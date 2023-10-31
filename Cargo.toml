@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "aoui",
+    "derive",
+]
+resolver="2"
