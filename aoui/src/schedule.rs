@@ -5,7 +5,7 @@ use bevy::transform::systems::{propagate_transforms, sync_simple_transforms};
 use bevy::prelude::*;
 
 use crate::compute::compute_aoui_root;
-use crate::{Anchors, RotatedRect, ScreenSpaceTransform, BuildTransform, Dimension, AorsREM, DimensionSize};
+use crate::{Anchors, RotatedRect, ScreenSpaceTransform, BuildTransform, Dimension, AouiREM, DimensionSize};
 
 /// Core plugin for AoUI Rendering.
 pub struct AoUIPlugin;
@@ -13,7 +13,7 @@ pub struct AoUIPlugin;
 impl bevy::prelude::Plugin for AoUIPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
-            .init_resource::<AorsREM>()
+            .init_resource::<AouiREM>()
             .add_systems(PostUpdate, (
                 copy_anchor, 
                 copy_anchor_sprite, 
@@ -21,6 +21,7 @@ impl bevy::prelude::Plugin for AoUIPlugin {
                 copy_dimension_text,
                 copy_anchor_atlas,
                 copy_dimension_atlas,
+                copy_dimension_text_bounds,
             ).before(compute_aoui_root).after(update_text2d_layout))
             .add_systems(PostUpdate, compute_aoui_root.before(build_transform))
             .add_systems(PostUpdate, 
@@ -44,8 +45,10 @@ pub fn copy_anchor(mut query: Query<(&mut Anchor, &Anchors)>) {
 /// Copy evaluated `TextLayoutInfo` value to our `Dimension::Copied` value
 pub fn copy_dimension_text(mut query: Query<(&TextLayoutInfo, &mut Dimension)>) {
     query.par_iter_mut().for_each_mut(|(text, mut dim)| {
-        if let DimensionSize::Copied = &mut dim.as_mut().dim {
-            dim.size = text.size / 2.0;
+        match dim.dim {
+            DimensionSize::Copied => dim.size = text.size / 2.0,
+            DimensionSize::Scaled(s) => dim.size = text.size * s / 2.0,
+            _ => (),
         }
     })
 }
@@ -60,7 +63,7 @@ pub fn copy_anchor_sprite(mut query: Query<(&mut Sprite, &Anchors)>) {
 /// Synchonize size between `Sprite` and `Dimension`
 pub fn copy_dimension_sprite(mut query: Query<(&mut Sprite, &Handle<Image>, &mut Dimension)>, assets: Res<Assets<Image>>) {
     query.par_iter_mut().for_each_mut(|(mut sp, im, mut dimension)| {
-        match &mut dimension.as_mut().dim {
+        match dimension.dim {
             DimensionSize::Copied => {
                 dimension.size = match sp.custom_size {
                     Some(x) => x,
@@ -70,6 +73,15 @@ pub fn copy_dimension_sprite(mut query: Query<(&mut Sprite, &Handle<Image>, &mut
                     },
                 }
             },
+            DimensionSize::Scaled(s) => {
+                dimension.size = match sp.custom_size {
+                    Some(x) => x,
+                    None => match sp.rect {
+                        Some(rect) => rect.max - rect.min,
+                        None => assets.get(im).map(|x|x.size()).unwrap_or(Vec2::ZERO),
+                    },
+                } * s
+            },
             DimensionSize::Owned(_) => {
                 sp.custom_size = Some(dimension.size)
             },
@@ -77,13 +89,12 @@ pub fn copy_dimension_sprite(mut query: Query<(&mut Sprite, &Handle<Image>, &mut
     })
 }
 
-/// Copy dimension to text bounds. 
+/// Copy owned dimension to text bounds. 
 /// 
-/// This is not the standard behavior.
-/// Insert this manually if desired.
+/// If this behavior is not desired, do not use owned dimension on text.
 pub fn copy_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &mut Dimension)>) {
-    query.par_iter_mut().for_each_mut(|(mut sp, mut dimension)| {
-        match &mut dimension.as_mut().dim {
+    query.par_iter_mut().for_each_mut(|(mut sp, dimension)| {
+        match dimension.dim {
             DimensionSize::Owned(_) => {
                 sp.size = dimension.size
             },
@@ -116,7 +127,7 @@ pub fn copy_dimension_atlas(mut query: Query<(&mut TextureAtlasSprite, &Handle<T
     })
 }
 
-/// Build a transform with [`Anchors::center`] and [`RotatedRect`]
+/// Build a transform with [`Anchors::center`] on [`RotatedRect`]
 pub fn build_transform(mut query: Query<(&Anchors, &RotatedRect, &mut Transform), With<BuildTransform>>) {
     for (aoui, quad, mut transform) in query.iter_mut() {
         transform.translation = quad.anchor(aoui.get_center()).extend(quad.z);
@@ -125,7 +136,8 @@ pub fn build_transform(mut query: Query<(&Anchors, &RotatedRect, &mut Transform)
     }
 }
 
-
+/// The last system in the AoUI pipeline.
+///
 /// Currently does nothing in particular
 /// other than copying [`ScreenSpaceTransform`] into [`GlobalTransform`].
 pub fn finalize(

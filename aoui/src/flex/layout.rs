@@ -7,12 +7,14 @@ use super::span::{span, paragraph};
 use super::grid::grid;
 use super::util::*;
 
+/// Cells in a [`FlexLayout::Grid`]
 #[derive(Debug, Copy, Clone, bevy::prelude::Reflect)]
 pub enum Cells {
     Counted(UVec2),
     Sized(Vec2),
 }
 
+/// Columns in a [`FlexLayout::Table`]
 #[derive(Debug, Clone, bevy::prelude::Reflect)]
 pub enum Columns {
     Dynamic(usize),
@@ -90,9 +92,9 @@ pub enum FlexLayout {
         /// Determines the size of a cell.
         cell: Cells,
         /// The order of which continuous items are placed.
-        row: FlexDir,
+        row_dir: FlexDir,
         /// The order of which rows are placed.
-        column: FlexDir,
+        column_dir: FlexDir,
         /// How items in a row are aligned.
         /// 
         /// Significant when an early linebreak occurs.
@@ -122,9 +124,9 @@ pub enum FlexLayout {
         /// `vec![0.4, 0.7]` => `[0.0..0.4, 0.4..0.7, 0.7..1.0]`
         columns: Columns,
         /// The order of which continuous items are placed.
-        row: FlexDir,
+        row_dir: FlexDir,
         /// The order of which rows are placed.
-        column: FlexDir,
+        column_dir: FlexDir,
         /// How items in a row are aligned.
         row_align: Alignment,
         /// How rows are placed relative to the parent,
@@ -202,7 +204,7 @@ impl FlexLayout {
                     _ => panic!("Direction and stack must be othogonal.")
                 }
             },
-            FlexLayout::Grid { cell, row: line, column: stack, row_align: line_align, column_align: stack_align, stretch } => {
+            FlexLayout::Grid { cell, row_dir: line, column_dir: stack, row_align: line_align, column_align: stack_align, stretch } => {
                 let (cell_count, cell_size) = match cell {
                     Cells::Counted(count) => (*count, rect.dimension / count.as_vec2()),
                     Cells::Sized(size) => match stretch {
@@ -225,7 +227,7 @@ impl FlexLayout {
                     _ => panic!("Direction and stack must be othogonal.")
                 }
             }
-            FlexLayout::Table { columns: Columns::Dynamic(columns), row: line, column: stack, row_align: line_align, column_align: stack_align, stretch } => {
+            FlexLayout::Table { columns: Columns::Dynamic(columns), row_dir: line, column_dir: stack, row_align: line_align, column_align: stack_align, stretch } => {
                 match (line, stack) {
                     (R, T) => flex_table::<L2R, HI>(size, items, *columns, *line_align, *stack_align, *stretch),
                     (R, B) => flex_table::<L2R, LO>(size, items, *columns, *line_align, *stack_align, *stretch),
@@ -238,7 +240,7 @@ impl FlexLayout {
                     _ => panic!("Direction and stack must be othogonal.")
                 }
             }
-            FlexLayout::Table { columns: Columns::Fixed(columns), row: line, column: stack, row_align:_, column_align: stack_align, stretch:_ } => {
+            FlexLayout::Table { columns: Columns::Fixed(columns), row_dir: line, column_dir: stack, row_align:_, column_align: stack_align, stretch:_ } => {
                 match (line, stack) {
                     (R, T) => fixed_table::<L2R, HI>(size, items, columns, *stack_align),
                     (R, B) => fixed_table::<L2R, LO>(size, items, columns, *stack_align),

@@ -77,7 +77,7 @@ pub fn spawn(commands: &mut Commands, anchor: Anchor, flexbox: Entity, assets: &
     commands.entity(flexbox).add_child(child);
 }
 
-pub fn reord(mut commands: Commands, mut query: Query<(Entity, &mut FlexContainer), With<Root>>, spawned: Query<Entity, (With<Core>, Without<Root>)>, keys: Res<Input<KeyCode>>, assets: Res<AssetServer>) {
+pub fn reord(mut commands: Commands, mut query: Query<(Entity, &mut FlexContainer), With<Root>>, spawned: Query<Entity, (With<AoUI>, Without<Root>)>, keys: Res<Input<KeyCode>>, assets: Res<AssetServer>) {
     let (flexbox, mut container) = query.single_mut();
     if keys.just_pressed(KeyCode::Q) {
         spawn(&mut commands, Anchor::TopLeft, flexbox, &assets)    

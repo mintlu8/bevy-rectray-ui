@@ -4,8 +4,7 @@ use crate::{Size2, SetEM};
 
 /// Marker component for our rendering.
 #[derive(Debug, Clone, Component, Default, Reflect)]
-#[non_exhaustive]
-pub struct Core;
+pub struct AoUI;
 
 /// Properties usually automatically synchronized from bevy's native components.
 #[derive(Debug, Clone, Component, Default, Reflect)]
@@ -19,8 +18,7 @@ pub struct Anchors{
     /// Offset, parent rotation and parent scale
     /// are applied through this point.
     ///
-    /// If paired with a component that contains an anchor like [`Sprite`],
-    /// this will be copied every frame.
+    /// This always overwrites the `anchor` field in standard bevy components.
     pub anchor: Anchor,
 }
 
@@ -29,10 +27,16 @@ pub struct Anchors{
 /// If `Copied` and paired with a component that has a dimension like [`Sprite`],
 /// this will be copied every frame.
 /// 
+/// This is useful when paired with a dynamic sized item like text or atlas.
+/// 
+/// If `Scaled`, this acts as `Copied` but scales the copied dimension without 
+/// modifying the scale of the sprite.
+/// 
 /// If `Owned` we will try to edit the dimension of the paired sprite
 #[derive(Debug, Clone, Reflect)]
 pub enum DimensionSize {
     Copied,
+    Scaled(Vec2),
     Owned(Size2)
 }
 
@@ -41,7 +45,7 @@ pub enum DimensionSize {
 /// This is useful in rendering 2D mesh.
 #[derive(Debug, Clone, Component, Default, Reflect)]
 #[non_exhaustive]
-pub struct DimAsScale;
+pub struct DimensionAsScale;
 
 /// Controls the dimension, absolute or relative, of the sprite
 #[derive(Debug, Clone, Component, Reflect)]
@@ -109,6 +113,7 @@ impl Dimension {
         };
         match self.dim {
             DimensionSize::Copied => (self.size, self.em),
+            DimensionSize::Scaled(_) => (self.size, self.em),
             DimensionSize::Owned(v) => {
                 self.size = v.as_pixels(parent, em, rem);
                 (self.size, self.em)
@@ -119,6 +124,7 @@ impl Dimension {
     pub fn raw(&self) -> Vec2 {
         match &self.dim {
             DimensionSize::Copied => self.size,
+            DimensionSize::Scaled(_) => self.size,
             DimensionSize::Owned(v) => v.raw(),
         }
     }

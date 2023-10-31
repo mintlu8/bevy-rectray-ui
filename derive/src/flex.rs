@@ -5,12 +5,14 @@ pub enum FlexLayout {
     Span,
     HBox,
     VBox,
-    WrapBox,
     Paragraph,
     Grid,
     Table,
-    FixedGrid,
-    SizedGrid,
-    FixedTable,
-    FlexTable,
+}
+
+#[derive(Debug, FromMacro)]
+pub enum SparseLayout {
+    Rectangles,
+    Isometric,
+    HexGrid,
 }

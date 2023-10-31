@@ -4,7 +4,7 @@ use bevy::{
     text::{Text2dBounds, TextLayoutInfo}
 };
 
-use crate::{Transform2D, RotatedRect, ScreenSpaceTransform, Hitbox, Core, Anchors, BuildTransform, FlexControl, Dimension};
+use crate::{Transform2D, RotatedRect, ScreenSpaceTransform, Hitbox, AoUI, Anchors, BuildTransform, FlexControl, Dimension};
 
 
 /// The minimal bundle required for AoUI to function.
@@ -12,7 +12,7 @@ use crate::{Transform2D, RotatedRect, ScreenSpaceTransform, Hitbox, Core, Anchor
 /// This provides propagation but no rendering support.
 #[derive(Debug, Default, Bundle)]
 pub struct AoUIBundle {
-    pub core: Core,
+    pub core: AoUI,
     pub properties: Anchors,
     pub transform: Transform2D,
     pub dimension: Dimension,
@@ -65,7 +65,7 @@ impl Default for LinebreakBundle {
 #[cfg(feature="bundles")]
 #[derive(Debug, Default, Bundle)]
 pub struct AoUISpriteBundle {
-    pub core: Core,
+    pub core: AoUI,
     pub anchors: Anchors,
     pub transform: Transform2D,
     pub dimension: Dimension,
@@ -81,7 +81,7 @@ pub struct AoUISpriteBundle {
 #[cfg(feature="bundles")]
 #[derive(Debug, Default, Bundle)]
 pub struct AoUITextBundle {
-    pub core: Core,
+    pub core: AoUI,
     pub properties: Anchors,
     pub transform: Transform2D,
     pub dimension: Dimension,
@@ -101,7 +101,7 @@ pub struct AoUITextBundle {
 #[cfg(feature="bundles")]
 #[derive(Debug, Default, Bundle)]
 pub struct AoUIMaterialMesh2dBundle<M: Material2d>{
-    pub core: Core,
+    pub core: AoUI,
     pub properties: Anchors,
     pub transform: Transform2D,
     pub dimension: Dimension,

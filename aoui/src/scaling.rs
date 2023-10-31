@@ -4,8 +4,8 @@ use bevy::{prelude::{Vec2, Resource}, reflect::Reflect};
 /// 
 /// By default this is `[16, 16]` if not found.
 #[derive(Debug, Resource)]
-pub struct AorsREM(pub Vec2);
-impl Default for AorsREM {
+pub struct AouiREM(pub Vec2);
+impl Default for AouiREM {
     fn default() -> Self {
         Self(Vec2::new(16.0, 16.0))
     }

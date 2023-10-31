@@ -2,7 +2,7 @@ use std::{cmp::Ordering, marker::PhantomData, ops::BitAnd};
 
 use bevy::prelude::*;
 
-use crate::{Core, RotatedRect, Hitbox};
+use crate::{AoUI, RotatedRect, Hitbox};
 
 /// A system builder that propagates events.
 /// 
@@ -40,7 +40,7 @@ impl<T: CursorEvent> EventPipe<T> {
         mut reader: EventReader<T>,
         mut writer_with: EventWriter<T::WithEntity>,
         mut writer_without: EventWriter<T::WithoutEntity>,
-        entity_query: Query<(Entity, &RotatedRect, &Hitbox<T::FlagTy>), With<Core>>,
+        entity_query: Query<(Entity, &RotatedRect, &Hitbox<T::FlagTy>), With<AoUI>>,
     ) where T::WithEntity: Event, T::WithoutEntity: Event {
 
         for event in reader.iter() {
@@ -71,7 +71,7 @@ impl<T: CursorEvent> EventPipe<T> {
     pub fn system_ok_only(
         mut reader: EventReader<T>,
         mut writer_with: EventWriter<T::WithEntity>,
-        entity_query: Query<(Entity, &RotatedRect, &Hitbox<T::FlagTy>), With<Core>>,
+        entity_query: Query<(Entity, &RotatedRect, &Hitbox<T::FlagTy>), With<AoUI>>,
     ) where T::WithEntity: Event {
 
         for event in reader.iter() {

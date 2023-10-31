@@ -51,8 +51,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     }, FlexContainer {
         layout: FlexLayout::Table {
             columns: Columns::Dynamic(4),
-            row: FlexDir::LeftToRight,
-            column: FlexDir::TopToBottom,
+            row_dir: FlexDir::LeftToRight,
+            column_dir: FlexDir::TopToBottom,
             row_align: Alignment::Left,
             column_align: Alignment::Bottom,
             stretch: false,

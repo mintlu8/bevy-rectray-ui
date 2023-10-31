@@ -104,8 +104,14 @@ pub struct Rect {
 
 macroex::call_syntax!(
     "::bevy::prelude::Vec2::new($)", 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, Default)]
     pub Vec2(pub [f32; 2])
+);
+
+macroex::call_syntax!(
+    "::bevy::prelude::UVec2::new($)", 
+    #[derive(Debug, Clone, Copy, Default)]
+    pub UVec2(pub [u32; 2])
 );
 
 #[derive(Debug, FromMacro)]
@@ -128,14 +134,6 @@ impl ToTokens for HitboxShape {
             },
         }
     }
-}
-
-#[derive(FromMacro)]
-pub struct Hitbox {
-    #[macroex(required)]
-    pub shape: HitboxShape,
-    #[macroex(default="MaybeExpr::Value(NumberList(Vec2([1.0, 1.0])))")]
-    pub size: MaybeExpr<NumberList<Vec2>>,
 }
 
 
@@ -161,18 +159,21 @@ impl ToTokens for AnchorEntry {
 }
 
 #[derive(Debug, FromMacro)]
-pub enum Linebreak {
-    #[macroex(rename="linebreak")]
-    Linebreak,
-    #[macroex(rename="self")]
-    BreakOnSelf,
+pub struct Affine2{
+    pub translation: Vec2,
+    pub rotation: Number<f32>,
+    #[macroex(default = "Vec2([1.0, 1.0])")]
+    pub scale: Vec2,
 }
 
-#[derive(Debug, FromMacro)]
-pub struct Mat2{
-    pub rotation: f32,
-    #[macroex(default = "[1.0, 1.0]")]
-    pub scale: [f32; 2],
+
+impl ToTokens for Affine2 {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Affine2 {translation, rotation, scale} = self;
+        quote!(::bevy::prelude::Affine2::from_scale_angle_translation(
+            #scale, #rotation, #translation
+        )).to_tokens(tokens)
+    }
 }
 
 #[derive(Debug)]

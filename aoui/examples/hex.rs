@@ -50,8 +50,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         ..Default::default()
     }, SparseContainer {
         layout: SparseLayout::HexGrid { 
-            x: HexDir::DownRight, 
-            y: HexDir::Up, 
+            x: HexDir::BotRight, 
+            y: HexDir::Top, 
             size: Vec2::new(100.0, 100.0), 
         },
         transform: Affine2::IDENTITY,

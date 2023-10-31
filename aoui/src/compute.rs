@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashSet, window::PrimaryWindow};
 
-use crate::{Anchors, Transform2D, RotatedRect, ScreenSpaceTransform, ParentInfo, FlexContainer, FlexControl, FlexItem, Core, AorsREM, Dimension, SparseContainer, SparsePosition, SparseItem};
+use crate::{Anchors, Transform2D, RotatedRect, ScreenSpaceTransform, ParentInfo, FlexContainer, FlexControl, FlexItem, AoUI, AouiREM, Dimension, SparseContainer, SparsePosition, SparseItem};
 
 type AoUIEntity<'t> = (Entity,
     &'t Anchors, 
@@ -16,7 +16,7 @@ fn propagate(
     parent: ParentInfo,
     entity: Entity,
     rem: Vec2,
-    entity_query: &mut Query<AoUIEntity, With<Core>>,
+    entity_query: &mut Query<AoUIEntity, With<AoUI>>,
     flex_query: &Query<&FlexContainer>,
     sparse_query: &Query<&SparseContainer>,
     child_query: &Query<&Children>,
@@ -103,13 +103,13 @@ fn propagate(
 
 pub fn compute_aoui_root(
     window: Query<&Window, With<PrimaryWindow>>,
-    root_query: Query<Entity, (With<Core>, Without<Parent>)>,
-    mut entity_query: Query<AoUIEntity, With<Core>>,
+    root_query: Query<Entity, (With<AoUI>, Without<Parent>)>,
+    mut entity_query: Query<AoUIEntity, With<AoUI>>,
     flex_query: Query<&FlexContainer>,
     sparse_query: Query<&SparseContainer>,
     child_query: Query<&Children>,
     control_query: Query<&FlexControl>,
-    res_rem: Option<Res<AorsREM>>,
+    res_rem: Option<Res<AouiREM>>,
 ) {
     let window = window.single();
     let dim = Vec2::new(window.width(), window.height());

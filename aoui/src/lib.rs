@@ -1,16 +1,17 @@
 //! Bevy AoUI provides a light-weight Anchor-Offset based 2D sprite rendering system.
 //! 
 //! AoUI is not a full render pipeline system, but rather a [`GlobalTransform`](bevy::prelude::GlobalTransform) generator.
-//! Meaning we only replace bevy's standard transform systems 
+//! AoUI replaces bevy's standard transform systems
 //! like [`propagate_transforms`](bevy::transform::systems::propagate_transforms)
 //! and [`sync_simple_transforms`](bevy::transform::systems::sync_simple_transforms),
-//! while leveraging other parts of bevy's standard library and ecosystem as much as possible.
+//! on structs marked with [AoUI],
+//! while leveraging other parts of bevy's standard library and ecosystem whenever possible.
 //!
 //! # Core Concepts
 //!
-//! AoUI offers a refreshingly different paradime from traditional CSS based UI layout.
+//! AoUI offers a refreshingly different paradigm from traditional CSS based UI layout.
 //! 
-//! These are the core components of a AoUI Sprite:
+//! AoUI Sprites contains these core components:
 //! * [anchor](Anchors::anchor)
 //! * [center](Anchors::center)
 //! * [dimension](Dimension::dim)
@@ -18,15 +19,15 @@
 //! * [rotation](Transform2D::rotation)
 //! * [scale](Transform2D::scale)
 //! 
-//! Each sprite is considered a rectangle with a dimension and 
-//! has 9 [anchors](bevy::sprite::Anchor): `BottomLeft`, `CenterRight`, `Center`, etc.
+//! Each sprite is conceptualized as a rectangle with a dimension and 
+//! 9 [anchors](bevy::sprite::Anchor): `BottomLeft`, `CenterRight`, `Center`, etc.
 //! 
-//! We parent each sprite to one of the parent sprite's anchors,
-//! and offset it by a `Vec2`. 
-//! If offset is `(0, 0)`, the parent and child sprite's 
-//! anchors overlap.
+//! [Custom anchors](bevy::sprite::Anchor::Custom) can be used but not in some layouts.
 //! 
-
+//! Sprites are connected to parent sprites via one of the parent's anchors
+//! and can be offset by a `Vec2`. When the offset is set to `(0, 0)`, 
+//! the anchors of the parent and child sprites overlap.
+//! 
 //! <svg width="256px" height="256px" style="margin-left: auto; margin-right: auto; display: block;" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
 //!     <g transform="matrix(0.358906,0,0,0.278019,-25.4441,-14.0335)">
 //!         <rect x="70.893" y="50.477" width="356.639" height="460.401" style="fill:none;stroke:rgb(239,239,239);stroke-width:6.23px;"/>
@@ -41,74 +42,78 @@
 //!         <rect x="188.717" y="54.654" width="148.18" height="148.18" style="fill:none;stroke:rgb(239,239,239);stroke-width:2.39px;"/>
 //!     </g>
 //! </svg>
-
 //! 
-//! For all parentless sprites, 
-//! the root parent is the window's rectangle.
+//! In the case of parentless sprites, they are anchored to the window's rectangle.
 //! 
-//! To apply `rotation` and `scale`, each sprite uses a `center`
-//! independent from anchor. 
-//! This is considered to be the canonical [`Transform`](bevy::prelude::Transform) of the sprite.
-//! Rotation and scale propagates to all children just like regular bevy.
+//! When applying `rotation` and `scale`, each sprite utilizes a 
+//! `center` that operates independently from the anchor. 
+//! This `center` is regarded as the definitive [`Transform`](bevy::prelude::Transform) 
+//! for the sprite when used with [`BuildTransform`] to integrate with native components.
+//! 
+//! Similar to standard Bevy behavior, `rotation` and `scale` propagate to all child sprites.
 //! 
 //! # FlexContainer
 //! 
-//! Anchor-Offset works well for isolated UI components, but for laying out
-//! multiple UI components in order, we need the [`FlexContainer`].
+//! Anchor-Offset is well-suited for isolated UI components, but when it comes to arranging
+//! multiple UI elements in a specific order, you'll find the [`FlexContainer`] useful.
 //! 
-//! The FlexContainer is a insertion order only layout 
-//! that works with bevy's [`Children`](bevy::prelude::Children) component.
+//! The `FlexContainer` is a layout system that only depands on insertion order and seamlessly
+//! integrates with Bevy's [`Children`](bevy::prelude::Children) component.
 //!
 //! ## Span
 //! 
-//! [`Span`](FlexLayout::Span) is your classic single line `HBox` or `VBox`.
+//! [`Span`](FlexLayout::Span) serves as a classic single-line layout, akin to `HBox` or `VBox`.
 //! 
 //! Children are first sorted into 3 buckets based on their anchors along the main axis, 
 //! and aligned differently based on their assigned bucket.
 //! 
-//! For `HBox`, we have sprites laid out like
+//! For `HBox`, we have sprites laid out as follows:
 //! ```
 //! # /*
 //! (Anchors::*Left ..)       (Anchors::*Center ..)       (Anchors::*Right ..)
 //! # */
 //! ```
-//! with each bucket respecting their insertion order.
+//! with each sprite takes up `dimension * scale` size. 
 //! 
-//! Each sprite takes up `dimension * scale` size. 
-//! 
-//! Currently offset and rotation does not affect how much space a sprite takes up,
+//! It's important to note that currently offset and rotation 
+//! does not affect how much space a sprite takes up,
 //! if you think they should, please file an issue.
 //! 
 //! ## Paragraph
 //! 
-//! [`Paragraph`](FlexLayout::Paragraph) is a layout of wrapping spans.
+//! [`Paragraph`](FlexLayout::Paragraph) is a layout for wrapping spans.
 //! 
-//! We collect children sequentially until a line fills up,
-//! then we render them like a `span`. Due to the alignment feature of `span`, paragraph
-//! is capable of creating complex layout on its own with minimal additional support.
+//! Children are collected sequentially until a line is filled,
+//! and then they are rendered as a `span`. 
+//! Thanks to the alignment features of a `span`, the paragraph
+//! layout can create complex arrangements with minimal additional support.
 //! 
 //! To better leverage the paragraph layout, you can use [`FlexControl::Linebreak`] or
-//! [`LinebreakBundle`] to perform a linebreak. These are also available in `grid` or `table`.
+//! [`LinebreakBundle`] to perform a linebreak. 
+//! These features are also available in `grid` and `table`.
 //! 
 //! ## Grid
 //! 
-//! [`Grid`](FlexLayout::Grid) a layout of evenly subdivided cells.
+//! [`Grid`](FlexLayout::Grid) is a layout of evenly subdivided cells.
 //! 
-//! Features
+//! Key Features
 //! 
-//! * Any insertion order.
-//! * Both size and count based division.
-//! * Re-align incomplete rows.
+//! * Offers both size-based and count-based divisions.
+//! * Supports any insertion order.
+//! * Supports re-alignment for incomplete rows.
+//! 
+//! See [`SparseLayout::Rectangles`] for a more flexible version.
 //! 
 //! ## Table
 //! 
-//! [`Table`](FlexLayout::Table) is a layout of aligned rows and columns.
+//! [`Table`](FlexLayout::Table) provides a layout system for aligned rows and columns.
 //! 
-//! We support both dynamic sized columns and percentage width based columns.
+//! `Table` supports both dynamic-sized columns and percentage-width-based columns.
 //! 
 //! # SparseContainer
 //! 
 //! [`SparseContainer`] provides a tile map like layout.
+//! 
 //! Supported [layouts](`SparseLayout`) are 
 //! * `Rectangles`
 //! * `Isometric` 
@@ -118,57 +123,61 @@
 //! to be placed accordingly.
 //! 
 //! # Mental Model
-//!
-//! The order of rendering goes:
-//! * compute parent anchor's final position
-//! * offset from parent anchor
-//! * scale from parent anchor using parent's scale
-//! * rotate from parent anchor using parent's rotation
-//! * scale locally from the sprite's center
-//! * rotate locally from the sprite's center
+//! 
+//! The order of rendering goes as follows:
+//! 1. Compute the final position of the parent anchor.
+//! 2. Apply an offset from the parent anchor.
+//! 3. Scale using the parent anchor and the parent's scale.
+//! 4. Rotate based on the parent anchor and the parent's rotation.
+//! 5. Apply local scaling relative to the sprite's center.
+//! 6. Perform local rotation around the sprite's center.
 //!
 //! The result always
-//! * is 2D
+//! * is a 2D sprite
 //! * is a rotated rectangle
 //! * is equivalent to a global transform
 //! * has the same rotation as the sum of its and its ancestors' rotations
 //! * has the same scale as the product of its and its ancestors' scales
+//! 
+//! # DSL
+//! 
+//! We offer an optional DSL to streamline widget creation and reduce boilerplate.
+//! Check out our book for more details.
 //!
 //! # Performance
 //! 
-//! We prioritize ergonomics over performance and our rendering system uses
-//! extra steps compared to traditional rendering, this includes:
+//! We prioritize ergonomics over performance. 
+//! Our rendering system uses extra steps 
+//! compared to traditional rendering, this includes:
 //! 
-//! * Maintaining rectangles instead of points
-//! * Two step rotation and scale (from anchor and center)
+//! * Maintaining rectangles instead of points.
+//! * Fetching anchor points from rotated rectangles.
+//! * Two step rotation and scale (from anchor and from center).
 //! 
-//! This means we probably won't be as fast as native bevy transfroms.
-//! Nevertheless, our performance is enough to support most UI use cases, including rendering
-//! multiline rich text directly with `FlexContainer`. 
+//! This means we probably won't be as performant as native bevy transfroms.
+//! Nevertheless, our performance is enough to support most UI use cases, 
+//! including rendering multiline rich text directly with `FlexContainer`. 
 //! 
-//! Using AoUI as a particle emitter, however, is ill-advised.
-//! 
-//! Please submit a pull request if you can improve our performance.
-//! 
+//! Consider submit a pull request if you can improve our performance.
 //! 
 //! # Widgets
 //! 
 //! `AoUI` does not provide event handling widgets,
-//! like buttons or checkboxes, out of the box, 
+//! such as buttons or checkboxes, out of the box, 
 //! but they can easily be built using our event system.
 //! 
 //! Since `AoUI` is a very thin abstraction layer over standard bevy, 
 //! it should be relatively easy to integrate widgets from other crates.
 //! 
-//! Official `AoUI` widgets will live in a separate crate,
-//! and `AoUI` DSL will support them in the future.
+//! Official `AoUI` widgets might live in a separate crate in the future.
 //! 
 //! # Todos
 //! 
 //! * Add support for `SpriteSheetBundle`.
 //! * Better `Mesh2D` support.
 //! * Implement change detection.
-//! 
+//! * Implement some kind of custom spritesheet.
+//! * Better rich text support.
 
 pub mod schedule;
 mod rect;

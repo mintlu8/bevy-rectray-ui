@@ -53,8 +53,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     }, FlexContainer {
         layout: FlexLayout::Grid { 
             cell: Cells::Counted(UVec2::new(6, 5)), 
-            row: FlexDir::LeftToRight, 
-            column: FlexDir::TopToBottom, 
+            row_dir: FlexDir::LeftToRight, 
+            column_dir: FlexDir::TopToBottom, 
             row_align: Alignment::Left, 
             column_align: Alignment::Top, 
             stretch: false, 
@@ -84,7 +84,7 @@ pub fn spawn(commands: &mut Commands, anchor: Anchor, flexbox: Entity, assets: &
 
 pub fn reord(mut commands: Commands, 
         mut query: Query<(Entity, &mut FlexContainer), With<Root>>, 
-        spawned: Query<Entity, (With<Core>, Without<Root>)>,  
+        spawned: Query<Entity, (With<AoUI>, Without<Root>)>,  
         keys: Res<Input<KeyCode>>, 
         assets: Res<AssetServer>
     ) {

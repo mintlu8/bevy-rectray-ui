@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::RotatedRect;
 
+/// Shape of a hitbox.
 #[derive(Debug, Clone, Copy, Reflect)]
 #[non_exhaustive]
 pub enum HitboxShape{
