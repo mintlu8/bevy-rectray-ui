@@ -4,7 +4,7 @@ use bevy::text::{TextLayoutInfo, update_text2d_layout, Text2dBounds};
 use bevy::transform::systems::{propagate_transforms, sync_simple_transforms};
 use bevy::prelude::*;
 
-use crate::compute::compute_aoui_root;
+use crate::compute::compute_aoui_transforms;
 use crate::{Anchors, RotatedRect, ScreenSpaceTransform, BuildTransform, Dimension, AouiREM, DimensionSize};
 
 /// Core plugin for AoUI Rendering.
@@ -22,8 +22,8 @@ impl bevy::prelude::Plugin for AoUIPlugin {
                 copy_anchor_atlas,
                 copy_dimension_atlas,
                 copy_dimension_text_bounds,
-            ).before(compute_aoui_root).after(update_text2d_layout))
-            .add_systems(PostUpdate, compute_aoui_root.before(build_transform))
+            ).before(compute_aoui_transforms).after(update_text2d_layout))
+            .add_systems(PostUpdate, compute_aoui_transforms.before(build_transform))
             .add_systems(PostUpdate, 
                 build_transform
                     .before(propagate_transforms)

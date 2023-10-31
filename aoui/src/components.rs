@@ -6,7 +6,7 @@ use crate::{Size2, SetEM};
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct AoUI;
 
-/// Properties usually automatically synchronized from bevy's native components.
+/// Contains `anchor` and `center` of the sprite.
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct Anchors{
     /// Governs the rotation and scale specified in [`Transform2D`].
@@ -29,38 +29,36 @@ pub struct Anchors{
 /// 
 /// This is useful when paired with a dynamic sized item like text or atlas.
 /// 
-/// If `Scaled`, this acts as `Copied` but scales the copied dimension without 
+/// If `Scaled`, acts as `Copied` but scales the copied dimension without 
 /// modifying the scale of the sprite.
 /// 
 /// If `Owned` we will try to edit the dimension of the paired sprite
 #[derive(Debug, Clone, Reflect)]
 pub enum DimensionSize {
+    /// Copy `size` from sprite, rect, image, text, etc.
     Copied,
+    /// Copy and scale `size` from sprite, rect, image, text, etc.
     Scaled(Vec2),
+    /// Governs size of sprite, rect, image, text, etc.
     Owned(Size2)
 }
-
-/// Marker component for multiplying dimension to scale.
-/// 
-/// This is useful in rendering 2D mesh.
-#[derive(Debug, Clone, Component, Default, Reflect)]
-#[non_exhaustive]
-pub struct DimensionAsScale;
 
 /// Controls the dimension, absolute or relative, of the sprite
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct Dimension {
     /// Input for dimension.
     pub dim: DimensionSize,
-    /// Modifies the relative size em.
+    /// Modifies the relative size `em`.
     pub set_em: SetEM,
-    /// Evaluated size.
-    /// 
-    /// Should be initialized if known, otherwise init with zero.
+    /// Evaluated size in pixels.
+    ///     
+    /// This value is computed every frame. 
     pub size: Vec2,
-    /// Relative size, computed every frame. 
+    /// Relative size `em` on this sprite.
     /// 
-    /// By default `(16, 16)`
+    /// This value is computed every frame. 
+    /// 
+    /// By default `(16, 16)`.
     pub em: Vec2,
 }
 
@@ -153,7 +151,7 @@ pub struct Transform2D{
 }
 
 /// An intermediate screen space transform output
-/// centered on (0,0) and scaled to window size.
+/// centered on `(0,0)` and scaled to window size.
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct ScreenSpaceTransform(pub Affine3A);
 

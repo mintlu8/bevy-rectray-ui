@@ -11,7 +11,6 @@ type AoUIEntity<'t> = (Entity,
     Option<&'t SparsePosition>
 );
 
-/// SAFETY: safe since double mut access is gated by visited
 fn propagate(
     parent: ParentInfo,
     entity: Entity,
@@ -26,6 +25,7 @@ fn propagate(
 
     visited.insert(entity);
 
+    // SAFETY: safe since double mut access is gated by visited
     let (entity, anchors, mut dimension, transform, mut orig, output, ..) = match unsafe {entity_query.get_unchecked(entity)}{
         Ok(items) => items,
         Err(_) => return,
@@ -51,6 +51,7 @@ fn propagate(
             let mut args = Vec::new();
             for child in children {
                 if !visited.insert(*child) { continue; }
+                // SAFETY: safe since double mut access is gated by visited
                 if let Ok((_, child_anc, mut child_dim, ..)) = unsafe { entity_query.get_unchecked(*child) } {
                     entities.push(*child);
                     args.push(FlexItem {
@@ -71,6 +72,7 @@ fn propagate(
             let mut args = Vec::new();
             for child in children {
                 if !visited.insert(*child) { continue; }
+                // SAFETY: safe since double mut access is gated by visited
                 if let Ok((_, child_anc, mut child_dim, .., pos)) = unsafe { entity_query.get_unchecked(*child) } {
                     entities.push(*child);
                     args.push(SparseItem {
@@ -89,6 +91,7 @@ fn propagate(
         } else {
             for child in children {
                 if !visited.insert(*child) { continue; }
+                // SAFETY: safe since double mut access is gated by visited
                 if let Ok((_, child_anc, ..)) = unsafe { entity_query.get_unchecked(*child) } {
                     let parent = ParentInfo::new(&rect, &child_anc.anchor, dimension, em);
                     queue.push((*child, parent))
@@ -101,7 +104,8 @@ fn propagate(
     output.map(|mut x| x.0 = affine);
 }
 
-pub fn compute_aoui_root(
+/// The main computation step.
+pub fn compute_aoui_transforms(
     window: Query<&Window, With<PrimaryWindow>>,
     root_query: Query<Entity, (With<AoUI>, Without<Parent>)>,
     mut entity_query: Query<AoUIEntity, With<AoUI>>,
