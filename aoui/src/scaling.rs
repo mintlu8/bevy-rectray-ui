@@ -1,13 +1,13 @@
 use bevy::{prelude::{Vec2, Resource}, reflect::Reflect};
 
-/// The Root EM of the window.
+/// The root relative size of the window.
 /// 
 /// By default this is `[16, 16]` if not found.
 #[derive(Debug, Resource)]
-pub struct AouiREM(pub Vec2);
+pub struct AouiREM(pub f32);
 impl Default for AouiREM {
     fn default() -> Self {
-        Self(Vec2::new(16.0, 16.0))
+        Self(16.0)
     }
 }
 
@@ -16,9 +16,9 @@ impl Default for AouiREM {
 pub enum SetEM {
     #[default]
     None,
-    Pixels(Vec2),
-    Scale(Vec2),
-    ScaleRem(Vec2),
+    Pixels(f32),
+    Ems(f32),
+    Rems(f32),
 }
 
 /// The unit of a Size `px`, `em`, `rem`, `percent`
@@ -41,6 +41,8 @@ pub struct Size2 {
 
 
 impl SizeUnit {
+
+    /// Compute size in pixels given parent info.
     #[inline]
     pub fn as_pixels(self, value: f32, parent: f32, em: f32, rem: f32) -> f32 {
         match self {
@@ -59,7 +61,15 @@ impl Size2 {
         raw: Vec2::ZERO,
     };
 
-    pub fn new(x: (SizeUnit, f32), y: (SizeUnit, f32)) -> Self{
+
+    pub const INHERIT: Self = Self {
+        x: SizeUnit::Percent,
+        y: SizeUnit::Percent,
+        raw: Vec2::ONE,
+    };
+
+    /// Construct size.
+    pub const fn new(x: (SizeUnit, f32), y: (SizeUnit, f32)) -> Self{
         Self {
             x: x.0,
             y: y.0,
@@ -67,7 +77,8 @@ impl Size2 {
         }
     }
 
-    pub fn pixels(x: f32, y: f32) -> Self{
+    /// Size based on fixed number of pixels.
+    pub const fn pixels(x: f32, y: f32) -> Self{
         Self {
             x: SizeUnit::Pixels,
             y: SizeUnit::Pixels,
@@ -75,7 +86,8 @@ impl Size2 {
         }
     }
 
-    pub fn em(x: f32, y: f32) -> Self{
+    /// Size based on the parent relative size.
+    pub const fn em(x: f32, y: f32) -> Self{
         Self {
             x: SizeUnit::Em,
             y: SizeUnit::Em,
@@ -83,7 +95,8 @@ impl Size2 {
         }
     }
 
-    pub fn rem(x: f32, y: f32) -> Self{
+    /// Size based on the root size.
+    pub const fn rem(x: f32, y: f32) -> Self{
         Self {
             x: SizeUnit::Rem,
             y: SizeUnit::Rem,
@@ -91,7 +104,8 @@ impl Size2 {
         }
     }
 
-    pub fn percent(x: f32, y: f32) -> Self{
+    /// Size based on a percentage for the parent size.
+    pub const fn percent(x: f32, y: f32) -> Self{
         Self {
             x: SizeUnit::Percent,
             y: SizeUnit::Percent,
@@ -99,11 +113,12 @@ impl Size2 {
         }
     }
 
+    /// Compute size in pixels given parent info.
     #[inline]
-    pub fn as_pixels(&self, parent: Vec2, em: Vec2, rem: Vec2) -> Vec2 {
+    pub fn as_pixels(&self, parent: Vec2, em: f32, rem: f32) -> Vec2 {
         Vec2::new(
-            self.x.as_pixels(self.raw.x, parent.x, em.x, rem.x),
-            self.y.as_pixels(self.raw.y, parent.y, em.y, rem.y),
+            self.x.as_pixels(self.raw.x, parent.x, em, rem),
+            self.y.as_pixels(self.raw.y, parent.y, em, rem),
         )
     }
 
@@ -117,6 +132,14 @@ impl Size2 {
     /// The unit and meaning of this value depends on the use case.
     pub fn raw(&self) -> Vec2 {
         self.raw
+    }
+
+    /// Get mutable access to the underlying owned value.
+    /// 
+    /// For ease of use with egui.
+    #[doc(hidden)]
+    pub fn raw_mut(&mut self) -> &mut Vec2 {
+        &mut self.raw
     }
 
     /// A loose function that updates this struct's value.

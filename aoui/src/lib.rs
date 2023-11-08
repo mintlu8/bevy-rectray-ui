@@ -1,11 +1,53 @@
 //! Bevy AoUI provides a light-weight Anchor-Offset based 2D sprite rendering system.
 //! 
-//! AoUI is not a full render pipeline system, but rather a [`GlobalTransform`](bevy::prelude::GlobalTransform) generator.
+//! Similar to the philosophy of Rust, AoUI provides low level control through the 
+//! anchor-offset system and high level ergonomics through its layout system.
+//! 
+//! # The AoUI DOM
+//! 
+//! AoUI is not a full render pipeline system, but rather a 
+//! [`Transform`](bevy::prelude::Transform) and
+//! [`GlobalTransform`](bevy::prelude::GlobalTransform) generator.
+//! 
 //! AoUI replaces bevy's standard transform systems
 //! like [`propagate_transforms`](bevy::transform::systems::propagate_transforms)
 //! and [`sync_simple_transforms`](bevy::transform::systems::sync_simple_transforms),
 //! on structs marked with [AoUI],
 //! while leveraging other parts of bevy's standard library and ecosystem whenever possible.
+//! 
+//! AoUI provides 2 rendering methods: 
+//! * [`ScreenSpaceTransform`] handles AoUI widgets that rely on `Anchor`.
+//! * [`BuildTransform`] handles bevy and third party widgets the rely on `Transform`.
+//! 
+//! AoUI propagates translation, rotation, scale and relative size down its DOM.
+//! 
+//! Currently the root node of the AoUI DOM is always the window. Meaning AoUI widgers
+//! can have native bevy widgets as children, but not vice versa.
+//! 
+//! # Advantages of AoUI
+//! 
+//! There are many awesome UI libraries in the bevy ecosystem
+//! that you should definitely use over AoUI in
+//! many use cases. However, AoUI offers some unique advantages:
+//! 
+//! * Full ECS support with easy feature composition.
+//! 
+//! AoUI is built fully embracing bevy's ecosystem. 
+//! You can mix and match our modularized components
+//! and add, remove or edit any system you want to change.
+//! 
+//! * First class rotation and scaling support.
+//! 
+//! You are allowed to rotate and scale any widget with ease.
+//! 
+//! * Simple but versatile layout system.
+//! 
+//! Layouts that work out of the box with minimal configuration.
+//! 
+//! * Both high and low level API.
+//! 
+//! You can use mix and match anchoring and layouts to best suit your needs.
+//! 
 //!
 //! # Core Concepts
 //!
@@ -50,7 +92,6 @@
 //! This `center` is regarded as the definitive [`Transform`](bevy::prelude::Transform) 
 //! for the sprite when used with [`BuildTransform`] to integrate with native components.
 //! 
-//! Similar to standard Bevy behavior, `rotation` and `scale` propagate to all child sprites.
 //! 
 //! # FlexContainer
 //! 
@@ -96,31 +137,9 @@
 //! 
 //! [`Grid`](FlexLayout::Grid) is a layout of evenly subdivided cells.
 //! 
-//! Key Features
-//! 
-//! * Offers both size-based and count-based divisions.
-//! * Supports any insertion order.
-//! * Supports re-alignment for incomplete rows.
-//! 
-//! See [`SparseLayout::Rectangles`] for a more flexible version.
-//! 
 //! ## Table
 //! 
 //! [`Table`](FlexLayout::Table) provides a layout system for aligned rows and columns.
-//! 
-//! `Table` supports both dynamic-sized columns and percentage-width-based columns.
-//! 
-//! # SparseContainer
-//! 
-//! [`SparseContainer`] provides a tile map like layout.
-//! 
-//! Supported [layouts](`SparseLayout`) are 
-//! * `Rectangles`
-//! * `Isometric` 
-//! * `HexGrid`
-//! 
-//! Children needs to specify a [`SparsePosition`]
-//! to be placed accordingly.
 //! 
 //! # Mental Model
 //! 
@@ -139,45 +158,34 @@
 //! * has the same rotation as the sum of its and its ancestors' rotations
 //! * has the same scale as the product of its and its ancestors' scales
 //! 
-//! # DSL
+//! # FAQ:
 //! 
-//! We offer an optional DSL to streamline widget creation and reduce boilerplate.
-//! Check out our book for more details.
-//!
-//! # Performance
+//! ## Where are the widgets?
 //! 
-//! We prioritize ergonomics over performance. 
-//! Our rendering system uses extra steps 
-//! compared to traditional rendering, this includes:
+//! `bevy_aoui` is a layout system, not a widget library. 
+//! Implementations of most AoUI widgets 
+//! will live outside of the crate. 
+//! You can integrate third party libraries with this crate,
+//! or create your own widgets with bevy's prmitives.
 //! 
-//! * Maintaining rectangles instead of points.
+//! ## What about performance?
+//! 
+//! We do extra things compared to traditional rendering:
+//! 
+//! * Maintaining rectangles and relative size.
 //! * Fetching anchor points from rotated rectangles.
 //! * Two step rotation and scale (from anchor and from center).
 //! 
-//! This means we probably won't be as performant as native bevy transfroms.
-//! Nevertheless, our performance is enough to support most UI use cases, 
-//! including rendering multiline rich text directly with `FlexContainer`. 
-//! 
-//! Consider submit a pull request if you can improve our performance.
-//! 
-//! # Widgets
-//! 
-//! `AoUI` does not provide event handling widgets,
-//! such as buttons or checkboxes, out of the box, 
-//! but they can easily be built using our event system.
-//! 
-//! Since `AoUI` is a very thin abstraction layer over standard bevy, 
-//! it should be relatively easy to integrate widgets from other crates.
-//! 
-//! Official `AoUI` widgets might live in a separate crate in the future.
+//! Meaning performance is not our primary goal. 
+//! Though performance related suggestions and PRs are welcome.
 //! 
 //! # Todos
 //! 
-//! * Add support for `SpriteSheetBundle`.
-//! * Better `Mesh2D` support.
+//! * Fix debug mode rendering.
+//! * Implement dynamic sized frames.
 //! * Implement change detection.
-//! * Implement some kind of custom spritesheet.
-//! * Better rich text support.
+//! * Implement sprite sheet support.
+//! * Implement Mesh2d support.
 
 pub mod schedule;
 mod rect;
@@ -186,20 +194,18 @@ mod hitbox;
 mod compute;
 mod scaling;
 
-mod flex;
-mod sparse;
+mod layout;
+mod scene;
+mod events;
 
 pub use rect::*;
 pub use components::*;
 pub use schedule::AoUIPlugin;
 pub use hitbox::*;
-pub use flex::*;
-pub use sparse::*;
+pub use layout::*;
+pub use scene::*;
 
 mod bundles;
 pub use bundles::*;
-mod events;
 pub use events::*;
 pub use scaling::*;
-
-pub use bevy_aoui_derive::sprite;

@@ -34,6 +34,9 @@ pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, enitity: 
             sprite: Sprite {
                 color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5),
                 custom_size: Some(Vec2::new(size, size)),
+                ..Default::default()
+            },
+            transform: Transform2D { 
                 anchor: anchor.clone(),
                 ..Default::default()
             },
@@ -47,7 +50,7 @@ pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, enitity: 
 }
 
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
-    let texture = assets.load::<Image, _>("square.png");
+    let texture = assets.load::<Image>("square.png");
     commands.spawn(Camera2dBundle::default());
 
     use rand::prelude::*;

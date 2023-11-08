@@ -1,20 +1,15 @@
 # Components
 
-## Core
+## AoUI
 
-`Core` is a marker component that enables our render pipeline.
-
-Core has 2 modes: `Core::Full` and `Core::Fast`
-
-Setting `Core::Fast` disables rotation, individual scaling and
-relative size(em) from all child components for performance.
+`AoUI` is a marker component that enables our render pipeline.
 
 ## Anchors
 
 `Anchors` provides anchor and center of a sprite.
 
 - `anchor` is used to inherit the parent's position, rotation and scale.
-this is copied from `Sprite` or `Anchor` every frame.
+This also governs the anchor of `Sprite` and `Text2d`.
 
 - `center` is used to apply the sprite's own rotation and scale.
 
@@ -40,7 +35,7 @@ our relative size system and update fields like `custom_size` accordingly.
 - `scale` scale around the sprite's center.
 - `z` z offset from parent.
 
-The Z formula is `parent_z + child_z + eps`,
+The Z formula is `parent_z + child_z + eps * 8.0`,
 so you can ignore it most of the time.
 
 ## RotatedRect

@@ -17,9 +17,9 @@ pub fn main() {
         .add_event::<OnMouseClickWithEntity>()
         .add_systems(Startup, init)
         .add_systems(Update, mouse_events)
-        .add_systems(Update, EventPipe::<OnMouseHover>::system_ok_only.after(mouse_events)
+        .add_systems(Update, OnMouseHover::system_ok_only.after(mouse_events)
             .before(on_hover))
-        .add_systems(Update, EventPipe::<OnMouseClick>::system_ok_only.after(mouse_events)
+        .add_systems(Update, OnMouseClick::system_ok_only.after(mouse_events)
             .before(on_click))
         .add_systems(Update, on_click)
         .add_systems(Update, on_hover)
@@ -31,14 +31,15 @@ macro_rules! add {
         {
             $commands.spawn((AoUISpriteBundle {
                 sprite: Sprite { 
-                    anchor: Anchor::$anchor,
-                    custom_size: Some(Vec2::new(200.0, 200.0)),
                     color: Color::BLUE,
                     ..Default::default()
                 },
+                anchors: Anchors::inherit(Anchor::$anchor),
+                dimension: Dimension::pixels(Vec2::new(200.0, 200.0)),
                 texture: $assets.load("square.png"),
                 ..Default::default()
-            },
+            }, Hitbox ::default(),
+            MouseHoverListener, MouseCLickListener
             ))
         }
     };
@@ -70,14 +71,18 @@ pub struct OnMouseClick(Vec2);
 #[derive(Debug, Event, Clone)]
 pub struct OnMouseClickWithEntity(Vec2, Entity);
 
+
+#[derive(Debug, Component)]
+pub struct MouseHoverListener;
+
 impl CursorEvent for OnMouseHover {
-    type FlagTy = u32;
-    const FLAG: Self::FlagTy = 0;
+    type EventMarker = MouseHoverListener;
     type WithEntity = OnMouseHoverWithEntity;
     type WithoutEntity = ();
+    type Points = [Vec2; 1];
 
-    fn position(&self) -> Vec2 {
-        self.0
+    fn positions(&self) -> [Vec2; 1] {
+        [self.0]
     }
 
     fn with_entity(&self, entity: Entity) -> Self::WithEntity {
@@ -87,25 +92,32 @@ impl CursorEvent for OnMouseHover {
     fn without_entity(&self) -> Self::WithoutEntity {
         ()
     }
+
 }
 
+#[derive(Debug, Component)]
+pub struct MouseCLickListener;
+
 impl CursorEvent for OnMouseClick {
-    type FlagTy = u32;
-    const FLAG: Self::FlagTy = 0;
+
+    type EventMarker = MouseCLickListener;
     type WithEntity = OnMouseClickWithEntity;
     type WithoutEntity = ();
+    type Points = [Vec2; 1];
 
-    fn position(&self) -> Vec2 {
-        self.0
+    fn positions(&self) -> [Vec2; 1] {
+        [self.0]
     }
 
     fn with_entity(&self, entity: Entity) -> Self::WithEntity {
+        dbg!("this");
         OnMouseClickWithEntity(self.0, entity)
     }
 
     fn without_entity(&self) -> Self::WithoutEntity {
         ()
     }
+
 }
 
 pub fn mouse_events(
@@ -116,7 +128,8 @@ pub fn mouse_events(
     mut write: EventWriter<OnMouseHover>,
     mut write2: EventWriter<OnMouseClick>
 ) {
-    let (camera, camera_transform) = camera.single();
+    let (camera, camera_transform) = camera.single();        
+
     let mouse_pos = match windows.single().cursor_position()
         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
         .map(|ray| ray.origin.truncate()){

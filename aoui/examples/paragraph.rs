@@ -40,10 +40,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
         texture: assets.load("square.png"),
         ..Default::default()
-    }, FlexContainer {
-        layout: FlexLayout::Paragraph { 
+    }, Container {
+        layout: Layout::Paragraph { 
             direction: FlexDir::LeftToRight, 
-            alignment: Alignment::Center, 
             stack: FlexDir::TopToBottom,
             stretch: false,
         },
@@ -57,7 +56,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 commands.spawn(AoUITextBundle {
                     text: Text::from_section(w, TextStyle{
                         font: assets.load("Noto.ttf"),
-                        font_size: 24.0,
+                        font_size: 1.0,
                         color: Color::WHITE,
                     }),
                     text_anchor: Anchor::TopLeft,
@@ -65,7 +64,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 }).id()
             );
         });
-        words.push(commands.spawn(LinebreakBundle::new(Vec2::splat(24.0))).id());
+        words.push(commands.spawn(LinebreakBundle::new(Size2::em(1.0, 1.0))).id());
     });
     commands.entity(textbox).push_children(&words[0..words.len()-1]);
 }
@@ -94,24 +93,22 @@ pub fn spin_anc(anc: &Anchor) -> Anchor {
 /// Q, E: Change font size
 /// WSAD: Change FlexContainer size
 pub fn controls(
-    mut flex: Query<&mut FlexContainer>, 
+    mut flex: Query<&mut Container>, 
     mut text: Query<&mut Anchor, With<Text>>, 
     mut main: Query<&mut Sprite>, 
-    mut text_size: Query<&mut Text>, 
+    mut text_size: Query<&mut Dimension>, 
     keys: Res<Input<KeyCode>>) {
     if keys.just_pressed(KeyCode::Key1) {
         for mut sp in flex.iter_mut() {
-            if let FlexLayout::Paragraph { direction, alignment, stack, .. } = &mut sp.layout {
+            if let Layout::Paragraph { direction, stack, .. } = &mut sp.layout {
                 *direction = match direction {
                     FlexDir::LeftToRight => FlexDir::RightToLeft,
                     FlexDir::RightToLeft => {
-                        *alignment = alignment.transpose();
                         *stack = stack.transpose();
                         FlexDir::BottomToTop
                     },
                     FlexDir::BottomToTop => FlexDir::TopToBottom,
                     FlexDir::TopToBottom => {
-                        *alignment = alignment.transpose();
                         *stack = stack.transpose();
                         FlexDir::LeftToRight
                     },
@@ -121,26 +118,8 @@ pub fn controls(
     }
     if keys.just_pressed(KeyCode::Key2) {
         for mut sp in flex.iter_mut() {
-            if let FlexLayout::Paragraph { stack, .. } = &mut sp.layout {
+            if let Layout::Paragraph { stack, .. } = &mut sp.layout {
                 *stack = stack.flip()
-            }
-        }
-    }
-    if keys.just_pressed(KeyCode::Key3) {
-        for mut sp in flex.iter_mut() {
-            if let FlexLayout::Paragraph { direction, alignment, .. } = &mut sp.layout {
-                *alignment = match alignment {
-                    Alignment::Center => {
-                        match direction {
-                            FlexDir::LeftToRight | FlexDir::RightToLeft => Alignment::Top,
-                            FlexDir::BottomToTop | FlexDir::TopToBottom => Alignment::Right,
-                        }
-                    }
-                    Alignment::Bottom => Alignment::Center,
-                    Alignment::Top => Alignment::Bottom,
-                    Alignment::Left => Alignment::Center,
-                    Alignment::Right => Alignment::Left,
-                }
             }
         }
     }
@@ -162,15 +141,19 @@ pub fn controls(
 
     if keys.just_pressed(KeyCode::Q) {
         for mut sp in text_size.iter_mut() {
-            let size = &mut sp.sections.first_mut().unwrap().style.font_size;
-            *size = ((*size) - 1.0).max(1.0);
+            match &mut sp.set_em {
+                SetEM::Ems(em) => *em = (*em - 0.1).max(0.1),
+                em => *em = SetEM::Ems(1.0),
+            }
         }
     }
 
     if keys.just_pressed(KeyCode::E) {
         for mut sp in text_size.iter_mut() {
-            let size = &mut sp.sections.first_mut().unwrap().style.font_size;
-            *size = ((*size) + 1.0).max(1.0);
+            match &mut sp.set_em {
+                SetEM::Ems(em) => *em = (*em + 0.1).max(0.1),
+                em => *em = SetEM::Ems(1.0),
+            }
         }
     }
 

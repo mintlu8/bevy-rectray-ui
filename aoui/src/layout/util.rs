@@ -2,7 +2,7 @@ use bevy::prelude::Vec2;
 use bevy::sprite::Anchor;
 use bevy::prelude::Reflect;
 
-use crate::FlexControl;
+use crate::LayoutControl;
 
 /// Horizontal or Vertical.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
@@ -27,6 +27,7 @@ impl From<bool> for Axis {
         }
     }
 }
+
 
 /// Order items are laid out in a [`FlexContainer`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
@@ -82,6 +83,17 @@ impl From<FlexDir> for Axis {
     }
 }
 
+impl From<&FlexDir> for Axis {
+    fn from(value: &FlexDir) -> Self {
+        match value {
+            FlexDir::LeftToRight => Axis::Horizontal,
+            FlexDir::RightToLeft => Axis::Horizontal,
+            FlexDir::BottomToTop => Axis::Vertical,
+            FlexDir::TopToBottom => Axis::Vertical,
+        }
+    }
+}
+
 /// Where items are aligned to in a [`FlexContainer`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum Alignment {
@@ -102,23 +114,22 @@ impl Alignment {
     }
 }
 
-/// Where to place the next line in a [wrapping layout](FlexLayout::Paragraph).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-pub(crate) enum Stacking {
+pub(crate) enum Binary {
     Lo, Hi
 }
 
-impl Stacking {
+impl Binary {
     /// Returns -1 if Lo, 1 if Hi
     pub fn signum(&self) -> f32 {
         match self {
-            Stacking::Lo => -1.0,
-            Stacking::Hi => 1.0,
+            Binary::Lo => -1.0,
+            Binary::Hi => 1.0,
         }
     }
 }
 
-impl From<u8> for Stacking {
+impl From<u8> for Binary {
     fn from(value: u8) -> Self {
         match value {
             0 => Self::Lo,
@@ -128,7 +139,7 @@ impl From<u8> for Stacking {
     }
 }
 
-impl From<FlexDir> for Stacking {
+impl From<FlexDir> for Binary {
     fn from(value: FlexDir) -> Self {
         match value {
             FlexDir::RightToLeft|FlexDir::TopToBottom => Self::Lo,
@@ -137,40 +148,32 @@ impl From<FlexDir> for Stacking {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct BoxSize {
-    pub offset: Vec2,
-    pub dimension: Vec2,
-    pub margin: Vec2,
-}
-
-impl BoxSize {
-    pub fn with_max_dim(&self, max: Vec2) -> Self{
-        BoxSize {
-            offset: self.offset,
-            dimension: self.dimension.min(max),
-            margin: self.margin
+impl From<&FlexDir> for Binary {
+    fn from(value: &FlexDir) -> Self {
+        match value {
+            FlexDir::RightToLeft|FlexDir::TopToBottom => Self::Lo,
+            FlexDir::LeftToRight|FlexDir::BottomToTop => Self::Hi,
         }
     }
 }
 
-/// Info for positioning an item in a [`FlexContainer`].
+/// Info for positioning an item in a [`Container`].
 #[doc(hidden)]
 #[derive(Debug, Clone)]
-pub struct FlexItem {
+pub struct LayoutItem {
     /// anchor of this item
     pub anchor: Anchor,
     /// dimension of this item
     pub dimension: Vec2,
     /// Force a linebreak on or after this item.
-    pub flex_control: FlexControl,
+    pub control: LayoutControl,
 }
 
-pub(crate) enum SpanAlign {
+pub(crate) enum Trinary {
     Neg, Mid, Pos
 }
 
-impl From<Alignment> for SpanAlign {
+impl From<Alignment> for Trinary {
     fn from(value: Alignment) -> Self {
         match value {
             Alignment::Center => Self::Mid,
@@ -180,7 +183,7 @@ impl From<Alignment> for SpanAlign {
     }
 }
 
-impl From<&Alignment> for SpanAlign {
+impl From<&Alignment> for Trinary {
     fn from(value: &Alignment) -> Self {
         match value {
             Alignment::Center => Self::Mid,
@@ -190,45 +193,50 @@ impl From<&Alignment> for SpanAlign {
     }
 }
 
-impl Axis {
-    pub(crate) fn span_align(&self, anchor: &Anchor) -> SpanAlign {
-        use Anchor::*;
-        match self {
-            Axis::Horizontal => match anchor {
-                BottomLeft|CenterLeft|TopLeft => SpanAlign::Neg,
-                BottomCenter|Center|TopCenter => SpanAlign::Mid,
-                BottomRight|CenterRight|TopRight => SpanAlign::Pos,
-                _ => panic!("Custom anchor not supported"),
-            },
-            Axis::Vertical => match anchor {
-                BottomLeft|BottomCenter|BottomRight => SpanAlign::Neg,
-                CenterLeft|Center|CenterRight => SpanAlign::Mid,
-                TopLeft|TopCenter|TopRight => SpanAlign::Pos,
-                _ => panic!("Custom anchor not supported"),
-            },
-        }
+
+pub(super) fn hbucket(anchor: &Anchor) -> Trinary {
+    match anchor {
+        Anchor::BottomLeft => Trinary::Neg,
+        Anchor::CenterLeft => Trinary::Neg,
+        Anchor::TopLeft => Trinary::Neg,
+        Anchor::BottomCenter => Trinary::Mid,
+        Anchor::Center => Trinary::Mid,
+        Anchor::TopCenter => Trinary::Mid,
+        Anchor::BottomRight => Trinary::Pos,
+        Anchor::CenterRight => Trinary::Pos,
+        Anchor::TopRight => Trinary::Pos,
+        Anchor::Custom(_) => panic!("Custom anchor is not alloed in span."),
     }
 }
 
-pub(crate) fn maxlen_minor<'t, const DIR: u8>(items: impl IntoIterator<Item = &'t FlexItem>) -> Vec2 {
-    match DIR / 2 == 0{
-        false => maxlen::<false>(items),
-        true => maxlen::<true>(items),
+
+pub(super) fn vbucket(anchor: &Anchor) -> Trinary {
+    match anchor {
+        Anchor::BottomLeft => Trinary::Neg,
+        Anchor::BottomCenter => Trinary::Neg,
+        Anchor::BottomRight => Trinary::Neg,
+        Anchor::CenterLeft => Trinary::Mid,
+        Anchor::Center => Trinary::Mid,
+        Anchor::CenterRight => Trinary::Mid,
+        Anchor::TopLeft => Trinary::Pos,
+        Anchor::TopCenter => Trinary::Pos,
+        Anchor::TopRight => Trinary::Pos,
+        Anchor::Custom(_) => panic!("Custom anchor is not alloed in span."),
     }
 }
 
-pub(crate) fn maxlen<'t, const AXIS: bool>(items: impl IntoIterator<Item = &'t FlexItem>) -> Vec2 {
-    let axis: Axis = AXIS.into();
-    match axis {
-        Axis::Horizontal => Vec2::new(
-            items.into_iter()
-                .map(|x: &FlexItem| x.dimension.x)
-                .max_by(|a, b| a.total_cmp(b))
-                .unwrap_or(0.0), 0.0),
-        Axis::Vertical => Vec2::new(0.0,
-            items.into_iter()
-                .map(|x: &FlexItem| x.dimension.y)
-                .max_by(|a, b| a.total_cmp(b))
-                .unwrap_or(0.0))
-    }
+pub(super) fn posx(v: Vec2) -> Vec2 {
+    Vec2::new(v.x, 0.0)
+}
+
+pub(super) fn negx(v: Vec2) -> Vec2 {
+    Vec2::new(-v.x, 0.0)
+}
+
+pub(super) fn posy(v: Vec2) -> Vec2 {
+    Vec2::new(0.0, v.y)
+}
+
+pub(super) fn negy(v: Vec2) -> Vec2 {
+    Vec2::new(0.0, -v.y)
 }

@@ -1,4 +1,8 @@
 # Summary
 
 - [Components](./components.md)
-- [Widgets](./dsl.md)
+- [Size](./size.md)
+- [DSL](./dsl.md)
+  - [Syntax](./syntax.md)
+  - [Structs](./structs.md)
+  - [Widgets](./widgets.md)

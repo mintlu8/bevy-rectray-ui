@@ -36,7 +36,7 @@ pub fn main() {
 pub struct Root;
 
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
-    let texture = assets.load::<Image, _>("square.png");
+    let texture = assets.load::<Image>("square.png");
     commands.spawn(Camera2dBundle::default());
 
     let root = commands.spawn((AoUISpriteBundle {
@@ -48,13 +48,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
         texture: texture.clone(),
         ..Default::default()
-    }, FlexContainer {
-        layout: FlexLayout::Table {
+    }, Container {
+        layout: Layout::Table {
             columns: Columns::Dynamic(4),
             row_dir: FlexDir::LeftToRight,
             column_dir: FlexDir::TopToBottom,
-            row_align: Alignment::Left,
-            column_align: Alignment::Bottom,
             stretch: false,
         },
         margin: Size2::pixels(20.0, 20.0),
@@ -94,7 +92,7 @@ pub fn spawn(commands: &mut Commands, size: Vec2, flexbox: Entity, assets: &Res<
             anchor: Anchor::TopLeft,
             ..Default::default()
         },
-        texture: assets.load::<Image, _>("square.png"),
+        texture: assets.load::<Image>("square.png"),
         ..Default::default()
     }).id();
     commands.entity(flexbox).add_child(child);

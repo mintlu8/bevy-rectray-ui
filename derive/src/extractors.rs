@@ -5,7 +5,6 @@ use quote::{quote, format_ident, ToTokens};
 
 pub struct Length(pub Ident, pub f32);
 
-ident_validator!(XLit "x");
 ident_validator!(PxLit "px");
 ident_validator!(EmLit "em");
 ident_validator!(RemLit "rem");
@@ -19,13 +18,12 @@ impl FromMacro for Length {
     fn from_many(tokens: TokenStream) -> Result<Self, Error> {
         let mut iter = tokens.into_iter();
         let Number(v) = iter.extract()?;
-        let ident = match iter.extract()? {
-            Either4::A(PxLit) => format_ident!("Pixels"),
-            Either4::B(EmLit) => format_ident!("Pixels"),
-            Either4::C(RemLit) => format_ident!("Pixels"),
-            Either4::D(PunctOf::<'%'>) => format_ident!("Pixels"),
-        };
-        Ok(Self(ident, v))
+        Ok(match iter.extract()? {
+            Either4::A(PxLit) => Self(format_ident!("Pixels"), v),
+            Either4::B(EmLit) => Self(format_ident!("Em"), v),
+            Either4::C(RemLit) => Self(format_ident!("Rem"), v),
+            Either4::D(PunctOf::<'%'>) => Self(format_ident!("Percent"), v/100.0),
+        })
     }
 }
 
@@ -51,16 +49,6 @@ impl ToTokens for Size2 {
     }
 }
 
-impl Size2 {
-    pub fn get_raw(&self) -> Option<Vec2> {
-        if self.0[0].0 == format_ident!("px") && self.0[1].0 == format_ident!("px") {
-            Some(Vec2([self.0[0].1, self.0[1].1]))
-        } else {
-            None
-        }
-    }
-}
-
 pub struct SetEM(Ident, [f32; 2]);
 
 impl FromMacro for SetEM {
@@ -71,15 +59,12 @@ impl FromMacro for SetEM {
 
     fn from_many(tokens: TokenStream) -> Result<Self, Error> {
         let mut iter = tokens.into_iter();
+        let Repeat::<_, 2>(NumberList(list)) = iter.extract()?;
         match iter.extract()? {
-            Either::A(XLit) => {
-                let Repeat::<_, 2>(NumberList(list)) = iter.extract()?;
-                Ok(Self(format_ident!("Mult"), list))
-            }
-            Either::B(Repeat::<_, 2>(NumberList(list))) => {
-                let RemLit = iter.extract()?;
-                Ok(Self(format_ident!("MultRem"), list))
-            }
+            OrEndOfStream(None) => Ok(Self(format_ident!("Pixels"), list)),
+            OrEndOfStream(Some(Either3::A(PxLit))) => Ok(Self(format_ident!("Pixels"), list)),
+            OrEndOfStream(Some(Either3::B(EmLit))) => Ok(Self(format_ident!("Ems"), list)),
+            OrEndOfStream(Some(Either3::C(RemLit))) => Ok(Self(format_ident!("Rems"), list)),
         }
     }
 }

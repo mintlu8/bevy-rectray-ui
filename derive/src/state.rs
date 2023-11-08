@@ -30,12 +30,17 @@ pub struct State {
     // shared
     pub color: MaybeExpr<Color>,
     pub size: MaybeExpr<Vec2>,
+
+    pub widget: Option<IdentString>,
     
     /// children
     #[macroex(repeat, rename="child")]
     pub children: Vec<TokenStream>,
     // #[macroex(repeat, rename="children")]
     // pub child_iter: Vec<TokenStream>,
+
+    pub background: Option<TokenStream>,
+
 
     /// extra components
     #[macroex(repeat, rename="extra")]
@@ -48,7 +53,7 @@ pub struct State {
     // hitbox
     pub hitbox: MaybeExpr<HitboxShape>,
     pub hitbox_size: MaybeExpr<Vec2>,
-    pub mouse_event: MaybeExpr<u32>,
+    pub hitbox_flag: MaybeExpr<u32>,
 
 
     // sprite
@@ -78,20 +83,20 @@ pub struct State {
     pub y_axis: Option<Ident>,
     pub origin: MaybeExpr<Vec2>,
     pub scene_transform: MaybeExpr<Affine2>,
-    pub unit_rect: MaybeExpr<NumberList<[f32; 4]>>,
+    pub cell_rect: MaybeExpr<NumberList<[f32; 4]>>,
     pub position: MaybeExpr<Vec2>,
 
     // text
     pub text: Option<String>,
     pub font: Option<TokenStream>,
     pub font_size: Option<Number<f32>>,
-    pub format: Option<String>,
+    pub multiline: Option<String>,
     pub text_anchor: Option<TokenTree>,
 }
 
 
 impl State {
     pub fn does_render(&self) -> bool {
-        self.sprite.is_some() || self.font.is_some()
+        self.sprite.is_some() || self.text.is_some() || self.multiline.is_some()
     }
 }

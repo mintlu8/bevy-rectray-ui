@@ -6,22 +6,6 @@ use crate::{Size2, SetEM};
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct AoUI;
 
-/// Contains `anchor` and `center` of the sprite.
-#[derive(Debug, Clone, Component, Default, Reflect)]
-pub struct Anchors{
-    /// Governs the rotation and scale specified in [`Transform2D`].
-    /// This also serves as the [`Transform`] center is needed.
-    ///
-    /// By default this is the same as [`anchor`].
-    pub center: Option<Anchor>,
-    /// Where the sprite is parented to.
-    /// Offset, parent rotation and parent scale
-    /// are applied through this point.
-    ///
-    /// This always overwrites the `anchor` field in standard bevy components.
-    pub anchor: Anchor,
-}
-
 /// Size of the sprite.
 ///
 /// If `Copied` and paired with a component that has a dimension like [`Sprite`],
@@ -58,8 +42,8 @@ pub struct Dimension {
     /// 
     /// This value is computed every frame. 
     /// 
-    /// By default `(16, 16)`.
-    pub em: Vec2,
+    /// By default `16`.
+    pub em: f32,
 }
 
 impl Default for Dimension {
@@ -68,46 +52,76 @@ impl Default for Dimension {
             dim: DimensionSize::Copied,
             set_em: SetEM::None,
             size: Vec2::ZERO,
-            em: Vec2::new(16.0, 16.0),
+            em: 16.0,
         }
     }
 }
 
 impl Dimension {
 
-    pub fn pixels(size: Vec2) -> Self {
-        Self {
-            dim: DimensionSize::Owned(size.into()),
-            size,
-            ..Default::default()
-        }
-    }
+    /// Dimension copied from the likes of [`Sprite`], [`Image`] or [`TextLayoutInfo`](bevy::text::TextLayoutInfo).
+    pub const COPIED: Self = Self {
+        dim: DimensionSize::Copied,
+        set_em: SetEM::None,
+        size: Vec2::ZERO,
+        em: 16.0,
+    };
 
-    pub const fn copied() -> Self {
+    pub const INHERIT: Self = Self {
+        dim: DimensionSize::Owned(Size2::INHERIT),
+        set_em: SetEM::None,
+        size: Vec2::ZERO,
+        em: 16.0,
+    };
+
+
+    /// Owned dimension in pixels.
+    pub const fn pixels(size: Vec2) -> Self {
         Self {
-            dim: DimensionSize::Copied,
+            dim: DimensionSize::Owned(Size2::pixels(size.x, size.y)),
             set_em: SetEM::None,
             size: Vec2::ZERO,
-            em: Vec2::ZERO,
+            em: 16.0,
         }
     }
 
+    /// Owned dimension in pixels.
+    pub const fn percentage(size: Vec2) -> Self {
+        Self {
+            dim: DimensionSize::Owned(Size2::percent(size.x, size.y)),
+            set_em: SetEM::None,
+            size: Vec2::ZERO,
+            em: 16.0,
+        }
+    }
+
+    /// Owned dimension in relative size.
     pub const fn owned(size: Size2) -> Self {
         Self {
             dim: DimensionSize::Owned(size),
             set_em: SetEM::None,
             size: Vec2::ZERO,
-            em: Vec2::ZERO,
+            em: 16.0,
+        }
+    }
+
+    /// Add a em modifier.
+    pub const fn with_em(self, em: SetEM) -> Self {
+        Self {
+            dim: self.dim,
+            set_em: em,
+            size: self.size,
+            em: self.em,
         }
     }
 
     /// Updates dimension and returns size and em
-    pub fn update(&mut self, parent: Vec2, em: Vec2, rem: Vec2) -> (Vec2, Vec2) {
+    pub fn update(&mut self, parent: Vec2, em: f32, rem: f32) -> (Vec2, f32) {
         self.em = match self.set_em{
             SetEM::None => em,
             SetEM::Pixels(v) => v,
-            SetEM::Scale(v) => em * v,
-            SetEM::ScaleRem(v) => rem * v,
+            SetEM::Ems(v) => em * v,
+            SetEM::Rems(v) => rem * v,
         };
         match self.dim {
             DimensionSize::Copied => (self.size, self.em),
@@ -119,6 +133,7 @@ impl Dimension {
         }
     }
 
+    /// Obtain a context-less underlying value.
     pub fn raw(&self) -> Vec2 {
         match &self.dim {
             DimensionSize::Copied => self.size,
@@ -126,23 +141,54 @@ impl Dimension {
             DimensionSize::Owned(v) => v.raw(),
         }
     }
-}
 
-impl Anchors {
-    pub fn get_center(&self) -> &Anchor{
-        match &self.center {
-            Some(center) => center,
-            None => &self.anchor,
+    /// Get mutable access to the underlying owned value.
+    /// 
+    /// For ease of use with egui.
+    #[doc(hidden)]
+    pub fn raw_mut(&mut self) -> &mut Vec2 {
+        match &mut self.dim {
+            DimensionSize::Copied => panic!("Cannot get raw of copied value."),
+            DimensionSize::Scaled(_) => panic!("Cannot get raw of copied value."),
+            DimensionSize::Owned(v) => v.raw_mut(),
+        }
+    }
+    
+    /// Run a function if dimension is owned.
+    pub fn spawn_owned(&self, f: impl FnOnce(Vec2)) {
+        match self.dim {
+            DimensionSize::Owned(_) => f(self.size),
+            _ => (),
+        }
+    }
+
+    /// Update by a copied value.
+    pub fn update_copied(&mut self, value: impl FnOnce() -> Vec2) {
+        match self.dim {
+            DimensionSize::Copied => self.size = value(),
+            DimensionSize::Scaled(scale) => self.size = value() * scale,
+            _ => (),
         }
     }
 }
 
-/// A 2D transform component for AoUI
-#[derive(Debug, Clone, Copy, Component, Reflect)]
+/// The 2D transform component for AoUI
+#[derive(Debug, Clone, Component, Reflect)]
 pub struct Transform2D{
+    /// Governs the rotation and scale specified in [`Transform2D`].
+    /// This also serves as the [`Transform`] center is needed.
+    ///
+    /// By default this is the same as [`anchor`].
+    pub center: Option<Anchor>,
+    /// Where the sprite is parented to.
+    /// Offset, parent rotation and parent scale
+    /// are applied through this point.
+    ///
+    /// This always overwrites the `anchor` field in standard bevy components.
+    pub anchor: Anchor,
     /// Offset from parent's anchor.
     pub offset: Size2,
-    /// Z depth, by default, this is `parent_z + z + eps`
+    /// Z depth, by default, this is `parent_z + z + eps * 8`
     pub z: f32,
     /// Rotation around [`center`].
     pub rotation: f32,
@@ -152,21 +198,32 @@ pub struct Transform2D{
 
 /// An intermediate screen space transform output
 /// centered on `(0,0)` and scaled to window size.
+/// 
+/// ScreenSpaceTransform will build a `GlobalTransform` on `anchor`.
+/// If **unset** and `BuildTransform` is present, a transform is built
+/// on `center` by bevy's own pipeline. This can be useful for integrating with
+/// [`Mesh`](bevy::prelude::Mesh) or third party crates like
+/// [`bevy_prototype_lyon::Geometry`](https://docs.rs/bevy_prototype_lyon/latest/bevy_prototype_lyon/geometry/trait.Geometry.html)
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct ScreenSpaceTransform(pub Affine3A);
 
 impl Transform2D {
 
+    pub fn get_center(&self) -> &Anchor{
+        match &self.center {
+            Some(center) => center,
+            None => &self.anchor,
+        }
+    }
+
     pub const DEFAULT: Self = Self {
+        anchor: Anchor::Center,
+        center: None, 
         offset: Size2::ZERO,
         rotation: 0.0,
         z: 0.0,
         scale: Vec2::ONE,
     };
-
-    pub fn new(offset: impl Into<Size2>) -> Self {
-        Self { offset: offset.into(), rotation: 0.0, scale: Vec2::ONE, z: 0.0 }
-    }
 
     pub fn with_offset(mut self, offset: impl Into<Size2>) -> Self {
         self.offset = offset.into();
@@ -187,35 +244,31 @@ impl Transform2D {
         self.z = z;
         self
     }
+
+    pub fn with_anchor(mut self, anchor: Anchor) -> Self {
+        self.anchor = anchor;
+        self
+    }
+
+    pub fn with_center(mut self, center: Anchor) -> Self {
+        self.center = Some(center);
+        self
+    }
 }
 
 impl Default for Transform2D {
     fn default() -> Self {
-        Self { offset: Size2::ZERO, rotation: 0.0, scale: Vec2::ONE, z: 0.0 }
+        Self::DEFAULT
     }
 }
 
-impl Anchors {
-    pub const fn inherit(anchor: Anchor) -> Self{
-        Self {
-            center: None,
-            anchor,
-        }
-    }
-
-    pub const fn new(anchor: Anchor, center: Anchor) -> Self{
-        Self {
-            center: Some(center),
-            anchor,
-        }
-    }
-}
-
-
-/// Generate a transform component for intergration with bevy.
-///
-/// The generated transform uses computed [`center`](Anchors::center) as its translation
-/// and does not affect the actual transform of the sprite.
+/// Generate a [`Transform`] component at a custom anchor for intergration with bevy.
+/// 
+/// If [`GlobalTransform`] is present and [`ScreenSpaceTransform`] is not,
+/// the output will be used for self rendering.
+/// 
+/// If `ScreenSpaceTransform` is preset, this component will have no effect
+/// on self rendering.
 #[derive(Debug, Clone, Component, Default, Reflect)]
-pub struct BuildTransform;
+pub struct BuildTransform(pub Anchor);
 

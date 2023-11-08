@@ -11,9 +11,9 @@ mod state;
 mod flex;
 mod extractors;
 
-/// DSL for AoUI
+/// Domain specific language for AoUI.
 /// 
-/// See [`AoUI Book`] for more information.
+/// See `AoUI Book` for more information.
 #[proc_macro]
 #[proc_macro_error]
 pub fn sprite(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -53,8 +53,8 @@ fn extract_fields(iter: &mut impl Iterator<Item=proc_macro2::TokenTree>) -> Vec<
 
 fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
     let extracted_fields = extract_fields(&mut iter.clone());
-    let state = match State::extract(&mut iter) {
-        Ok(s) => s,
+    let (span, state) = match <Spanned<State>>::extract(&mut iter) {
+        Ok(Spanned(a,b)) => (a, b),
         Err(e) => abort_this!(e),
     };
 
@@ -121,7 +121,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
         if let Some(scale) = state.hitbox_size.get() {
             hitbox.push(quote!(scale: #scale));
         }
-        if let Some(flag) = state.mouse_event.get() {
+        if let Some(flag) = state.hitbox_flag.get() {
             hitbox.push(quote!(flag: #flag));
         }
         bundle.push(quote!{::bevy_aoui::Hitbox {#(#hitbox,)* ..Default::default()}});
@@ -174,15 +174,19 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
         let mut style = Vec::new();
 
         if let Some(text) = state.text {
-            section.push(quote!(value: #text));
+            section.push(quote!(value: #text.to_string()));
         }
 
         if let Some(font) = state.font {
             style.push(quote!(font: #font));
+        }else {
+            abort!(span, "Expect font.")
         }
 
         if let Some(Number(size)) = state.font_size {
             style.push(quote!(font_size: #size));
+        } else {
+            abort!(span, "Expect font size.")
         }
 
         if let Some(color) = state.color.get() {
@@ -195,17 +199,12 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
             bundle.push(quote!(::bevy::sprite::Anchor::default()))
         }
 
-        if let Some(anchor) = state.anchor.get() {
-            bundle.push(quote!(#anchor));
-        } else {
-            bundle.push(quote!(::bevy::sprite::Anchor::Center));
-        }
-
         if let Some(size) = state.size.get() {
             bundle.push(quote!(::bevy::text::Text2dBounds{size: #size}));
         } else {
             bundle.push(quote!(::bevy::text::Text2dBounds::default()));
         }
+
         bundle.push(quote!(::bevy::text::TextLayoutInfo::default()));
         bundle.push(quote!{::bevy::text::Text {
             sections: vec![
@@ -291,7 +290,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
                             stretch: #stretch,
                         }));
                     } else {
-                        abort!(::proc_macro2::Span::call_site(), "Expected cell_count or cell_size in FlexLayout::Grid")
+                        abort!(span, "Expected cell_count or cell_size in FlexLayout::Grid")
                     }
                 },
                 Table => {
@@ -321,7 +320,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
                                 stretch: #stretch,
                             }));
                         },
-                        None => abort!(::proc_macro2::Span::call_site(), "Expected columns or cell_size in FlexLayout::Table"),
+                        None => abort!(span, "Expected columns or cell_size in FlexLayout::Table"),
                     }
                 },
             }
@@ -346,7 +345,10 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
         MaybeExpr::Value(layout) => {
             let mut container = Vec::new();
 
-            let size = state.cell_size.get().expect_or_abort("Expected cell_size for scene.");
+            let size = match state.cell_size.get(){
+                Some(s) => s,
+                None => abort!(span, "Expect cell_size in scene.")
+            };
 
             match layout {
                 SparseLayout::Rectangles => {

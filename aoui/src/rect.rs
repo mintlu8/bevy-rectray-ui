@@ -18,30 +18,31 @@ pub struct RotatedRect{
 pub struct ParentInfo {
     pub anchor: Vec2,
     pub dimension: Vec2,
-    pub em: Vec2,
     pub rotation: f32,
     pub z: f32,
+    // this is already baked in dimension.
     pub scale: Vec2,
+    pub em: f32,
 }
 
 impl ParentInfo {
-    pub fn new(quad: &RotatedRect, anc: &Anchor, dimension: Vec2, em: Vec2) -> Self{
+    pub fn new(rect: &RotatedRect, anc: &Anchor, dimension: Vec2, em: f32) -> Self{
         ParentInfo{
-            anchor: quad.anchor(anc),
-            rotation: quad.rotation,
-            scale: quad.scale,
-            z: quad.z,
+            anchor: rect.anchor(anc),
+            rotation: rect.rotation,
+            scale: rect.scale,
+            z: rect.z,
             dimension,
             em,
         }
     }
 
-    pub fn from_anchor(quad: &RotatedRect, anc: Vec2, dimension: Vec2, em: Vec2) -> Self{
+    pub fn from_anchor(rect: &RotatedRect, anc: Vec2, dimension: Vec2, em: f32) -> Self{
         ParentInfo{
-            anchor: anc,
-            rotation: quad.rotation,
-            scale: quad.scale,
-            z: quad.z,
+            anchor: rect.anchor(&Anchor::Custom(anc)),
+            rotation: rect.rotation,
+            scale: rect.scale,
+            z: rect.z,
             dimension,
             em,
         }
@@ -55,55 +56,43 @@ impl RotatedRect {
         self.center + Vec2::from_angle(self.rotation).rotate(self.dimension * anchor.as_vec())
     }
 
-    /// Find the screen space position of an anchor, assuming no rotation.
+    /// convert a screen sapce point to local space, centered on `Center`.
     #[inline]
-    pub fn anchor_fast(&self, anchor: &Anchor) -> Vec2 {
-        self.center + self.dimension * anchor.as_vec()
+    pub fn local_space(&self, position: Vec2) -> Vec2 {
+        Vec2::from_angle(-self.rotation).rotate(position - self.center)
+    }
+
+    /// convert a screen space point to local space, centered on `BottomLeft`.
+    #[inline]
+    pub fn local_space_bl(&self, position: Vec2) -> Vec2 {
+        Vec2::from_angle(-self.rotation).rotate(position - self.center) + self.dimension / 2.0
     }
 
     /// Create an [`RotatedRect`] represeting the sprite's position on the screen space
     /// and an [`Affine3A`] that converts into the [`GlobalTransform`] suitable from the screen space
     pub fn construct(parent: &ParentInfo, anchor: &Anchor, offset: Vec2, dim: Vec2,
             center: &Anchor, rotation: f32, scale: Vec2, z: f32) -> (Self, Affine3A){
-
         let parent_anchor = parent.anchor;
         // apply offset and dimension
         let self_center = offset + (center.as_vec() - anchor.as_vec()) * dim;
-        let self_origin = offset + (Anchor::Center.as_vec() - anchor.as_vec()) * dim;
-        // pass1 applies rotation and scale inherited from parent
-        let pass1_center = Vec2::from_angle(parent.rotation).rotate(self_center * parent.scale) + parent_anchor;
-        let pass1_origin = Vec2::from_angle(parent.rotation).rotate(self_origin * parent.scale) + parent_anchor;
-        // pass2 applies the sprites own rotation and scale
-        let pass2_origin = pass1_center + Vec2::from_angle(rotation).rotate((pass1_origin - pass1_center) * scale);
+        let dir = (Anchor::Center.as_vec() - center.as_vec()) * dim;
+
+        let out_center = Vec2::from_angle(parent.rotation).rotate(self_center * parent.scale) + parent_anchor;
+        let rotation = parent.rotation + rotation;
+        let scale = parent.scale * scale;
+        let out_origin = out_center + Vec2::from_angle(rotation).rotate(dir * scale);
+
         let rect = Self {
-            center: pass2_origin, z,
-            dimension: dim * parent.scale * scale,
-            rotation: parent.rotation + rotation,
-            scale: parent.scale * scale,
+            center: out_origin, z,
+            dimension: dim * scale,
+            rotation,
+            scale,
         };
         (rect,
         Affine3A::from_scale_rotation_translation(
-            (parent.scale * scale).extend(1.0),
-            Quat::from_rotation_z(parent.rotation + rotation),
+            scale.extend(1.0),
+            Quat::from_rotation_z(rotation),
             rect.anchor(anchor).extend(z)
-        ))
-    }
-
-    /// Create an [`RotatedRect`] represeting the sprite's position on the screen space
-    /// and an [`Affine3A`] that converts into the [`GlobalTransform`] suitable from the screen space
-    /// This only considers parent's scale.
-    pub fn construct_no_rot_scale(parent: &ParentInfo, anchor: &Anchor, offset: Vec2, dim: Vec2, z: f32) -> (Self, Affine3A){
-        let dim = dim * parent.scale;
-        let origin = parent.anchor + offset * parent.scale + (Anchor::Center.as_vec() - anchor.as_vec()) * dim;
-        let rect = Self {
-            center: origin, z,
-            dimension: dim, 
-            rotation: 0.0,
-            scale: Vec2::ONE,
-        };
-        (rect,
-        Affine3A::from_translation(
-            rect.anchor_fast(anchor).extend(z)
         ))
     }
 }

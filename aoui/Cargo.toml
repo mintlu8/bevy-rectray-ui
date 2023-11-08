@@ -4,17 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = "^0.11"
-colorthis = "^0.1.1"
-bevy-aoui-derive = { path = "../derive" }
+bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite", "bevy_text"] }
+itertools = "^0.11"
 
 
 [features]
-default = ["bundles", "ui"]
-## Enable ui features and macro based DSL
-ui = []
+default = ["bundles"]
 ## Enable alternative versions of bevy's sprite, spritesheet and text bundles.
 bundles = []
 
 [dev-dependencies]
+bevy_egui = "0.23"
 rand = "0.8.5"
+bevy = { version = "^0.12" }
+

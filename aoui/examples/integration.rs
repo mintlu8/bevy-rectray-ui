@@ -64,7 +64,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     add!(commands, assets, BottomRight);
 }
 
-pub fn change_anchor(mut query: Query<&mut Anchors>, keys: Res<Input<KeyCode>>) {
+pub fn change_anchor(mut query: Query<&mut Transform2D>, keys: Res<Input<KeyCode>>) {
     if keys.just_pressed(KeyCode::Space) {
         for mut sp in query.iter_mut() {
             match sp.center.as_ref().unwrap() {

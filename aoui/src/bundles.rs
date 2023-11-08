@@ -4,7 +4,7 @@ use bevy::{
     text::{Text2dBounds, TextLayoutInfo}
 };
 
-use crate::{Transform2D, RotatedRect, ScreenSpaceTransform, Hitbox, AoUI, Anchors, BuildTransform, FlexControl, Dimension};
+use crate::{Transform2D, RotatedRect, ScreenSpaceTransform, Hitbox, AoUI, BuildTransform, LayoutControl, Dimension, Size2};
 
 
 /// The minimal bundle required for AoUI to function.
@@ -13,7 +13,6 @@ use crate::{Transform2D, RotatedRect, ScreenSpaceTransform, Hitbox, AoUI, Anchor
 #[derive(Debug, Default, Bundle)]
 pub struct AoUIBundle {
     pub core: AoUI,
-    pub properties: Anchors,
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
@@ -40,17 +39,20 @@ pub struct BuildTransformBundle {
 #[derive(Debug, Bundle)]
 pub struct LinebreakBundle {
     bundle: AoUIBundle,
-    control: FlexControl,
+    control: LayoutControl,
 }
 
 impl LinebreakBundle {
-    pub fn new(size: Vec2) -> Self{
+    pub fn new(size: impl Into<Size2>) -> Self{
         Self {
             bundle: AoUIBundle { 
-                dimension: Dimension::pixels(size), 
+                dimension: Dimension {
+                    dim: crate::DimensionSize::Owned(size.into()),
+                    ..Default::default()
+                }, 
                 ..Default::default()
             },
-            control: FlexControl::LinebreakMarker,
+            control: LayoutControl::LinebreakMarker,
         }
     }
 }
@@ -66,7 +68,6 @@ impl Default for LinebreakBundle {
 #[derive(Debug, Default, Bundle)]
 pub struct AoUISpriteBundle {
     pub core: AoUI,
-    pub anchors: Anchors,
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
@@ -82,7 +83,6 @@ pub struct AoUISpriteBundle {
 #[derive(Debug, Default, Bundle)]
 pub struct AoUITextBundle {
     pub core: AoUI,
-    pub properties: Anchors,
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
@@ -102,10 +102,10 @@ pub struct AoUITextBundle {
 #[derive(Debug, Default, Bundle)]
 pub struct AoUIMaterialMesh2dBundle<M: Material2d>{
     pub core: AoUI,
-    pub properties: Anchors,
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
+    pub build: BuildTransform,
     pub screen: ScreenSpaceTransform,
     pub mesh: Mesh2dHandle,
     pub material: Handle<M>,
