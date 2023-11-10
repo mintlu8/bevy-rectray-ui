@@ -1,44 +1,38 @@
-use bevy::{prelude::*, sprite::Anchor, reflect::Reflect, math::Affine3A};
+use bevy::{prelude::*, sprite::Anchor, reflect::Reflect};
 
 use crate::{Size2, SetEM};
 
-/// Marker component for our rendering.
+/// Marker component for the default schedules.
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct AoUI;
 
 /// Size of the sprite.
 ///
 /// If `Copied` and paired with a component that has a dimension like [`Sprite`],
-/// this will be copied every frame.
-/// 
-/// This is useful when paired with a dynamic sized item like text or atlas.
-/// 
-/// If `Scaled`, acts as `Copied` but scales the copied dimension without 
-/// modifying the scale of the sprite.
+/// this will be copied every frame,
+/// useful when paired with a dynamic sized item like text or atlas.
 /// 
 /// If `Owned` we will try to edit the dimension of the paired sprite
 #[derive(Debug, Clone, Reflect)]
 pub enum DimensionSize {
     /// Copy `size` from sprite, rect, image, text, etc.
     Copied,
-    /// Copy and scale `size` from sprite, rect, image, text, etc.
-    Scaled(Vec2),
     /// Governs size of sprite, rect, image, text, etc.
     Owned(Size2)
 }
 
-/// Controls the dimension, absolute or relative, of the sprite
+/// Controls the dimension of the sprite
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct Dimension {
     /// Input for dimension.
     pub dim: DimensionSize,
-    /// Modifies the relative size `em`.
+    /// Modifies font size `em`.
     pub set_em: SetEM,
     /// Evaluated size in pixels.
     ///     
     /// This value is computed every frame. 
     pub size: Vec2,
-    /// Relative size `em` on this sprite.
+    /// Font size `em` on this sprite.
     /// 
     /// This value is computed every frame. 
     /// 
@@ -59,7 +53,7 @@ impl Default for Dimension {
 
 impl Dimension {
 
-    /// Dimension copied from the likes of [`Sprite`], [`Image`] or [`TextLayoutInfo`](bevy::text::TextLayoutInfo).
+    /// Dimension copied paired components.
     pub const COPIED: Self = Self {
         dim: DimensionSize::Copied,
         set_em: SetEM::None,
@@ -67,6 +61,7 @@ impl Dimension {
         em: 16.0,
     };
 
+    /// Dimension inherited from parent.
     pub const INHERIT: Self = Self {
         dim: DimensionSize::Owned(Size2::INHERIT),
         set_em: SetEM::None,
@@ -85,7 +80,7 @@ impl Dimension {
         }
     }
 
-    /// Owned dimension in pixels.
+    /// Owned dimension in percentage.
     pub const fn percentage(size: Vec2) -> Self {
         Self {
             dim: DimensionSize::Owned(Size2::percent(size.x, size.y)),
@@ -95,7 +90,7 @@ impl Dimension {
         }
     }
 
-    /// Owned dimension in relative size.
+    /// Owned dimension.
     pub const fn owned(size: Size2) -> Self {
         Self {
             dim: DimensionSize::Owned(size),
@@ -125,7 +120,6 @@ impl Dimension {
         };
         match self.dim {
             DimensionSize::Copied => (self.size, self.em),
-            DimensionSize::Scaled(_) => (self.size, self.em),
             DimensionSize::Owned(v) => {
                 self.size = v.as_pixels(parent, em, rem);
                 (self.size, self.em)
@@ -133,29 +127,27 @@ impl Dimension {
         }
     }
 
-    /// Obtain a context-less underlying value.
+    /// Obtain a contextless underlying value.
     pub fn raw(&self) -> Vec2 {
         match &self.dim {
             DimensionSize::Copied => self.size,
-            DimensionSize::Scaled(_) => self.size,
             DimensionSize::Owned(v) => v.raw(),
         }
     }
 
-    /// Get mutable access to the underlying owned value.
+    /// Gain mutable access to the underlying owned value.
     /// 
     /// For ease of use with egui.
     #[doc(hidden)]
     pub fn raw_mut(&mut self) -> &mut Vec2 {
         match &mut self.dim {
             DimensionSize::Copied => panic!("Cannot get raw of copied value."),
-            DimensionSize::Scaled(_) => panic!("Cannot get raw of copied value."),
             DimensionSize::Owned(v) => v.raw_mut(),
         }
     }
     
     /// Run a function if dimension is owned.
-    pub fn spawn_owned(&self, f: impl FnOnce(Vec2)) {
+    pub fn run_if_owned(&self, f: impl FnOnce(Vec2)) {
         match self.dim {
             DimensionSize::Owned(_) => f(self.size),
             _ => (),
@@ -166,7 +158,6 @@ impl Dimension {
     pub fn update_copied(&mut self, value: impl FnOnce() -> Vec2) {
         match self.dim {
             DimensionSize::Copied => self.size = value(),
-            DimensionSize::Scaled(scale) => self.size = value() * scale,
             _ => (),
         }
     }
@@ -178,7 +169,7 @@ pub struct Transform2D{
     /// Governs the rotation and scale specified in [`Transform2D`].
     /// This also serves as the [`Transform`] center is needed.
     ///
-    /// By default this is the same as [`anchor`].
+    /// By default this is the same as `anchor`.
     pub center: Option<Anchor>,
     /// Where the sprite is parented to.
     /// Offset, parent rotation and parent scale
@@ -196,17 +187,6 @@ pub struct Transform2D{
     pub scale: Vec2,
 }
 
-/// An intermediate screen space transform output
-/// centered on `(0,0)` and scaled to window size.
-/// 
-/// ScreenSpaceTransform will build a `GlobalTransform` on `anchor`.
-/// If **unset** and `BuildTransform` is present, a transform is built
-/// on `center` by bevy's own pipeline. This can be useful for integrating with
-/// [`Mesh`](bevy::prelude::Mesh) or third party crates like
-/// [`bevy_prototype_lyon::Geometry`](https://docs.rs/bevy_prototype_lyon/latest/bevy_prototype_lyon/geometry/trait.Geometry.html)
-#[derive(Debug, Clone, Component, Default, Reflect)]
-pub struct ScreenSpaceTransform(pub Affine3A);
-
 impl Transform2D {
 
     pub fn get_center(&self) -> &Anchor{
@@ -216,7 +196,7 @@ impl Transform2D {
         }
     }
 
-    pub const DEFAULT: Self = Self {
+    pub const UNIT: Self = Self {
         anchor: Anchor::Center,
         center: None, 
         offset: Size2::ZERO,
@@ -258,17 +238,21 @@ impl Transform2D {
 
 impl Default for Transform2D {
     fn default() -> Self {
-        Self::DEFAULT
+        Self::UNIT
     }
 }
 
-/// Generate a [`Transform`] component at a custom anchor for intergration with bevy.
+/// Builds a `GlobalTransform` on a `Anchor`, by default `Transform2d::anchor`.
+#[derive(Debug, Clone, Component, Default, Reflect)]
+pub struct BuildGlobal(pub Option<Anchor>);
+
+/// Builds a `Transform` on a `Anchor`, by default `center`.
 /// 
-/// If [`GlobalTransform`] is present and [`ScreenSpaceTransform`] is not,
-/// the output will be used for self rendering.
+/// If `GlobalTransform` is present and [`BuildGlobal`] is not,
+/// the output will be used for rendering.
 /// 
-/// If `ScreenSpaceTransform` is preset, this component will have no effect
-/// on self rendering.
+/// If `BuildGlobal` is preset, this component 
+/// have no effect on rendering.
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct BuildTransform(pub Anchor);
 

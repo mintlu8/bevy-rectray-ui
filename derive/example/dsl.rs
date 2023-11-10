@@ -49,7 +49,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
         child: {
             text: "Hello World",
-            font: assets.load("Noto.ttf"),
+            font: Default::default(),
             font_size: 32,
             color: Purple,
             anchor: CenterRight,

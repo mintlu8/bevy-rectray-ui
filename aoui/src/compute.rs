@@ -1,21 +1,20 @@
-use bevy::{prelude::*, utils::HashSet, window::PrimaryWindow};
+use bevy::{prelude::*, utils::HashSet, window::PrimaryWindow, ecs::query::{ReadOnlyWorldQuery, WorldQuery}};
 use itertools::Itertools;
 
-use crate::{Transform2D, RotatedRect, ScreenSpaceTransform, ParentInfo, Container, LayoutControl, LayoutItem, AoUI, AouiREM, Dimension, SceneLayout};
+use crate::*;
 
 type AoUIEntity<'t> = (
     Entity,
     &'t mut Dimension,
     &'t Transform2D,
-    &'t mut RotatedRect, 
-    Option<&'t mut ScreenSpaceTransform>,
+    &'t mut RotatedRect
 );
 
-fn propagate(
+fn propagate<TAll: ReadOnlyWorldQuery>(
     parent: ParentInfo,
     entity: Entity,
     rem: f32,
-    entity_query: &mut Query<AoUIEntity, With<AoUI>>,
+    entity_query: &mut Query<AoUIEntity, TAll>,
     flex_query: &Query<&Container>,
     scene_query: &Query<&SceneLayout>,
     child_query: &Query<&Children>,
@@ -23,10 +22,8 @@ fn propagate(
     queue: &mut Vec<(Entity, ParentInfo)>,
     visited: &mut HashSet<Entity>) {
 
-    visited.insert(entity);
-
     // SAFETY: safe since double mut access is gated by visited
-    let (entity, mut dim, transform, mut orig, output, ..) = match unsafe {entity_query.get_unchecked(entity)}{
+    let (entity, mut dim, transform, mut orig, ..) = match unsafe {entity_query.get_unchecked(entity)}{
         Ok(items) => items,
         Err(_) => return,
     };
@@ -61,7 +58,7 @@ fn propagate(
             }
         }
         dim.size = size;
-        let (rect, affine) = RotatedRect::construct(
+        let rect = RotatedRect::construct(
             &parent,
             &transform.anchor,
             offset,
@@ -76,7 +73,6 @@ fn propagate(
             .zip_eq(placements.into_iter() .map(|x| x / size - Vec2::new(0.5, 0.5)))
             .map(|(entity, anc)| (entity, ParentInfo::from_anchor(&rect, anc, dimension, em))));
         *orig = rect;
-        output.map(|mut x| x.0 = affine);
         return;
     } 
 
@@ -87,7 +83,7 @@ fn propagate(
         (offset, transform.z)
     };
 
-    let (rect, affine) = RotatedRect::construct(
+    let rect = RotatedRect::construct(
         &parent,
         &transform.anchor,
         offset,
@@ -110,36 +106,59 @@ fn propagate(
     }
 
     *orig = rect;
-    output.map(|mut x| x.0 = affine);
 }
 
+/// Query for finding the root rectangle of a `compute_aoui_transforms` pass.
+/// 
+/// Usually `PrimaryWindow`.
+pub trait RootQuery<'t> {
+    type Query: WorldQuery;
+    type ReadOnly: ReadOnlyWorldQuery;
+
+    fn as_rect(query: &Query<Self::Query, Self::ReadOnly>) -> RotatedRect;
+}
+
+impl<'t> RootQuery<'t> for PrimaryWindow {
+    type Query= &'t Window;
+    type ReadOnly = With<PrimaryWindow>;
+
+    fn as_rect(query: &Query<Self::Query, Self::ReadOnly>) -> RotatedRect {
+        let window = query.single();
+        let dim = Vec2::new(window.width(), window.height());
+        RotatedRect {
+            center: Vec2::ZERO,
+            dimension: dim,
+            rotation: 0.0,
+            scale: Vec2::ONE,
+            z: 0.0
+        }
+    }
+}
+
+pub(crate) type TRoot = (With<AoUI>, Without<Parent>);
+pub(crate) type TAll = With<AoUI>;
+
 /// The main computation step.
-pub fn compute_aoui_transforms(
-    window: Query<&Window, With<PrimaryWindow>>,
-    root_query: Query<Entity, (With<AoUI>, Without<Parent>)>,
-    mut entity_query: Query<AoUIEntity, With<AoUI>>,
+pub fn compute_aoui_transforms<'t, R: RootQuery<'t>, TRoot: ReadOnlyWorldQuery, TAll: ReadOnlyWorldQuery>(
+    root: Query<R::Query, R::ReadOnly>,
+    root_entities: Query<Entity, TRoot>,
+    mut entity_query: Query<AoUIEntity, TAll>,
     flex_query: Query<&Container>,
     sparse_query: Query<&SceneLayout>,
     child_query: Query<&Children>,
     control_query: Query<&LayoutControl>,
     res_rem: Option<Res<AouiREM>>,
 ) {
-    let window = window.single();
-    let dim = Vec2::new(window.width(), window.height());
     let rem = res_rem.map(|x| x.0).unwrap_or(16.0);
 
-    let window_rect = RotatedRect {
-        center: Vec2::ZERO,
-        dimension: dim,
-        rotation: 0.0,
-        scale: Vec2::ONE,
-        z: 0.0
-    };
+    let window_rect = R::as_rect(&root);
+    let dim = window_rect.dimension;
 
     let mut visited = HashSet::new();
     let mut queue = Vec::new();
 
-    for (entity, _, t, ..) in entity_query.iter_many(root_query.iter()) {
+    for (entity, _, t, ..) in entity_query.iter_many(root_entities.iter()) {
+        if !visited.insert(entity) { return; }
         let parent = ParentInfo::new(&window_rect, &t.anchor, dim, rem);
         queue.push((entity, parent))
     }

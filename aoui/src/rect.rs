@@ -1,5 +1,5 @@
 
-use bevy::{math::{Vec2, Affine3A}, reflect::Reflect, prelude::{Component, Quat}, sprite::Anchor};
+use bevy::{math::Vec2, reflect::Reflect, prelude::Component, sprite::Anchor};
 
 /// A rotated 2D rectangle.
 #[derive(Debug, Clone, Copy, Component, Default, Reflect)]
@@ -71,7 +71,7 @@ impl RotatedRect {
     /// Create an [`RotatedRect`] represeting the sprite's position on the screen space
     /// and an [`Affine3A`] that converts into the [`GlobalTransform`] suitable from the screen space
     pub fn construct(parent: &ParentInfo, anchor: &Anchor, offset: Vec2, dim: Vec2,
-            center: &Anchor, rotation: f32, scale: Vec2, z: f32) -> (Self, Affine3A){
+            center: &Anchor, rotation: f32, scale: Vec2, z: f32) -> Self{
         let parent_anchor = parent.anchor;
         // apply offset and dimension
         let self_center = offset + (center.as_vec() - anchor.as_vec()) * dim;
@@ -88,11 +88,6 @@ impl RotatedRect {
             rotation,
             scale,
         };
-        (rect,
-        Affine3A::from_scale_rotation_translation(
-            scale.extend(1.0),
-            Quat::from_rotation_z(rotation),
-            rect.anchor(anchor).extend(z)
-        ))
+        rect
     }
 }

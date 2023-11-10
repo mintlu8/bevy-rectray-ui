@@ -4,12 +4,12 @@ use bevy::{
     text::{Text2dBounds, TextLayoutInfo}
 };
 
-use crate::{Transform2D, RotatedRect, ScreenSpaceTransform, Hitbox, AoUI, BuildTransform, LayoutControl, Dimension, Size2};
+use crate::{Transform2D, RotatedRect, BuildGlobal, Hitbox, AoUI, BuildTransform, LayoutControl, Dimension, Size2};
 
 
 /// The minimal bundle required for AoUI to function.
 ///
-/// This provides propagation but no rendering support.
+/// Provides DOM propagation but no rendering support.
 #[derive(Debug, Default, Bundle)]
 pub struct AoUIBundle {
     pub core: AoUI,
@@ -19,28 +19,66 @@ pub struct AoUIBundle {
     pub vis: VisibilityBundle,
 }
 
-/// A bundle that receives transform results produced by AoUI.
+/// A bundle generating a [`GlobalTransform`] with AoUI.
 #[derive(Debug, Default, Bundle)]
-pub struct AoUIOutputBundle {
-    pub screen: ScreenSpaceTransform,
+pub struct BuildGlobalBundle {
+    pub builder: BuildGlobal,
     pub global: GlobalTransform,
 }
 
-/// A bundle for integration with native bevy components that rely on [`Transform`].
-///
-/// Notably this is needed to have native bevy children.
+impl BuildGlobalBundle {
+    pub fn at_anchor(anchor: Anchor) -> Self{
+        Self { 
+            builder: BuildGlobal(Some(anchor)),
+            ..Default::default() 
+        }
+    }
+}
+
+/// A bundle generating a [`Transform`] with AoUI.
+/// 
+/// Use [`BuildSpacialBundle`] if you need a [`GlobalTransform`].
 #[derive(Debug, Default, Bundle)]
 pub struct BuildTransformBundle {
     pub builder: BuildTransform,
     pub transform: Transform,
 }
 
-/// A bundle that breaks a flexbox in place without taking up space.
+impl BuildTransformBundle {
+    pub fn at_anchor(anchor: Anchor) -> Self{
+        Self { 
+            builder: BuildTransform(anchor),
+            ..Default::default() 
+        }
+    }
+}
+
+/// A bundle generating a [`Transform`] and a [`GlobalTransform`] by proxy.
+#[derive(Debug, Default, Bundle)]
+pub struct BuildSpacialBundle {
+    pub builder: BuildTransform,
+    pub transform: Transform,
+    pub global: GlobalTransform,
+}
+
+impl BuildSpacialBundle {
+    pub fn at_anchor(anchor: Anchor) -> Self{
+        Self { 
+            builder: BuildTransform(anchor),
+            ..Default::default() 
+        }
+    }
+}
+
+
+/// A bundle that breaks a multiline [`Container`](crate::Container) 
+/// in place without taking up space.
 #[derive(Debug, Bundle)]
 pub struct LinebreakBundle {
     bundle: AoUIBundle,
     control: LayoutControl,
 }
+
 
 impl LinebreakBundle {
     pub fn new(size: impl Into<Size2>) -> Self{
@@ -48,6 +86,19 @@ impl LinebreakBundle {
             bundle: AoUIBundle { 
                 dimension: Dimension {
                     dim: crate::DimensionSize::Owned(size.into()),
+                    ..Default::default()
+                }, 
+                ..Default::default()
+            },
+            control: LayoutControl::LinebreakMarker,
+        }
+    }
+
+    pub fn ems(size: Vec2) -> Self{
+        Self {
+            bundle: AoUIBundle { 
+                dimension: Dimension {
+                    dim: crate::DimensionSize::Owned(Size2::em(size.x, size.y)),
                     ..Default::default()
                 }, 
                 ..Default::default()
@@ -71,11 +122,11 @@ pub struct AoUISpriteBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
-    pub screen: ScreenSpaceTransform,
+    pub build: BuildGlobal,
     pub sprite: Sprite,
+    pub texture: Handle<Image>,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,
-    pub texture: Handle<Image>,
 }
 
 /// The AoUI version of [`Text2dBundle`](https://docs.rs/bevy/latest/bevy/prelude/struct.Text2dBundle.html)
@@ -86,7 +137,7 @@ pub struct AoUITextBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
-    pub screen: ScreenSpaceTransform,
+    pub build: BuildGlobal,
     pub hitbox: Hitbox,
     pub text: Text,
     pub text_anchor: Anchor,
@@ -106,9 +157,9 @@ pub struct AoUIMaterialMesh2dBundle<M: Material2d>{
     pub dimension: Dimension,
     pub rect: RotatedRect,
     pub build: BuildTransform,
-    pub screen: ScreenSpaceTransform,
+    pub screen: BuildGlobal,
     pub mesh: Mesh2dHandle,
     pub material: Handle<M>,
     pub vis: VisibilityBundle,
-    pub global_transform: GlobalTransform,
+    pub global: GlobalTransform,
 }

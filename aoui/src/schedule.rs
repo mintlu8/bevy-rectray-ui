@@ -1,11 +1,29 @@
 
+use bevy::math::Affine3A;
 use bevy::sprite::{Sprite, TextureAtlasSprite, Anchor};
 use bevy::text::{TextLayoutInfo, Text2dBounds, update_text2d_layout};
 use bevy::transform::systems::{propagate_transforms, sync_simple_transforms};
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 
-use crate::compute::compute_aoui_transforms;
-use crate::{RotatedRect, ScreenSpaceTransform, BuildTransform, Dimension, AouiREM, DimensionSize, Transform2D};
+use crate::compute::*;
+use crate::{RotatedRect, BuildGlobal, BuildTransform, Dimension, AouiREM, DimensionSize, Transform2D};
+
+/// Fetch info for the DOM, happens before `AoUIDomUpdate`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
+pub struct AoUISyncRead;
+
+/// Update the DOM.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
+pub struct AoUIDomUpdate;
+
+/// Update data with the DOM, happens after `AoUIDomUpdate` and before bevy's `propagate_transform`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
+pub struct AoUISyncWrite;
+
+/// Write to `GlobalTransform`, after bevy's `propagate_transform`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
+pub struct AoUIFinalize;
 
 /// Core plugin for AoUI Rendering.
 pub struct AoUIPlugin;
@@ -14,6 +32,19 @@ impl bevy::prelude::Plugin for AoUIPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .init_resource::<AouiREM>()
+            .configure_sets(PostUpdate, AoUISyncRead
+                .before(AoUIDomUpdate)
+                .after(update_text2d_layout))
+            .configure_sets(PostUpdate, AoUIDomUpdate
+                .before(AoUISyncWrite))
+            .configure_sets(PostUpdate, AoUISyncWrite
+                .before(propagate_transforms)
+                .before(sync_simple_transforms)
+            )
+            .configure_sets(PostUpdate, AoUIFinalize
+                .after(propagate_transforms)
+                .after(sync_simple_transforms)
+            )
             .add_systems(PostUpdate, (
                 copy_anchor, 
                 copy_anchor_sprite, 
@@ -21,27 +52,19 @@ impl bevy::prelude::Plugin for AoUIPlugin {
                 copy_dimension_sprite,
                 copy_dimension_text,
                 copy_dimension_atlas,
-            ).before(compute_aoui_transforms).after(update_text2d_layout))
-            .add_systems(PostUpdate, compute_aoui_transforms.before(build_transform))
-            .add_systems(PostUpdate, 
-                build_transform
-                    .before(sync_dimension_atlas)
-                    .before(sync_dimension_sprite)
-                    .before(sync_dimension_text_bounds)
-            )
+            ).in_set(AoUISyncRead))
+            .add_systems(PostUpdate,
+                compute_aoui_transforms::<PrimaryWindow, TRoot, TAll>
+            .in_set(AoUIDomUpdate))
             .add_systems(PostUpdate, (
-                    sync_dimension_atlas,
-                    sync_dimension_sprite,
-                    sync_dimension_text_bounds,
-                    sync_em_text,
-                )
-                .before(propagate_transforms)
-                .before(sync_simple_transforms)
-            )
+                    build_transform,
+                sync_dimension_atlas,
+                sync_dimension_sprite,
+                sync_dimension_text_bounds,
+                sync_em_text,
+            ).in_set(AoUISyncWrite))
             .add_systems(PostUpdate, 
-                finalize
-                    .after(propagate_transforms)
-                    .after(sync_simple_transforms)
+                finalize.in_set(AoUIFinalize)
             );
     }
 }
@@ -57,7 +80,6 @@ pub fn copy_dimension_text(mut query: Query<(&TextLayoutInfo, &mut Dimension)>) 
     query.par_iter_mut().for_each(|(text, mut dim)| {
         match dim.dim {
             DimensionSize::Copied => dim.size = text.logical_size,
-            DimensionSize::Scaled(s) => dim.size = text.logical_size * s,
             _ => (),
         }
     })
@@ -110,14 +132,14 @@ pub fn copy_dimension_atlas(mut query: Query<(&TextureAtlasSprite, &Handle<Textu
 /// Synchonize size from `Dimension` to `Sprite`
 pub fn sync_dimension_sprite(mut query: Query<(&mut Sprite, &Dimension)>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        dimension.spawn_owned(|size| sp.custom_size = Some(size))
+        dimension.run_if_owned(|size| sp.custom_size = Some(size))
     })
 }
 
 /// Synchonize size from `Dimension` to `TextureAtlasSprite`
 pub fn sync_dimension_atlas(mut query: Query<(&mut TextureAtlasSprite, &Dimension)>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        dimension.spawn_owned(|size| sp.custom_size = Some(size))
+        dimension.run_if_owned(|size| sp.custom_size = Some(size))
     })
 }
 
@@ -127,7 +149,7 @@ pub fn sync_dimension_atlas(mut query: Query<(&mut TextureAtlasSprite, &Dimensio
 /// or do not use owned dimension on text.
 pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimension)>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        dimension.spawn_owned(|size| sp.size = size)
+        dimension.run_if_owned(|size| sp.size = size)
     })
 }
 
@@ -163,14 +185,15 @@ pub fn build_transform(mut query: Query<(&RotatedRect, &BuildTransform, &mut Tra
     });
 }
 
-/// The last system in the AoUI pipeline.
-///
-/// Currently does nothing in particular
-/// other than copying [`ScreenSpaceTransform`] into [`GlobalTransform`].
+/// Generate [`GlobalTransform`] with  [`BuildGlobal`].
 pub fn finalize(
-    mut query: Query<(&ScreenSpaceTransform, &mut GlobalTransform)>,
+    mut query: Query<(&BuildGlobal, &Transform2D, &RotatedRect, &mut GlobalTransform)>,
 ) {
-    query.par_iter_mut().for_each(|(screen, mut scene)| {
-        *scene = screen.0.into()
+    query.par_iter_mut().for_each(|(build, transform, rect, mut scene)| {
+        *scene = Affine3A::from_scale_rotation_translation(
+            rect.scale.extend(1.0), 
+            Quat::from_rotation_z(rect.rotation), 
+            rect.anchor(&build.0.unwrap_or(transform.anchor)).extend(rect.z)
+        ).into()
     });
 }

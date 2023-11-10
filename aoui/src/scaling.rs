@@ -127,7 +127,7 @@ impl Size2 {
         (self.x, self.y)
     }
 
-    /// A loose function that obtains a vec2 from this struct.
+    /// Obtains this struct's underlying value.
     /// 
     /// The unit and meaning of this value depends on the use case.
     pub fn raw(&self) -> Vec2 {
@@ -142,14 +142,7 @@ impl Size2 {
         &mut self.raw
     }
 
-    /// A loose function that updates this struct's value.
-    /// 
-    /// The unit and meaning of this value depends on the use case.
-    pub fn set_raw(&mut self, value: Vec2) {
-        self.raw = value
-    }
-
-    /// A loose function that updates this struct's value.
+    /// Updates this struct's underlying value.
     /// 
     /// The unit and meaning of this value depends on the use case.
     pub fn edit_raw(&mut self, f: impl FnOnce(&mut Vec2)) {

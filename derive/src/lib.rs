@@ -63,7 +63,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
     bundle.push(quote!(::bevy_aoui::AoUI));
 
     if state.does_render() {
-        bundle.push(quote!{::bevy_aoui::ScreenSpaceTransform::default()});
+        bundle.push(quote!{::bevy_aoui::BuildGlobal::default()});
         bundle.push(quote!{::bevy::prelude::GlobalTransform::default()});
     }
     {

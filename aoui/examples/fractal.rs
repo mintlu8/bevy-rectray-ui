@@ -1,5 +1,8 @@
+use std::f32::consts::PI;
+
 use bevy_aoui::*;
 use bevy::{prelude::*, sprite::Anchor, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
+use bevy_egui::{EguiContexts, egui::{self, Slider}, EguiPlugin};
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -12,7 +15,8 @@ pub fn main() {
         .add_plugins(LogDiagnosticsPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_systems(Startup, init)
-        .add_systems(Update, rotate_and_scale)
+        .add_systems(Update, egui_window)
+        .add_plugins(EguiPlugin)
         .add_plugins(AoUIPlugin)
         .run();
 }
@@ -72,22 +76,19 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     }
 }
 
-pub fn rotate_and_scale(mut query: Query<&mut Transform2D>, keys: Res<Input<KeyCode>>) {
-    if keys.just_pressed(KeyCode::Left) {
-        for mut sp in query.iter_mut() {
-            sp.rotation -= 0.1;
-        }
-    } else if keys.just_pressed(KeyCode::Right) {
-        for mut sp in query.iter_mut() {
-            sp.rotation += 0.1;
-        }
-    } else if keys.just_pressed(KeyCode::Up) {
-        for mut sp in query.iter_mut() {
-            sp.scale += Vec2::splat(0.1);
-        }
-    } else if keys.just_pressed(KeyCode::Down) {
-        for mut sp in query.iter_mut() {
-            sp.scale -= Vec2::splat(0.1);
-        }
+pub fn egui_window(mut ctx: EguiContexts, 
+    mut query: Query<&mut Transform2D>,
+) {
+    let sp = query.iter().next().unwrap();
+    let mut rotation = sp.rotation;
+    let mut scale = sp.scale;
+    egui::Window::new("Console").show(ctx.ctx_mut(), |ui| {
+        ui.add(Slider::new(&mut rotation, -PI * 2.0..=PI * 2.0).text("Rotation"));
+        ui.add(Slider::new(&mut scale.x, 0.0..=10.0).text("Scale Y"));
+        ui.add(Slider::new(&mut scale.y, 0.0..=10.0).text("Scale Y"));
+    });
+    for mut sp in query.iter_mut() {
+        sp.rotation = rotation;
+        sp.scale = scale;
     }
 }

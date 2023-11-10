@@ -1,4 +1,4 @@
-//! Bevy AoUI provides a light-weight Anchor-Offset based 2D sprite rendering system.
+//! Bevy AoUI provides a light-weight rectangular anchor-offset based 2D sprite rendering system.
 //! 
 //! Similar to the philosophy of Rust, AoUI provides low level control through the 
 //! anchor-offset system and high level ergonomics through its layout system.
@@ -16,50 +16,25 @@
 //! while leveraging other parts of bevy's standard library and ecosystem whenever possible.
 //! 
 //! AoUI provides 2 rendering methods: 
-//! * [`ScreenSpaceTransform`] handles AoUI widgets that rely on `Anchor`.
-//! * [`BuildTransform`] handles bevy and third party widgets the rely on `Transform`.
+//! * [`BuildGlobal`] genetates `GlobalTransform` directly.
+//! * [`BuildTransform`] handles bevy children and third party widgets the rely on `Transform`.
 //! 
-//! AoUI propagates translation, rotation, scale and relative size down its DOM.
+//! AoUI propagates translation, rotation, scale and font size down its DOM.
 //! 
 //! Currently the root node of the AoUI DOM is always the window. Meaning AoUI widgers
-//! can have native bevy widgets as children, but not vice versa.
-//! 
-//! # Advantages of AoUI
-//! 
-//! There are many awesome UI libraries in the bevy ecosystem
-//! that you should definitely use over AoUI in
-//! many use cases. However, AoUI offers some unique advantages:
-//! 
-//! * Full ECS support with easy feature composition.
-//! 
-//! AoUI is built fully embracing bevy's ecosystem. 
-//! You can mix and match our modularized components
-//! and add, remove or edit any system you want to change.
-//! 
-//! * First class rotation and scaling support.
-//! 
-//! You are allowed to rotate and scale any widget with ease.
-//! 
-//! * Simple but versatile layout system.
-//! 
-//! Layouts that work out of the box with minimal configuration.
-//! 
-//! * Both high and low level API.
-//! 
-//! You can use mix and match anchoring and layouts to best suit your needs.
-//! 
+//! can have native bevy sprites as children, but not vice versa.
 //!
 //! # Core Concepts
 //!
 //! AoUI offers a refreshingly different paradigm from traditional CSS based UI layout.
 //! 
 //! AoUI Sprites contains these core components:
-//! * [anchor](Anchors::anchor)
-//! * [center](Anchors::center)
-//! * [dimension](Dimension::dim)
+//! * [anchor](Transform2D::anchor)
+//! * [center](Transform2D::center)
 //! * [offset](Transform2D::offset)
 //! * [rotation](Transform2D::rotation)
 //! * [scale](Transform2D::scale)
+//! * [dimension](Dimension::dim)
 //! 
 //! Each sprite is conceptualized as a rectangle with a dimension and 
 //! 9 [anchors](bevy::sprite::Anchor): `BottomLeft`, `CenterRight`, `Center`, etc.
@@ -100,63 +75,32 @@
 //! 
 //! The `FlexContainer` is a layout system that only depands on insertion order and seamlessly
 //! integrates with Bevy's [`Children`](bevy::prelude::Children) component.
-//!
-//! ## Span
 //! 
-//! [`Span`](FlexLayout::Span) serves as a classic single-line layout, akin to `HBox` or `VBox`.
+//! Check out the book for more information.
 //! 
-//! Children are first sorted into 3 buckets based on their anchors along the main axis, 
-//! and aligned differently based on their assigned bucket.
+//! # Advantages of AoUI
 //! 
-//! For `HBox`, we have sprites laid out as follows:
-//! ```
-//! # /*
-//! (Anchors::*Left ..)       (Anchors::*Center ..)       (Anchors::*Right ..)
-//! # */
-//! ```
-//! with each sprite takes up `dimension * scale` size. 
+//! There are many awesome UI libraries in the bevy ecosystem
+//! that you should definitely use over AoUI in
+//! many use cases. However, AoUI offers some unique advantages:
 //! 
-//! It's important to note that currently offset and rotation 
-//! does not affect how much space a sprite takes up,
-//! if you think they should, please file an issue.
+//! * Full ECS support with easy feature composition.
 //! 
-//! ## Paragraph
+//! AoUI is built fully embracing bevy's ecosystem. 
+//! You can mix and match our modularized components
+//! and add, remove or edit any system you want to change.
 //! 
-//! [`Paragraph`](FlexLayout::Paragraph) is a layout for wrapping spans.
+//! * First class rotation and scaling support.
 //! 
-//! Children are collected sequentially until a line is filled,
-//! and then they are rendered as a `span`. 
-//! Thanks to the alignment features of a `span`, the paragraph
-//! layout can create complex arrangements with minimal additional support.
+//! You are allowed to rotate and scale any widget with ease.
 //! 
-//! To better leverage the paragraph layout, you can use [`FlexControl::Linebreak`] or
-//! [`LinebreakBundle`] to perform a linebreak. 
-//! These features are also available in `grid` and `table`.
+//! * Simple but versatile layout system.
 //! 
-//! ## Grid
+//! Layouts that work out of the box with minimal configuration.
 //! 
-//! [`Grid`](FlexLayout::Grid) is a layout of evenly subdivided cells.
+//! * High level abstraction with low level control.
 //! 
-//! ## Table
-//! 
-//! [`Table`](FlexLayout::Table) provides a layout system for aligned rows and columns.
-//! 
-//! # Mental Model
-//! 
-//! The order of rendering goes as follows:
-//! 1. Compute the final position of the parent anchor.
-//! 2. Apply an offset from the parent anchor.
-//! 3. Scale using the parent anchor and the parent's scale.
-//! 4. Rotate based on the parent anchor and the parent's rotation.
-//! 5. Apply local scaling relative to the sprite's center.
-//! 6. Perform local rotation around the sprite's center.
-//!
-//! The result always
-//! * is a 2D sprite
-//! * is a rotated rectangle
-//! * is equivalent to a global transform
-//! * has the same rotation as the sum of its and its ancestors' rotations
-//! * has the same scale as the product of its and its ancestors' scales
+//! You can mix and match anchoring and layouts to best suit your needs.
 //! 
 //! # FAQ:
 //! 
@@ -178,14 +122,6 @@
 //! 
 //! Meaning performance is not our primary goal. 
 //! Though performance related suggestions and PRs are welcome.
-//! 
-//! # Todos
-//! 
-//! * Fix debug mode rendering.
-//! * Implement dynamic sized frames.
-//! * Implement change detection.
-//! * Implement sprite sheet support.
-//! * Implement Mesh2d support.
 
 pub mod schedule;
 mod rect;

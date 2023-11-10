@@ -17,7 +17,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             color: Color::RED,
             ..Default::default()
         },
-        transform: Transform2D::DEFAULT.with_anchor(Anchor::CenterLeft),
+        transform: Transform2D::UNIT.with_anchor(Anchor::CenterLeft),
         dimension: Dimension::percentage(Vec2::new(0.5, 1.0)),
         texture: texture.clone(),
         ..Default::default()
@@ -28,18 +28,18 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             color: Color::BLUE,
             ..Default::default()
         },
-        transform: Transform2D::DEFAULT.with_anchor(Anchor::CenterRight),
+        transform: Transform2D::UNIT.with_anchor(Anchor::CenterRight),
         dimension: Dimension::percentage(Vec2::new(0.5, 1.0)),
         texture: texture.clone(),
         ..Default::default()
     }).id();
 
-    let up =  commands.spawn(AoUISpriteBundle {
+    let up = commands.spawn(AoUISpriteBundle {
         sprite: Sprite {
             color: Color::ORANGE,
             ..Default::default()
         },
-        transform: Transform2D::DEFAULT.with_anchor(Anchor::TopCenter),
+        transform: Transform2D::UNIT.with_anchor(Anchor::TopCenter),
         dimension: Dimension::percentage(Vec2::new(1.0, 0.25)),
         texture: texture.clone(),
         ..Default::default()
@@ -51,7 +51,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             color: Color::PURPLE,
             ..Default::default()
         },
-        transform: Transform2D::DEFAULT.with_anchor(Anchor::BottomCenter),
+        transform: Transform2D::UNIT.with_anchor(Anchor::BottomCenter),
         dimension: Dimension::percentage(Vec2::new(1.0, 0.25)),
         texture: texture.clone(),
         ..Default::default()

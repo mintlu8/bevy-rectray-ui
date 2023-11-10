@@ -46,11 +46,27 @@ impl SceneLayout {
         ))
     }
 
+
+    pub fn hex(zigzag: Vec2, straight: Vec2) -> Self {
+        let zigy = zigzag.project_onto(straight);
+        let zigx = zigzag - zigy;
+        Self(Box::new(move |v| 
+            (v.x * zigx + 
+            1.0 - (1.0 - (v.x % 2.0).abs()).abs() * zigy + 
+            v.y * straight).extend(v.y)
+        ))
+    }
+
+
     pub fn with_origin(self, origin: Vec2) -> Self {
         Self(Box::new(move |x| self.0(x - origin)))
     }
 
     pub fn with_transform(self, transform: Affine2) -> Self {
         Self(Box::new(move |x| self.0(transform.transform_vector2(x))))
+    }
+
+    pub fn transpose(self) -> Self {
+        Self(Box::new(move |x| self.0(Vec2::new(x.y, x.x))))
     }
 }

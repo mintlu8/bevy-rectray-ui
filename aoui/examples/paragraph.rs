@@ -11,13 +11,7 @@ In nec finibus metus, ac hendrerit augue. Lorem ipsum dolor sit amet, consectetu
 
 pub fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                present_mode: bevy::window::PresentMode::AutoNoVsync,
-                ..Default::default()
-            }),
-            ..Default::default()
-        }))
+        .add_plugins(DefaultPlugins)
         .add_plugins(LogDiagnosticsPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_systems(Startup, init)
@@ -31,7 +25,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
 
     let textbox = commands.spawn((AoUISpriteBundle {
-        transform: Transform2D::DEFAULT,
+        transform: Transform2D::UNIT,
         sprite: Sprite { 
             anchor: Anchor::Center,
             custom_size: Some(Vec2::new(700.0, 700.0)),
@@ -55,9 +49,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             words.push(
                 commands.spawn(AoUITextBundle {
                     text: Text::from_section(w, TextStyle{
-                        font: assets.load("Noto.ttf"),
-                        font_size: 1.0,
                         color: Color::WHITE,
+                        ..Default::default()
                     }),
                     text_anchor: Anchor::TopLeft,
                     ..Default::default()

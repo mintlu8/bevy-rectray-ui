@@ -23,6 +23,14 @@ pub trait CursorEvent: Event + Sized{
             p: PhantomData 
         }
     }
+
+
+    fn handler(system: SystemId) -> CursorEventHandler<Self> {
+        CursorEventHandler { 
+            system, 
+            p: PhantomData 
+        }
+    }
 }
 
 /// Plugin for registering a AoUI cursor event.
@@ -53,7 +61,7 @@ pub fn query_hitbox<'t>(entity_query: impl IntoIterator<Item = (Entity, &'t Rota
     .map(|x| x.0)
 }
 
-/// Find hitboxes that containing some points
+/// Find hitboxes that contains some points
 fn query_hitbox_event<T: CursorEvent>(
     mut commands: Commands,
     entity_query: Query<(&RotatedRect, &Hitbox, &CursorEventHandler<T>)>, 
