@@ -143,22 +143,25 @@ pub fn sync_dimension_atlas(mut query: Query<(&mut TextureAtlasSprite, &Dimensio
     })
 }
 
+/// Opts out of synchronizing text bounds.
+#[derive(Debug, Component)]
+pub struct OptOutTextBoundsSync;
+
+/// Opts out of synchronizing font size.
+#[derive(Debug, Component)]
+pub struct OptOutFontSizeSync;
+
+
 /// Copy owned dimension as text bounds. 
-/// 
-/// If this behavior is not desired, either remove this system
-/// or do not use owned dimension on text.
-pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimension)>) {
+pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimension), Without<OptOutTextBoundsSync>>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
         dimension.run_if_owned(|size| sp.size = size)
     })
 }
 
 
-/// Copy owned dimension as text bounds. 
-/// 
-/// If this behavior is not desired, either remove this system
-/// or do not use owned dimension on text.
-pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension)>) {
+/// Copy em as text size.
+pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFontSizeSync>>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
         sp.sections.iter_mut().for_each(|x| x.style.font_size = dimension.em)
     })

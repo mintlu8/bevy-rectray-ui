@@ -1,4 +1,4 @@
-use bevy_aoui::*;
+use bevy_aoui::{*, bundles::*};
 use bevy::{prelude::*, sprite::Anchor, text::Text2dBounds};
 
 pub fn main() {

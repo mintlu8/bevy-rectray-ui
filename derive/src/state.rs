@@ -4,7 +4,7 @@ use proc_macro2::TokenTree;
 use macroex::*;
 use macroex_extras::*;
 
-use crate::flex::FlexLayout;
+use crate::flex::Layout;
 use crate::extractors::*;
 use crate::flex::SparseLayout;
 
@@ -62,7 +62,7 @@ pub struct State {
     pub flip: Option<[bool; 2]>,
     
     // flex_container
-    pub flex: MaybeExpr<FlexLayout>,
+    pub flex: MaybeExpr<Layout>,
     pub margin: MaybeExpr<SizeLike>,
     pub direction: Option<Ident>,
     pub stack: Option<Ident>,

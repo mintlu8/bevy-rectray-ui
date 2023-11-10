@@ -1,8 +1,8 @@
-//! This is a demo of `FlexContainer::Span`
+//! This is a demo of `Container::Span`
 
 use std::f32::consts::PI;
 
-use bevy_aoui::*;
+use bevy_aoui::{*, bundles::*};
 use bevy_egui::{self, EguiContexts, egui::{self, ComboBox, Grid, Slider}};
 use bevy::{prelude::*, sprite::Anchor};
 use rand::Rng;
@@ -106,7 +106,7 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
 
     egui::Window::new("Console").show(ctx.ctx_mut(), |ui| {
         
-        ui.label("AoUI FlexContainer");
+        ui.label("AoUI Container");
 
         let Vec2 { x, y } = dimension.raw_mut();
         ui.add(Slider::new(x, 0.0..=2000.0).text("width"));
@@ -159,7 +159,7 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                 _ => unreachable!(),
             };
 
-        ComboBox::from_label("FlexLayout Type")
+        ComboBox::from_label("Layout Type")
             .selected_text(layout_type)
             .show_ui(ui, |ui| {
                 ui.selectable_value(&mut layout_type, "compact", "compact");

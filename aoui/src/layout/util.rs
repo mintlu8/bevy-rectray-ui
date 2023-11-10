@@ -29,7 +29,7 @@ impl From<bool> for Axis {
 }
 
 
-/// Order items are laid out in a [`FlexContainer`].
+/// Order items are laid out in a [`Container`](crate::Container).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum FlexDir {
     LeftToRight, RightToLeft,
@@ -94,7 +94,7 @@ impl From<&FlexDir> for Axis {
     }
 }
 
-/// Where items are aligned to in a [`FlexContainer`]
+/// Where items are aligned to in a [`Container`](crate::Container).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum Alignment {
     Center, Bottom, Top, Left, Right

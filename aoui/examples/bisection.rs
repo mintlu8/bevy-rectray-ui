@@ -1,4 +1,4 @@
-use bevy_aoui::*;
+use bevy_aoui::{*, bundles::*};
 use bevy::{prelude::*, sprite::Anchor};
 pub fn main() {
     App::new()

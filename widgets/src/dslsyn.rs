@@ -74,7 +74,7 @@ syn!(
         text: String,
         font: Expression,
 
-        flex: FlexLayout,
+        flex: Layout,
         margin: Size2,
         direction: FlexDir,
         stack: FlexDir,

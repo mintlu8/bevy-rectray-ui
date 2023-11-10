@@ -54,7 +54,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
 
         #[cfg(debug_assertions)]{
             if transform.rotation != 0.0 || transform.scale != Vec2::ONE {
-                eprintln!("Warning: anchors of a FlexLayout is unreliable. Rotate or scale its parent is recommended.")
+                eprintln!("Warning: anchors of a Layout is unreliable. Rotate or scale its parent is recommended.")
             }
         }
         dim.size = size;

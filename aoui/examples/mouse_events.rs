@@ -1,4 +1,4 @@
-use bevy_aoui::*;
+use bevy_aoui::{*, bundles::*, events::CursorEvent};
 use bevy::{prelude::*, window::PrimaryWindow, sprite::Anchor, ecs::system::SystemId};
 
 pub fn main() {

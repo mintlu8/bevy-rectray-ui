@@ -11,7 +11,7 @@
 //! 
 //! AoUI replaces bevy's standard transform systems
 //! like [`propagate_transforms`](bevy::transform::systems::propagate_transforms)
-//! and [`sync_simple_transforms`](bevy::transform::systems::sync_simple_transforms),
+//! and [`sync_simple_transforms`](bevy::transform::systems::sync_simple_transforms)
 //! on structs marked with [AoUI],
 //! while leveraging other parts of bevy's standard library and ecosystem whenever possible.
 //! 
@@ -64,16 +64,13 @@
 //! 
 //! When applying `rotation` and `scale`, each sprite utilizes a 
 //! `center` that operates independently from the anchor. 
-//! This `center` is regarded as the definitive [`Transform`](bevy::prelude::Transform) 
-//! for the sprite when used with [`BuildTransform`] to integrate with native components.
 //! 
-//! 
-//! # FlexContainer
+//! # Container
 //! 
 //! Anchor-Offset is well-suited for isolated UI components, but when it comes to arranging
-//! multiple UI elements in a specific order, you'll find the [`FlexContainer`] useful.
+//! multiple UI elements in a specific order, you'll find the `Container` useful.
 //! 
-//! The `FlexContainer` is a layout system that only depands on insertion order and seamlessly
+//! The `Container` is a layout system that only depands on insertion order and seamlessly
 //! integrates with Bevy's [`Children`](bevy::prelude::Children) component.
 //! 
 //! Check out the book for more information.
@@ -96,9 +93,9 @@
 //! 
 //! * Simple but versatile layout system.
 //! 
-//! Layouts that work out of the box with minimal configuration.
+//! Simple layouts less bloated than CSS that work out of the box with minimal configuration.
 //! 
-//! * High level abstraction with low level control.
+//! * High level abstractions with low level control.
 //! 
 //! You can mix and match anchoring and layouts to best suit your needs.
 //! 
@@ -112,18 +109,19 @@
 //! You can integrate third party libraries with this crate,
 //! or create your own widgets with bevy's prmitives.
 //! 
+//! Checkout our examples for simple widget implementations.
+//! 
 //! ## What about performance?
 //! 
 //! We do extra things compared to traditional rendering:
 //! 
 //! * Maintaining rectangles and relative size.
 //! * Fetching anchor points from rotated rectangles.
-//! * Two step rotation and scale (from anchor and from center).
+//! * Multi step rotation and scale (from anchor and from center).
 //! 
-//! Meaning performance is not our primary goal. 
+//! This means competing in performance benchmarks is not our primary goal. 
 //! Though performance related suggestions and PRs are welcome.
 
-pub mod schedule;
 mod rect;
 mod components;
 mod hitbox;
@@ -132,7 +130,6 @@ mod scaling;
 
 mod layout;
 mod scene;
-mod events;
 
 pub use rect::*;
 pub use components::*;
@@ -140,8 +137,8 @@ pub use schedule::AoUIPlugin;
 pub use hitbox::*;
 pub use layout::*;
 pub use scene::*;
-
-mod bundles;
-pub use bundles::*;
-pub use events::*;
 pub use scaling::*;
+
+pub mod schedule;
+pub mod bundles;
+pub mod events;

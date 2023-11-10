@@ -1,7 +1,7 @@
 use macroex::*;
 
 #[derive(Debug, FromMacro)]
-pub enum FlexLayout {
+pub enum Layout {
     Span,
     HBox,
     VBox,

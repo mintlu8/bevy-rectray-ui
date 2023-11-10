@@ -80,12 +80,13 @@ When size is Copied, AoUI will dynamically obtain the size of the rect from `Spr
 When using `Layout`, owned size instead serve as a suggestion for the dimension
 of the layout, which might be dynamic.
 
-Owned dimension currently supports 4 different modes:
+Owned dimension currently supports these modes:
 
 * pixels
-* percent of parent dimension
+* percent
 * em
 * rem
+* margin-px, margin-em, margin-rem: `100% - n px`
 
 `em` is our relative size system, similar to Html and CSS.
 The `AoUI` DOM propagates an `em` value that controls

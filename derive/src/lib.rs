@@ -5,7 +5,7 @@ use macroex_extras::{ValueOrExpr, MaybeExpr};
 use proc_macro2::{TokenStream, token_stream::IntoIter, Ident};
 use proc_macro_error::{proc_macro_error, OptionExt, abort};
 use quote::{quote, format_ident};
-use crate::{state::*, flex::{FlexLayout, SparseLayout}};
+use crate::{state::*, flex::{Layout, SparseLayout}};
 
 mod state;
 mod flex;
@@ -228,7 +228,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
     match state.flex {
         MaybeExpr::None => (),
         MaybeExpr::Value(flex) => {
-            use FlexLayout::*;
+            use Layout::*;
             let mut flexbox = Vec::new();
             if let Some(margin) = state.margin.get() {
                 flexbox.push(quote!(margin: #margin))
@@ -237,19 +237,19 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
             match flex {
                 Span => {
                     let direction = &state.alignment.expect_or_abort("Expected direction.");
-                    flexbox.push(quote!(layout: ::bevy_aoui::FlexLayout::Span{
+                    flexbox.push(quote!(layout: ::bevy_aoui::Layout::Span{
                         direction: #direction,
                         stretch: #stretch,
                     }));
                 },
                 HBox => {
-                    flexbox.push(quote!(layout: ::bevy_aoui::FlexLayout::Span{
+                    flexbox.push(quote!(layout: ::bevy_aoui::Layout::Span{
                         direction: ::bevy_aoui::FlexDir::LeftToRight,
                         stretch: #stretch,
                     }));
                 },
                 VBox => {
-                    flexbox.push(quote!(layout: ::bevy_aoui::FlexLayout::Span{
+                    flexbox.push(quote!(layout: ::bevy_aoui::Layout::Span{
                         direction: ::bevy_aoui::FlexDir::TopToBottom,
                         stretch: #stretch,
                     }));
@@ -258,7 +258,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
                     let direction = state.direction.unwrap_or(format_ident!("LeftToRight"));
                     let stack = state.stack.unwrap_or(format_ident!("TopToBottom"));
                     let alignment = state.alignment.unwrap_or(format_ident!("Top"));
-                    flexbox.push(quote!(layout: ::bevy_aoui::FlexLayout::Paragraph{
+                    flexbox.push(quote!(layout: ::bevy_aoui::Layout::Paragraph{
                         direction: ::bevy_aoui::FlexDir::#direction,
                         alignment: ::bevy_aoui::Alignment::#alignment,
                         stack: ::bevy_aoui::FlexDir::#stack,
@@ -272,7 +272,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
                     let row_align = state.row_align.unwrap_or(format_ident!("Left"));
                     let column_align = state.column_align.unwrap_or(format_ident!("Top"));
                     if let Some(cells) = state.cell_count.get() {
-                        flexbox.push(quote!(layout: ::bevy_aoui::FlexLayout::Paragraph{
+                        flexbox.push(quote!(layout: ::bevy_aoui::Layout::Paragraph{
                             cell: ::bevy_aoui::Cells::Counted(#cells),
                             row_dir: ::bevy_aoui::FlexDir::#row_dir,
                             column_dir: ::bevy_aoui::FlexDir::#column_dir,
@@ -281,7 +281,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
                             stretch: #stretch,
                         }));
                     } else if let Some(size) = state.cell_size.get() {
-                        flexbox.push(quote!(layout: ::bevy_aoui::FlexLayout::Paragraph{
+                        flexbox.push(quote!(layout: ::bevy_aoui::Layout::Paragraph{
                             cell: ::bevy_aoui::Cells::Sized(#size),
                             rorow_dirw: ::bevy_aoui::FlexDir::#row_dir,
                             column_dir: ::bevy_aoui::FlexDir::#column_dir,
@@ -290,7 +290,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
                             stretch: #stretch,
                         }));
                     } else {
-                        abort!(span, "Expected cell_count or cell_size in FlexLayout::Grid")
+                        abort!(span, "Expected cell_count or cell_size in Layout::Grid")
                     }
                 },
                 Table => {
@@ -301,7 +301,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
                     let column_align = state.column_align.unwrap_or(format_ident!("Top"));
                     match state.columns {
                         Some(Either::A(count)) => {
-                            flexbox.push(quote!(layout: ::bevy_aoui::FlexLayout::Paragraph{
+                            flexbox.push(quote!(layout: ::bevy_aoui::Layout::Paragraph{
                                 cell: ::bevy_aoui::Columns::Dynamic(#count),
                                 row_dir: ::bevy_aoui::FlexDir::#row_dir,
                                 column_dir: ::bevy_aoui::FlexDir::#column_dir,
@@ -311,7 +311,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
                             }));
                         },
                         Some(Either::B(separators)) => {
-                            flexbox.push(quote!(layout: ::bevy_aoui::FlexLayout::Paragraph{
+                            flexbox.push(quote!(layout: ::bevy_aoui::Layout::Paragraph{
                                 cell: ::bevy_aoui::Columns::Fixed(vec![#(#separators),*]),
                                 row_dir: ::bevy_aoui::FlexDir::#row_dir,
                                 column_dir: ::bevy_aoui::FlexDir::#column_dir,
@@ -320,11 +320,11 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
                                 stretch: #stretch,
                             }));
                         },
-                        None => abort!(span, "Expected columns or cell_size in FlexLayout::Table"),
+                        None => abort!(span, "Expected columns or cell_size in Layout::Table"),
                     }
                 },
             }
-            bundle.push(quote!(::bevy_aoui::FlexContainer {#(#flexbox,)* ..Default::default()}));
+            bundle.push(quote!(::bevy_aoui::Container {#(#flexbox,)* ..Default::default()}));
         },
         macroex_extras::MaybeExpr::Expr(e) => {
             let mut flexbox = Vec::new();
@@ -332,7 +332,7 @@ fn parse_one(commands: TokenStream, mut iter: IntoIter) -> TokenStream {
                 flexbox.push(quote!(margin: #margin))
                 
             }
-            bundle.push(quote!(::bevy_aoui::FlexContainer {
+            bundle.push(quote!(::bevy_aoui::Container {
                 layout: #e,
                 #(#flexbox,)* 
                 ..Default::default()

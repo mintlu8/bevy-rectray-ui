@@ -1,8 +1,8 @@
 use bevy::{prelude::{Vec2, Resource}, reflect::Reflect};
 
-/// The root relative size of the window.
+/// The root font size of the window.
 /// 
-/// By default this is `[16, 16]` if not found.
+/// By default this is `[16, 16]`.
 #[derive(Debug, Resource)]
 pub struct AouiREM(pub f32);
 impl Default for AouiREM {
@@ -11,7 +11,7 @@ impl Default for AouiREM {
     }
 }
 
-/// Set the em relative to parent.
+/// Set the font size of the widget.
 #[derive(Debug, Clone, Copy, Default, Reflect)]
 pub enum SetEM {
     #[default]
@@ -29,6 +29,12 @@ pub enum SizeUnit{
     Em,
     Rem,
     Percent,
+    /// 100% - a px
+    MarginPx,
+    /// 100% - a em
+    MarginEm,
+    /// 100% - a rem
+    MarginRem,
 }
 
 /// A context sensitive Vec2
@@ -50,6 +56,9 @@ impl SizeUnit {
             SizeUnit::Em => value * em,
             SizeUnit::Rem => value * rem,
             SizeUnit::Percent => value * parent,
+            SizeUnit::MarginPx => parent - value,
+            SizeUnit::MarginEm => parent - value * em,
+            SizeUnit::MarginRem => parent - value * rem,
         }
     }
 }

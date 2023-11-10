@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use bevy_aoui::*;
+use bevy_aoui::{*, bundles::*};
 use bevy::{prelude::*, sprite::Anchor, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
 use bevy_egui::{EguiContexts, egui::{self, Slider}, EguiPlugin};
 pub fn main() {

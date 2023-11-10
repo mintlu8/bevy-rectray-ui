@@ -14,13 +14,14 @@ By default the AoUI Schedule has the following `SystemSets`:
 
 Currently the DOM root is always a rectangle representing the window.
 
-For example, a sprite with no parent and has `Anchor::TopLeft` 
+For example, a sprite with no parent and has `Anchor::TopLeft`
 should be placed on the topleft of the window, with the default 2D camera.
 
 This step is marked by the `AoUI` marker component.
 You can use `compute_aoui_transforms` with custom queries for alternative build order.
 
 * AoUISyncWrite: Synchronize information owned by the `AoUI` DOM.
+  * Update `transform` with `BuildTransform`
   * Update `custom_size` of a sprite.
   * Update `size` of `FontStyle`.
 

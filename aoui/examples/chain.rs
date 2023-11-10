@@ -1,4 +1,4 @@
-use bevy_aoui::*;
+use bevy_aoui::{*, bundles::*};
 use bevy::{prelude::*, sprite::Anchor};
 use bevy_egui::{EguiContexts, egui::{Slider, self}};
 pub fn main() {

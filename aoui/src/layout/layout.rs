@@ -5,14 +5,14 @@ use super::span::*;
 use super::grid::*;
 use super::util::*;
 
-/// Cells in a [`FlexLayout::Grid`]
+/// Cells in a [`Layout::Grid`]
 #[derive(Debug, Copy, Clone, bevy::prelude::Reflect)]
 pub enum Cells {
     Counted(UVec2),
     Sized(Vec2),
 }
 
-/// Columns in a [`FlexLayout::Table`]
+/// Columns in a [`Layout::Table`]
 #[derive(Debug, Clone, bevy::prelude::Reflect)]
 pub enum Columns {
     Dynamic(usize),
@@ -85,7 +85,7 @@ pub enum Layout {
     /// A typical English text Paragraph can be seen as
     /// ```
     /// # use bevy_aoui::*;
-    /// FlexLayout::Paragraph {
+    /// Layout::Paragraph {
     ///     direction: FlexDir::LeftToRight,
     ///     stack: FlexDir::TopToBottom,
     ///     stretch: false,

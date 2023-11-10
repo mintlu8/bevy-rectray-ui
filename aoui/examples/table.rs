@@ -1,4 +1,4 @@
-//! This is a demo of `FlexContainer::Span`
+//! This is a demo of `Container::Span`
 //! 
 //! use keys
 //! 
@@ -14,7 +14,7 @@
 //! Notice how insertion order matters.
 //! 
 
-use bevy_aoui::{*, Columns};
+use bevy_aoui::{*, bundles::*};
 use bevy::{prelude::*, sprite::Anchor};
 use rand::Rng;
 

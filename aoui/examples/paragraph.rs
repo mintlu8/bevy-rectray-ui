@@ -1,4 +1,4 @@
-use bevy_aoui::*;
+use bevy_aoui::{*, bundles::*};
 use bevy::{prelude::*, sprite::Anchor, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}};
 
 
@@ -84,7 +84,7 @@ pub fn spin_anc(anc: &Anchor) -> Anchor {
 /// 4: Spin TextAnchor
 /// 5: Spin Main Anchor
 /// Q, E: Change font size
-/// WSAD: Change FlexContainer size
+/// WSAD: Change Container size
 pub fn controls(
     mut flex: Query<&mut Container>, 
     mut text: Query<&mut Anchor, With<Text>>, 

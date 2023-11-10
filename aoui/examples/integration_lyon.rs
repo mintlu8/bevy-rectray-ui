@@ -1,4 +1,4 @@
-use bevy_aoui::*;
+use bevy_aoui::{*, bundles::*};
 use bevy::{prelude::*, sprite::{Anchor, Mesh2dHandle}};
 use bevy_prototype_lyon::prelude::*;
 

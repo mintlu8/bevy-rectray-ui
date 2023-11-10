@@ -2,6 +2,8 @@
 use bevy::{math::Vec2, reflect::Reflect, prelude::Component, sprite::Anchor};
 
 /// A rotated 2D rectangle.
+/// 
+/// Note: `scale` is pre-multiplied into `dimension`.
 #[derive(Debug, Clone, Copy, Component, Default, Reflect)]
 #[non_exhaustive]
 pub struct RotatedRect{
