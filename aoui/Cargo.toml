@@ -14,8 +14,7 @@ default = ["bundles"]
 bundles = []
 
 [dev-dependencies]
-bevy_egui = "0.23"
-rand = "0.8.5"
+bevy_egui = "^0.23"
+rand = "^0.8.5"
 bevy = { version = "^0.12" }
-bevy_prototype_lyon = "0.10.0"
 

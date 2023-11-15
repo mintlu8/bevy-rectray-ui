@@ -21,7 +21,7 @@ pub enum Columns {
 }
 
 impl Columns {
-    pub const ANY: Self = Columns::Dynamic(9999);
+    pub const ANY: Self = Columns::Dynamic(usize::MAX);
 }
 
 

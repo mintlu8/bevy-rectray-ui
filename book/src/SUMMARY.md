@@ -5,6 +5,4 @@
 - [Components](./components.md)
 - [Layouts](./layout.md)
 - [DSL](./dsl.md)
-  - [Syntax](./syntax.md)
-  - [Structs](./structs.md)
-  - [Widgets](./widgets.md)
+- [Widgets](./widgets.md)

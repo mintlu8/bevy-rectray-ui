@@ -7,7 +7,8 @@ type AoUIEntity<'t> = (
     Entity,
     &'t mut Dimension,
     &'t Transform2D,
-    &'t mut RotatedRect
+    &'t mut RotatedRect,
+    Option<&'t ScaleErase>,
 );
 
 fn propagate<TAll: ReadOnlyWorldQuery>(
@@ -23,7 +24,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
     visited: &mut HashSet<Entity>) {
 
     // SAFETY: safe since double mut access is gated by visited
-    let (entity, mut dim, transform, mut orig, ..) = match unsafe {entity_query.get_unchecked(entity)}{
+    let (entity, mut dim, transform, mut orig, erase, ..) = match unsafe {entity_query.get_unchecked(entity)}{
         Ok(items) => items,
         Err(_) => return,
     };
@@ -41,7 +42,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { entity_query.get_unchecked(*child) } {
                 entities.push(*child);
                 args.push(LayoutItem {
-                    anchor: child_transform.anchor.clone(),
+                    anchor: child_transform.get_parent_anchor().clone(),
                     dimension: child_dim.update(dimension, em, rem).0,
                     control: control_query.get(*child)
                         .map(|x| *x)
@@ -67,10 +68,11 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             transform.rotation,
             transform.scale,
             parent.z + transform.z + f32::EPSILON * 8.0,
+            erase.is_some(),
         );
         
         queue.extend(entities.into_iter()
-            .zip_eq(placements.into_iter() .map(|x| x / size - Vec2::new(0.5, 0.5)))
+            .zip_eq(placements.into_iter().map(|x| x / size - Vec2::new(0.5, 0.5)))
             .map(|(entity, anc)| (entity, ParentInfo::from_anchor(&rect, anc, dimension, em))));
         *orig = rect;
         return;
@@ -92,6 +94,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         transform.rotation,
         transform.scale,
         parent.z + z + f32::EPSILON * 8.0,
+        erase.is_some(),
     );
 
     if let Ok(children) = child_query.get(entity) {
@@ -99,7 +102,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             if !visited.insert(*child) { continue; }
             // SAFETY: safe since double mut access is gated by visited
             if let Ok((_, _, t, ..)) = unsafe { entity_query.get_unchecked(*child) } {
-                let parent = ParentInfo::new(&rect, &t.anchor, dimension, em);
+                let parent = ParentInfo::new(&rect, t.get_parent_anchor(), dimension, em);
                 queue.push((*child, parent))
             }
         }
@@ -159,7 +162,7 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>, TRoot: ReadOnlyWorldQuery, 
 
     for (entity, _, t, ..) in entity_query.iter_many(root_entities.iter()) {
         if !visited.insert(entity) { return; }
-        let parent = ParentInfo::new(&window_rect, &t.anchor, dim, rem);
+        let parent = ParentInfo::new(&window_rect, t.get_parent_anchor(), dim, rem);
         queue.push((entity, parent))
     }
 

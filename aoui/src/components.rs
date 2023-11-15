@@ -135,6 +135,16 @@ impl Dimension {
         }
     }
 
+    /// Edit a contextless underlying value.
+    /// 
+    /// Has no effect if dimension is not owned.
+    pub fn edit_raw(&mut self, f: impl FnOnce(&mut Vec2)) {
+        match &mut self.dim {
+            DimensionSize::Copied => (),
+            DimensionSize::Owned(v) => v.edit_raw(f),
+        }
+    }
+
     /// Gain mutable access to the underlying owned value.
     /// 
     /// For ease of use with egui.
@@ -161,22 +171,34 @@ impl Dimension {
             _ => (),
         }
     }
+
+    pub fn is_owned(&self) -> bool {
+        matches!(self.dim, DimensionSize::Owned(..))
+    }
+
+    pub fn is_copied(&self) -> bool {
+        matches!(self.dim, DimensionSize::Copied)
+    }
 }
 
 /// The 2D transform component for AoUI
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct Transform2D{
-    /// Governs the rotation and scale specified in [`Transform2D`].
-    /// This also serves as the [`Transform`] center is needed.
+    /// The sprite's offset, as well as
+    /// parent rotation and parent scale
+    /// are applied through this point.
+    ///
+    /// This always overwrites the `anchor` field in standard bevy components,
+    /// and should ideally work the same way for third party implementations.
+    pub anchor: Anchor,
+    /// The anchor matched on the parent side.
+    ///
+    /// By default this is the same as `anchor`.
+    pub parent_anchor: Option<Anchor>,
+    /// Center of `rotation` and `scale`.
     ///
     /// By default this is the same as `anchor`.
     pub center: Option<Anchor>,
-    /// Where the sprite is parented to.
-    /// Offset, parent rotation and parent scale
-    /// are applied through this point.
-    ///
-    /// This always overwrites the `anchor` field in standard bevy components.
-    pub anchor: Anchor,
     /// Offset from parent's anchor.
     pub offset: Size2,
     /// Z depth, by default, this is `parent_z + z + eps * 8`
@@ -196,8 +218,16 @@ impl Transform2D {
         }
     }
 
+    pub fn get_parent_anchor(&self) -> &Anchor{
+        match &self.parent_anchor {
+            Some(anchor) => anchor,
+            None => &self.anchor,
+        }
+    }
+
     pub const UNIT: Self = Self {
         anchor: Anchor::Center,
+        parent_anchor: None, 
         center: None, 
         offset: Size2::ZERO,
         rotation: 0.0,
@@ -230,6 +260,11 @@ impl Transform2D {
         self
     }
 
+    pub fn with_parent_anchor(mut self, anchor: Anchor) -> Self {
+        self.parent_anchor = Some(anchor);
+        self
+    }
+
     pub fn with_center(mut self, center: Anchor) -> Self {
         self.center = Some(center);
         self
@@ -256,3 +291,6 @@ pub struct BuildGlobal(pub Option<Anchor>);
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct BuildTransform(pub Anchor);
 
+/// If set, do not propagate the scale of **this** sprite down its children.
+#[derive(Debug, Clone, Component, Default, Reflect)]
+pub struct ScaleErase;

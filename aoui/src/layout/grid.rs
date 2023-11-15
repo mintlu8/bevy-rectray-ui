@@ -1,10 +1,10 @@
-use std::{ops::Range, iter::once};
+use std::ops::Range;
 use bevy::math::*;
 use itertools::Itertools;
 
 use crate::{LayoutItem, LayoutControl};
 
-fn l1norm(v: Vec2) -> f32 {
+fn xy(v: Vec2) -> f32 {
     v.x + v.y
 }
 
@@ -137,8 +137,8 @@ pub fn porportional_table(
     if len == 0 {
         assert_ne!(len, 0, "Columns should not be 0.");
     }
-    let row = l1norm(row_dir(dimension).abs());
-    let margin_per_item = l1norm(margin) * (len - 1) as f32 / len as f32;
+    let row = xy(row_dir(dimension).abs());
+    let margin_per_item = xy(margin) * (len - 1) as f32 / len as f32;
     let columns = columns.into_iter().map(|x| x * row - margin_per_item);
 
     fixed_table(dimension, margin, items, columns, row_dir, column_dir, false)
@@ -153,21 +153,33 @@ pub fn fixed_table(
     column_dir: impl Fn(Vec2) -> Vec2,
     stretch: bool,
 ) -> (Vec<Vec2>, Vec2) {
-    let signum = row_dir(dimension).signum();
-    let abs_len = l1norm(row_dir(dimension).abs());
-    let columns = once(0.0).into_iter().chain(columns).chain(once(abs_len));
-    let columns = if signum.cmplt(Vec2::ZERO).any() {
-        columns.into_iter()
-            .tuple_windows()
-            .map(|(a, b)|(signum * b + abs_len, signum * a + abs_len))
-            .collect_vec()
-    } else {
-        columns.into_iter()
-            .tuple_windows()
-            .map(|(a, b)|(signum * a, signum * b))
-            .collect_vec()
+    let len = row_dir(dimension);
+    let signum = len.signum();
+    let columns: Vec<Vec2> = columns.into_iter().map(|x| x * signum).collect_vec();
+    let row_margin = match stretch {
+        false => row_dir(margin),
+        true => match columns.len() {
+            0|1 => Vec2::ZERO,
+            count => (len - columns.iter().sum::<Vec2>()) / (count - 1) as f32
+        },
     };
-    table(margin, items, columns, row_dir, column_dir)
+
+    let mut result = Vec::new();
+    if len.cmplt(Vec2::ZERO).any() {
+        let mut cursor = len.abs();
+        for item in columns {
+            result.push((cursor + item, cursor));
+            cursor += item + row_margin;
+        }
+    } else {
+        let mut cursor = Vec2::ZERO;
+        for item in columns {
+            result.push((cursor, cursor + item));
+            cursor += item + row_margin;
+        }
+    }
+
+    table(margin, items, result, row_dir, column_dir)
 }
 
 pub fn flex_table(
@@ -183,7 +195,7 @@ pub fn flex_table(
     let mut index = 0;
     let mut cols: Vec<f32> = Vec::new();
     let items = items.into_iter().map(|item| {
-        let len = l1norm(row_dir(item.dimension).abs());
+        let len = xy(row_dir(item.dimension).abs());
         match cols.get_mut(index) {
             Some(x) => *x = (*x).max(len),
             None => cols.push(len),
@@ -199,7 +211,7 @@ pub fn flex_table(
     let row_one = row_dir(Vec2::ONE).abs();
     
     let col_margin = if stretch {
-        (l1norm(row_len).abs() - cols.iter().sum::<f32>()).max(0.0) / (cols.len() - 1) as f32 * row_one
+        (xy(row_len).abs() - cols.iter().sum::<f32>()).max(0.0) / (cols.len() - 1) as f32 * row_one
     } else {
         row_dir(margin).abs()
     };

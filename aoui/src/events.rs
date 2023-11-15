@@ -53,9 +53,11 @@ impl<T: CursorEvent, L: ScheduleLabel + Clone> Plugin for CursorEventPlugin<T, L
 }
 
 /// Find hitboxes that contain some points
-pub fn query_hitbox<'t>(entity_query: impl IntoIterator<Item = (Entity, &'t RotatedRect, &'t Hitbox)>, points: impl IntoIterator<Item = Vec2> + Copy) -> Option<Entity> {    entity_query
+pub fn query_hitbox<'t>(entity_query: impl IntoIterator<Item = (Entity, &'t RotatedRect, &'t Hitbox, &'t ViewVisibility)>, points: impl IntoIterator<Item = Vec2> + Copy) -> Option<Entity> {    
+    entity_query
         .into_iter()
-        .filter_map(|(entity, rect, hitbox)|{
+        .filter(|(.., vis)| vis.get())
+        .filter_map(|(entity, rect, hitbox, _)|{
             if points.into_iter().all(|pt| hitbox.contains(rect, pt)) {
                 Some((entity.clone(), rect.z))
             } else {
@@ -68,13 +70,14 @@ pub fn query_hitbox<'t>(entity_query: impl IntoIterator<Item = (Entity, &'t Rota
 /// Find hitboxes that contain some points
 fn query_hitbox_event<T: CursorEvent>(
     mut commands: Commands,
-    entity_query: Query<(&RotatedRect, &Hitbox, &CursorEventHandler<T>)>, 
+    entity_query: Query<(&RotatedRect, &Hitbox, &CursorEventHandler<T>, &ViewVisibility)>, 
     mut event: EventReader<T>,
 ) {
     for event in event.read() {
         let handler = entity_query
             .iter()
-            .filter_map(|(rect, hitbox, handler)|{
+            .filter(|(.., vis)| vis.get())
+            .filter_map(|(rect, hitbox, handler, _)|{
                 if event.positions().into_iter().all(|pt| hitbox.contains(rect, pt)) {
                     Some((handler, rect.z))
                 } else {
