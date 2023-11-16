@@ -6,10 +6,11 @@ edition = "2021"
 [dependencies]
 bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite", "bevy_text"] }
 itertools = "^0.11"
+serde = { version = "^1", optional = true }
 
 
 [features]
-default = ["bundles"]
+default = ["bundles", "serde"]
 ## Enable alternative versions of bevy's sprite, spritesheet and text bundles.
 bundles = []
 

@@ -1,3 +1,4 @@
+use bevy::math::BVec2;
 use bevy::prelude::{Vec2, UVec2};
 use crate::span::{compact, span};
 
@@ -35,12 +36,15 @@ impl Columns {
 #[derive(Debug, Clone, bevy::prelude::Reflect)]
 #[non_exhaustive]
 pub enum Layout {
-    /// Dynamic layout that always has the same size as its singular child, with margin added.
+    /// Dynamic layout that always has the same size as sum of its child, with margin added.
     /// 
-    /// # Panics
-    /// 
-    /// When given more than one children.
-    Single,
+    /// Otherwise similar to a regular sprite.
+    Dynamic {
+        /// Width is dynamic.
+        x: bool,
+        /// Height is dynamic.
+        y: bool,
+    },
     /// A size agnostic dynamic mono-directional compact hbox or vbox.
     /// 
     /// # Rules
@@ -195,17 +199,19 @@ impl Layout {
 
     pub fn place_all<T>(&self, dim: Vec2, margin: Vec2, items: T) -> (Vec<Vec2>, Vec2) where T: IntoIterator<Item = LayoutItem>, T::IntoIter: DoubleEndedIterator{
         match self {
-            Layout::Single => {
-                let mut iter = items.into_iter();
-                let first = iter.next();
-                assert!(iter.next().is_none(), "Layout::Single cannot have multiple children.");
-                match first {
-                    Some(item) => (
-                        vec![item.anchor.as_vec()], 
-                        item.dimension
-                    ),
-                    None => (Vec::new(), Vec2::ZERO),
-                }
+            Layout::Dynamic {x, y} => {
+                let mut max = Vec2::ZERO;
+                let mut anchors: Vec<_> = items.into_iter().map(|x| {
+                    max = max.max(x.dimension);
+                    x.anchor.as_vec()
+                }).collect();
+
+                let dim = Vec2::new(
+                    if *x {max.x} else {dim.x},
+                    if *y {max.y} else {dim.y},
+                );
+                anchors.iter_mut().for_each(|x| *x *= dim);
+                (anchors, dim)
             },
             Layout::Compact { direction } => {
                 match direction {

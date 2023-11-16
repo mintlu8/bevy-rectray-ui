@@ -44,11 +44,45 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     });
     fixed_table! ((commands, assets) {
         anchor: Center,
-        dimension: [400, 100],
-        margin: [10, 10],
-        columns: [0.2, 0.3, 0.5, 0.7],
+        dimension: [700, 100],
+        columns: [0.2, 0.3, 0.5, 0.8],
         z: 1,
         extra: Sprite::default(),
+        child: rectangle! {
+            dimension: size2!([700, 100%]),
+            fill: color!(black),
+            extra: IgnoreLayout,
+            z: -1,
+            child: rectangle! {
+                anchor: Left,
+                dimension: size2!([20%, 100%]),
+                fill: color!(blue300)
+            },
+            child: rectangle! {
+                anchor: Left,
+                offset: size2!([20%, 0]),
+                dimension: size2!([10%, 100%]),
+                fill: color!(blue400)
+            },
+            child: rectangle! {
+                anchor: Left,
+                offset: size2!([30%, 0]),
+                dimension: size2!([20%, 100%]),
+                fill: color!(blue500)
+            },
+            child: rectangle! {
+                anchor: Left,
+                offset: size2!([50%, 0]),
+                dimension: size2!([30%, 100%]),
+                fill: color!(blue600)
+            },
+            child: rectangle! {
+                anchor: Left,
+                offset: size2!([80%, 0]),
+                dimension: size2!([20%, 100%]),
+                fill: color!(blue700)
+            }
+        },
         child: rectangle! {
             anchor: TopLeft,
             dimension: [80, 50],
@@ -102,6 +136,75 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             anchor: BottomRight,
             dimension: [90, 30],
             fill: color!(red900),
+            child: anchor_circle!{BottomRight}
+        },
+        child: rectangle! {
+            anchor: Center,
+            dimension: [40, 40],
+            fill: color!(red950),
+            child: anchor_circle!{Center}
+        },
+
+
+        child: rectangle! {
+            anchor: CenterLeft,
+            dimension: [60, 40],
+            fill: color!(orange100),
+            child: anchor_circle!{CenterLeft},
+        },
+
+        child: rectangle! {
+            anchor: TopRight,
+            dimension: [50, 30],
+            fill: color!(orange200),
+            child: anchor_circle!{TopRight}
+        },
+        child: rectangle! {
+            anchor: BottomCenter,
+            dimension: [40, 10],
+            fill: color!(orange300),
+            child: anchor_circle!{BottomCenter}
+        },
+        child: rectangle! {
+            anchor: TopLeft,
+            dimension: [20, 50],
+            fill: color!(orange400),
+            child: anchor_circle!{TopLeft}
+        },
+        child: rectangle! {
+            anchor: BottomLeft,
+            dimension: [40, 40],
+            fill: color!(orange500),
+            child: anchor_circle!{BottomLeft}
+        },
+        child: rectangle! {
+            anchor: TopCenter,
+            dimension: [40, 50],
+            fill: color!(orange600),
+            child: anchor_circle!{TopCenter}
+        },
+        child: rectangle! {
+            anchor: CenterRight,
+            dimension: [30, 30],
+            fill: color!(orange700),
+            child: anchor_circle!{CenterRight}
+        },
+        child: rectangle! {
+            anchor: TopRight,
+            dimension: [30, 60],
+            fill: color!(orange800),
+            child: anchor_circle!{TopRight}
+        },
+        child: rectangle! {
+            anchor: BottomLeft,
+            dimension: [50, 30],
+            fill: color!(orange900),
+            child: anchor_circle!{BottomLeft}
+        },
+        child: rectangle! {
+            anchor: BottomRight,
+            dimension: [30, 30],
+            fill: color!(orange950),
             child: anchor_circle!{BottomRight}
         },
     });

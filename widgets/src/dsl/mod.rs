@@ -25,28 +25,28 @@ pub mod prelude {
     pub use crate::widgets::shape::Shapes;
     pub use super::layouts::linebreak;
     pub use std::f32::consts::PI;
+    pub use bevy_aoui::LayoutControl::{Linebreak, IgnoreLayout};
 
+    /// This can be use anywhere where you want to use `anchor` as Anchor.
     #[allow(non_upper_case_globals)]
-    pub const Inherit: Option<Option<Anchor>> = Some(None);
+    pub const Inherit: Option<Anchor> = None;
 
     #[macro_export]
     macro_rules! frame {
         {$commands: tt {$($tt:tt)*}} => 
             {$crate::meta_dsl!($commands [$crate::dsl::Frame] {$($tt)*})};
     }
-    pub use frame;
     #[macro_export]
     macro_rules! sprite {
         {$commands: tt {$($tt:tt)*}} => 
             {$crate::meta_dsl!($commands [$crate::dsl::Sprite] {$($tt)*})};
     }
-    pub use sprite;
     #[macro_export]
     macro_rules! textbox {
         {$commands: tt {$($tt:tt)*}} => 
             {$crate::meta_dsl!($commands [$crate::dsl::TextBox] {$($tt)*})};
     }
-    pub use textbox;
+    pub use {frame, sprite, textbox};
     pub use crate::{shape, rectangle, circle};
     pub use crate::{compact, paragraph, span, hbox, vbox, hspan, vspan};
     pub use crate::{fixed_table, flex_table, fixed_grid, sized_grid, sized_table};

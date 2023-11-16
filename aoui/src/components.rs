@@ -14,6 +14,7 @@ pub struct AoUI;
 /// 
 /// If `Owned` we will try to edit the dimension of the paired sprite
 #[derive(Debug, Clone, Reflect)]
+#[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DimensionSize {
     /// Copy `size` from sprite, rect, image, text, etc.
     Copied,
@@ -23,6 +24,7 @@ pub enum DimensionSize {
 
 /// Controls the dimension of the sprite
 #[derive(Debug, Clone, Component, Reflect)]
+#[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Dimension {
     /// Input for dimension.
     pub dim: DimensionSize,
@@ -31,12 +33,12 @@ pub struct Dimension {
     /// Evaluated size in pixels.
     ///     
     /// This value is computed every frame. 
+    #[cfg_attr(feature="serde", serde(default))]
     pub size: Vec2,
     /// Font size `em` on this sprite.
     /// 
     /// This value is computed every frame. 
-    /// 
-    /// By default `16`.
+    #[cfg_attr(feature="serde", serde(default))]
     pub em: f32,
 }
 
@@ -182,7 +184,7 @@ impl Dimension {
 }
 
 /// The 2D transform component for AoUI
-#[derive(Debug, Clone, Component, Reflect)]
+#[derive(Debug, Copy, Clone, Component, Reflect)]
 pub struct Transform2D{
     /// The sprite's offset, as well as
     /// parent rotation and parent scale

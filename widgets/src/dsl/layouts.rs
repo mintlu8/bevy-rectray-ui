@@ -28,11 +28,48 @@ macro_rules! linebreak {
     };
 }
 
-pub use linebreak;
-
-use crate::dsl::{core::{transform2d, dimension, common_plugins}, DslInto};
+use crate::dsl::{core::{transform2d, dimension}, DslInto};
 
 use super::{util::OneOrTwo, AoUIWidget};
+
+pub use linebreak;
+
+/// A Sized AoUI Component with no rendering.
+#[derive(Debug, Default)]
+pub struct DynFrame {
+    pub anchor: Anchor,
+    pub parent_anchor: Option<Anchor>,
+    pub center: Option<Anchor>,
+    pub visible: Option<bool>,
+    pub offset: Size2,
+    pub rotation: f32,
+    pub scale: Option<OneOrTwo<Vec2>>,
+    pub z: f32,
+    pub x: Option<bool>,
+    pub y: Option<bool>,
+    pub dimension: Option<Size2>,
+    pub em: SetEM,
+    pub hitbox: Option<Hitbox>,
+}
+
+
+impl AoUIWidget for DynFrame {
+    fn spawn_with(self, commands: &mut Commands) -> Entity {
+        let mut base = commands.spawn((
+            AoUIBundle {
+                transform: transform2d!(self),
+                dimension: dimension!(self),
+                vis: self.visible.dinto(),
+                ..Default::default()
+            },
+        ));
+        if let Some(hitbox) = self.hitbox {
+            base.insert(hitbox);
+        }
+        base.id()
+    }
+}
+
 
 #[derive(Debug, Clone, Copy)]
 pub enum SpanContainerNames {
@@ -54,7 +91,6 @@ pub struct SpanContainer {
     pub z: f32,
     pub dimension: Option<Size2>,
     pub em: SetEM,
-    pub linebreak: bool,
     pub hitbox: Option<Hitbox>,
     pub direction: Option<FlexDir>,
     pub stack: Option<FlexDir>,
@@ -93,7 +129,9 @@ impl AoUIWidget for SpanContainer {
                 margin: self.margin.0,
             }
         ));
-        common_plugins!(self, base);
+        if let Some(hitbox) = self.hitbox {
+            base.insert(hitbox);
+        }
         base.id()
     }
 }
@@ -197,7 +235,6 @@ pub struct GridContainer {
     pub z: f32,
     pub dimension: Option<Size2>,
     pub em: SetEM,
-    pub linebreak: bool,
     pub hitbox: Option<Hitbox>,
     pub row: Option<FlexDir>,
     pub column: Option<FlexDir>,
@@ -264,7 +301,9 @@ impl AoUIWidget for GridContainer {
                 margin: self.margin.0,
             }
         ));
-        common_plugins!(self, base);
+        if let Some(hitbox) = self.hitbox {
+            base.insert(hitbox);
+        }
         base.id()
     }
 }

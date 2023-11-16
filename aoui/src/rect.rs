@@ -7,10 +7,15 @@ use bevy::{math::Vec2, reflect::Reflect, prelude::Component, sprite::Anchor};
 #[derive(Debug, Clone, Copy, Component, Default, Reflect)]
 #[non_exhaustive]
 pub struct RotatedRect{
+    /// Center of the Rect.
     pub center: Vec2,
+    /// Dimension of the Rect.
     pub dimension: Vec2,
+    /// Rotation of the Rect.
     pub rotation: f32,
+    /// Z depth of the Rect.
     pub z: f32,
+    /// Scale of the rect, already baked in dimension.
     pub scale: Vec2,
 }
 
@@ -22,7 +27,7 @@ pub struct ParentInfo {
     pub dimension: Vec2,
     pub rotation: f32,
     pub z: f32,
-    // this is already baked in dimension.
+    /// Scale is already baked in dimension.
     pub scale: Vec2,
     pub em: f32,
 }
@@ -96,3 +101,31 @@ impl RotatedRect {
         rect
     }
 }
+
+#[cfg(feature="serde")]
+const _: () = {
+    use serde::{Serialize, Deserialize};
+    impl Serialize for RotatedRect {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+            (
+                self.center.x, self.center.y, 
+                self.dimension.x, self.dimension.y,
+                self.rotation, self.z, 
+                self.scale.x, self.scale.y
+            ).serialize(serializer)
+        }
+    }
+
+
+    impl<'de> Deserialize<'de> for RotatedRect {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+            let (cx, cy, dx, dy, r, z, sx, sy) = <_>::deserialize(deserializer)?; 
+            Ok(Self { 
+                center: Vec2::new(cx, cy),
+                dimension: Vec2::new(dx, dy),
+                rotation: r, z,
+                scale: Vec2::new(sx, sy),
+            })
+        }
+    }
+};

@@ -28,20 +28,8 @@ macro_rules! dimension {
     }
 }
 
-macro_rules! common_plugins {
-    ($this: expr, $commands: expr) => {
-        if $this.linebreak {
-            $commands.insert(::bevy_aoui::LayoutControl::Linebreak);
-        }
-        if let Some(hitbox) = $this.hitbox {
-            $commands.insert(hitbox);
-        }
-    }
-}
-
 pub(crate) use transform2d;
 pub(crate) use dimension;
-pub(crate) use common_plugins;
 
 use crate::dsl::DslInto;
 
@@ -59,18 +47,7 @@ pub struct Minimal {
     pub z: f32,
     pub dimension: Option<Size2>,
     pub em: SetEM,
-    pub linebreak: bool,
     pub hitbox: Option<Hitbox>,
-}
-
-macro_rules! number_of_somes {
-    ($($expr: expr),*) => {
-        {
-            let mut count = 0usize;
-            $(if $expr.is_some() { count += 1 })*
-            count
-        }
-    };
 }
 
 
@@ -87,16 +64,7 @@ pub struct Frame {
     pub z: f32,
     pub dimension: Option<Size2>,
     pub em: SetEM,
-    pub linebreak: bool,
     pub hitbox: Option<Hitbox>,
-    /// If specified, produce `BuildGlobal`
-    /// 
-    /// Put `Inherit` here to use the default anchor.
-    pub global: Option<Option<Anchor>>,
-    /// If specified, produce `BuildTransform``
-    pub transform: Option<Anchor>,
-    /// If specified, produce `BuildSpacial`
-    pub spacial: Option<Anchor>,
 }
 
 impl AoUIWidget for Frame {
@@ -109,19 +77,8 @@ impl AoUIWidget for Frame {
                 ..Default::default()
             },
         ));
-        common_plugins!(self, base);
-        match number_of_somes!(self.global, self.transform, self.spacial) {
-            0 => (),
-            1 => {
-                if let Some(anc) = self.global {
-                    base.insert(::bevy_aoui::BuildGlobal(anc));
-                } else if let Some(anc) = self.transform {
-                    base.insert(::bevy_aoui::BuildTransform(anc));
-                } else if let Some(anc) = self.spacial {
-                    base.insert(::bevy_aoui::BuildTransform(anc));
-                }
-            },
-            _ => panic!("`global`, `transform`, `spacial` are mutually exclusive."),
+        if let Some(hitbox) = self.hitbox {
+            base.insert(hitbox);
         }
         base.id()
     }
@@ -142,7 +99,6 @@ pub struct Sprite {
     pub z: f32,
     pub dimension: Option<Size2>,
     pub em: SetEM,
-    pub linebreak: bool,
     pub hitbox: Option<Hitbox>,
 
     pub sprite: Handle<Image>,
@@ -172,7 +128,9 @@ impl AoUIWidget for Sprite {
                 ..Default::default()
             },
         ));
-        common_plugins!(self, base);
+        if let Some(hitbox) = self.hitbox {
+            base.insert(hitbox);
+        }
         base.id()
     }
 }
@@ -190,7 +148,6 @@ pub struct TextBox {
     pub z: f32,
     pub dimension: Option<Size2>,
     pub em: SetEM,
-    pub linebreak: bool,
     pub hitbox: Option<Hitbox>,
 
     pub text: String,
@@ -235,7 +192,9 @@ impl AoUIWidget for TextBox {
                 ..Default::default()
             },
         ));
-        common_plugins!(self, base);
+        if let Some(hitbox) = self.hitbox {
+            base.insert(hitbox);
+        }       
         base.id()
     }
 }

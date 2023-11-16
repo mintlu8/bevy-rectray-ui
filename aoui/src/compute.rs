@@ -42,7 +42,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             // SAFETY: safe since double mut access is gated by visited
             if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { entity_query.get_unchecked(*child) } {
                 match control_query.get(*child) {
-                    Ok(LayoutControl::NoLayout) => other_entities.push((
+                    Ok(LayoutControl::IgnoreLayout) => other_entities.push((
                         *child, 
                         child_transform.get_parent_anchor()
                     )),
@@ -83,7 +83,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             .map(|(entity, anc)| (entity, ParentInfo::from_anchor(&rect, anc, dimension, em))));
         *orig = rect;
         for (child, anchor) in other_entities {
-            let parent = ParentInfo::new(&rect, anchor, dimension, em);
+            let parent = ParentInfo::new(&rect, anchor, size, em);
             queue.push((child, parent))
         }
         return;

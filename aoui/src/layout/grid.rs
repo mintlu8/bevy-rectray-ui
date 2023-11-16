@@ -142,7 +142,14 @@ pub fn porportional_table(
     }
     let row = xy(row_dir(dimension).abs());
     let margin_per_item = xy(margin) * (len - 1) as f32 / len as f32;
-    let columns = columns.into_iter().map(|x| x * row - margin_per_item);
+
+    let mut last = 0.0;
+    
+    let columns = columns.into_iter().chain(std::iter::once(1.0)).map(|x| {
+        let result = (x - last) * row - margin_per_item;
+        last = x;
+        result
+    });
 
     fixed_table(dimension, margin, items, columns, row_dir, column_dir, false)
 }
@@ -157,8 +164,7 @@ pub fn fixed_table(
     stretch: bool,
 ) -> (Vec<Vec2>, Vec2) {
     let len = row_dir(dimension);
-    let signum = len.signum();
-    let columns: Vec<Vec2> = columns.into_iter().map(|x| x * signum).collect_vec();
+    let columns: Vec<Vec2> = columns.into_iter().map(|x| row_dir(x * Vec2::ONE)).collect_vec();
     let row_margin = match stretch {
         false => row_dir(margin),
         true => match columns.len() {
@@ -181,8 +187,7 @@ pub fn fixed_table(
             cursor += item + row_margin;
         }
     }
-
-    table(margin, items, dbg!(result), row_dir, column_dir)
+    table(margin, items, result, row_dir, column_dir)
 }
 
 pub fn flex_table(

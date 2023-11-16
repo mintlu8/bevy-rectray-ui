@@ -13,6 +13,7 @@ impl Default for AouiREM {
 
 /// Set the font size of the widget.
 #[derive(Debug, Clone, Copy, Default, Reflect)]
+#[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SetEM {
     #[default]
     None,
@@ -23,11 +24,16 @@ pub enum SetEM {
 
 /// The unit of a Size `px`, `em`, `rem`, `percent`
 #[derive(Debug, Default, Clone, Copy, PartialEq, Reflect)]
+#[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SizeUnit{
     #[default]
+    /// Pixels.
     Pixels,
+    /// Font size.
     Em,
+    /// Root font size.
     Rem,
+    /// Percent of parent size.
     Percent,
     /// 100% - a px
     MarginPx,
@@ -181,3 +187,24 @@ impl SetEM {
         }
     }
 }
+
+#[cfg(feature="serde")]
+const _:() = {
+    use serde::{Serialize, Deserialize};
+    impl Serialize for Size2 {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+            ((self.x, self.raw.x), (self.y, self.raw.y)).serialize(serializer)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Size2 {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+            let ((ux, x), (uy, y)) = <_>::deserialize(deserializer)?; 
+            Ok(Self { 
+                x: ux,
+                y: uy,
+                raw: Vec2::new(x, y)
+            })
+        }
+    }
+};

@@ -2,7 +2,7 @@ use bevy::{math::Vec2, sprite::{Anchor, Mesh2dHandle, ColorMaterial}, prelude::{
 use bevy_aoui::{Size2, SetEM, Hitbox, bundles::{AoUIBundle, BuildGlobalBundle}, ScaleErase};
 use bevy_prototype_lyon::prelude::*;
 
-use crate::{dsl::{prelude::*, core::{transform2d, dimension, common_plugins}}, widgets::shape::{Shapes, ShapeDimension}};
+use crate::{dsl::{prelude::*, core::{transform2d, dimension}}, widgets::shape::{Shapes, ShapeDimension}};
 
 use super::{convert::DslInto, AoUIWidget};
 
@@ -52,7 +52,6 @@ pub struct Shape {
     /// Initialize render size, by default Vec2::ONE.
     pub size: Option<Vec2>,
     pub em: SetEM,
-    pub linebreak: bool,
     pub hitbox: Option<Hitbox>,
     pub shape: Shapes,
     pub fill: Option<Fill>,
@@ -97,7 +96,9 @@ impl AoUIWidget for Shape {
             }
             base.insert(stroke);
         }
-        common_plugins!(self, base);
+        if let Some(hitbox) = self.hitbox {
+            base.insert(hitbox);
+        }        
         base.id()
     }
 }
