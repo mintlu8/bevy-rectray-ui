@@ -194,6 +194,9 @@ pub struct Transform2D{
     /// The anchor matched on the parent side.
     ///
     /// By default this is the same as `anchor`.
+    /// 
+    /// Unless doing spine animations,
+    /// try avoid using this field in ideomatic usage of `AoUI`.
     pub parent_anchor: Option<Anchor>,
     /// Center of `rotation` and `scale`.
     ///

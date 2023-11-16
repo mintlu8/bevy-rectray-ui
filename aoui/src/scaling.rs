@@ -168,3 +168,16 @@ impl From<Vec2> for Size2 {
         }
     }
 }
+
+impl SetEM {
+    #[doc(hidden)]
+    /// For testing with egui only
+    pub fn raw_mut(&mut self) -> &mut f32 {
+        match self {
+            SetEM::None => panic!("Does not own a raw value."),
+            SetEM::Pixels(f) => f,
+            SetEM::Ems(f) => f,
+            SetEM::Rems(f) => f,
+        }
+    }
+}

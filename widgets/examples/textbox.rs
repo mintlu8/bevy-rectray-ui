@@ -3,6 +3,7 @@ use bevy_aoui::AoUIPlugin;
 use bevy_aoui_widgets::{AoUIWidgetsPlugin, widgets::inputbox::{*}, events::EventFlags};
 use bevy_prototype_lyon::prelude::*;
 
+
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)

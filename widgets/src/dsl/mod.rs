@@ -11,6 +11,7 @@ mod layouts;
 mod shapes;
 pub use shapes::Shape;
 pub use convert::DslInto;
+pub use layouts::{SpanContainer, SpanContainerNames, GridContainer, GridContainerNames};
 pub use core::{Frame, Sprite, TextBox};
 
 pub mod prelude {
@@ -46,15 +47,9 @@ pub mod prelude {
             {$crate::meta_dsl!($commands [$crate::dsl::TextBox] {$($tt)*})};
     }
     pub use textbox;
-    #[macro_export]
-    macro_rules! shape {
-        {($commands: expr, $server: expr $(, $ctx: expr)*) {$($tt:tt)*}} => 
-            {$crate::meta_dsl!(($commands, $server $(, $ctx)*) [$crate::dsl::Shape] {
-                default_material: $server.add(::bevy::prelude::ColorMaterial::default()),
-                $($tt)*
-            })};
-    }
-    pub use shape;
+    pub use crate::{shape, rectangle, circle};
+    pub use crate::{compact, paragraph, span, hbox, vbox, hspan, vspan};
+    pub use crate::{fixed_table, flex_table, fixed_grid, sized_grid, sized_table};
     
 }
 
@@ -108,49 +103,62 @@ pub trait AoUIWidget: Sized {
 
 #[macro_export]
 macro_rules! filter_children {
-    ($commands: tt [$($tt: tt)*] [$($fields: tt)*]) => {
-        $crate::meta_dsl!($commands [$($tt)*] {$($fields)*} {} {} {})
+    ($commands: tt [$($path: tt)*] [$($fields: tt)*]) => {
+        $crate::meta_dsl!($commands [$($path)*] {$($fields)*} {} {} {})
     };
-    ($commands: tt [$($tt: tt)*] [$($out: tt)*] child: $macro: ident !, $($rest: tt)*) => {
-        $crate::filter_children!($commands [$($tt)*] [
+    ($commands: tt [$($path: tt)*] [$($out: tt)*] child: $macro: ident !, $($rest: tt)*) => {
+        $crate::filter_children!($commands [$($path)*] [
             $($out)* 
             child: $macro! (
                 $commands
             )
         ], $($rest)*)
     };
-    ($commands: tt [$($tt: tt)*] [$($out: tt)*] child: $macro: ident ! {$($expr: tt)*} $($rest: tt)*) => {
-        $crate::filter_children!($commands [$($tt)*] [
+    ($commands: tt [$($path: tt)*] [$($out: tt)*] child: $macro: ident ! {$($expr: tt)*}, $($rest: tt)*) => {
+        $crate::filter_children!($commands [$($path)*] [
+            $($out)* 
+            child: $macro! (
+                $commands {
+                    $($expr)*
+                }
+            ),
+        ] $($rest)*)
+    };
+
+    ($commands: tt [$($path: tt)*] [$($out: tt)*] child: $macro: ident ! {$($expr: tt)*}) => {
+        $crate::filter_children!($commands [$($path)*] [
             $($out)* 
             child: $macro! (
                 $commands {
                     $($expr)*
                 }
             )
-        ] $($rest)*)
+        ])
     };
-    ($commands: tt [$($tt: tt)*] [$($out: tt)*] $head: tt $($rest: tt)*) => {
-        $crate::filter_children!($commands [$($tt)*] [$($out)* $head] $($rest)*)
+    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $head: expr, $($rest: tt)*) => {
+        $crate::filter_children!($commands [$($path)*] [$($out)* $field: $head,] $($rest)*)
+    };
+
+    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $head: expr) => {
+        $crate::filter_children!($commands [$($path)*] [$($out)* $field: $head])
     };
 }
 
 #[macro_export]
 macro_rules! meta_dsl {
-    // ($commands: tt [$($tt: tt)*] {$($field: ident: $expr: expr),* $(,)?} ) => {
-    //     $crate::meta_dsl!($commands [$($tt)*] {$($field: $expr),*} {} {} {})
-    // };
-    ($commands: tt [$($tt: tt)*] {$($fields: tt)*} ) => {
-        $crate::filter_children!($commands [$($tt)*] [] $($fields)*)
+    
+    ($commands: tt [$($path: tt)*] {$($fields: tt)*} ) => {
+        $crate::filter_children!($commands [$($path)*] [] $($fields)*)
     };
 
-    ($commands: tt [$($tt: tt)*] 
+    ($commands: tt [$($path: tt)*] 
         {extra: $expr: expr $(,$f: ident: $e: expr)* $(,)?} 
         {$($f2: ident: $e2: expr),*} 
         {$($extras: expr),*} 
         {$($children: expr),*}
     ) => {
         $crate::meta_dsl!($commands
-            [$($tt)*] 
+            [$($path)*] 
             {$($f: $e),*} 
             {$($f2: $e2),*}
             {$($extras,)* $expr}
@@ -158,14 +166,14 @@ macro_rules! meta_dsl {
         )
     };
 
-    ($commands: tt [$($tt: tt)*] 
+    ($commands: tt [$($path: tt)*] 
         {child: $expr: expr $(,$f: ident: $e: expr)* $(,)?} 
         {$($f2: ident: $e2: expr),*} 
         {$($extras: expr),*} 
         {$($children: expr),*}
     ) => {
         $crate::meta_dsl!($commands
-            [$($tt)*] 
+            [$($path)*] 
             {$($f: $e),*} 
             {$($f2: $e2),*}
             {$($extras),*}
@@ -173,14 +181,14 @@ macro_rules! meta_dsl {
         )
     };
 
-    ($commands: tt [$($tt: tt)*] 
+    ($commands: tt [$($path: tt)*] 
         {$field: ident: $expr: expr $(,$f: ident: $e: expr)* $(,)?} 
         {$($f2: ident: $e2: expr),*} 
         {$($extras: expr),*} 
         {$($children: expr),*}
     ) => {
         $crate::meta_dsl!($commands
-            [$($tt)*] 
+            [$($path)*] 
             {$($f: $e),*} 
             {$($f2: $e2,)* $field: $expr}
             {$($extras),*}
@@ -188,8 +196,7 @@ macro_rules! meta_dsl {
         )
     };
 
-
-    (($commands: expr $(,$e:expr)*) [$($tt: tt)*] {$(,)?} 
+    (($commands: expr $(,$e:expr)*) [$($path: tt)*] {$(,)?} 
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*} 
         {$($children: expr),*}
@@ -198,7 +205,7 @@ macro_rules! meta_dsl {
             use $crate::dsl::DslInto;
             let children = [$($children),*];
             $commands.spawn_aoui((
-                $($tt)* {
+                $($path)* {
                     $($field: ($expr).dinto(),)*
                     ..Default::default()
                 },

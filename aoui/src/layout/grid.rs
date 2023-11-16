@@ -78,29 +78,31 @@ pub fn table(
     let mut cursor = Vec2::ZERO;
     let mut result = Vec::new();
 
-    let half_size = |x| rabs(x) / 2.0 + cabs(Vec2::ONE) / 2.0;
+    let as_cell_size = |x| rabs(x) + cabs(Vec2::ONE);
     let mut line_height = Vec2::ZERO;
     let line_margin = column_dir(margin);
     let mut col = 0;
     let max = columns.first().map(|x| x.0 + x.1).unwrap_or(Vec2::ZERO).max(
         columns.last().map(|x| x.0 + x.1).unwrap_or(Vec2::ZERO)
     );
-    let unit_row = row_dir(Vec2::ONE).abs();
+    let unit_row = rabs(Vec2::ONE);
     for item in items {
         line_height = line_height.max(column_dir(item.dimension).abs());
         let (offset, dim) = columns[col];
-        let dim = half_size(dim);
+        let dim = as_cell_size(dim);
         if item.control != LayoutControl::LinebreakMarker {
-            result.push(offset + dim + dim * item.anchor.as_vec());
+            result.push(offset + dim / 2.0 + dim * item.anchor.as_vec());
             col += 1;
         } 
         if col >= columns.len() || item.control.is_linebreak() {
             let len = result.len();
             let height = column_dir(line_height);
+            cursor += height.min(Vec2::ZERO);
             for item in &mut result[(len - col)..] {
-                *item = *item * (height + unit_row) + cursor;
+                *item = *item * (height.abs() + unit_row) + cursor;
             }
-            cursor += height + line_margin;
+            cursor += height.max(Vec2::ZERO);
+            cursor += line_margin;
             col = 0;
             line_height = Vec2::ZERO;
         }
@@ -111,10 +113,11 @@ pub fn table(
     if col > 0 {
         let len = result.len();
         let height = column_dir(line_height);
+        cursor += height.min(Vec2::ZERO);
         for item in &mut result[(len - col)..] {
-            *item = *item * (height + unit_row) + cursor;
+            *item = *item * (height.abs() + unit_row) + cursor;
         }
-        cursor += height;
+        cursor += height.max(Vec2::ZERO);
     } else if cursor != Vec2::ZERO {
         cursor -= line_margin;
     }
@@ -160,7 +163,7 @@ pub fn fixed_table(
         false => row_dir(margin),
         true => match columns.len() {
             0|1 => Vec2::ZERO,
-            count => (len - columns.iter().sum::<Vec2>()) / (count - 1) as f32
+            count => (len - columns.iter().sum::<Vec2>()) / (count - 1) as f32,
         },
     };
 
@@ -168,18 +171,18 @@ pub fn fixed_table(
     if len.cmplt(Vec2::ZERO).any() {
         let mut cursor = len.abs();
         for item in columns {
-            result.push((cursor + item, cursor));
+            result.push((cursor + item, item.abs()));
             cursor += item + row_margin;
         }
     } else {
         let mut cursor = Vec2::ZERO;
         for item in columns {
-            result.push((cursor, cursor + item));
+            result.push((cursor, item.abs()));
             cursor += item + row_margin;
         }
     }
 
-    table(margin, items, result, row_dir, column_dir)
+    table(margin, items, dbg!(result), row_dir, column_dir)
 }
 
 pub fn flex_table(

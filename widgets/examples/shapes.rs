@@ -45,7 +45,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             stroke: (color!(yellow), 1.4),
             dimension: [240, 120],
         },
-        child: linebreak!,
+        child: linebreak! {},
         child: linebreak! { 10 },
     });
 }

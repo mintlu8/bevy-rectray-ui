@@ -37,7 +37,7 @@ pub fn compact(
     (result, cursor.abs() + height_mult)
 }
 
-pub fn span(
+pub fn span<const REV: bool>(
     size: Vec2,
     margin: Vec2,
     stretch: bool,
@@ -112,10 +112,11 @@ pub fn span(
             },
         }
     }
+    if REV { result.reverse(); }
     result
 }
 
-pub fn paragraph(
+pub fn paragraph<const REV: bool>(
     size: Vec2,
     margin: Vec2,
     stretch: bool,
@@ -125,7 +126,7 @@ pub fn paragraph(
     stack_dir: impl Fn(Vec2) -> Vec2,
 ) -> (Vec<Vec2>, Vec2){
 
-    let length = |v| line_dir(v).x + line_dir(v).y;
+    let length = |v| line_dir(v).x.abs() + line_dir(v).y.abs();
     let minor_dir = |v| stack_dir(v).abs();
 
 
@@ -148,7 +149,11 @@ pub fn paragraph(
                 .map(|x: &LayoutItem| minor_dir(x.dimension))
                 .fold(Vec2::ZERO, |a, b| a.max(b));
             let line_size = line_dir(size) + line_height;
-            let mut span = span(line_size, margin, stretch, buffer.drain(..), &buckets, &line_dir, &minor_dir);
+            let mut span = if REV {
+                span::<REV>(line_size, margin, stretch, buffer.drain(..).rev(), &buckets, &line_dir, &minor_dir)
+            } else {
+                span::<REV>(line_size, margin, stretch, buffer.drain(..), &buckets, &line_dir, &minor_dir)
+            };
             let line_height = if item.control == LayoutControl::LinebreakMarker {
                 stack_dir(line_height.max(item.dimension))
             } else {
@@ -159,7 +164,7 @@ pub fn paragraph(
             cursor += line_height.max(Vec2::ZERO);
             cursor += stack_dir(margin);
             result.extend(span);
-            len = length(item.dimension);
+            len = length(item.dimension) + margin_flat;
         } else {
             len += length(item.dimension) + margin_flat;
         }
@@ -178,7 +183,11 @@ pub fn paragraph(
             .map(|x: &LayoutItem| minor_dir(x.dimension))
             .fold(Vec2::ZERO, |a, b| a.max(b));
         let line_size = line_dir(size) + line_height;
-        let mut span = span(line_size, margin, stretch, buffer.drain(..), &buckets, &line_dir, &minor_dir);
+        let mut span = if REV {
+            span::<REV>(line_size, margin, stretch, buffer.drain(..).rev(), &buckets, &line_dir, &minor_dir)
+        } else {
+            span::<REV>(line_size, margin, stretch, buffer.drain(..), &buckets, &line_dir, &minor_dir)
+        };
         cursor += stack_dir(line_height).min(Vec2::ZERO);
         span.iter_mut().for_each(|x| *x += cursor);
         cursor += stack_dir(line_height).max(Vec2::ZERO);

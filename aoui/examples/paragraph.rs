@@ -1,5 +1,8 @@
+use std::f32::consts::PI;
+
 use bevy_aoui::{*, bundles::*};
 use bevy::{prelude::*, sprite::Anchor, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}};
+use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox}, EguiPlugin};
 
 
 static LOREM_IPSUM: &'static str = 
@@ -12,11 +15,12 @@ In nec finibus metus, ac hendrerit augue. Lorem ipsum dolor sit amet, consectetu
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(EguiPlugin)
+        .add_plugins(AoUIPlugin)
         .add_plugins(LogDiagnosticsPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_systems(Startup, init)
-        .add_systems(Update, controls)
-        .add_plugins(AoUIPlugin)
+        .add_systems(Update, egui_window)
         .run();
 }
 
@@ -26,9 +30,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     let textbox = commands.spawn((AoUISpriteBundle {
         transform: Transform2D::UNIT,
+        dimension: Dimension::pixels(Vec2::new(700.0, 700.0)).with_em(SetEM::Ems(1.0)),
         sprite: Sprite { 
-            anchor: Anchor::Center,
-            custom_size: Some(Vec2::new(700.0, 700.0)),
             color: Color::DARK_GRAY,
             ..Default::default()
         },
@@ -40,7 +43,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             stack: FlexDir::TopToBottom,
             stretch: false,
         },
-        margin: Size2::pixels(4.0, 0.0),
+        margin: Size2::em(0.4, 0.0),
     })).id();
     let mut words = Vec::new();
 
@@ -52,7 +55,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                         color: Color::WHITE,
                         ..Default::default()
                     }),
-                    text_anchor: Anchor::TopLeft,
+                    transform: Transform2D {
+                        anchor: Anchor::TopLeft,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 }).id()
             );
@@ -62,120 +68,125 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     commands.entity(textbox).push_children(&words[0..words.len()-1]);
 }
 
-pub fn spin_anc(anc: &Anchor) -> Anchor {
-    match anc {
-        Anchor::BottomLeft => Anchor::BottomCenter,
-        Anchor::BottomCenter => Anchor::BottomRight,
-        Anchor::BottomRight => Anchor::CenterLeft,
-        Anchor::CenterLeft => Anchor::Center,
-        Anchor::Center => Anchor::CenterRight,
-        Anchor::CenterRight => Anchor::TopLeft,
-        Anchor::TopLeft => Anchor::TopCenter,
-        Anchor::TopCenter => Anchor::TopRight,
-        Anchor::TopRight => Anchor::BottomLeft,
-        Anchor::Custom(_) => unreachable!(),
-    }
-}
 
-/// Controls: 
-/// 1: Spin FlexDir
-/// 2: Spin WrapTo
-/// 3: Spin Alignment
-/// 4: Spin TextAnchor
-/// 5: Spin Main Anchor
-/// Q, E: Change font size
-/// WSAD: Change Container size
-pub fn controls(
-    mut flex: Query<&mut Container>, 
-    mut text: Query<&mut Anchor, With<Text>>, 
-    mut main: Query<&mut Sprite>, 
-    mut text_size: Query<&mut Dimension>, 
-    keys: Res<Input<KeyCode>>) {
-    if keys.just_pressed(KeyCode::Key1) {
-        for mut sp in flex.iter_mut() {
-            if let Layout::Paragraph { direction, stack, .. } = &mut sp.layout {
-                *direction = match direction {
-                    FlexDir::LeftToRight => FlexDir::RightToLeft,
-                    FlexDir::RightToLeft => {
-                        *stack = stack.transpose();
-                        FlexDir::BottomToTop
-                    },
-                    FlexDir::BottomToTop => FlexDir::TopToBottom,
-                    FlexDir::TopToBottom => {
-                        *stack = stack.transpose();
-                        FlexDir::LeftToRight
-                    },
-                }
-            }
-        }
-    }
-    if keys.just_pressed(KeyCode::Key2) {
-        for mut sp in flex.iter_mut() {
-            if let Layout::Paragraph { stack, .. } = &mut sp.layout {
-                *stack = stack.flip()
-            }
-        }
-    }
-    if keys.just_pressed(KeyCode::Key4) {
-        for mut sp in text.iter_mut() {
-            *sp = spin_anc(&sp)
-        }
-    }
-    if keys.just_pressed(KeyCode::Key5) {
-        for mut sp in main.iter_mut() {
-            sp.anchor = spin_anc(&sp.anchor);
-        }
-    }
-    if keys.just_pressed(KeyCode::Key5) {
-        for mut sp in main.iter_mut() {
-            sp.anchor = spin_anc(&sp.anchor);
-        }
-    }
+pub fn egui_window(mut ctx: EguiContexts, 
+    mut container: Query<(&mut Container, &mut Transform2D, &mut Dimension)>,
+    mut spawned: Query<&mut Transform2D, (Without<Container>, With<Text>)>,
+) {
+    let (mut container, mut transform, mut dimension) = container.single_mut();
 
-    if keys.just_pressed(KeyCode::Q) {
-        for mut sp in text_size.iter_mut() {
-            match &mut sp.set_em {
-                SetEM::Ems(em) => *em = (*em - 0.1).max(0.1),
-                em => *em = SetEM::Ems(1.0),
-            }
-        }
-    }
+    egui::Window::new("Console").show(ctx.ctx_mut(), |ui| {
+        
+        ui.label("Paragraph");
 
-    if keys.just_pressed(KeyCode::E) {
-        for mut sp in text_size.iter_mut() {
-            match &mut sp.set_em {
-                SetEM::Ems(em) => *em = (*em + 0.1).max(0.1),
-                em => *em = SetEM::Ems(1.0),
-            }
-        }
-    }
+        let Vec2 { x, y } = dimension.raw_mut();
+        ui.add(Slider::new(x, 0.0..=2000.0).text("width"));
+        ui.add(Slider::new(y, 0.0..=2000.0).text("height"));
 
-    if keys.just_pressed(KeyCode::A) {
-        for mut sp in main.iter_mut() {
-            if let Some(size) = &mut sp.custom_size {
-                size.x = (size.x - 10.0).max(10.0);
-            }
+        ui.add(Slider::new(&mut transform.rotation, -PI * 2.0..=PI * 2.0).text("rotate"));
+        let Vec2 { x, y } = &mut transform.scale;
+
+        ui.add(Slider::new(x, 0.0..=4.0).text("scale x"));
+        ui.add(Slider::new(y, 0.0..=4.0).text("scale y"));
+
+        let mut anc = match spawned.iter().next().unwrap().anchor {
+            Anchor::BottomLeft => "BottomLeft",
+            Anchor::BottomCenter => "BottomCenter",
+            Anchor::BottomRight => "BottomRight",
+            Anchor::CenterLeft => "CenterLeft",
+            Anchor::Center => "Center",
+            Anchor::CenterRight => "CenterRight",
+            Anchor::TopLeft => "TopLeft",
+            Anchor::TopCenter => "TopCenter",
+            Anchor::TopRight => "TopRight",
+            Anchor::Custom(_) => unreachable!(),
+        };
+
+        ComboBox::from_label("Anchor")
+            .selected_text(anc)
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut anc, "BottomLeft", "BottomLeft");
+                ui.selectable_value(&mut anc, "BottomCenter", "BottomCenter");
+                ui.selectable_value(&mut anc, "BottomRight", "BottomRight");
+                ui.selectable_value(&mut anc, "CenterLeft", "CenterLeft");
+                ui.selectable_value(&mut anc, "Center", "Center");
+                ui.selectable_value(&mut anc, "CenterRight", "CenterRight");
+                ui.selectable_value(&mut anc, "TopLeft", "TopLeft");
+                ui.selectable_value(&mut anc, "TopCenter", "TopCenter");
+                ui.selectable_value(&mut anc, "TopRight", "TopRight");
+            });
+        
+        let result_anchor = match anc {
+            "BottomLeft" => Anchor::BottomLeft,
+            "BottomCenter" =>  Anchor::BottomCenter,
+            "BottomRight" => Anchor::BottomRight,
+            "CenterLeft" => Anchor::CenterLeft,
+            "Center" => Anchor::Center,
+            "CenterRight" => Anchor::CenterRight,
+            "TopLeft" => Anchor::TopLeft,
+            "TopCenter" => Anchor::TopCenter,
+            "TopRight" => Anchor::TopRight,
+            _ => unreachable!(),
+        };
+
+        spawned.iter_mut().for_each(|mut x| x.anchor = result_anchor);
+
+
+        let font_size = dimension.set_em.raw_mut();
+        ui.add(Slider::new(font_size, 0.0..=12.0).text("font size (em)"));
+
+        let Layout::Paragraph { direction, stack, stretch } = &mut container.layout else {return};
+
+        ComboBox::from_label("Direction")
+            .selected_text(match direction {
+                FlexDir::LeftToRight => "left to right",
+                FlexDir::RightToLeft => "right to left",
+                FlexDir::BottomToTop => "bottom to top",
+                FlexDir::TopToBottom => "top to bottom",
+            })
+            .show_ui(ui, |ui| {
+                ui.selectable_value(direction, FlexDir::LeftToRight, "left to right");
+                ui.selectable_value(direction, FlexDir::RightToLeft, "right to left");
+                ui.selectable_value(direction, FlexDir::BottomToTop, "bottom to top");
+                ui.selectable_value(direction, FlexDir::TopToBottom, "top to bottom");
+            });
+        match direction {
+            FlexDir::LeftToRight|FlexDir::RightToLeft => {
+                ComboBox::from_label("Stack")
+                    .selected_text(match stack {
+                        FlexDir::BottomToTop => "bottom to top",
+                        FlexDir::TopToBottom => "top to bottom",
+                        _ => {
+                            *stack = FlexDir::TopToBottom;
+                            "bottom to top"
+                        }
+                    })
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(stack, FlexDir::BottomToTop, "bottom to top");
+                        ui.selectable_value(stack, FlexDir::TopToBottom, "top to bottom");
+                    });
+            },
+            FlexDir::BottomToTop|FlexDir::TopToBottom => {
+                ComboBox::from_label("Stack")
+                    .selected_text(match stack {
+                        FlexDir::LeftToRight => "left to right",
+                        FlexDir::RightToLeft => "right to left",
+                        _ => {
+                            *stack = FlexDir::LeftToRight;
+                            "left to right"
+                        }
+                    })
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(stack, FlexDir::LeftToRight, "left to right");
+                        ui.selectable_value(stack, FlexDir::RightToLeft, "right to left");
+                    });
+            },
         }
-    }
-    if keys.just_pressed(KeyCode::D) {
-        for mut sp in main.iter_mut() {
-            if let Some(size) = &mut sp.custom_size {
-                size.x = (size.x + 10.0).max(10.0);
-            }
-        }
-    }
-    if keys.just_pressed(KeyCode::S) {
-        for mut sp in main.iter_mut() {
-            if let Some(size) = &mut sp.custom_size {
-                size.y = (size.y - 10.0).max(10.0);
-            }
-        }
-    }
-    if keys.just_pressed(KeyCode::W) {
-        for mut sp in main.iter_mut() {
-            if let Some(size) = &mut sp.custom_size {
-                size.y = (size.y + 10.0).max(10.0);
-            }
-        }
-    }
+        ui.checkbox(stretch, "Stretch");
+        
+    
+        let Vec2 { x, y } = container.margin.raw_mut();
+        ui.add(Slider::new(x, 0.0..=10.0).text("margin x (em)"));
+        ui.add(Slider::new(y, 0.0..=10.0).text("margin y (em)"));
+    });
 }

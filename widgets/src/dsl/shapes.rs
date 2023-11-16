@@ -12,6 +12,19 @@ impl DslInto<Option<Fill>> for Color{
     }
 }
 
+impl DslInto<Option<Stroke>> for (Color, i32){
+    fn dinto(self) -> Option<Stroke> {
+        let (color, size) = self;
+        Some(Stroke { 
+            color, 
+            options: StrokeOptions::DEFAULT
+                .with_line_width(size as f32)
+                .with_start_cap(LineCap::Round)
+                .with_end_cap(LineCap::Round)
+        })
+    }
+}
+
 impl DslInto<Option<Stroke>> for (Color, f32){
     fn dinto(self) -> Option<Stroke> {
         let (color, size) = self;
@@ -87,4 +100,38 @@ impl AoUIWidget for Shape {
         common_plugins!(self, base);
         base.id()
     }
+}
+
+
+#[macro_export]
+macro_rules! shape {
+    (($commands: expr, $server: expr $(, $ctx: expr)*) {$($tt:tt)*}) => {
+            $crate::meta_dsl!(($commands, $server $(, $ctx)*) [$crate::dsl::Shape] {
+            default_material: $server.add(::bevy::prelude::ColorMaterial::default()),
+            $($tt)*
+        })
+    };
+}
+
+
+#[macro_export]
+macro_rules! rectangle {
+    (($commands: expr, $server: expr $(, $ctx: expr)*) {$($tt:tt)*}) => {
+        $crate::meta_dsl!(($commands, $server $(, $ctx)*) [$crate::dsl::Shape] {
+            default_material: $server.add(::bevy::prelude::ColorMaterial::default()),
+            shape: $crate::widgets::Shapes::Rectangle,
+            $($tt)*
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! circle {
+    (($commands: expr, $server: expr $(, $ctx: expr)*) {$($tt:tt)*}) => {
+        $crate::meta_dsl!(($commands, $server $(, $ctx)*) [$crate::dsl::Shape] {
+            default_material: $server.add(::bevy::prelude::ColorMaterial::default()),
+            shape: $crate::widgets::Shapes::Circle,
+            $($tt)*
+        })
+    };
 }

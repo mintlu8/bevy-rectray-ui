@@ -196,9 +196,10 @@ pub fn remove_focus(mut commands: Commands,
     }
 }
 
-/// We hand out component [`CursorFocus`] for passive state
-/// and [`CursorAction`] for active events.
-/// These should be handled on this frame.
+/// We hand out component [`CursorFocus`] for persistant states,
+/// [`CursorAction`] for active events.
+/// and [`CursorClickOutside`] for cancelling.
+/// These should be handled on this frame during [`Update`].
 pub fn mouse_button_input(
     mut commands: Commands,
     mut state: ResMut<CursorState>,
@@ -212,8 +213,9 @@ pub fn mouse_button_input(
     fn drop<T>(_: T) {}
     state.catched = false;
     if state.blocked { return; }
-    let (camera, camera_transform) = camera.single();        
-    let Some(mouse_pos) = windows.single().cursor_position()
+    let Ok((camera, camera_transform)) = camera.get_single() else { return };    
+    let Ok(window) = windows.get_single() else { return };       
+    let Some(mouse_pos) = window.cursor_position()
         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
         .map(|ray| ray.origin.truncate()) else {return;};
     state.cursor_pos = mouse_pos;
@@ -352,7 +354,7 @@ pub fn mouse_button_input(
             )
             .map(|_| state.catched = true);
         query.iter().filter(|(.., flags)| { flags.contains(EventFlags::CLICK_OUTSIDE) })
-            .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos) && !hitbox.contains(rect, down))
+            .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
             .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
         state.last_lmb_up_time = time.elapsed_seconds();
     } else if buttons.just_released(MouseButton::Right) {
@@ -363,7 +365,7 @@ pub fn mouse_button_input(
             .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::RIGHT_CLICK))))
             .map(|_| state.catched = true);
         query.iter().filter(|(.., flags)| { flags.contains(EventFlags::CLICK_OUTSIDE) })
-            .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos) && !hitbox.contains(rect, down))
+            .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
             .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
     } else if buttons.just_released(MouseButton::Middle) {
         let down = state.down_pos;
@@ -373,7 +375,7 @@ pub fn mouse_button_input(
             .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::MID_CLICK))))
             .map(|_| state.catched = true);
         query.iter().filter(|(.., flags)| { flags.contains(EventFlags::CLICK_OUTSIDE) })
-            .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos) && !hitbox.contains(rect, down))
+            .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
             .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
     } else {
         query.iter().filter(|(.., flags)| flags.intersects(EventFlags::HOVER))

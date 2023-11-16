@@ -1,5 +1,11 @@
-use bevy::{prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res}, text::{Text, Font}, window::{Window, PrimaryWindow, ReceivedCharacter}, ecs::{query::Changed, event::EventReader, system::{Command, Commands}}, input::{keyboard::{KeyboardInput, KeyCode}, Input}, math::Vec2, asset::{Handle, Assets}, hierarchy::Children};
-use bevy_aoui::{RotatedRect, Transform2D, Dimension, Hitbox, bundles::AoUITextBundle};
+use bevy::hierarchy::Children;
+use bevy::asset::{Handle, Assets};
+use bevy::input::{keyboard::KeyCode, Input};
+use bevy::ecs::{query::Changed, event::EventReader, system::Commands};
+use bevy::window::{Window, PrimaryWindow, ReceivedCharacter};
+use bevy::text::{Text, Font};
+use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
+use bevy_aoui::{RotatedRect, Transform2D, Dimension, bundles::AoUITextBundle};
 use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction};
 use ab_glyph::Font as FontTrait;
 
@@ -10,7 +16,7 @@ enum LeftRight {
 
 /// Single line text input.
 /// 
-/// InputBox has requires 3 children to function properly:
+/// InputBox requires 3 children to function properly:
 /// 
 /// * `InputBoxText`: empty frame component for individual glyphs.
 /// * `InputBoxCursorBar`: vertical bar of the cursor.
@@ -18,6 +24,8 @@ enum LeftRight {
 /// 
 /// `InputBoxCursorBar` and `InputBoxCursorArea` requires 
 /// `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
+/// 
+/// Warning: This widget might not behave properly if tempered externally.
 #[derive(Debug, Component, Default)]
 pub struct InputBox {
     cursor_start: usize,
@@ -101,7 +109,7 @@ impl InputBox {
         self.focus = false;
     }
 
-    /// Simulate the behavior of clicking `backspace`.
+    /// Simulate the behavior of typing a char.
     pub fn push(&mut self, c: char) {
         self.text = self.text.chars().take(self.cursor_start)
             .chain(std::iter::once(c))
@@ -111,7 +119,7 @@ impl InputBox {
         self.cursor_len = 0;
     }
 
-    /// Simulates the behavior of clicking `backspace`.
+    /// Simulates the behavior of pasting.
     pub fn push_str(&mut self, c: &str) {
         let len = c.chars().count();
         self.text = self.text.chars().take(self.cursor_start)
@@ -203,6 +211,7 @@ impl InputBox {
         } 
     }
 
+    /// Swap the selected area with another string.
     pub fn swap_selected(&mut self, swapped: &str) -> String {
         let len = swapped.chars().count();
         let result = self.text.chars()

@@ -34,23 +34,30 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
 
     if let Ok(layout) = flex_query.get(entity) {
         let children = child_query.get(entity).map(|x| x.iter()).into_iter().flatten();
-        let mut entities = Vec::new();
+        let mut layout_entities = Vec::new();
+        let mut other_entities = Vec::new();
         let mut args = Vec::new();
         for child in children {
             if !visited.insert(*child) { continue; }
             // SAFETY: safe since double mut access is gated by visited
             if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { entity_query.get_unchecked(*child) } {
-                entities.push(*child);
-                args.push(LayoutItem {
-                    anchor: child_transform.get_parent_anchor().clone(),
-                    dimension: child_dim.update(dimension, em, rem).0,
-                    control: control_query.get(*child)
-                        .map(|x| *x)
-                        .unwrap_or(LayoutControl::None)
-                });
+                match control_query.get(*child) {
+                    Ok(LayoutControl::NoLayout) => other_entities.push((
+                        *child, 
+                        child_transform.get_parent_anchor()
+                    )),
+                    control => {
+                        layout_entities.push(*child);
+                        args.push(LayoutItem {
+                            anchor: child_transform.get_parent_anchor().clone(),
+                            dimension: child_dim.update(dimension, em, rem).0,
+                            control: control.copied().unwrap_or_default(),
+                        })
+                    }
+                };
             }
         }
-        let margin = layout.margin.as_pixels(parent.dimension, parent.em, rem);
+        let margin = layout.margin.as_pixels(parent.dimension, em, rem);
         let (placements, size) = layout.place_all(dimension, margin, args);
 
         #[cfg(debug_assertions)]{
@@ -71,10 +78,14 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             erase.is_some(),
         );
         
-        queue.extend(entities.into_iter()
+        queue.extend(layout_entities.into_iter()
             .zip_eq(placements.into_iter().map(|x| x / size - Vec2::new(0.5, 0.5)))
             .map(|(entity, anc)| (entity, ParentInfo::from_anchor(&rect, anc, dimension, em))));
         *orig = rect;
+        for (child, anchor) in other_entities {
+            let parent = ParentInfo::new(&rect, anchor, dimension, em);
+            queue.push((child, parent))
+        }
         return;
     } 
 
@@ -126,7 +137,10 @@ impl<'t> RootQuery<'t> for PrimaryWindow {
     type ReadOnly = With<PrimaryWindow>;
 
     fn as_rect(query: &Query<Self::Query, Self::ReadOnly>) -> RotatedRect {
-        let window = query.single();
+        let window = match query.get_single(){
+            Ok(w) => w,
+            Err(_) => return Default::default(), 
+        };
         let dim = Vec2::new(window.width(), window.height());
         RotatedRect {
             center: Vec2::ZERO,

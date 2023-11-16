@@ -35,6 +35,8 @@ pub enum LayoutControl {
     /// 
     /// Using returned position for rendering is unspecified behavior.
     LinebreakMarker,
+    /// Laid out like a children of a normal sprite.
+    NoLayout,
 }
 
 

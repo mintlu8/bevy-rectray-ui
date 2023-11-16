@@ -193,7 +193,7 @@ impl Layout {
         stretch: false,
     };
 
-    pub fn place_all(&self, dim: Vec2, margin: Vec2, items: impl IntoIterator<Item = LayoutItem>) -> (Vec<Vec2>, Vec2){
+    pub fn place_all<T>(&self, dim: Vec2, margin: Vec2, items: T) -> (Vec<Vec2>, Vec2) where T: IntoIterator<Item = LayoutItem>, T::IntoIter: DoubleEndedIterator{
         match self {
             Layout::Single => {
                 let mut iter = items.into_iter();
@@ -217,22 +217,22 @@ impl Layout {
             },
             Layout::Span { direction, stretch } => {
                 (match direction{
-                    R => span(dim, margin, *stretch, items, hbucket, posx, posy),
-                    L => span(dim, margin, *stretch, items, hbucket, posx, posy),
-                    T => span(dim, margin, *stretch, items, vbucket, posy, posx),
-                    B => span(dim, margin, *stretch, items, vbucket, posy, posx),
+                    R => span::<false>(dim, margin, *stretch, items, hbucket, posx, posy),
+                    L => span::<true>(dim, margin, *stretch, items.into_iter().rev(), hbucket, posx, posy),
+                    T => span::<false>(dim, margin, *stretch, items, vbucket, posy, posx),
+                    B => span::<true>(dim, margin, *stretch, items.into_iter().rev(), vbucket, posy, posx),
                 }, dim)
             },
             Layout::Paragraph { direction, stack, stretch } => {
                 match (direction, stack) {
-                    (R, B) => paragraph(dim, margin, *stretch, items, hbucket, posx, negy),
-                    (L, B) => paragraph(dim, margin, *stretch, items, hbucket, posx, negy),
-                    (T, L) => paragraph(dim, margin, *stretch, items, vbucket, posy, negx),
-                    (B, L) => paragraph(dim, margin, *stretch, items, vbucket, posy, negx),
-                    (R, T) => paragraph(dim, margin, *stretch, items, hbucket, posx, posy),
-                    (L, T) => paragraph(dim, margin, *stretch, items, hbucket, posx, posy),
-                    (T, R) => paragraph(dim, margin, *stretch, items, vbucket, posy, posx),
-                    (B, R) => paragraph(dim, margin, *stretch, items, vbucket, posy, posx),
+                    (R, B) => paragraph::<false>(dim, margin, *stretch, items, hbucket, posx, negy),
+                    (L, B) => paragraph::<true>(dim, margin, *stretch, items, hbucket, posx, negy),
+                    (T, L) => paragraph::<false>(dim, margin, *stretch, items, vbucket, posy, negx),
+                    (B, L) => paragraph::<true>(dim, margin, *stretch, items, vbucket, posy, negx),
+                    (R, T) => paragraph::<false>(dim, margin, *stretch, items, hbucket, posx, posy),
+                    (L, T) => paragraph::<true>(dim, margin, *stretch, items, hbucket, posx, posy),
+                    (T, R) => paragraph::<false>(dim, margin, *stretch, items, vbucket, posy, posx),
+                    (B, R) => paragraph::<true>(dim, margin, *stretch, items, vbucket, posy, posx),
                     _ => panic!("Direction and stack must be othogonal.")
                 }
             },
