@@ -78,7 +78,7 @@ impl RotatedRect {
     /// Create an [`RotatedRect`] represeting the sprite's position on the screen space
     /// and an [`Affine3A`] that converts into the [`GlobalTransform`] suitable from the screen space
     pub fn construct(parent: &ParentInfo, anchor: &Anchor, offset: Vec2, dim: Vec2,
-            center: &Anchor, rotation: f32, scale: Vec2, z: f32, erase_scale: bool) -> Self{
+            center: &Anchor, rotation: f32, scale: Vec2, z: f32) -> Self{
         let parent_anchor = parent.anchor;
         // apply offset and dimension
         let self_center = offset + (center.as_vec() - anchor.as_vec()) * dim;
@@ -86,10 +86,7 @@ impl RotatedRect {
 
         let out_center = Vec2::from_angle(parent.rotation).rotate(self_center * parent.scale) + parent_anchor;
         let rotation = parent.rotation + rotation;
-        let scale = match erase_scale {
-            false => parent.scale * scale,
-            true => parent.scale,
-        };
+        let scale = parent.scale * scale;
         let out_origin = out_center + Vec2::from_angle(rotation).rotate(dir * scale);
 
         let rect = Self {

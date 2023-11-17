@@ -1,4 +1,3 @@
-use bevy::math::BVec2;
 use bevy::prelude::{Vec2, UVec2};
 use crate::span::{compact, span};
 
@@ -54,12 +53,6 @@ pub enum Layout {
     /// Width is sum of children's width, plus margin.
     /// 
     /// Height is the maximum of children's height.
-    /// 
-    /// # Rules
-    /// 
-    /// Children are placed sequentially in a line.
-    /// 
-    /// Line height is the maximum of its children's height.
     Compact {
         /// The axis, horizontal or vertical.
         direction: FlexDir,
@@ -73,7 +66,7 @@ pub enum Layout {
     ///
     /// # Panics
     ///
-    /// * When supplied a [`Anchor::Custom`] Anchor.
+    /// * When supplied a [`Anchor::Custom`](bevy::sprite::Anchor) Anchor.
     Span {
         /// The axis, horizontal or vertical.
         direction: FlexDir,
@@ -105,10 +98,7 @@ pub enum Layout {
         direction: FlexDir,
         /// The order of which lines are placed.
         stack: FlexDir,
-        /// Where spans are places relative to the parent box,
-        /// must be othogonal to `direction`.
-        // alignment: Alignment,
-        /// This only affects the primary axis.
+        /// If specified, try increase the margin to fill the span.
         stretch: bool,
     },
     /// A 2D grid wih even pre-subdivided cells.
@@ -127,7 +117,7 @@ pub enum Layout {
         /// 
         /// Significant when an early linebreak occurs.
         alignment: Alignment,
-        /// if specified, adjust cell size to fill the grid.
+        /// if specified, adjust cell size to fill the grid without changing cell count.
         /// 
         /// This only affects [`Cell::Sized`] mode.
         stretch: bool,
@@ -140,7 +130,7 @@ pub enum Layout {
     Table {
         /// Determines the number and size of columns
         ///
-        /// For sized columns
+        /// For porportioned columns
         /// 
         /// `vec![0.4, 0.7]` produces columns `[0.0..0.4, 0.4..0.7, 0.7..1.0]`
         columns: Columns,

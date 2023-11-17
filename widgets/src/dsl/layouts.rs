@@ -21,7 +21,7 @@ macro_rules! linebreak {
     (($commands: expr $(, $tt:expr)*) {$size: expr}) => {
         {
             use $crate::dsl::DslInto;
-            let size: bevy_aoui::Size2;
+            let size: ::bevy_aoui::Size2;
             OneOrTwo(size) = $size.dinto();
             $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::new(size)).id()
         }
@@ -48,7 +48,7 @@ pub struct DynFrame {
     pub x: Option<bool>,
     pub y: Option<bool>,
     pub dimension: Option<Size2>,
-    pub em: SetEM,
+    pub font_size: SetEM,
     pub hitbox: Option<Hitbox>,
 }
 
@@ -90,7 +90,7 @@ pub struct SpanContainer {
     pub scale: Option<OneOrTwo<Vec2>>,
     pub z: f32,
     pub dimension: Option<Size2>,
-    pub em: SetEM,
+    pub font_size: SetEM,
     pub hitbox: Option<Hitbox>,
     pub direction: Option<FlexDir>,
     pub stack: Option<FlexDir>,
@@ -234,7 +234,7 @@ pub struct GridContainer {
     pub scale: Option<OneOrTwo<Vec2>>,
     pub z: f32,
     pub dimension: Option<Size2>,
-    pub em: SetEM,
+    pub font_size: SetEM,
     pub hitbox: Option<Hitbox>,
     pub row: Option<FlexDir>,
     pub column: Option<FlexDir>,

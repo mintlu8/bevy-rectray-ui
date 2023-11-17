@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::compute::*;
-use crate::{RotatedRect, BuildGlobal, BuildTransform, Dimension, AouiREM, DimensionSize, Transform2D};
+use crate::{RotatedRect, BuildGlobal, BuildTransform, Dimension, AoUIREM, DimensionSize, Transform2D};
 
 /// Fetch info for the DOM, happens before `AoUIDomUpdate`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
@@ -31,7 +31,7 @@ pub struct AoUIPlugin;
 impl bevy::prelude::Plugin for AoUIPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
-            .init_resource::<AouiREM>()
+            .init_resource::<AoUIREM>()
             .configure_sets(PostUpdate, AoUISyncRead
                 .before(AoUIDomUpdate)
                 .after(update_text2d_layout))

@@ -8,7 +8,6 @@ type AoUIEntity<'t> = (
     &'t mut Dimension,
     &'t Transform2D,
     &'t mut RotatedRect,
-    Option<&'t ScaleErase>,
 );
 
 fn propagate<TAll: ReadOnlyWorldQuery>(
@@ -24,13 +23,10 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
     visited: &mut HashSet<Entity>) {
 
     // SAFETY: safe since double mut access is gated by visited
-    let (entity, mut dim, transform, mut orig, erase, ..) = match unsafe {entity_query.get_unchecked(entity)}{
-        Ok(items) => items,
-        Err(_) => return,
-    };
+    let Ok((entity, mut dim, transform, mut orig, ..)) = (unsafe {entity_query.get_unchecked(entity)}) else {return};
 
     let (dimension, em) = dim.update(parent.dimension, parent.em, rem);
-    let offset = transform.offset.as_pixels(parent.dimension, parent.em, rem);
+    let offset = transform.offset.as_pixels(parent.dimension, em, rem);
 
     if let Ok(layout) = flex_query.get(entity) {
         let children = child_query.get(entity).map(|x| x.iter()).into_iter().flatten();
@@ -50,7 +46,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
                         layout_entities.push(*child);
                         args.push(LayoutItem {
                             anchor: child_transform.get_parent_anchor().clone(),
-                            dimension: child_dim.update(dimension, em, rem).0,
+                            dimension: child_dim.update(dimension, em, rem).0 * child_transform.scale,
                             control: control.copied().unwrap_or_default(),
                         })
                     }
@@ -60,11 +56,6 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         let margin = layout.margin.as_pixels(parent.dimension, em, rem);
         let (placements, size) = layout.place_all(dimension, margin, args);
 
-        #[cfg(debug_assertions)]{
-            if transform.rotation != 0.0 || transform.scale != Vec2::ONE {
-                eprintln!("Warning: anchors of a Layout is unreliable. Rotate or scale its parent is recommended.")
-            }
-        }
         dim.size = size;
         let rect = RotatedRect::construct(
             &parent,
@@ -75,7 +66,6 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             transform.rotation,
             transform.scale,
             parent.z + transform.z + f32::EPSILON * 8.0,
-            erase.is_some(),
         );
         
         queue.extend(layout_entities.into_iter()
@@ -105,7 +95,6 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         transform.rotation,
         transform.scale,
         parent.z + z + f32::EPSILON * 8.0,
-        erase.is_some(),
     );
 
     if let Ok(children) = child_query.get(entity) {
@@ -156,6 +145,14 @@ pub(crate) type TRoot = (With<AoUI>, Without<Parent>);
 pub(crate) type TAll = With<AoUI>;
 
 /// The main computation step.
+/// 
+/// For custom usage,
+/// 
+/// R: Get root rectangle,
+/// 
+/// TRoot: Readonly query for child of root rectangle.
+/// 
+/// TAll: Readonly query for all children, including TRoot.
 pub fn compute_aoui_transforms<'t, R: RootQuery<'t>, TRoot: ReadOnlyWorldQuery, TAll: ReadOnlyWorldQuery>(
     root: Query<R::Query, R::ReadOnly>,
     root_entities: Query<Entity, TRoot>,
@@ -164,7 +161,7 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>, TRoot: ReadOnlyWorldQuery, 
     sparse_query: Query<&SceneLayout>,
     child_query: Query<&Children>,
     control_query: Query<&LayoutControl>,
-    res_rem: Option<Res<AouiREM>>,
+    res_rem: Option<Res<AoUIREM>>,
 ) {
     let rem = res_rem.map(|x| x.0).unwrap_or(16.0);
 

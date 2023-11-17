@@ -9,17 +9,22 @@ pub use colorthis::rgbaf;
 mod core;
 mod layouts;
 mod shapes;
+mod inputbox;
+mod oneshot;
+
 pub use shapes::Shape;
 pub use convert::DslInto;
 pub use layouts::{SpanContainer, SpanContainerNames, GridContainer, GridContainerNames};
 pub use core::{Frame, Sprite, TextBox};
+pub use inputbox::InputBoxDsl;
 
 pub mod prelude {
     pub use crate::color;
     pub use crate::size2;
     pub use super::util::*;
+    pub use super::util::Hitbox::*;
     pub use super::util::AoUISpacialConsts::*;
-    pub use super::AouiCommands;
+    pub use super::AoUICommands;
     pub use bevy::prelude::BuildChildren;
     use bevy::sprite::Anchor;
     pub use crate::widgets::shape::Shapes;
@@ -27,20 +32,23 @@ pub mod prelude {
     pub use std::f32::consts::PI;
     pub use bevy_aoui::LayoutControl::{Linebreak, IgnoreLayout};
 
-    /// This can be use anywhere where you want to use `anchor` as Anchor.
+    /// This can be use anywhere where you want to use the default anchor.
     #[allow(non_upper_case_globals)]
     pub const Inherit: Option<Anchor> = None;
 
+    /// Construct an empty sprite.
     #[macro_export]
     macro_rules! frame {
         {$commands: tt {$($tt:tt)*}} => 
             {$crate::meta_dsl!($commands [$crate::dsl::Frame] {$($tt)*})};
     }
+    /// Construct an image based sprite.
     #[macro_export]
     macro_rules! sprite {
         {$commands: tt {$($tt:tt)*}} => 
             {$crate::meta_dsl!($commands [$crate::dsl::Sprite] {$($tt)*})};
     }
+    /// Construct a textbox.
     #[macro_export]
     macro_rules! textbox {
         {$commands: tt {$($tt:tt)*}} => 
@@ -50,9 +58,12 @@ pub mod prelude {
     pub use crate::{shape, rectangle, circle};
     pub use crate::{compact, paragraph, span, hbox, vbox, hspan, vspan};
     pub use crate::{fixed_table, flex_table, fixed_grid, sized_grid, sized_table};
-    
+    pub use crate::inputbox;
+    pub use crate::oneshot;
 }
 
+#[doc(hidden)]
+/// Implementation detail for meta_dsl.
 pub trait FnChildren {
     type Out: AsRef<[Entity]> + Default;
     fn exec(self, commands: &mut Commands) -> Self::Out;
@@ -66,7 +77,9 @@ impl<F, Out> FnChildren for F where F: FnOnce(&mut Commands) -> Out, Out: AsRef<
     }
 }
 
+#[doc(hidden)]
 #[derive(Debug, Default)]
+/// Implementation detail for meta_dsl.
 pub enum EntitiesBuilder<F: FnChildren>{
     Some(F),
     #[default]
@@ -82,12 +95,13 @@ impl<F: FnChildren> EntitiesBuilder<F> {
     }
 }
 
-#[doc(hidden)]
-pub trait AouiCommands {
+/// Enable commands to spawn our widgets.
+pub trait AoUICommands {
+    /// Spawn an aoui widget.
     fn spawn_aoui(&mut self, a: (impl AoUIWidget, impl Bundle, impl AsRef<[Entity]>)) -> Entity;
 }
 
-impl<'w, 's> AouiCommands for Commands<'w, 's> {
+impl<'w, 's> AoUICommands for Commands<'w, 's> {
     fn spawn_aoui(&mut self, (widget, extras, children): (impl AoUIWidget, impl Bundle, impl AsRef<[Entity]>)) -> Entity {
         let id = widget.spawn_with(self);
         self.entity(id)
@@ -101,23 +115,24 @@ pub trait AoUIWidget: Sized {
     fn spawn_with(self, commands: &mut Commands) -> Entity;
 }
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! filter_children {
     ($commands: tt [$($path: tt)*] [$($fields: tt)*]) => {
         $crate::meta_dsl!($commands [$($path)*] {$($fields)*} {} {} {})
     };
-    ($commands: tt [$($path: tt)*] [$($out: tt)*] child: $macro: ident !, $($rest: tt)*) => {
+    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident !, $($rest: tt)*) => {
         $crate::filter_children!($commands [$($path)*] [
             $($out)* 
-            child: $macro! (
+            $field: $macro! (
                 $commands
             )
         ], $($rest)*)
     };
-    ($commands: tt [$($path: tt)*] [$($out: tt)*] child: $macro: ident ! {$($expr: tt)*}, $($rest: tt)*) => {
+    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*}, $($rest: tt)*) => {
         $crate::filter_children!($commands [$($path)*] [
             $($out)* 
-            child: $macro! (
+            $field: $macro! (
                 $commands {
                     $($expr)*
                 }
@@ -144,6 +159,7 @@ macro_rules! filter_children {
     };
 }
 
+/// The core macro for our DSL.
 #[macro_export]
 macro_rules! meta_dsl {
     
@@ -203,13 +219,15 @@ macro_rules! meta_dsl {
     ) => {
         {  
             use $crate::dsl::DslInto;
+            let extras = ($($extras),*);
             let children = [$($children),*];
+            let entity = $($path)* {
+                $($field: ($expr).dinto(),)*
+                ..Default::default()
+            };
             $commands.spawn_aoui((
-                $($path)* {
-                    $($field: ($expr).dinto(),)*
-                    ..Default::default()
-                },
-                ($($extras),*),
+                entity,
+                extras,
                 children,
             ))
         }

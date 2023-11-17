@@ -70,8 +70,8 @@
 //! Anchor-Offset is well-suited for isolated UI components, but when it comes to arranging
 //! multiple UI elements in a specific order, you'll find the `Container` useful.
 //! 
-//! The `Container` is a layout system that only depands on insertion order and seamlessly
-//! integrates with Bevy's [`Children`](bevy::prelude::Children) component.
+//! The `Container` is a layout system that only depands on insertion order and works
+//! with Bevy's [`Children`](bevy::prelude::Children) component.
 //! 
 //! Check out the book for more information.
 //! 
@@ -87,13 +87,17 @@
 //! You can mix and match our modularized components
 //! and add, remove or edit any system you want to change.
 //! 
+//! * Relative size system.
+//! 
+//! Full support for web like size units: `em`, `rem`, `%`, etc.
+//! 
 //! * First class rotation and scaling support.
 //! 
-//! You are allowed to rotate and scale any widget with ease.
+//! You are can rotate and scale any sprite from any anchor on it with ease.
 //! 
 //! * Simple but versatile layout system.
 //! 
-//! Simple layouts less bloated than CSS that work out of the box with minimal configuration.
+//! Simple layouts that work out of the box with minimal configuration.
 //! 
 //! * High level abstractions with low level control.
 //! 
@@ -105,9 +109,7 @@
 //! 
 //! `bevy_aoui` is a layout system, not a widget library. 
 //! Implementations of most AoUI widgets 
-//! will live outside of the crate. 
-//! You can integrate third party libraries with this crate,
-//! or create your own widgets with bevy's prmitives.
+//! will live outside of the crate, like in `bevy_aoui_widgets`.
 //! 
 //! Checkout our examples for simple widget implementations.
 //! 

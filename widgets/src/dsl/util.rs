@@ -3,6 +3,7 @@ use bevy_aoui::{Size2, SetEM, Alignment, FlexDir};
 
 use super::convert::DslInto;
 
+/// Syntax for constructing a hitbox.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Hitbox<T: DslInto<OneOrTwo<Vec2>>> {
     Rect(T),
@@ -24,6 +25,9 @@ impl<T: DslInto<OneOrTwo<Vec2>>> DslInto<Option<bevy_aoui::Hitbox>> for Hitbox<T
     }
 }
 
+/// Unified constants for various enums used by `AoUI`.
+/// 
+/// Note `Left` can be used as `CenterLeft`, etc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AoUISpacialConsts {
     TopLeft,
@@ -79,6 +83,19 @@ impl DslInto<Alignment> for AoUISpacialConsts {
     }
 }
 
+impl DslInto<Option<Alignment>> for AoUISpacialConsts {
+    fn dinto(self) -> Option<Alignment> {
+        Some(match self {
+            AoUISpacialConsts::Center => Alignment::Center,
+            AoUISpacialConsts::Top => Alignment::Top,
+            AoUISpacialConsts::Bottom => Alignment::Bottom,
+            AoUISpacialConsts::Left => Alignment::Left,
+            AoUISpacialConsts::Right => Alignment::Right,
+            c => panic!("{:?} is not an Alignment.", c),
+        })
+    }
+}
+
 impl DslInto<FlexDir> for AoUISpacialConsts {
     fn dinto(self) -> FlexDir {
         match self {
@@ -91,10 +108,25 @@ impl DslInto<FlexDir> for AoUISpacialConsts {
     }
 }
 
-///
+impl DslInto<Option<FlexDir>> for AoUISpacialConsts {
+    fn dinto(self) -> Option<FlexDir> {
+        Some(match self {
+            AoUISpacialConsts::LeftToRight => FlexDir::LeftToRight,
+            AoUISpacialConsts::RightToLeft => FlexDir::RightToLeft,
+            AoUISpacialConsts::TopToBottom => FlexDir::TopToBottom,
+            AoUISpacialConsts::BottomToTop => FlexDir::BottomToTop,
+            c => panic!("{:?} is not an FlexDir.", c),
+        })
+    }
+}
+
+/// Color constrution macro, see [`colorthis`].
+/// 
+/// Input is `RgbaLinear`, but immediately cast into `Rgba`(sRGB).
+/// 
 /// ```
 /// # use bevy_aoui_widgets::color;
-/// color!(Red400);
+/// color!(red400);
 /// ```
 #[macro_export]
 macro_rules! color {
@@ -130,18 +162,24 @@ impl DslInto<SetEM> for f32 {
     }
 }
 
+/// Set font size by `px`.
 pub fn px(f: impl DslInto<f32>) -> SetEM {
     SetEM::Pixels(f.dinto())
 }
 
+/// Set font size by `em`.
 pub fn em(f: impl DslInto<f32>) -> SetEM {
     SetEM::Ems(f.dinto())
 }
 
+/// Set font size by `rem`.
 pub fn rem(f: impl DslInto<f32>) -> SetEM {
     SetEM::Rems(f.dinto())
 }
 
+/// Set font size by `%`.
+/// 
+/// Provide values like `40`, not `0.4`.
 pub fn percent(f: impl DslInto<f32>) -> SetEM {
     SetEM::Pixels(f.dinto() / 100.0)
 }
@@ -228,7 +266,7 @@ impl DslInto<OneOrTwo<$ty>> for (f32, f32) {
 impl_one_or_two!(Vec2, x, y, Vec2::new(x as f32, y as f32));
 impl_one_or_two!(Size2, x, y, Size2::pixels(x as f32, y as f32));
 
-
+#[doc(hidden)]
 #[macro_export]
 macro_rules! size {
     ($x: tt) => {

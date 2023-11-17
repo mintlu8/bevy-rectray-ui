@@ -1,5 +1,5 @@
 use bevy::{math::Vec2, sprite::{Anchor, Mesh2dHandle, ColorMaterial}, prelude::{Color, Handle, Commands, Entity}};
-use bevy_aoui::{Size2, SetEM, Hitbox, bundles::{AoUIBundle, BuildGlobalBundle}, ScaleErase};
+use bevy_aoui::{Size2, SetEM, Hitbox, bundles::{AoUIBundle, BuildGlobalBundle}};
 use bevy_prototype_lyon::prelude::*;
 
 use crate::{dsl::{prelude::*, core::{transform2d, dimension}}, widgets::shape::{Shapes, ShapeDimension}};
@@ -51,7 +51,7 @@ pub struct Shape {
     pub dimension: Option<Size2>,
     /// Initialize render size, by default Vec2::ONE.
     pub size: Option<Vec2>,
-    pub em: SetEM,
+    pub font_size: SetEM,
     pub hitbox: Option<Hitbox>,
     pub shape: Shapes,
     pub fill: Option<Fill>,
@@ -79,7 +79,6 @@ impl AoUIWidget for Shape {
                 ..Default::default()
             },
             BuildGlobalBundle::default(),
-            ScaleErase,
             shape.build_path(anchor, size),
             shape,
             ShapeDimension { size, anchor },
@@ -104,6 +103,7 @@ impl AoUIWidget for Shape {
 }
 
 
+/// Construct a shape with `bevy_prototype_lyon`.
 #[macro_export]
 macro_rules! shape {
     (($commands: expr, $server: expr $(, $ctx: expr)*) {$($tt:tt)*}) => {
@@ -114,7 +114,7 @@ macro_rules! shape {
     };
 }
 
-
+/// Construct a rectangle with `bevy_prototype_lyon`.
 #[macro_export]
 macro_rules! rectangle {
     (($commands: expr, $server: expr $(, $ctx: expr)*) {$($tt:tt)*}) => {
@@ -126,6 +126,7 @@ macro_rules! rectangle {
     };
 }
 
+/// Construct a circle with `bevy_prototype_lyon`.
 #[macro_export]
 macro_rules! circle {
     (($commands: expr, $server: expr $(, $ctx: expr)*) {$($tt:tt)*}) => {

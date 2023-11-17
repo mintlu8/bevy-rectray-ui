@@ -49,7 +49,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         z: 1,
         extra: Sprite::default(),
         child: rectangle! {
-            dimension: size2!([700, 100%]),
+            dimension: size2!([100%, 100%]),
             fill: color!(black),
             extra: IgnoreLayout,
             z: -1,

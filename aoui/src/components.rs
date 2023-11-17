@@ -68,7 +68,7 @@ impl Dimension {
         dim: DimensionSize::Owned(Size2::INHERIT),
         set_em: SetEM::None,
         size: Vec2::ZERO,
-        em: 16.0,
+        em: 0.0,
     };
 
 
@@ -78,7 +78,7 @@ impl Dimension {
             dim: DimensionSize::Owned(Size2::pixels(size.x, size.y)),
             set_em: SetEM::None,
             size: Vec2::ZERO,
-            em: 16.0,
+            em: 0.0,
         }
     }
 
@@ -88,7 +88,7 @@ impl Dimension {
             dim: DimensionSize::Owned(Size2::percent(size.x, size.y)),
             set_em: SetEM::None,
             size: Vec2::ZERO,
-            em: 16.0,
+            em: 0.0,
         }
     }
 
@@ -98,7 +98,7 @@ impl Dimension {
             dim: DimensionSize::Owned(size),
             set_em: SetEM::None,
             size: Vec2::ZERO,
-            em: 16.0,
+            em: 0.0,
         }
     }
 
@@ -198,7 +198,7 @@ pub struct Transform2D{
     /// By default this is the same as `anchor`.
     /// 
     /// Unless doing spine animations,
-    /// try avoid using this field in ideomatic usage of `AoUI`.
+    /// try avoid using this field in idiomatic usage of `AoUI`.
     pub parent_anchor: Option<Anchor>,
     /// Center of `rotation` and `scale`.
     ///
@@ -240,36 +240,45 @@ impl Transform2D {
         scale: Vec2::ONE,
     };
 
+    /// Set offset.
     pub fn with_offset(mut self, offset: impl Into<Size2>) -> Self {
         self.offset = offset.into();
         self
     }
 
+    /// Set rotation.
     pub fn with_rotation(mut self, rot: f32) -> Self {
         self.rotation = rot;
         self
     }
 
+    /// Set scale.
     pub fn with_scale(mut self, scale: Vec2) -> Self {
         self.scale = scale;
         self
     }
 
+    /// Set z offset.
     pub fn with_z(mut self, z: f32) -> Self {
         self.z = z;
         self
     }
 
+    /// Set anchor.
     pub fn with_anchor(mut self, anchor: Anchor) -> Self {
         self.anchor = anchor;
         self
     }
 
+    /// Set parent anchor.
+    ///  
+    /// Discouraged in idiomatic use, unless doing spine animation.
     pub fn with_parent_anchor(mut self, anchor: Anchor) -> Self {
         self.parent_anchor = Some(anchor);
         self
     }
 
+    /// Set center.
     pub fn with_center(mut self, center: Anchor) -> Self {
         self.center = Some(center);
         self
@@ -295,7 +304,3 @@ pub struct BuildGlobal(pub Option<Anchor>);
 /// have no effect on rendering.
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct BuildTransform(pub Anchor);
-
-/// If set, do not propagate the scale of **this** sprite down its children.
-#[derive(Debug, Clone, Component, Default, Reflect)]
-pub struct ScaleErase;

@@ -22,8 +22,8 @@ macro_rules! transform2d {
 macro_rules! dimension {
     ($this: expr) => {
         match $this.dimension {
-            Some(size) => ::bevy_aoui::Dimension::owned(size).with_em($this.em),
-            None => ::bevy_aoui::Dimension::COPIED.with_em($this.em),
+            Some(size) => ::bevy_aoui::Dimension::owned(size).with_em($this.font_size),
+            None => ::bevy_aoui::Dimension::COPIED.with_em($this.font_size),
         }
     }
 }
@@ -46,12 +46,12 @@ pub struct Minimal {
     pub scale: Option<OneOrTwo<Vec2>>,
     pub z: f32,
     pub dimension: Option<Size2>,
-    pub em: SetEM,
+    pub font_size: SetEM,
     pub hitbox: Option<Hitbox>,
 }
 
 
-/// A Sized AoUI Component with no rendering.
+/// An empty sprite.
 #[derive(Debug, Default)]
 pub struct Frame {
     pub anchor: Anchor,
@@ -63,7 +63,7 @@ pub struct Frame {
     pub scale: Option<OneOrTwo<Vec2>>,
     pub z: f32,
     pub dimension: Option<Size2>,
-    pub em: SetEM,
+    pub font_size: SetEM,
     pub hitbox: Option<Hitbox>,
 }
 
@@ -86,7 +86,7 @@ impl AoUIWidget for Frame {
    
 
 
-/// A Sized AoUI Component with no rendering.
+/// An image base sprite.
 #[derive(Debug, Default)]
 pub struct Sprite {
     pub anchor: Anchor,
@@ -98,7 +98,7 @@ pub struct Sprite {
     pub scale: Option<OneOrTwo<Vec2>>,
     pub z: f32,
     pub dimension: Option<Size2>,
-    pub em: SetEM,
+    pub font_size: SetEM,
     pub hitbox: Option<Hitbox>,
 
     pub sprite: Handle<Image>,
@@ -135,7 +135,7 @@ impl AoUIWidget for Sprite {
     }
 }
 
-/// A Sized AoUI Component with no rendering.
+/// A text box.
 #[derive(Debug, Default)]
 pub struct TextBox {
     pub anchor: Anchor,
@@ -147,7 +147,7 @@ pub struct TextBox {
     pub scale: Option<OneOrTwo<Vec2>>,
     pub z: f32,
     pub dimension: Option<Size2>,
-    pub em: SetEM,
+    pub font_size: SetEM,
     pub hitbox: Option<Hitbox>,
 
     pub text: String,

@@ -3,7 +3,13 @@ use bevy::{prelude::*, sprite::Anchor};
 use bevy_egui::{EguiContexts, egui::{Slider, self}};
 pub fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                present_mode: bevy::window::PresentMode::AutoNoVsync,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }))
         .add_plugins(bevy_egui::EguiPlugin)
         .add_systems(Startup, init)
         .add_systems(Update, egui_window)
@@ -36,9 +42,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     for _ in 0..120 {
         let curr = commands.spawn(AoUISpriteBundle {
             transform: Transform2D::UNIT
-                .with_offset(Vec2::new(10.0, 0.0))
-                .with_anchor(Anchor::CenterRight)
-                .with_center(Anchor::CenterLeft),
+                .with_anchor(Anchor::CenterLeft)
+                .with_center(Anchor::CenterLeft)
+                // We use parent anchor for spine animation.
+                .with_parent_anchor(Anchor::CenterRight),
             sprite: Sprite {
                 color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5),
                 custom_size: Some(Vec2::new(10.0, 10.0)),

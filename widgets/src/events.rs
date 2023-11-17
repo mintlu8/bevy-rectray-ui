@@ -1,5 +1,3 @@
-//! We only handle lmb.
-
 use std::ops::BitOr;
 
 use bevy::{prelude::*, window::{Window, PrimaryWindow}, ecs::system::EntityCommands};
@@ -10,7 +8,7 @@ pub struct DoubleClickThreshold(f32);
 
 impl Default for DoubleClickThreshold {
     fn default() -> Self {
-        Self(0.2)
+        Self(0.3)
     }
 }
 
@@ -27,7 +25,7 @@ impl DoubleClickThreshold {
 /// State of the cursor system.
 #[derive(Debug, Resource)]
 pub struct CursorState{
-    last_lmb_up_time: f32,
+    last_lmb_down_time: [f32; 2],
     cursor_pos: Vec2,
     up_pos: Vec2,
     down_pos: Vec2,
@@ -42,7 +40,7 @@ pub struct CursorState{
 impl Default for CursorState {
     fn default() -> Self {
         Self { 
-            last_lmb_up_time: 0.0, 
+            last_lmb_down_time: [0.0, 0.0], 
             cursor_pos: Vec2::ZERO, 
             up_pos: Vec2::ZERO, 
             down_pos: Vec2::ZERO, 
@@ -73,6 +71,9 @@ impl CursorFocus {
 pub struct CursorAction(EventFlags);
 
 impl CursorAction {
+    pub fn flags(&self) -> EventFlags {
+        self.0
+    }
     pub fn is(&self, flag: EventFlags) -> bool {
         self.0 == flag
     }
@@ -99,7 +100,7 @@ impl CursorState {
     /// Does not cancel dragging.
     pub fn block(&mut self) {
         if self.drag_target != None {
-            self.last_lmb_up_time = 0.0;
+            self.last_lmb_down_time = [0.0, 0.0];
             self.blocked = true;
             self.dragging = false;
         }
@@ -107,7 +108,7 @@ impl CursorState {
 
     /// Call if some external system catched mouse events this frame before this.
     pub fn block_force(&mut self) {
-        self.last_lmb_up_time = 0.0;
+        self.last_lmb_down_time = [0.0, 0.0];
         self.blocked = true;
         self.drag_target = None;
         self.dragging = false;
@@ -231,7 +232,9 @@ pub fn mouse_button_input(
             }
         }
         if buttons.just_pressed(MouseButton::Left) { 
-            state.down_pos = mouse_pos 
+            state.down_pos = mouse_pos;
+            let [_, last] = state.last_lmb_down_time;
+            state.last_lmb_down_time = [last, time.elapsed_seconds()];
         }
         if let Some((entity, flag)) = query.iter().filter(|(.., flags)| flags.intersects(EventFlags::DRAG | EventFlags::CLICK))
                 .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
@@ -266,7 +269,7 @@ pub fn mouse_button_input(
             }
         }
         if buttons.just_pressed(MouseButton::Right) { 
-            state.down_pos = mouse_pos 
+            state.down_pos = mouse_pos
         }
         if let Some((entity, flag)) = query.iter().filter(|(.., flags)| flags.intersects(EventFlags::RIGHT_DRAG | EventFlags::RIGHT_CLICK))
                 .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
@@ -328,7 +331,7 @@ pub fn mouse_button_input(
         state.dragging = false;
         if let Some(drag) = state.drag_target { 
             if let Some(mut entity) = commands.get_entity(drag) {
-                if state.drag_dbl_click && time.elapsed_seconds() - state.last_lmb_up_time <= double_click.get() {
+                if state.drag_dbl_click && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
                     entity.insert(CursorAction(EventFlags::DOUBLE_CLICK));
                 } else {
                     entity.insert(CursorAction(EventFlags::DRAG_END));
@@ -339,14 +342,13 @@ pub fn mouse_button_input(
                 .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
                 .map(|(entity,..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::DROP))));
         }
-        state.last_lmb_up_time = time.elapsed_seconds();
     } else if buttons.just_released(MouseButton::Left) {
         let down = state.down_pos;
         query.iter().filter(|(.., flags)| flags.contains(EventFlags::CLICK))
             .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos) && hitbox.contains(rect, down))
             .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
             .map(|(entity, .., flags)| 
-                if flags.contains(EventFlags::DOUBLE_CLICK) && time.elapsed_seconds() - state.last_lmb_up_time <= double_click.get() {
+                if flags.contains(EventFlags::DOUBLE_CLICK) && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
                     commands.entity(entity).insert(CursorAction(EventFlags::DOUBLE_CLICK));
                 } else {
                     commands.entity(entity).insert(CursorAction(EventFlags::CLICK));
@@ -356,7 +358,6 @@ pub fn mouse_button_input(
         query.iter().filter(|(.., flags)| { flags.contains(EventFlags::CLICK_OUTSIDE) })
             .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
             .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
-        state.last_lmb_up_time = time.elapsed_seconds();
     } else if buttons.just_released(MouseButton::Right) {
         let down = state.down_pos;
         query.iter().filter(|(.., flags)| flags.contains(EventFlags::RIGHT_CLICK))
