@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_aoui::AoUIPlugin;
-use bevy_aoui_widgets::AoUIWidgetsPlugin;
+use bevy_aoui_widgets::AoUIExtensionsPlugin;
 use bevy_prototype_lyon::prelude::*;
 
 pub fn main() {
@@ -8,7 +8,7 @@ pub fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, init)
         .add_plugins(AoUIPlugin)
-        .add_plugins(AoUIWidgetsPlugin)
+        .add_plugins(AoUIExtensionsPlugin)
         .add_plugins(ShapePlugin)
         .run();
 }
@@ -16,7 +16,7 @@ pub fn main() {
 
 macro_rules! anchor_circle {
     (($commands: expr, $server: expr $(, $ctx: expr)*) {$expr: expr}) => {
-        bevy_aoui_widgets::meta_dsl!(($commands, $server $(, $ctx)*) [bevy_aoui_widgets::dsl::Shape] {
+        bevy_aoui_widgets::meta_dsl!(($commands, $server $(, $ctx)*) [bevy_aoui_widgets::dsl::builders::ShapeBuilder] {
             default_material: $server.add(::bevy::prelude::ColorMaterial::default()),
             shape: bevy_aoui_widgets::widgets::Shapes::Circle,
             fill: color!(white),

@@ -1,8 +1,9 @@
 
 /// Construct a oneshot event dynamically as a `&'static OnceLock<SystemId>`
 /// 
-/// This macro should only be used exactly once, as this requires static
-/// resource to work.
+/// This macro cannot capture context and only generates a new `SystemId` on the first call.
+/// 
+/// Do not use this macro if used with multiple worlds.
 #[macro_export]
 macro_rules! oneshot {
     (($commands: expr $(, $ctx:expr)*) {fn $name: ident ($($arg:tt)*){$($tt:tt)*}}) => {
@@ -32,14 +33,15 @@ macro_rules! oneshot {
 }
 
 /// Create a handler for a certain event.
-///
-/// This macro should only be used exactly once, as this requires static
-/// resource to work.
+/// 
+/// This macro cannot capture context and only generates a new `SystemId` on the first call.
+/// 
+/// Do not use this macro if used with multiple worlds.
 #[macro_export]
 macro_rules! handler {
-    ($ctx:tt {mouse($($flag: ident)|*) => fn $name: ident ($($arg:tt)*){$($tt:tt)*}})  => {
+    ($ctx:tt {$flag: expr => fn $name: ident ($($arg:tt)*){$($tt:tt)*}})  => {
         $crate::OneShot::new(
-            $(crate::EventFlags::$flag)|*,
+            $flag,
             $crate::oneshot!($ctx {fn $name ($($arg)*){$($tt)*}})
         )
     };

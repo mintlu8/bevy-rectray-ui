@@ -1,7 +1,7 @@
-use std::ops::BitOr;
-
 use bevy::{prelude::*, window::{Window, PrimaryWindow}, ecs::system::EntityCommands};
 use bevy_aoui::{RotatedRect, Hitbox};
+
+use crate::dto::Submit;
 
 #[derive(Debug, Resource)]
 pub struct DoubleClickThreshold(f32);
@@ -55,18 +55,21 @@ impl Default for CursorState {
 }
 
 /// Represents hovering, clicking or dragging.
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Clone, Copy)]
 #[component(storage="SparseSet")]
 pub struct CursorFocus(EventFlags);
 
 impl CursorFocus {
+    pub fn flags(&self) -> EventFlags {
+        self.0
+    }
     pub fn is(&self, flag: EventFlags) -> bool {
         self.0 == flag
     }
 }
 
 /// Represents a cursor event like `OnMouseDown`.
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Clone, Copy)]
 #[component(storage="SparseSet")]
 pub struct CursorAction(EventFlags);
 
@@ -114,6 +117,16 @@ impl CursorState {
         self.dragging = false;
     }
 
+    /// Cancels dragging of the current entity, does not reset mouse state.
+    fn cancel_drag(&mut self) {
+        self.drag_target = None;
+    }
+    
+    /// Cancels dragging of the current entity, does not reset mouse state.
+    fn clear_dbl_click(&mut self) {
+        self.last_lmb_down_time = [0.0, 0.0];
+    }
+
     /// This guarantees the existance of the entity.
     pub fn drag_target<'w, 's, 't>(&self, commands: &'t mut Commands<'w, 's>) -> Option<EntityCommands<'w, 's, 't>> {
         commands.get_entity(self.drag_target?)
@@ -140,62 +153,50 @@ impl CursorState {
     }
 }
 
-/// `CLICK`, `DRAG`, `HOVER`, `DROP`, `CLICK_OUTSIDE` are valid component flags.
-#[derive(Debug, Component, PartialEq, Eq, Clone, Copy)]
-pub struct EventFlags(u16);
-
-impl EventFlags{
-    pub const DRAG: Self = Self(1);
-    pub const DOWN: Self = Self(2);
-    pub const CLICK: Self = Self(4);
-    pub const DOUBLE_CLICK: Self = Self(8);
-    pub const HOVER: Self = Self(16);
-
-    pub const MID_DOWN: Self = Self(32);
-    pub const MID_CLICK: Self = Self(64);
-    pub const MID_DRAG: Self = Self(128);
-
-    pub const RIGHT_DOWN: Self = Self(256);
-    pub const RIGHT_CLICK: Self = Self(512);
-    pub const RIGHT_DRAG: Self = Self(1024);
-
-    pub const DROP: Self = Self(2048);
-    pub const DRAG_END: Self = Self(4096);
-
-    pub const CLICK_OUTSIDE: Self = Self(8192);
-
-    pub fn contains(&self, other: Self) -> bool {
-        self.0 & other.0 == other.0
+tlbf::tlbf!(
+    #[derive(Component)]
+    /// Flags for cursor events.
+    /// 
+    /// Valid listeners are `Hover`, `*Click`, `*Drag`, `DoubleClick`, `Drop` and `ClickOutside`.
+    /// 
+    /// * `Hover` listens for `Hover`,
+    /// * `Click` listens for `Down`, `Up` and `Pressed`
+    /// * `Drag` listens for `Down`, `DragEnd` and `Drag`
+    /// * `DoubleClick` listens for `DoubleClick`, which replaces `Click` or `DragEnd`
+    /// * `Drop` listens for `Drop`
+    /// * `ClickOutside` listens for mouse up outside.
+    /// 
+    /// Events are emitted as 3 separate components, each frame a sprite can receive at most one of each:
+    /// * `CursorFocus`: `Hover`, `Down`, `Drag`
+    /// * `CursorAction`: `Down`, `Click`, `DragEnd`, `DoubleClick`, `Drop`
+    /// * `CursorClickOutside`: `ClickOutside`
+    /// 
+    /// Details:
+    /// * `Click` requires mouse up and mouse down be both inside a sprite.
+    /// * `ClickOutside` requires mouse up be outside of a sprite and the sprite not being dragged.
+    /// * Dragged sprite will receive `Down` from other mouse buttons regardless of their handlers.
+    /// * There is in fact no `MouseUp`.
+    pub EventFlags: u32 {
+        Idle,
+        Hover,
+        Drag,
+        Down,
+        Pressed,
+        Click,
+        DoubleClick,
+        MidDown,
+        MidPressed,
+        MidClick,
+        MidDrag,
+        RightDown,
+        RightPressed,
+        RightClick,
+        RightDrag,
+        Drop,
+        DragEnd,
+        ClickOutside,
     }
-
-    pub fn intersects(&self, other: Self) -> bool {
-        self.0 & other.0 != 0
-    }
-}
-impl BitOr for EventFlags {
-    type Output = Self;
-
-    fn bitor(self, rhs: Self) -> Self::Output {
-        Self(self.0 | rhs. 0)
-    }
-}
-
-/// Remove [`CursorFocus`] and [`CursorAction`];
-pub fn remove_focus(mut commands: Commands, 
-    query1: Query<Entity, With<CursorFocus>>, 
-    query2: Query<Entity, With<CursorAction>>,
-    query3: Query<Entity, With<CursorClickOutside>>,
-) {
-    for entity in query1.iter() {
-        commands.entity(entity).remove::<CursorFocus>();
-    }
-    for entity in query2.iter() {
-        commands.entity(entity).remove::<CursorAction>();
-    }
-    for entity in query3.iter() {
-        commands.entity(entity).remove::<CursorClickOutside>();
-    }
-}
+);
 
 /// We hand out component [`CursorFocus`] for persistant states,
 /// [`CursorAction`] for active events.
@@ -220,92 +221,105 @@ pub fn mouse_button_input(
         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
         .map(|ray| ray.origin.truncate()) else {return;};
     state.cursor_pos = mouse_pos;
-    if buttons.pressed(MouseButton::Left) {
-        if state.dragging { 
-            if let Some(mut target) = state.drag_target(&mut commands){
-                target.insert(CursorFocus(EventFlags::DRAG));
-                state.catched = true; 
-                return;
-            } else {
+    if state.dragging {
+        state.catched = true;
+        if let Some(mut entity) = state.drag_target(&mut commands) {
+            if !buttons.pressed(state.drag_button) {
+                if state.drag_dbl_click && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
+                    entity.insert(CursorAction(EventFlags::DoubleClick));
+                    state.clear_dbl_click();
+                } else {
+                    entity.insert(CursorAction(EventFlags::DragEnd));
+                }
                 state.dragging = false;
                 state.drag_target = None;
+                let dragged_id = entity.id();
+                query.iter().filter(|(.., flags)| flags.contains(Drop))
+                    .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
+                    .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
+                    .map(|(entity,..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::Drop))));
+                query.iter().filter(|(.., flags)| { flags.contains(ClickOutside) })
+                    .filter(|(e, ..)| e != &dragged_id)
+                    .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
+                    .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
+            } else {
+                if state.drag_button != MouseButton::Left && buttons.just_pressed(MouseButton::Left) {
+                    entity.insert(CursorAction(EventFlags::Down));
+                } else if state.drag_button != MouseButton::Right && buttons.just_pressed(MouseButton::Right) {
+                    entity.insert(CursorAction(EventFlags::RightDown));
+                } else if state.drag_button != MouseButton::Middle && buttons.just_pressed(MouseButton::Middle) {
+                    entity.insert(CursorAction(EventFlags::MidDown));
+                }
+                entity.insert(CursorFocus(match state.drag_button {
+                    MouseButton::Left => EventFlags::Drag,
+                    MouseButton::Right => EventFlags::RightDrag,
+                    MouseButton::Middle => EventFlags::MidDrag,
+                    MouseButton::Other(_) => EventFlags::Drag,
+                }));
             }
+        } else if !buttons.pressed(state.drag_button) {
+            state.dragging = false;
+            state.drag_target = None;
+            query.iter().filter(|(.., flags)| { flags.contains(ClickOutside) })
+                .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
+                .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
         }
+    } else if buttons.pressed(MouseButton::Left) {
         if buttons.just_pressed(MouseButton::Left) { 
             state.down_pos = mouse_pos;
             let [_, last] = state.last_lmb_down_time;
             state.last_lmb_down_time = [last, time.elapsed_seconds()];
         }
-        if let Some((entity, flag)) = query.iter().filter(|(.., flags)| flags.intersects(EventFlags::DRAG | EventFlags::CLICK))
+        if let Some((entity, flag)) = query.iter().filter(|(.., flags)| flags.intersects(Drag|Click))
                 .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
                 .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
                 .map(|(entity, _, _, flags)| (entity, flags)
         ) {
             state.catched = true;
             if buttons.just_pressed(MouseButton::Left) {
-                commands.entity(entity).insert(CursorAction(EventFlags::DOWN));
-                if flag.contains(EventFlags::DRAG) {
+                commands.entity(entity).insert(CursorAction(EventFlags::Down));
+                if flag.contains(Drag) {
                     state.drag_target = Some(entity);
                     state.dragging = true;
                     state.drag_button = MouseButton::Left;
-                    state.drag_dbl_click = flag.contains(EventFlags::DOUBLE_CLICK);
-                    commands.entity(entity).insert(CursorFocus(EventFlags::DRAG));
+                    state.drag_dbl_click = flag.contains(DoubleClick);
+                    commands.entity(entity).insert(CursorFocus(EventFlags::Drag));
                 } else {
-                    commands.entity(entity).insert(CursorFocus(EventFlags::DOWN));
+                    commands.entity(entity).insert(CursorFocus(EventFlags::Pressed));
                 }
-            } else if flag.contains(EventFlags::CLICK) {
-                commands.entity(entity).insert(CursorFocus(EventFlags::CLICK));
+            } else if flag.contains(Click) {
+                commands.entity(entity).insert(CursorFocus(EventFlags::Pressed));
             }
         }
     } else if buttons.pressed(MouseButton::Right) {
-        if state.dragging { 
-            if let Some(mut target) = state.drag_target(&mut commands){
-                target.insert(CursorFocus(EventFlags::RIGHT_DRAG));
-                state.catched = true; 
-                return;
-            } else {
-                state.dragging = false;
-                state.drag_target = None;
-            }
-        }
         if buttons.just_pressed(MouseButton::Right) { 
             state.down_pos = mouse_pos
         }
-        if let Some((entity, flag)) = query.iter().filter(|(.., flags)| flags.intersects(EventFlags::RIGHT_DRAG | EventFlags::RIGHT_CLICK))
+        if let Some((entity, flag)) = query.iter().filter(|(.., flags)| flags.intersects(RightDrag|RightClick))
                 .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
                 .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
                 .map(|(entity, _, _, flags)| (entity, flags)
         ) {
             state.catched = true;
             if buttons.just_pressed(MouseButton::Right) {
-                commands.entity(entity).insert(CursorAction(EventFlags::RIGHT_DOWN));
-                if flag.contains(EventFlags::RIGHT_DRAG) {
+                commands.entity(entity).insert(CursorAction(EventFlags::RightDown));
+                if flag.contains(RightDrag) {
                     state.drag_target = Some(entity);
                     state.drag_button = MouseButton::Right;
                     state.drag_dbl_click = false;
-                    commands.entity(entity).insert(CursorFocus(EventFlags::RIGHT_DRAG));
+                    commands.entity(entity).insert(CursorFocus(EventFlags::RightDrag));
                 } else {
-                    commands.entity(entity).insert(CursorFocus(EventFlags::RIGHT_DOWN));
+                    commands.entity(entity).insert(CursorFocus(EventFlags::RightPressed));
                 }
-            } else if flag.contains(EventFlags::RIGHT_CLICK) {
-                commands.entity(entity).insert(CursorFocus(EventFlags::RIGHT_CLICK));
+            } else if flag.contains(RightClick) {
+                commands.entity(entity).insert(CursorFocus(EventFlags::RightPressed));
             }
         }
     } else if buttons.pressed(MouseButton::Middle) {
-        if state.dragging { 
-            if let Some(mut target) = state.drag_target(&mut commands){
-                target.insert(CursorFocus(EventFlags::MID_DRAG));
-                state.catched = true; 
-                return;
-            } else {
-                state.dragging = false;
-                state.drag_target = None;
-            }
-        }
         if buttons.just_pressed(MouseButton::Middle) { 
             state.down_pos = mouse_pos 
         }
-        if let Some((entity, flag)) = query.iter().filter(|(.., flags)|flags.intersects(EventFlags::MID_DRAG | EventFlags::MID_CLICK))
+        if let Some((entity, flag)) = query.iter().filter(|(.., flags)|flags.intersects(MidDrag|MidClick))
                 .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
                 .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
                 .map(|(entity, _, _, flags)| (entity, flags)
@@ -313,76 +327,82 @@ pub fn mouse_button_input(
             state.catched = true;
             if buttons.just_pressed(MouseButton::Middle) {
                 state.down_pos = mouse_pos;
-                commands.entity(entity).insert(CursorAction(EventFlags::MID_DOWN));
-                if flag.contains(EventFlags::MID_DRAG) {
+                commands.entity(entity).insert(CursorAction(EventFlags::MidDown));
+                if flag.contains(MidDrag) {
                     state.drag_target = Some(entity);
                     state.drag_button = MouseButton::Middle;
                     state.drag_dbl_click = false;
-                    commands.entity(entity).insert(CursorFocus(EventFlags::MID_DRAG));
+                    commands.entity(entity).insert(CursorFocus(EventFlags::MidDrag));
                 } else {
-                    commands.entity(entity).insert(CursorFocus(EventFlags::MID_DOWN));
+                    commands.entity(entity).insert(CursorFocus(EventFlags::MidPressed));
                 }
-            } else if flag.contains(EventFlags::MID_CLICK) {
-                commands.entity(entity).insert(CursorFocus(EventFlags::MID_CLICK));
+            } else if flag.contains(MidClick) {
+                commands.entity(entity).insert(CursorFocus(EventFlags::MidPressed));
             }
-        }
-    } else if state.dragging {
-        state.catched = true;
-        state.dragging = false;
-        if let Some(drag) = state.drag_target { 
-            if let Some(mut entity) = commands.get_entity(drag) {
-                if state.drag_dbl_click && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
-                    entity.insert(CursorAction(EventFlags::DOUBLE_CLICK));
-                } else {
-                    entity.insert(CursorAction(EventFlags::DRAG_END));
-                }
-            }
-            query.iter().filter(|(.., flags)| flags.contains(EventFlags::DROP))
-                .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
-                .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
-                .map(|(entity,..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::DROP))));
         }
     } else if buttons.just_released(MouseButton::Left) {
         let down = state.down_pos;
-        query.iter().filter(|(.., flags)| flags.contains(EventFlags::CLICK))
+        query.iter().filter(|(.., flags)| flags.contains(Click))
             .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos) && hitbox.contains(rect, down))
             .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
             .map(|(entity, .., flags)| 
-                if flags.contains(EventFlags::DOUBLE_CLICK) && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
-                    commands.entity(entity).insert(CursorAction(EventFlags::DOUBLE_CLICK));
+                if flags.contains(DoubleClick) && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
+                    commands.entity(entity).insert(CursorAction(EventFlags::DoubleClick));
+                    state.clear_dbl_click();
                 } else {
-                    commands.entity(entity).insert(CursorAction(EventFlags::CLICK));
+                    commands.entity(entity).insert(CursorAction(EventFlags::Click));
                 }
             )
             .map(|_| state.catched = true);
-        query.iter().filter(|(.., flags)| { flags.contains(EventFlags::CLICK_OUTSIDE) })
+        query.iter().filter(|(.., flags)| flags.contains(ClickOutside))
             .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
             .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
     } else if buttons.just_released(MouseButton::Right) {
         let down = state.down_pos;
-        query.iter().filter(|(.., flags)| flags.contains(EventFlags::RIGHT_CLICK))
+        query.iter().filter(|(.., flags)| flags.contains(RightClick))
             .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos) && hitbox.contains(rect, down))
             .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
-            .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::RIGHT_CLICK))))
+            .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::RightClick))))
             .map(|_| state.catched = true);
-        query.iter().filter(|(.., flags)| { flags.contains(EventFlags::CLICK_OUTSIDE) })
+        query.iter().filter(|(.., flags)| flags.contains(ClickOutside))
             .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
             .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
     } else if buttons.just_released(MouseButton::Middle) {
         let down = state.down_pos;
-        query.iter().filter(|(.., flags)| flags.contains(EventFlags::MID_CLICK))
+        query.iter().filter(|(.., flags)| flags.contains(MidClick))
             .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos) && hitbox.contains(rect, down))
             .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
-            .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::MID_CLICK))))
+            .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::MidClick))))
             .map(|_| state.catched = true);
-        query.iter().filter(|(.., flags)| { flags.contains(EventFlags::CLICK_OUTSIDE) })
+        query.iter().filter(|(.., flags)| flags.contains(ClickOutside))
             .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
             .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
     } else {
-        query.iter().filter(|(.., flags)| flags.intersects(EventFlags::HOVER))
+        query.iter().filter(|(.., flags)| flags.intersects(Hover))
             .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
             .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
-            .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorFocus(EventFlags::HOVER))))
+            .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorFocus(EventFlags::Hover))))
             .map(|_| state.catched = true);
+    }
+}
+
+/// Remove [`CursorFocus`], [`CursorAction`] and [`CursorClickOutside`];
+pub fn remove_focus(mut commands: Commands, 
+    query1: Query<Entity, With<CursorFocus>>, 
+    query2: Query<Entity, With<CursorAction>>,
+    query3: Query<Entity, With<CursorClickOutside>>,
+    query4: Query<Entity, With<Submit>>,
+) {
+    for entity in query1.iter() {
+        commands.entity(entity).remove::<CursorFocus>();
+    }
+    for entity in query2.iter() {
+        commands.entity(entity).remove::<CursorAction>();
+    }
+    for entity in query3.iter() {
+        commands.entity(entity).remove::<CursorClickOutside>();
+    }
+    for entity in query4.iter() {
+        commands.entity(entity).remove::<Submit>();
     }
 }

@@ -6,6 +6,7 @@ use bevy::window::{Window, PrimaryWindow, ReceivedCharacter};
 use bevy::text::{Text, Font};
 use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
 use bevy_aoui::{RotatedRect, Transform2D, Dimension, bundles::AoUITextBundle};
+use crate::dto::Submit;
 use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction};
 use ab_glyph::Font as FontTrait;
 
@@ -27,7 +28,8 @@ enum LeftRight {
 /// `InputBoxCursorBar` and `InputBoxCursorArea` requires 
 /// `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
 /// 
-/// Warning: This widget might not behave properly if tempered externally.
+/// Warning: This widget does not rebuild its glyphs every frame,
+/// might not behave properly if tempered externally.
 #[derive(Debug, Component, Default)]
 pub struct InputBox {
     cursor_start: usize,
@@ -264,7 +266,7 @@ pub fn text_on_mouse_double_click(
     mut query: Query<(&mut InputBox, &CursorAction)>
 ) {
     for (mut input_box, action) in query.iter_mut() {
-        if action.is(EventFlags::DOUBLE_CLICK) {
+        if action.is(EventFlags::DoubleClick) {
             input_box.select_all();
             input_box.set_focus(true);
         }
@@ -278,7 +280,7 @@ pub fn update_inputbox_cursor(
     mut text: Query<(Entity, &Parent, Option<&Children>), (With<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>, Without<Text>)>,
     mut bar: Query<(&Parent, &mut Transform2D, &mut Visibility), (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<Text>)>,
     mut area: Query<(&Parent, &mut Transform2D, &mut Dimension, &mut Visibility), (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<Text>)>,
-    mut letters: Query<(Entity, &mut Transform2D, &mut Dimension, &mut Text), (Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>
+    mut letters: Query<(Entity, &mut Transform2D, &mut Dimension, &mut Text, &mut Visibility), (Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>
 ) {
     use ab_glyph::ScaleFont as FontTrait;
     use bevy::prelude::*;
@@ -314,9 +316,10 @@ pub fn update_inputbox_cursor(
             }
             max = (index, end);
             if let Some(entity) = entities.next(){
-                if let Ok((_, mut transform, mut dimension, mut text)) = letters.get_mut(*entity){
+                if let Ok((_, mut transform, mut dimension, mut text, mut vis)) = letters.get_mut(*entity){
                     transform.offset.edit_raw(|v| v.x = cursor + center);
                     dimension.edit_raw(|v| v.x = bounds.width());
+                    *vis = Visibility::Inherited;
                     match text.sections.first_mut() {
                         Some(first) => first.value = chara.to_string(),
                         None => text.sections.push(TextSection { 
@@ -328,8 +331,11 @@ pub fn update_inputbox_cursor(
                             } 
                         }),
                     }
+                } else {
+                    // fixing broken state makes little sense here.
+                    warn!("Glyph entity invalidated in textbox, aborting.");
+                    return;
                 }
-                // TODO: What to do if someone messed with the children?
             } else {
                 added.push(commands.spawn({
                     AoUITextBundle {
@@ -358,10 +364,10 @@ pub fn update_inputbox_cursor(
         if input_box.cursor_start + input_box.cursor_len == 0 {
             end = start;
         }
-
-        let removed: Vec<_> = entities.map(|x| *x).collect();
-        commands.entity(glyph_container).remove_children(&removed).push_children(&added);
-        removed.into_iter().for_each(|x| commands.entity(x).despawn());
+        entities.for_each(|entity| if let Ok((.., mut vis)) = letters.get_mut(*entity){
+            *vis = Visibility::Hidden;
+        });
+        commands.entity(glyph_container).push_children(&added);
         if !input_box.focus {
             for (.., mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 *vis = Visibility::Hidden;
@@ -374,7 +380,7 @@ pub fn update_inputbox_cursor(
         if input_box.cursor_len == 0 {
             for (_, mut transform, mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
-                *vis = Visibility::Visible;
+                *vis = Visibility::Inherited;
             };
             for (.., mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 *vis = Visibility::Hidden;
@@ -386,7 +392,7 @@ pub fn update_inputbox_cursor(
             for (.., mut transform, mut dimension, mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
                 dimension.edit_raw(|v| v.x = end - start);
-                *vis = Visibility::Visible;
+                *vis = Visibility::Inherited;
             };
 
         }
@@ -405,11 +411,12 @@ pub fn text_on_click_outside(
     }
 }
 pub fn inputbox_keyboard(
+    mut commands: Commands,
     mut query: Query<(Entity, &mut InputBox)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {
-    for (_, mut inputbox) in query.iter_mut().filter(|(_, input)| input.has_focus()) {
+    for (entity, mut inputbox) in query.iter_mut().filter(|(_, input)| input.has_focus()) {
         if keys.any_pressed(CONTROL) {
             if keys.just_pressed(KeyCode::C) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
@@ -444,7 +451,9 @@ pub fn inputbox_keyboard(
             for char in events.read() {
                 match char.char {
                     '\t' => (),
-                    '\r'|'\n' => (),
+                    '\r'|'\n' => {
+                        commands.entity(entity).insert(Submit::new(inputbox.get()));
+                    },
                     '\x08'|'\x7f' => inputbox.backspace(),
                     _ => inputbox.push(char.char)
                 }
@@ -463,53 +472,3 @@ pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &Dimension)>) {
     })
 }
 
-
-// pub fn text_on_mouse_drag(
-//     listen: Listener<Pointer<Drag>>, 
-//     query: Query<(Entity, &RotatedRect), (With<Hitbox>, With<InputBox>)>,
-//     text: Query<(&Parent, &TextLayoutInfo), With<InputBoxText>>,
-//     mut bar: Query<(&Parent, &mut Transform2D, &mut Visibility), With<InputBoxCursorBar>>,
-//     mut area: Query<(&Parent, &mut Transform2D, &mut Dimension, &mut Visibility), With<InputBoxCursorArea>>,
-// ) {
-//     let Ok((entity, rect)) = query.get(listen.target) else {return};
-
-//     let Some((_, layout)) = text.into_iter().filter(|(p, _)| p.get() == entity).next() else {return};
-//     let pos = listen.pointer_location.position;
-//     let down = pos - listen.distance;
-
-//     let curr = rect.local_space_bl(pos);
-//     let down = rect.local_space_bl(down);
-//     let mut curr_offset = 0.0;
-//     let mut down_offset = 0.0;
-//     for glyph in layout.glyphs.iter() {
-//         if curr.x > glyph.position.x {
-//             break;
-//         }
-//         curr_offset = glyph.position.x;
-//     }
-//     for glyph in layout.glyphs.iter() {
-//         if down.x > glyph.position.x {
-//             break;
-//         }
-//         down_offset = glyph.position.x;
-//     }
-//     if curr_offset == down_offset {
-//         if let Some((_, mut transform, mut vis)) = bar.iter_mut().filter(|(p, ..)| p.get() == entity).next() {
-//             transform.offset.edit_raw(|v| v.x = curr_offset);
-//             *vis = Visibility::Visible;
-//         };
-//         if let Some((.., mut vis)) = area.iter_mut().filter(|(p, ..)| p.get() == entity).next() {
-//             *vis = Visibility::Hidden;
-//         };
-//     } else {
-//         if let Some((.., mut vis)) = bar.iter_mut().filter(|(p, ..)| p.get() == entity).next() {
-//             *vis = Visibility::Hidden;
-//         };
-//         if let Some((.., mut transform, mut dimension, mut vis)) = area.iter_mut().filter(|(p, ..)| p.get() == entity).next() {
-//             transform.offset.edit_raw(|v| v.x = curr_offset.min(down_offset));
-//             dimension.edit_raw(|v| v.x = (curr_offset - down_offset).abs());
-//             *vis = Visibility::Visible;
-//         };
-//     }
-    
-// }

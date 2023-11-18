@@ -11,5 +11,11 @@ arboard = { version = "3.2.1", default-features = false }
 bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite", "bevy_text"] }
 bevy_aoui = {version = "^0.1", path = "../aoui"}
 bevy_prototype_lyon = "^0.10.0"
-colorthis = "^0.1.1"
-string_iter = "0.1.0"
+colorthis = {version = "^0.1.1", features=["compact"]}
+serde = "^1"
+postcard = {version = "^1", default-features = false, features = ["use-std"]}
+string_iter = "^0.1.0"
+tlbf = "^0.2"
+
+[dev-dependencies]
+bevy-inspector-egui = "0.21.0"

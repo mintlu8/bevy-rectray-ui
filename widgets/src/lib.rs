@@ -10,8 +10,8 @@
 //! for detecting cursor activity exclusively for AoUI widgets. Cursor events not
 //! catched by our system can be handled by other systems.
 //! 
-//! Unlike the event system in `bevy_aoui`, this api is optimized for library use,
-//! and might not be as ergonomic for firing off one-shot events.
+//! We offer a component insertion based core event system as well as
+//! a oneshot system based event hadler system for end users.
 //! 
 //! # Widgets
 //! 
@@ -19,6 +19,10 @@
 //! 
 //! * `Shape`: a vector shape renderer using `bevy_prototype_lyon`.
 //! * `InputBox`: a single line text input.
+//! * `Buton`: Since AoUI does not have a standard look,
+//! we currently don't offer a standard button widget, but all
+//! the building blocks are there to build a button or a checkbox
+//! directly through out components.
 //! 
 //! # DSL
 //! 
@@ -56,27 +60,59 @@
 //! 
 //! Check our our book or examples for more info.
 
-use bevy::{prelude::{PreUpdate, PostUpdate}, app::Update};
+use bevy::{prelude::{PreUpdate, PostUpdate}, app::Update, ecs::schedule::{IntoSystemConfigs, SystemSet, IntoSystemSetConfigs}, input::InputSystem};
 
 pub mod dsl;
 pub mod widgets;
 pub mod events;
 
-pub mod oneshot;
-pub use oneshot::OneShot;
+mod dto;
 
-pub use widgets::schedule::AoUIWidgetsPlugin;
+pub use dto::Submit;
+mod oneshot;
+pub use oneshot::{OneShot, OnSubmit, EventQuery};
+use widgets::inputbox;
 
 /// Plugin for the event pipeline.
-pub struct AoUICursorEventsPlugin;
+pub(crate) struct AoUICursorEventsPlugin;
+
+#[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
+pub struct AoUIEventSet;
+
+#[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
+pub struct AoUIEventCleanupSet;
 
 impl bevy::prelude::Plugin for AoUICursorEventsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
+        use events::*;
         app.init_resource::<events::CursorState>()
             .init_resource::<events::DoubleClickThreshold>()
-            .add_systems(PreUpdate, events::mouse_button_input)
-            .add_systems(PostUpdate, events::remove_focus)
-            .add_systems(Update, oneshot::call_oneshot_mouse)
+            .configure_sets(PreUpdate, AoUIEventSet.after(InputSystem))
+            .configure_sets(PostUpdate, AoUIEventCleanupSet)
+            .add_systems(PreUpdate, events::mouse_button_input.in_set(AoUIEventSet))
+            .add_systems(PostUpdate, events::remove_focus.in_set(AoUIEventCleanupSet))
+            .add_systems(Update, (
+                oneshot::call_oneshot::<EventFlags>,
+                oneshot::call_oneshot::<Click>,
+                oneshot::call_oneshot::<Down>,
+                oneshot::call_oneshot::<DragEnd>,
+                oneshot::call_oneshot::<RightClick>,
+                oneshot::call_oneshot::<RightDown>,
+                oneshot::call_oneshot::<MidClick>,
+                oneshot::call_oneshot::<MidDown>,
+                oneshot::call_oneshot::<DoubleClick>,
+                oneshot::call_oneshot::<DragEnd>,
+                oneshot::call_oneshot::<ClickOutside>,
+
+                oneshot::call_oneshot::<Hover>,
+                oneshot::call_oneshot::<Pressed>,
+                oneshot::call_oneshot::<Drag>,
+                oneshot::call_oneshot::<MidPressed>,
+                oneshot::call_oneshot::<MidDrag>,
+                oneshot::call_oneshot::<RightPressed>,
+                oneshot::call_oneshot::<RightDrag>,
+                oneshot::call_oneshot::<OnSubmit>,
+            ))
         ;
     }
 }
@@ -86,8 +122,9 @@ pub struct AoUIExtensionsPlugin;
 
 impl bevy::prelude::Plugin for AoUIExtensionsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugins(widgets::schedule::FullWidgetsPlugin)
+        app
             .add_plugins(AoUICursorEventsPlugin)
+            .add_plugins(widgets::schedule::FullWidgetsPlugin)
         ;
     }
 }

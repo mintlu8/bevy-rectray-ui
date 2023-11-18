@@ -1,37 +1,8 @@
 use bevy::{sprite::Anchor, prelude::{Vec2, Image, Handle, Color, Rect, Commands, Entity}, text::{Font, Text, TextSection, TextStyle, BreakLineOn, Text2dBounds}, math::bool};
 use bevy_aoui::{Size2, SetEM, bundles::{AoUIBundle, AoUISpriteBundle, AoUITextBundle}, Hitbox};
 
-// name based meta prgramming
-macro_rules! transform2d {
-    ($this: expr) => {
-        ::bevy_aoui::Transform2D {
-            center: $this.center,
-            anchor: $this.anchor,
-            parent_anchor: $this.parent_anchor,
-            offset: $this.offset,
-            rotation: $this.rotation,
-            scale: match $this.scale{
-                Some($crate::dsl::prelude::OneOrTwo(vec)) => vec,
-                None => ::bevy::math::Vec2::ONE,
-            },
-            z: $this.z
-        }
-    };
-}
 
-macro_rules! dimension {
-    ($this: expr) => {
-        match $this.dimension {
-            Some(size) => ::bevy_aoui::Dimension::owned(size).with_em($this.font_size),
-            None => ::bevy_aoui::Dimension::COPIED.with_em($this.font_size),
-        }
-    }
-}
-
-pub(crate) use transform2d;
-pub(crate) use dimension;
-
-use crate::dsl::DslInto;
+use crate::{dsl::DslInto, transform2d, dimension};
 
 use super::{prelude::OneOrTwo, AoUIWidget};
 
@@ -53,7 +24,7 @@ pub struct Minimal {
 
 /// An empty sprite.
 #[derive(Debug, Default)]
-pub struct Frame {
+pub struct FrameBuilder {
     pub anchor: Anchor,
     pub parent_anchor: Option<Anchor>,
     pub center: Option<Anchor>,
@@ -67,7 +38,7 @@ pub struct Frame {
     pub hitbox: Option<Hitbox>,
 }
 
-impl AoUIWidget for Frame {
+impl AoUIWidget for FrameBuilder {
     fn spawn_with(self, commands: &mut Commands) -> Entity {
         let mut base = commands.spawn((
             AoUIBundle {
@@ -88,7 +59,7 @@ impl AoUIWidget for Frame {
 
 /// An image base sprite.
 #[derive(Debug, Default)]
-pub struct Sprite {
+pub struct SpriteBuilder {
     pub anchor: Anchor,
     pub parent_anchor: Option<Anchor>,
     pub center: Option<Anchor>,
@@ -108,7 +79,7 @@ pub struct Sprite {
     pub flip: [bool; 2],
 }
 
-impl AoUIWidget for Sprite {
+impl AoUIWidget for SpriteBuilder {
     fn spawn_with(self, commands: &mut Commands) -> Entity {
         let [flip_x, flip_y] = self.flip;
         let mut base = commands.spawn((
@@ -137,7 +108,7 @@ impl AoUIWidget for Sprite {
 
 /// A text box.
 #[derive(Debug, Default)]
-pub struct TextBox {
+pub struct TextBoxBuilder {
     pub anchor: Anchor,
     pub parent_anchor: Option<Anchor>,
     pub center: Option<Anchor>,
@@ -160,7 +131,7 @@ pub struct TextBox {
 }
 
 
-impl AoUIWidget for TextBox {
+impl AoUIWidget for TextBoxBuilder {
     fn spawn_with(self, commands: &mut Commands) -> Entity {
         let mut base = commands.spawn((
             AoUITextBundle {

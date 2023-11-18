@@ -1,23 +1,10 @@
-use std::{sync::OnceLock, borrow::Cow};
+use std::sync::OnceLock;
 
-use bevy::{input::keyboard::KeyCode, ecs::{system::{SystemId, Query, Commands}, component::Component}};
+use bevy::ecs::{system::{SystemId, Query, Commands}, component::Component};
 
-use crate::events::{EventFlags, CursorAction};
+use crate::{events::{EventFlags, CursorAction, CursorFocus, ClickOutside, CursorClickOutside}, dto::Submit};
 
-pub trait EventContains {
-    type Inst;
-    fn contains(&self, other: &Self::Inst) -> bool;
-}
-
-impl EventContains for EventFlags {
-    type Inst = Self;
-
-    fn contains(&self, other: &Self::Inst) -> bool {
-        self.contains(*other)
-    }
-}
-
-
+/// Event handler though a oneshot system.
 #[derive(Component)]
 pub struct OneShot<T> {
     event: T,
@@ -33,15 +20,82 @@ impl<T> OneShot<T> {
     }
 }
 
-pub fn call_oneshot_mouse(
+pub fn call_oneshot<T: EventQuery + Send + Sync + 'static> (
     mut commands: Commands,
-    query: Query<(&CursorAction, &OneShot<EventFlags>)>,
+    query: Query<(&T::Component, &OneShot<T>)>,
 ) {
     for (action, system) in query.iter() {
-        if system.event.contains(action.flags()) {
+        if system.event.validate(action) {
             if let Some(system) = system.get() {
                 commands.run_system(system)
             }
         }
+    }
+}
+
+/// Check for associated event component.
+pub trait EventQuery {
+    type Component: Component + Send + Sync;
+    fn validate(&self, other: &Self::Component) -> bool;
+}
+
+impl EventQuery for EventFlags {
+    type Component = CursorAction;
+
+    fn validate(&self, other: &Self::Component) -> bool {
+        self.contains(other.flags())
+    }
+}
+
+macro_rules! impl_entity_query_for_mouse_active {
+    ($($ident:ident)*) => {
+        $(impl EventQuery for $crate::events::$ident {
+            type Component = CursorAction;
+        
+            fn validate(&self, other: &Self::Component) -> bool {
+                EventFlags::$ident.contains(other.flags())
+            }
+        })*
+    };
+}
+
+impl_entity_query_for_mouse_active!(
+    Click Down DragEnd Drop RightClick
+    RightDown MidClick MidDown DoubleClick
+);
+
+impl EventQuery for ClickOutside {
+    type Component = CursorClickOutside;
+
+    fn validate(&self, _: &Self::Component) -> bool {
+        true
+    }
+}
+
+macro_rules! impl_entity_query_for_mouse_state {
+    ($($ident:ident)*) => {
+        $(impl EventQuery for $crate::events::$ident {
+            type Component = CursorFocus;
+        
+            fn validate(&self, other: &Self::Component) -> bool {
+                EventFlags::$ident.contains(other.flags())
+            }
+        })*
+    };
+}
+
+impl_entity_query_for_mouse_state! (
+    Hover Pressed MidPressed RightPressed
+    Drag MidDrag RightDrag
+);
+
+/// One-shot system for checking the sumbit event.
+pub struct OnSubmit;
+
+impl EventQuery for OnSubmit {
+    type Component = Submit;
+
+    fn validate(&self, _: &Self::Component) -> bool {
+        true
     }
 }
