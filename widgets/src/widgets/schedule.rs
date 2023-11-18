@@ -1,5 +1,5 @@
 use bevy::{prelude::{Plugin, PostUpdate, IntoSystemConfigs, Update}, ecs::schedule::{SystemSet, IntoSystemSetConfigs}, app::PreUpdate};
-use bevy_aoui::schedule::AoUISyncWrite;
+use bevy_aoui::schedule::AoUIStoreOutput;
 
 use crate::AoUIEventSet;
 
@@ -11,8 +11,8 @@ pub struct CoreWidgetsPlugin;
 impl Plugin for CoreWidgetsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
-            .add_systems(PostUpdate, shape::sync_shape_size.in_set(AoUISyncWrite))
-            .add_systems(PostUpdate, shape::rebuild_shapes.in_set(AoUISyncWrite).after(shape::sync_shape_size))
+            .add_systems(PostUpdate, shape::sync_shape_size.in_set(AoUIStoreOutput))
+            .add_systems(PostUpdate, shape::rebuild_shapes.in_set(AoUIStoreOutput).after(shape::sync_shape_size))
         ;
     }
 }
@@ -45,7 +45,7 @@ impl Plugin for FullWidgetsPlugin {
                 button::set_cursor,
                 button::conditional_visibility,
             ))
-            .add_systems(PostUpdate, inputbox::sync_em_inputbox.in_set(AoUISyncWrite))
+            .add_systems(PostUpdate, inputbox::sync_em_inputbox.in_set(AoUIStoreOutput))
         ;
     }
 }

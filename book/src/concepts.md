@@ -3,10 +3,13 @@
 
 ## Anchor, Center, Offset, Rotation, Scale
 
-* `anchor` is the shared `(0,0)` position on the parent rect and this sprite.
+* `anchor` is the `(0,0)` position on this sprite.
 
 By default, this sets the `Anchor` component of various bevy components
 that interacts with anchor, like `Sprite` or `Text2d`.
+
+* `parent_anchor` is the corresponding point of `anchor` on the parent,
+by default and in idiomatic use cases, it is the same as `anchor`.
 
 * `center` is the center of the sprite's local `rotation` and `scale`.
 If specified as `None`, it is always the same as `anchor`.
@@ -88,9 +91,9 @@ Owned dimension currently supports these modes:
 * rem
 * margin-px, margin-em, margin-rem: `100% - n px`
 
-`em` is our relative size system, similar to Html and CSS.
-The `AoUI` DOM propagates an `em` value that controls
-the size of our text widgets.
+`em` is our font size system, similar to Html and CSS.
+The `AoUI` tree propagates an `em` value that controls
+the size of fonts.
 You can use the `SetEm` component to change the size of
 `em` on a widget and its children.
 Additionally, none-text widget can use `em` or `rem` to align their size with text.

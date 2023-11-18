@@ -1,14 +1,14 @@
 # DSL
 
-AoUI provides a simple DSL syntax for UI generation.
+`bevy_aoui_widgets` provides a simple DSL syntax for UI generation.
 
-For every AoUI widget struct, there is a macro with a corressponding name
-`e.g.` `Sprite` has `sprite!`
+For every AoUI widget struct, there is a macro with a corresponding name
+`e.g.` `SpriteBuilder` has `sprite!`
 
 The macro has syntax almost identical to struct construction:
 
 ```rust
-widget!(commands {
+widget!((commands) {
     name: "Hello AoUI!",
     dimension: [20, 20],
     color: color!(red),
@@ -18,13 +18,15 @@ widget!(commands {
 which translates to
 
 ```rust
-Widget(commands {
+Widget {
     name: "Hello AoUI!".dinto(),
     dimension: [20, 20].dinto(),
     color: color!(red).dinto(),
     ..Default::default()
-})
+}.spawn_with(commands)
 ```
+
+This returns an `Entity`.
 
 `dinto` uses our `DslInto` trait to provide some nice
 syntax conversions for ergonomics. See our docs for a list
@@ -45,10 +47,13 @@ the DSL.
 
 ## Context
 
+At the root level of the macro, you need to pass in a context,
+wrapped in parenthesis.
+
 By default the context is `commands`, which is required.
 You can pass down additional context through a tuple syntax.
 
-To pass down the `AssetServer`:
+To pass in the `AssetServer`:
 
 ```rust
 widget!((commands, asset_server, ..) {
@@ -56,52 +61,58 @@ widget!((commands, asset_server, ..) {
 })
 ```
 
-This is required for a few widgets like `Shape`.
+This is required by a few widgets like `Shape`.
+
+### Context Propagation
+
+All fields using this exact syntax
+
+```rust
+field_name: macro_name! { .. },
+```
+
+will be passed in the context, this becomes
+
+```rust
+field_name: macro_name! ((command, ..) { .. })
+```
+
+This is especially useful for spawining children,
+as you can avoid writing `context` multiple times.
 
 ## Special Syntax
 
-* `extra`: repeatable, inserts an extra custom bundle to the widget.
+* `extra`: repeatable, insert a custom bundle to the widget.
 
 ```rust
-sprite! ( commands {
+sprite! ( (commands) {
     ..
-    extra: ClickHandler {
-        buttom: MouseButton::Left,
-    },
     extra: SpacialBundle::default(),
+    extra: DraggableMarker,
+    extra: handler!{LeftDrag => 
+        fn handle_drag(mut query: Query<&mut Transform2D, With<DraggableMarker>>, res: Res<CursorState>) {
+            query.single_mut().offset.edit_raw(|x| *x = res.cursor_position())
+        }
+    },
     ..
 })
 ```
 
-* `child`: repeatable, collect all `child` entries and insert them as
-children of this sprite.
-
-When using macro call syntax with braces `{}`,
+* `child`: repeatable, given an `Entity`, insert them as children.
 
 ```rust
-parent!(ctx {
-    ..
-    child: button! {
-        field: ..
-        ..
-    }
-})
-```
-
-We automatically pass down the context, transforming the macro invocation into:
-
-```rust
-child: button! (ctx {
-    field: ...
-    ...
-})
-```
-
-* `texture` and `font`: if `AssetServer` is in context, you can specify a
-string literal instead of a handle.
-
-```rust
-{
-    texture: "ferris.png",
-}
+inputbox! ((commands, assets) {
+    dimension: size2!([400, 32]),
+    color: color!(red),
+    child: shape! {
+        shape: Shapes::Rectangle,
+        fill: color!(gold),
+        dimension: size2!([2, 1 em]),
+    },
+    child: shape! {
+        shape: Shapes::Rectangle,
+        fill: color!(green) * 0.5,
+        dimension: size2!([12, 1 em]),
+    },
+});
 ```

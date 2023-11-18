@@ -9,17 +9,17 @@ use bevy::window::PrimaryWindow;
 use crate::compute::*;
 use crate::{RotatedRect, BuildGlobal, BuildTransform, Dimension, AoUIREM, DimensionSize, Transform2D};
 
-/// Fetch info for the DOM, happens before `AoUIDomUpdate`.
+/// Fetch info for the DOM, happens before `AoUITreeUpdate`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
-pub struct AoUISyncRead;
+pub struct AoUILoadInput;
 
 /// Update the DOM.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
-pub struct AoUIDomUpdate;
+pub struct AoUITreeUpdate;
 
-/// Update data with the DOM, happens after `AoUIDomUpdate` and before bevy's `propagate_transform`.
+/// Update data with the DOM, happens after `AoUITreeUpdate` and before bevy's `propagate_transform`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
-pub struct AoUISyncWrite;
+pub struct AoUIStoreOutput;
 
 /// Write to `GlobalTransform`, after bevy's `propagate_transform`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
@@ -32,12 +32,12 @@ impl bevy::prelude::Plugin for AoUIPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .init_resource::<AoUIREM>()
-            .configure_sets(PostUpdate, AoUISyncRead
-                .before(AoUIDomUpdate)
+            .configure_sets(PostUpdate, AoUILoadInput
+                .before(AoUITreeUpdate)
                 .after(update_text2d_layout))
-            .configure_sets(PostUpdate, AoUIDomUpdate
-                .before(AoUISyncWrite))
-            .configure_sets(PostUpdate, AoUISyncWrite
+            .configure_sets(PostUpdate, AoUITreeUpdate
+                .before(AoUIStoreOutput))
+            .configure_sets(PostUpdate, AoUIStoreOutput
                 .before(propagate_transforms)
                 .before(sync_simple_transforms)
             )
@@ -52,17 +52,17 @@ impl bevy::prelude::Plugin for AoUIPlugin {
                 copy_dimension_sprite,
                 copy_dimension_text,
                 copy_dimension_atlas,
-            ).in_set(AoUISyncRead))
+            ).in_set(AoUILoadInput))
             .add_systems(PostUpdate,
                 compute_aoui_transforms::<PrimaryWindow, TRoot, TAll>
-            .in_set(AoUIDomUpdate))
+            .in_set(AoUITreeUpdate))
             .add_systems(PostUpdate, (
                     build_transform,
                 sync_dimension_atlas,
                 sync_dimension_sprite,
                 sync_dimension_text_bounds,
                 sync_em_text,
-            ).in_set(AoUISyncWrite))
+            ).in_set(AoUIStoreOutput))
             .add_systems(PostUpdate, 
                 finalize.in_set(AoUIFinalize)
             );

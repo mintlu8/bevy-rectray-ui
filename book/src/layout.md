@@ -6,19 +6,15 @@ and rows are placed vertially (i.e. `TopToBottom`), when referring to
 
 ## Single
 
-Single is a dynamic container that always has the size of its underlying sprite + margin.
+Single is a dynamic container that always has the maximum size of its underlying sprites + margin.
 If the hierarchy can be reversed, consider using `SizeUnit::MarginPx` as a simpler alternative.
-
-When given 0 children, the size is 0.
-
-When given more than 1 childres, the layout panics.
 
 ## Compact
 
 Compact is a simple horizontal or vertical layout that is size agnostic.
 
 The height is always the maximum height of its children and the width is always the
-sum of the widths of children + margin.
+sum of the widths of children, plus margin.
 
 ## Span
 
