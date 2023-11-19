@@ -216,17 +216,17 @@ pub struct Transform2D{
 
 impl Transform2D {
 
-    pub fn get_center(&self) -> &Anchor{
-        match &self.center {
+    pub fn get_center(&self) -> Anchor{
+        match self.center {
             Some(center) => center,
-            None => &self.anchor,
+            None => self.anchor,
         }
     }
 
-    pub fn get_parent_anchor(&self) -> &Anchor{
-        match &self.parent_anchor {
+    pub fn get_parent_anchor(&self) -> Anchor{
+        match self.parent_anchor {
             Some(anchor) => anchor,
-            None => &self.anchor,
+            None => self.anchor,
         }
     }
 

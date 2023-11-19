@@ -178,7 +178,7 @@ pub(crate) fn paragraph<const REV: bool>(
         }
     }
 
-    if buffer.len() > 0 {
+    if !buffer.is_empty() {
         let line_height = buffer.iter()
             .map(|x: &LayoutItem| minor_dir(x.dimension))
             .fold(Vec2::ZERO, |a, b| a.max(b));

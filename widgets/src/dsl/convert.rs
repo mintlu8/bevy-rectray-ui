@@ -56,7 +56,7 @@ impl<T, const N: usize> DslInto<Vec<T>> for [T; N] {
 
 impl<T: Clone> DslInto<Vec<T>> for &[T] {
     fn dinto(self) -> Vec<T> {
-        self.into_iter().cloned().collect()
+        self.to_vec()
     }
 }
 
@@ -68,7 +68,7 @@ impl<const N: usize> DslInto<Vec<f32>> for [i32; N] {
 
 impl DslInto<Vec<f32>> for &[i32] {
     fn dinto(self) -> Vec<f32> {
-        self.into_iter().map(|x| *x as f32).collect()
+        self.iter().map(|x| *x as f32).collect()
     }
 }
 

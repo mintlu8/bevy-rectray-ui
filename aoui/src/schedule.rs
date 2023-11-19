@@ -9,15 +9,15 @@ use bevy::window::PrimaryWindow;
 use crate::compute::*;
 use crate::{RotatedRect, BuildGlobal, BuildTransform, Dimension, AoUIREM, DimensionSize, Transform2D};
 
-/// Fetch info for the DOM, happens before `AoUITreeUpdate`.
+/// Fetch info for the tree, happens before `AoUITreeUpdate`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
 pub struct AoUILoadInput;
 
-/// Update the DOM.
+/// Update the tree.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
 pub struct AoUITreeUpdate;
 
-/// Update data with the DOM, happens after `AoUITreeUpdate` and before bevy's `propagate_transform`.
+/// Update data with the tree, happens after `AoUITreeUpdate` and before bevy's `propagate_transform`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
 pub struct AoUIStoreOutput;
 
@@ -71,7 +71,7 @@ impl bevy::prelude::Plugin for AoUIPlugin {
 
 /// Copy our `anchor` component's value to the `Anchor` component
 pub fn copy_anchor(mut query: Query<(&mut Anchor, &Transform2D)>) {
-    query.par_iter_mut().for_each(|(mut a, anc)| *a = anc.anchor.clone())
+    query.par_iter_mut().for_each(|(mut a, anc)| *a = anc.anchor)
 }
 
 /// Copy evaluated `TextLayoutInfo` value to our `Dimension::Copied` value
@@ -88,7 +88,7 @@ pub fn copy_dimension_text(mut query: Query<(&TextLayoutInfo, &mut Dimension)>) 
 /// Copy our `Anchors` component's value to the `Sprite` component
 pub fn copy_anchor_sprite(mut query: Query<(&mut Sprite, &Transform2D)>) {
     query.par_iter_mut().for_each(|(mut sp, anc)| {
-        sp.anchor = anc.anchor.clone();
+        sp.anchor = anc.anchor;
     })
 }
 
@@ -110,7 +110,7 @@ pub fn copy_dimension_sprite(mut query: Query<(&Sprite, &Handle<Image>, &mut Dim
 /// Copy anchor to the `TextureAtlasSprite` component
 pub fn copy_anchor_atlas(mut query: Query<(&mut TextureAtlasSprite, &Transform2D)>) {
     query.par_iter_mut().for_each(|(mut sp, anc)| {
-        sp.anchor = anc.anchor.clone();
+        sp.anchor = anc.anchor;
     })
 }
 
@@ -182,7 +182,7 @@ pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFont
 /// Build a transform using [`RotatedRect`].
 pub fn build_transform(mut query: Query<(&RotatedRect, &BuildTransform, &mut Transform)>) {
     query.par_iter_mut().for_each(|(rect, BuildTransform(anchor), mut transform)| {
-        transform.translation = rect.anchor(anchor).extend(rect.z);
+        transform.translation = rect.anchor(*anchor).extend(rect.z);
         transform.rotation = Quat::from_rotation_z(rect.rotation);
         transform.scale = rect.scale.extend(1.0);
     });
@@ -196,7 +196,7 @@ pub fn finalize(
         *scene = Affine3A::from_scale_rotation_translation(
             rect.scale.extend(1.0), 
             Quat::from_rotation_z(rect.rotation), 
-            rect.anchor(&build.0.unwrap_or(transform.anchor)).extend(rect.z)
+            rect.anchor(build.0.unwrap_or(transform.anchor)).extend(rect.z)
         ).into()
     });
 }

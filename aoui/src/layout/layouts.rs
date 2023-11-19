@@ -280,27 +280,27 @@ impl Layout {
             }
             Layout::Table { columns: Columns::Porportions(columns), row_dir, column_dir, stretch: _ } => {
                 match (row_dir, column_dir) {
-                    (R, T) => porportional_table(dim, margin, items, columns.into_iter().cloned(), posx, posy),
-                    (R, B) => porportional_table(dim, margin, items, columns.into_iter().cloned(), posx, negy),
-                    (L, T) => porportional_table(dim, margin, items, columns.into_iter().cloned(), negx, posy),
-                    (L, B) => porportional_table(dim, margin, items, columns.into_iter().cloned(), negx, negy),
-                    (T, R) => porportional_table(dim, margin, items, columns.into_iter().cloned(), posy, posx),
-                    (T, L) => porportional_table(dim, margin, items, columns.into_iter().cloned(), posy, negx),
-                    (B, R) => porportional_table(dim, margin, items, columns.into_iter().cloned(), negy, posx),
-                    (B, L) => porportional_table(dim, margin, items, columns.into_iter().cloned(), negy, negx),
+                    (R, T) => porportional_table(dim, margin, items, columns.iter().cloned(), posx, posy),
+                    (R, B) => porportional_table(dim, margin, items, columns.iter().cloned(), posx, negy),
+                    (L, T) => porportional_table(dim, margin, items, columns.iter().cloned(), negx, posy),
+                    (L, B) => porportional_table(dim, margin, items, columns.iter().cloned(), negx, negy),
+                    (T, R) => porportional_table(dim, margin, items, columns.iter().cloned(), posy, posx),
+                    (T, L) => porportional_table(dim, margin, items, columns.iter().cloned(), posy, negx),
+                    (B, R) => porportional_table(dim, margin, items, columns.iter().cloned(), negy, posx),
+                    (B, L) => porportional_table(dim, margin, items, columns.iter().cloned(), negy, negx),
                     _ => panic!("Direction and stack must be othogonal.")
                 }
             }
             Layout::Table { columns: Columns::Sized(columns), row_dir, column_dir, stretch } => {
                 match (row_dir, column_dir) {
-                    (R, T) => fixed_table(dim, margin, items, columns.into_iter().cloned(), posx, posy, *stretch),
-                    (R, B) => fixed_table(dim, margin, items, columns.into_iter().cloned(), posx, negy, *stretch),
-                    (L, T) => fixed_table(dim, margin, items, columns.into_iter().cloned(), negx, posy, *stretch),
-                    (L, B) => fixed_table(dim, margin, items, columns.into_iter().cloned(), negx, negy, *stretch),
-                    (T, R) => fixed_table(dim, margin, items, columns.into_iter().cloned(), posy, posx, *stretch),
-                    (T, L) => fixed_table(dim, margin, items, columns.into_iter().cloned(), posy, negx, *stretch),
-                    (B, R) => fixed_table(dim, margin, items, columns.into_iter().cloned(), negy, posx, *stretch),
-                    (B, L) => fixed_table(dim, margin, items, columns.into_iter().cloned(), negy, negx, *stretch),
+                    (R, T) => fixed_table(dim, margin, items, columns.iter().cloned(), posx, posy, *stretch),
+                    (R, B) => fixed_table(dim, margin, items, columns.iter().cloned(), posx, negy, *stretch),
+                    (L, T) => fixed_table(dim, margin, items, columns.iter().cloned(), negx, posy, *stretch),
+                    (L, B) => fixed_table(dim, margin, items, columns.iter().cloned(), negx, negy, *stretch),
+                    (T, R) => fixed_table(dim, margin, items, columns.iter().cloned(), posy, posx, *stretch),
+                    (T, L) => fixed_table(dim, margin, items, columns.iter().cloned(), posy, negx, *stretch),
+                    (B, R) => fixed_table(dim, margin, items, columns.iter().cloned(), negy, posx, *stretch),
+                    (B, L) => fixed_table(dim, margin, items, columns.iter().cloned(), negy, negx, *stretch),
                     _ => panic!("Direction and stack must be othogonal.")
                 }
             }

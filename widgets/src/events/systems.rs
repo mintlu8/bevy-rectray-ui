@@ -30,6 +30,8 @@ pub fn remove_focus(mut commands: Commands,
 /// [`CursorAction`] for active events.
 /// and [`CursorClickOutside`] for cancelling.
 /// These should be handled on this frame during [`Update`].
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::option_map_unit_fn)]
 pub fn mouse_button_input(
     mut commands: Commands,
     mut state: ResMut<CursorState>,

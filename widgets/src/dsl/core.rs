@@ -90,8 +90,8 @@ impl AoUIWidget for SpriteBuilder {
                     custom_size: self.size,
                     rect: self.rect,
                     color: self.color.unwrap_or(Color::WHITE),
-                    flip_x: flip_x,
-                    flip_y: flip_y,
+                    flip_x,
+                    flip_y,
                     ..Default::default()
                 }, 
                 texture: self.sprite,

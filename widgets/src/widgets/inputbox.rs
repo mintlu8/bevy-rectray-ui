@@ -68,6 +68,11 @@ impl InputBox {
         self.text.chars().count()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.text.is_empty()
+    }
+
+
     pub fn cursor_len(&self) -> usize {
         self.cursor_len
     }
@@ -148,7 +153,7 @@ impl InputBox {
         match self.cursor_len {
             0 => self.cursor_start = (self.cursor_start + 1).min(self.len()),
             _ => {
-                self.cursor_start = self.cursor_start + self.cursor_len;
+                self.cursor_start += self.cursor_len;
                 self.cursor_len = 0;
             },
         }
@@ -240,7 +245,7 @@ pub fn text_on_mouse_down(
 ) {
     let scale = window.get_single().map(|x| x.scale_factor() as f32).unwrap_or(1.0);
     for (entity, mut input_box, rect) in query.iter_mut() {
-        let Some((_, children)) = text.into_iter().filter(|(p, ..)| p.get() == entity).next() else {continue;};
+        let Some((_, children)) = text.into_iter().find(|(p, ..)| p.get() == entity) else {continue;};
 
         let cursor = rect.local_space(state.cursor_position()) * scale / 2.0; 
         let down = rect.local_space(state.down_position()) * scale / 2.0;
@@ -273,6 +278,7 @@ pub fn text_on_mouse_double_click(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn update_inputbox_cursor(
     mut commands: Commands,
     fonts: Res<Assets<Font>>,
@@ -289,7 +295,7 @@ pub fn update_inputbox_cursor(
             Some(font) => font.font.as_scaled(dimension.em),
             None => continue,
         };
-        let Some((glyph_container, _, children)) = text.iter_mut().filter(|(_, p, ..)| p.get() == entity).next() else {continue;};
+        let Some((glyph_container, _, children)) = text.iter_mut().find(|(_, p, ..)| p.get() == entity) else {continue;};
         
         let font_size = dimension.em;
         let mut added = Vec::new();

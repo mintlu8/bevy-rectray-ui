@@ -59,7 +59,7 @@ pub fn query_hitbox<'t>(entity_query: impl IntoIterator<Item = (Entity, &'t Rota
         .filter(|(.., vis)| vis.get())
         .filter_map(|(entity, rect, hitbox, _)|{
             if points.into_iter().all(|pt| hitbox.contains(rect, pt)) {
-                Some((entity.clone(), rect.z))
+                Some((entity, rect.z))
             } else {
                 None
             }

@@ -163,6 +163,7 @@
 //! * High level abstractions with low level control.
 //! 
 //! You can mix and match anchoring and layouts to best suit your needs.
+#![allow(clippy::single_match)]
 
 mod rect;
 mod components;

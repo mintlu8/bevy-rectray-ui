@@ -33,7 +33,7 @@ pub struct ParentInfo {
 }
 
 impl ParentInfo {
-    pub fn new(rect: &RotatedRect, anc: &Anchor, dimension: Vec2, em: f32) -> Self{
+    pub fn new(rect: &RotatedRect, anc: Anchor, dimension: Vec2, em: f32) -> Self{
         ParentInfo{
             anchor: rect.anchor(anc),
             rotation: rect.rotation,
@@ -46,7 +46,7 @@ impl ParentInfo {
 
     pub fn from_anchor(rect: &RotatedRect, anc: Vec2, dimension: Vec2, em: f32) -> Self{
         ParentInfo{
-            anchor: rect.anchor(&Anchor::Custom(anc)),
+            anchor: rect.anchor(Anchor::Custom(anc)),
             rotation: rect.rotation,
             scale: rect.scale,
             z: rect.z,
@@ -59,7 +59,7 @@ impl ParentInfo {
 impl RotatedRect {
     /// Find the screen space position of an anchor.
     #[inline]
-    pub fn anchor(&self, anchor: &Anchor) -> Vec2 {
+    pub fn anchor(&self, anchor: Anchor) -> Vec2 {
         self.center + Vec2::from_angle(self.rotation).rotate(self.dimension * anchor.as_vec())
     }
 
@@ -77,8 +77,9 @@ impl RotatedRect {
 
     /// Create an [`RotatedRect`] represeting the sprite's position on the screen space
     /// and an [`Affine3A`] that converts into the [`GlobalTransform`] suitable from the screen space
-    pub fn construct(parent: &ParentInfo, anchor: &Anchor, offset: Vec2, dim: Vec2,
-            center: &Anchor, rotation: f32, scale: Vec2, z: f32) -> Self{
+    #[allow(clippy::too_many_arguments)]
+    pub fn construct(parent: &ParentInfo, anchor: Anchor, offset: Vec2, dim: Vec2,
+            center: Anchor, rotation: f32, scale: Vec2, z: f32) -> Self{
         let parent_anchor = parent.anchor;
         // apply offset and dimension
         let self_center = offset + (center.as_vec() - anchor.as_vec()) * dim;
@@ -89,13 +90,12 @@ impl RotatedRect {
         let scale = parent.scale * scale;
         let out_origin = out_center + Vec2::from_angle(rotation).rotate(dir * scale);
 
-        let rect = Self {
+        Self {
             center: out_origin, z,
             dimension: dim * scale,
             rotation,
             scale,
-        };
-        rect
+        }
     }
 }
 

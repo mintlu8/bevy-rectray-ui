@@ -62,10 +62,9 @@ impl CursorState {
     /// 
     /// Does not cancel dragging.
     pub fn block(&mut self) {
-        if self.drag_target != None {
+        if !self.dragging {
             self.last_lmb_down_time = [0.0, 0.0];
             self.blocked = true;
-            self.dragging = false;
         }
     }
 

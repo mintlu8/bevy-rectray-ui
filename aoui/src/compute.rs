@@ -10,6 +10,8 @@ type AoUIEntity<'t> = (
     &'t mut RotatedRect,
 );
 
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::needless_pass_by_ref_mut)]
 fn propagate<TAll: ReadOnlyWorldQuery>(
     parent: ParentInfo,
     entity: Entity,
@@ -45,7 +47,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
                     control => {
                         layout_entities.push(*child);
                         args.push(LayoutItem {
-                            anchor: child_transform.get_parent_anchor().clone(),
+                            anchor: child_transform.get_parent_anchor(),
                             dimension: child_dim.update(dimension, em, rem).0 * child_transform.scale,
                             control: control.copied().unwrap_or_default(),
                         })
@@ -59,7 +61,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         dim.size = size;
         let rect = RotatedRect::construct(
             &parent,
-            &transform.anchor,
+            transform.anchor,
             offset,
             size,
             transform.get_center(),
@@ -88,7 +90,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
 
     let rect = RotatedRect::construct(
         &parent,
-        &transform.anchor,
+        transform.anchor,
         offset,
         dimension,
         transform.get_center(),
@@ -153,6 +155,7 @@ pub(crate) type TAll = With<AoUI>;
 /// TRoot: Readonly query for child of root rectangle.
 /// 
 /// TAll: Readonly query for all children, including TRoot.
+#[allow(clippy::too_many_arguments)]
 pub fn compute_aoui_transforms<'t, R: RootQuery<'t>, TRoot: ReadOnlyWorldQuery, TAll: ReadOnlyWorldQuery>(
     root: Query<R::Query, R::ReadOnly>,
     root_entities: Query<Entity, TRoot>,
