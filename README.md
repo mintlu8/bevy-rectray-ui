@@ -179,20 +179,20 @@ Performance related pull requests and suggestions are welcome.
 
 * Skeletal Animation
 
-[Spiral](./showcase/spiral.png)
+![Spiral](./showcase/spiral.png)
 
 * Rich Text with the `paragraph` layout.
 
-[Paragraph](./showcase/description.png)
+![Paragraph](./showcase/description.png)
 
 * The `compact` and `span` layout.
 
-[Layouts](./showcase/layouts.png)
+![Layouts](./showcase/layouts.png)
 
 * Single line text input.
 
-[Edit1](./showcase/edit1.png)
-[Edit2](./showcase/edit2.png)
+![Edit1](./showcase/edit1.png)
+![Edit2](./showcase/edit2.png)
 
 ### Bevy Versions
 
