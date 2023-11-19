@@ -59,8 +59,7 @@ where all the syntax magic happens.
 Add children like so, notice you don't need to manually pass in
 the context `(commands, ..)`
 
-```rust
-# /*
+```rust]
 sprite! ((commands, ..) {
     dim: [400, 400],
     sprite: assets.load("Ferris.png"),
@@ -68,7 +67,6 @@ sprite! ((commands, ..) {
         ...
     }
 });
-# */
 ```
 
 Check our our book or examples for more info.
