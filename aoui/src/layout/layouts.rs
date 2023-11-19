@@ -153,15 +153,6 @@ impl Default for Layout {
     }
 }
 
-pub const L2R: u8 = 0;
-pub const R2L: u8 = 1;
-pub const B2T: u8 = 2;
-pub const T2B: u8 = 3;
-
-
-pub const LO: u8 = 0;
-pub const HI: u8 = 1;
-
 use {
     FlexDir::LeftToRight as R,
     FlexDir::RightToLeft as L,

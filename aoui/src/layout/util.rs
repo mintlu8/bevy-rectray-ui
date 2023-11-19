@@ -10,15 +10,6 @@ pub(crate) enum Axis {
     Horizontal, Vertical,
 }
 
-impl Axis {
-    pub fn rev(&self) -> Axis {
-        match self {
-            Axis::Horizontal => Axis::Vertical,
-            Axis::Vertical => Axis::Horizontal,
-        }
-    }
-}
-
 impl From<bool> for Axis {
     fn from(value: bool) -> Self {
         match value {
@@ -56,18 +47,6 @@ impl FlexDir {
             FlexDir::RightToLeft => FlexDir::TopToBottom,
             FlexDir::BottomToTop => FlexDir::LeftToRight,
             FlexDir::TopToBottom => FlexDir::RightToLeft,
-        }
-    }
-}
-
-impl From<u8> for FlexDir {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => Self::LeftToRight,
-            1 => Self::RightToLeft,
-            2 => Self::BottomToTop,
-            3 => Self::TopToBottom,
-            _ => panic!("Not a valid direction.")
         }
     }
 }
@@ -117,26 +96,6 @@ impl Alignment {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub(crate) enum Binary {
     Lo, Hi
-}
-
-impl Binary {
-    /// Returns -1 if Lo, 1 if Hi
-    pub fn signum(&self) -> f32 {
-        match self {
-            Binary::Lo => -1.0,
-            Binary::Hi => 1.0,
-        }
-    }
-}
-
-impl From<u8> for Binary {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => Self::Lo,
-            1 => Self::Hi,
-            _ => panic!("Not a valid WrapTo.")
-        }
-    }
 }
 
 impl From<FlexDir> for Binary {

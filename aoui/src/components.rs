@@ -123,7 +123,7 @@ impl Dimension {
         match self.dim {
             DimensionSize::Copied => (self.size, self.em),
             DimensionSize::Owned(v) => {
-                self.size = v.as_pixels(parent, em, rem);
+                self.size = v.as_pixels(parent, self.em, rem);
                 (self.size, self.em)
             }
         }
