@@ -202,3 +202,10 @@ Performance related pull requests and suggestions are welcome.
 | bevy | bevy_aoui | bevy_aoui_widgets |
 | -- | -- | -- |
 | 0.12 | 0.1 | 0.1 |
+
+## TODOs
+
+- [ ] Scissor rect, very important for scrolling support.
+- [ ] Official TextureAtlasSprite widget.
+- [ ] Rich text implementation. (String to entities as children of the `Paragraph` layout.)
+- [ ] Atlas/skeletal animation asset importer.
