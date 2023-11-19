@@ -18,15 +18,12 @@ Before you start you should check out `bevy_aoui_widgets`'s examples if you like
 First add the AoUI Plugin:
 
 ```rust
-# /*
 app.add_plugins(AoUIPlugin)
-# */
 ```
 
 Create a sprite:
 
 ```rust
-# /*
 commands.spawn(AoUISpriteBundle {
     sprite: Sprite { 
         color: Color::RED,
@@ -44,13 +41,11 @@ commands.spawn(AoUISpriteBundle {
     texture: assets.load("sprite.png"),
     ..Default::default()
 });
-# */
 ```
 
 Create some text:
 
 ```rust
-# /*
 commands.spawn(AoUITextBundle {
     text: Text::from_section(
         "Hello, World!!", 
@@ -68,7 +63,6 @@ commands.spawn(AoUITextBundle {
     dimension: Dimension::COPIED.with_em(SetEM::Pixels(24.0)),
     ..Default::default()
 });
-# */
 ```
 
 ## Core Concepts
