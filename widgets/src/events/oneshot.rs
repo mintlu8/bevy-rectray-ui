@@ -20,6 +20,7 @@ impl<T> OneShot<T> {
     }
 }
 
+/// Register a type<T> that can handle certain events.
 pub fn call_oneshot<T: EventQuery + Send + Sync + 'static> (
     mut commands: Commands,
     query: Query<(&T::Component, &OneShot<T>)>,

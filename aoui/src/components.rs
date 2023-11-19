@@ -197,7 +197,7 @@ pub struct Transform2D{
     ///
     /// By default this is the same as `anchor`.
     /// 
-    /// Unless doing spine animations,
+    /// Unless doing skeletal animations,
     /// try avoid using this field in idiomatic usage of `AoUI`.
     pub parent_anchor: Option<Anchor>,
     /// Center of `rotation` and `scale`.
@@ -272,7 +272,7 @@ impl Transform2D {
 
     /// Set parent anchor.
     ///  
-    /// Discouraged in idiomatic use, unless doing spine animation.
+    /// Discouraged in idiomatic use, unless doing skeletal animation.
     pub fn with_parent_anchor(mut self, anchor: Anchor) -> Self {
         self.parent_anchor = Some(anchor);
         self

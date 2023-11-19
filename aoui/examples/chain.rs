@@ -44,7 +44,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             transform: Transform2D::UNIT
                 .with_anchor(Anchor::CenterLeft)
                 .with_center(Anchor::CenterLeft)
-                // We use parent anchor for spine animation.
+                // We use parent anchor for skeletal animation.
                 .with_parent_anchor(Anchor::CenterRight),
             sprite: Sprite {
                 color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5),

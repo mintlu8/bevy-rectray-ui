@@ -1,8 +1,11 @@
 # Bevy AoUI
 
-A light-weight anchor-offset based 2D sprite layout system for the bevy engine.
+[![Crates.io](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
+[![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
 
-Bevy AoUI provides a light-weight rectangular anchor-offset based 2D sprite layout,
+A light-weight Anchor-Offset based 2D sprite rendering system for the bevy engine.
+
+Bevy AoUI provides a light-weight rectangular anchor-offset based 2D sprite rendering,
 UI layout and skeletal animation system.
 
 Similar to the philosophy of Rust, AoUI provides low level control through the
@@ -157,28 +160,3 @@ to traditional rendering. Currently performance optimization features like
 if the api become more stablized.
 
 Performance related pull requests and suggestions are welcome.
-
-### Showcase
-
-* Skeletal Animation
-
-[Spiral](./showcase/spiral.png)
-
-* Rich Text with the `paragraph` layout.
-
-[Paragraph](./showcase/description.png)
-
-* The `compact` and `span` layout.
-
-[Layouts](./showcase/layouts.png)
-
-* Single line text input.
-
-[Edit1](./showcase/edit1.png)
-[Edit2](./showcase/edit2.png)
-
-### Bevy Versions
-
-| bevy | bevy_aoui | bevy_aoui_widgets |
-| -- | -- | -- |
-| 0.12 | 0.1 | 0.1 |

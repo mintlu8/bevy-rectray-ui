@@ -19,11 +19,11 @@ pub use crate::events::{
     Pressed as LeftPressed, Drag as LeftDrag,
     MidPressed, MidDrag,
     RightPressed, RightDrag,
+    OnSubmit
 };
 pub use crate::widgets::{
     PropagateFocus, DisplayIf, SetCursor
 };
-pub use crate::oneshot::OnSubmit;
 
 /// This can be use anywhere where you want to use the default anchor.
 #[allow(non_upper_case_globals)]

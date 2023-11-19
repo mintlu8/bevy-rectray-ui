@@ -3,6 +3,16 @@ name = "bevy_aoui"
 version = "0.1.0"
 edition = "2021"
 
+authors = ["Mincong Lu <mintlux667@gmail.com>"]
+license = "MIT OR Apache-2.0"
+
+readme = "README.md"
+repository = "https://github.com/mintlu8/bevy-aoui"
+description = """
+A light-weight anchor-offset based 2D sprite layout system for the bevy engine.
+"""
+keywords = ["bevy", "ui", "widgets"]
+
 [dependencies]
 bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite", "bevy_text"] }
 itertools = "^0.11"

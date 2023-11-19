@@ -73,6 +73,12 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         margin: [10, 10],
         z: 1,
         child: rectangle! {
+            dimension: size2!(1 + [6, 6] px),
+            fill: color!(neutral700),
+            extra: IgnoreLayout,
+            z: -1,
+        },
+        child: rectangle! {
             anchor: TopLeft,
             dimension: [80, 50],
             fill: color!(red100),
@@ -131,10 +137,16 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     hspan! ((commands, assets) {
         anchor: Left,
-        dimension: [700, 100],
+        dimension: [600, 100],
         offset: [20, 0],
         margin: [10, 10],
         z: 2,
+        child: rectangle! {
+            dimension: size2!(1 + [6, 6] px),
+            fill: color!(neutral700),
+            extra: IgnoreLayout,
+            z: -1,
+        },
         child: rectangle! {
             anchor: TopLeft,
             dimension: [80, 50],
@@ -199,6 +211,12 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         margin: [10, 10],
         z: 3,
         child: rectangle! {
+            dimension: size2!(1 + [6, 6] px),
+            fill: color!(neutral700),
+            extra: IgnoreLayout,
+            z: -1,
+        },
+        child: rectangle! {
             anchor: TopLeft,
             dimension: [80, 50],
             fill: color!(green100),
@@ -261,6 +279,12 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [-20, 0],
         margin: [10, 10],
         z: 4,
+        child: rectangle! {
+            dimension: size2!(1 + [6, 6] px),
+            fill: color!(neutral700),
+            extra: IgnoreLayout,
+            z: -1,
+        },
         child: rectangle! {
             anchor: TopLeft,
             dimension: [80, 50],

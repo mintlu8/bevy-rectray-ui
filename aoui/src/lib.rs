@@ -1,9 +1,10 @@
-//! Bevy AoUI provides a light-weight rectangular anchor-offset based 2D sprite rendering system.
+//! Bevy AoUI provides a light-weight rectangular anchor-offset based 2D sprite layout, 
+//! UI layout and skeletal animation system.
 //! 
 //! Similar to the philosophy of Rust, AoUI provides low level control through the 
 //! anchor-offset system and high level ergonomics through its layout system.
 //! 
-//! # The AoUI DOM
+//! # The AoUI Pipeline
 //! 
 //! AoUI is not a full render pipeline system, but rather a 
 //! [`Transform`](bevy::prelude::Transform) and
@@ -17,13 +18,73 @@
 //! 
 //! AoUI provides 2 rendering methods: 
 //! * [`BuildGlobal`] genetates `GlobalTransform` directly.
-//! * [`BuildTransform`] handles bevy children and third party widgets the rely on `Transform`.
+//! * [`BuildTransform`] genetates `Transform`.
 //! 
-//! AoUI propagates translation, rotation, scale and font size down its DOM.
+//! AoUI propagates translation, rotation, scale and font size down its tree.
 //! 
-//! Currently the root node of the AoUI DOM is always the window. Meaning AoUI widgers
-//! can have native bevy sprites as children, but not vice versa.
+//! In the default pipeline, the root node of the AoUI tree is the window. 
+//! meaning orphaned sprites will be placed against the window's rectangle.
 //!
+//! # Getting Started
+//! 
+//! Before you start you should check out `bevy_aoui_widgets`'s examples if you like shapes or DSL.
+//! 
+//! First add the AoUI Plugin:
+//! 
+//! ```
+//! # /*
+//! app.add_plugins(AoUIPlugin)
+//! # */
+//! ```
+//! 
+//! Create a sprite:
+//! 
+//! ```
+//! # /*
+//! commands.spawn(AoUISpriteBundle {
+//!     sprite: Sprite { 
+//!         color: Color::RED,
+//!         ..Default::default()
+//!     },
+//!     transform: Transform2D { 
+//!         center: Some(Anchor::Center),
+//!         anchor: Anchor::TopCenter,
+//!         offset: Vec2::new(20.0, 0.0),
+//!         rotation: 1.21,
+//!         scale: Vec2::new(4.0, 1.0),
+//!         ..Default::default()
+//!     },
+//!     dimension: Dimension::pixels(Vec2::new(50.0, 50.0)),
+//!     texture: assets.load("sprite.png"),
+//!     ..Default::default()
+//! });
+//! # */
+//! ```
+//! 
+//! Create some text:
+//! 
+//! ```
+//! # /*
+//! commands.spawn(AoUITextBundle {
+//!     text: Text::from_section(
+//!         "Hello, World!!", 
+//!         style(Color::WHITE)
+//!     ),
+//!     font: assets.load::<Font>("OpenSans.ttf"),
+//!     transform: Transform2D { 
+//!         center: Some(Anchor::Center),
+//!         anchor: Anchor::TopCenter,
+//!         offset: Vec2::new(20.0, 0.0),
+//!         rotation: 1.21,
+//!         scale: Vec2::new(4.0, 1.0),
+//!         ..Default::default()
+//!     },
+//!     dimension: Dimension::COPIED.with_em(SetEM::Pixels(24.0)),
+//!     ..Default::default()
+//! });
+//! # */
+//! ```
+//! 
 //! # Core Concepts
 //!
 //! AoUI offers a refreshingly different paradigm from traditional CSS based UI layout.
@@ -62,8 +123,8 @@
 //! 
 //! In the case of parentless sprites, they are anchored to the window's rectangle.
 //! 
-//! When applying `rotation` and `scale`, each sprite utilizes a 
-//! `center` that operates independently from the anchor. 
+//! When applying `rotation` and `scale`, sprites can use a 
+//! `center` that operates independently from the anchor.
 //! 
 //! # Container
 //! 
@@ -93,7 +154,7 @@
 //! 
 //! * First class rotation and scaling support.
 //! 
-//! You are can rotate and scale any sprite from any anchor on it with ease.
+//! You are can rotate and scale any sprite from any position on it with ease.
 //! 
 //! * Simple but versatile layout system.
 //! 
@@ -102,27 +163,6 @@
 //! * High level abstractions with low level control.
 //! 
 //! You can mix and match anchoring and layouts to best suit your needs.
-//! 
-//! # FAQ:
-//! 
-//! ## Where are the widgets?
-//! 
-//! `bevy_aoui` is a layout system, not a widget library. 
-//! Implementations of most AoUI widgets 
-//! will live outside of the crate, like in `bevy_aoui_widgets`.
-//! 
-//! Checkout our examples for simple widget implementations.
-//! 
-//! ## What about performance?
-//! 
-//! We do extra things compared to traditional rendering:
-//! 
-//! * Maintaining rectangles and relative size.
-//! * Fetching anchor points from rotated rectangles.
-//! * Multi step rotation and scale (from anchor and from center).
-//! 
-//! This means competing in performance benchmarks is not our primary goal. 
-//! Though performance related suggestions and PRs are welcome.
 
 mod rect;
 mod components;
