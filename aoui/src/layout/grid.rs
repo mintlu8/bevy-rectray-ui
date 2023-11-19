@@ -8,7 +8,7 @@ fn xy(v: Vec2) -> f32 {
     v.x + v.y
 }
 
-pub fn grid(
+pub(crate) fn grid(
     margin: Vec2,
     items: impl IntoIterator<Item = LayoutItem>,
     columns: usize,
@@ -64,7 +64,7 @@ pub fn grid(
 }
 
 
-pub fn table(
+pub(crate) fn table(
     margin: Vec2,
     items: impl IntoIterator<Item = LayoutItem>,
     columns: Vec<(Vec2, Vec2)>,
@@ -127,7 +127,7 @@ pub fn table(
     (result, max + cursor.abs())
 }
 
-pub fn porportional_table(
+pub(crate) fn porportional_table(
     dimension: Vec2,
     margin: Vec2,
     items: impl IntoIterator<Item = LayoutItem>,
@@ -154,7 +154,7 @@ pub fn porportional_table(
     fixed_table(dimension, margin, items, columns, row_dir, column_dir, false)
 }
 
-pub fn fixed_table(
+pub(crate) fn fixed_table(
     dimension: Vec2,
     margin: Vec2,
     items: impl IntoIterator<Item = LayoutItem>,

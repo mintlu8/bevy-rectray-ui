@@ -3,7 +3,7 @@ use crate::LayoutControl;
 use super::util::*;
 use bevy::{prelude::Vec2, sprite::Anchor};
 
-pub fn compact(
+pub(crate) fn compact(
     margin: Vec2,
     items: impl IntoIterator<Item = LayoutItem>,
     advance: impl Fn(Vec2) -> Vec2,
@@ -37,7 +37,7 @@ pub fn compact(
     (result, cursor.abs() + height_mult)
 }
 
-pub fn span<const REV: bool>(
+pub(crate) fn span<const REV: bool>(
     size: Vec2,
     margin: Vec2,
     stretch: bool,
@@ -116,7 +116,7 @@ pub fn span<const REV: bool>(
     result
 }
 
-pub fn paragraph<const REV: bool>(
+pub(crate) fn paragraph<const REV: bool>(
     size: Vec2,
     margin: Vec2,
     stretch: bool,
