@@ -1,6 +1,6 @@
-use bevy::{prelude::*, sprite::Anchor, reflect::Reflect};
+use bevy::{prelude::*, reflect::Reflect};
 
-use crate::{Size2, SetEM};
+use crate::{Size2, SetEM, Anchor};
 
 /// Marker component for the default schedules.
 #[derive(Debug, Clone, Component, Default, Reflect)]
@@ -199,11 +199,11 @@ pub struct Transform2D{
     /// 
     /// Unless doing skeletal animations,
     /// try avoid using this field in idiomatic usage of `AoUI`.
-    pub parent_anchor: Option<Anchor>,
+    pub parent_anchor: Anchor,
     /// Center of `rotation` and `scale`.
     ///
     /// By default this is the same as `anchor`.
-    pub center: Option<Anchor>,
+    pub center: Anchor,
     /// Offset from parent's anchor.
     pub offset: Size2,
     /// Z depth, by default, this is `parent_z + z + eps * 8`
@@ -217,23 +217,17 @@ pub struct Transform2D{
 impl Transform2D {
 
     pub fn get_center(&self) -> Anchor{
-        match self.center {
-            Some(center) => center,
-            None => self.anchor,
-        }
+        self.center.or(self.anchor)
     }
 
     pub fn get_parent_anchor(&self) -> Anchor{
-        match self.parent_anchor {
-            Some(anchor) => anchor,
-            None => self.anchor,
-        }
+        self.parent_anchor.or(self.anchor)
     }
 
     pub const UNIT: Self = Self {
         anchor: Anchor::Center,
-        parent_anchor: None, 
-        center: None, 
+        parent_anchor: Anchor::Inherit,
+        center: Anchor::Inherit,
         offset: Size2::ZERO,
         rotation: 0.0,
         z: 0.0,
@@ -274,13 +268,13 @@ impl Transform2D {
     ///  
     /// Discouraged in idiomatic use, unless doing skeletal animation.
     pub fn with_parent_anchor(mut self, anchor: Anchor) -> Self {
-        self.parent_anchor = Some(anchor);
+        self.parent_anchor = anchor;
         self
     }
 
     /// Set center.
     pub fn with_center(mut self, center: Anchor) -> Self {
-        self.center = Some(center);
+        self.center = center;
         self
     }
 }
@@ -292,9 +286,14 @@ impl Default for Transform2D {
 }
 
 /// Builds a `GlobalTransform` on a `Anchor`, by default `Transform2d::anchor`.
-#[derive(Debug, Clone, Component, Default, Reflect)]
-pub struct BuildGlobal(pub Option<Anchor>);
+#[derive(Debug, Clone, Component, Reflect)]
+pub struct BuildGlobal(pub Anchor);
 
+impl Default for BuildGlobal {
+    fn default() -> Self {
+        Self(Anchor::Inherit)
+    }
+}
 /// Builds a `Transform` on a `Anchor`, by default `center`.
 /// 
 /// If `GlobalTransform` is present and [`BuildGlobal`] is not,
@@ -302,5 +301,40 @@ pub struct BuildGlobal(pub Option<Anchor>);
 /// 
 /// If `BuildGlobal` is preset, this component 
 /// have no effect on rendering.
-#[derive(Debug, Clone, Component, Default, Reflect)]
+#[derive(Debug, Clone, Component, Reflect)]
 pub struct BuildTransform(pub Anchor);
+
+impl Default for BuildTransform {
+    fn default() -> Self {
+        Self(Anchor::Inherit)
+    }
+}
+
+#[derive(Debug, Clone, Component, Reflect)]
+pub struct Opacity {
+    pub opactity: f32,
+    pub computed: f32
+}
+
+impl Opacity {
+    pub const FULL: Self = Self {
+        opactity: 1.0,
+        computed: 1.0,
+    };
+    pub const TRANSPARENT: Self = Self {
+        opactity: 0.0,
+        computed: 0.0,
+    };
+    pub const fn new(v: f32) -> Self {
+        Self {
+            opactity: v,
+            computed: v,
+        }
+    }
+}
+
+impl Default for Opacity {
+    fn default() -> Self {
+        Self::FULL
+    }
+}

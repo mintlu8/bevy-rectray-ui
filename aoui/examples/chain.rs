@@ -1,5 +1,5 @@
 use bevy_aoui::{*, bundles::*};
-use bevy::{prelude::*, sprite::Anchor};
+use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{Slider, self}};
 pub fn main() {
     App::new()
@@ -61,7 +61,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 .with_z(1.0),
             sprite: Sprite {
                 color: Color::WHITE,
-                anchor: Anchor::CenterRight,
                 custom_size: Some(Vec2::new(2.0, 2.0)),
                 ..Default::default()
             },

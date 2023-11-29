@@ -1,5 +1,5 @@
-use bevy::{prelude::{Component, Vec2}, reflect::Reflect, sprite::Anchor, ecs::{query::Changed, system::Query}};
-use bevy_aoui::{Transform2D, Dimension};
+use bevy::{prelude::{Component, Vec2}, reflect::Reflect, ecs::{query::Changed, system::Query}};
+use bevy_aoui::{Transform2D, Dimension, Anchor};
 use bevy_prototype_lyon::prelude::{GeometryBuilder, Path};
 use bevy_prototype_lyon::shapes::*;
 
@@ -78,20 +78,10 @@ impl Shapes {
     }
 }
 
-// TODO: wait for bevy impl
-fn anchor_eq(left: &Anchor, right: &Anchor) -> bool{
-    use std::mem::discriminant;
-    discriminant(left) == discriminant(right) && 
-        match (left, right) {
-            (Anchor::Custom(a), Anchor::Custom(b)) => a == b,
-            _ => true,
-        }
-}
-
 
 pub fn sync_shape_size(mut query: Query<(&Transform2D, &Dimension, &mut ShapeDimension)>) {
     for (transform, dimension, mut shape) in query.iter_mut() {
-        if !anchor_eq(&transform.anchor, &shape.as_ref().anchor) {
+        if &transform.anchor != &shape.as_ref().anchor {
             shape.anchor = transform.anchor
         }
 

@@ -1,4 +1,4 @@
-use bevy::ecs::component::Component;
+use bevy::{ecs::component::Component, math::Vec2};
 
 
 
@@ -14,6 +14,9 @@ impl CursorFocus {
     pub fn is(&self, flag: EventFlags) -> bool {
         self.0 == flag
     }
+    pub fn intersects(&self, flag: EventFlags) -> bool {
+        self.0.0 & flag.0 > 0
+    }
 }
 
 /// Represents a cursor event like `OnMouseDown`.
@@ -28,6 +31,9 @@ impl CursorAction {
     pub fn is(&self, flag: EventFlags) -> bool {
         self.0 == flag
     }
+    pub fn intersects(&self, flag: EventFlags) -> bool {
+        self.0.0 & flag.0 > 0
+    }
 }
 
 
@@ -36,33 +42,33 @@ impl CursorAction {
 #[component(storage="SparseSet")]
 pub struct CursorClickOutside;
 
-/// Captures a mouse up outside event.
-pub struct MouseUpSubscriber(bool);
-
+#[derive(Debug, Component)]
+#[component(storage="SparseSet")]
+pub struct MouseWheelAction(Vec2);
 
 tlbf::tlbf!(
-    #[derive(Component)]
     /// Flags for cursor events.
-    /// 
+    ///
     /// Valid listeners are `Hover`, `*Click`, `*Drag`, `DoubleClick`, `Drop` and `ClickOutside`.
-    /// 
+    ///
     /// * `Hover` listens for `Hover`,
     /// * `Click` listens for `Down`, `Up` and `Pressed`
     /// * `Drag` listens for `Down`, `DragEnd` and `Drag`
     /// * `DoubleClick` listens for `DoubleClick`, which replaces `Click` or `DragEnd`
     /// * `Drop` listens for `Drop`
     /// * `ClickOutside` listens for mouse up outside.
-    /// 
+    ///
     /// Events are emitted as 3 separate components, each frame a sprite can receive at most one of each:
-    /// * `CursorFocus`: `Hover`, `Down`, `Drag`
+    /// * `CursorFocus`: `Hover`, `Pressed`, `Drag`
     /// * `CursorAction`: `Down`, `Click`, `DragEnd`, `DoubleClick`, `Drop`
     /// * `CursorClickOutside`: `ClickOutside`
-    /// 
+    ///
     /// Details:
     /// * `Click` requires mouse up and mouse down be both inside a sprite.
     /// * `ClickOutside` requires mouse up be outside of a sprite and the sprite not being dragged.
     /// * Dragged sprite will receive `Down` from other mouse buttons regardless of their handlers.
     /// * There is in fact no `MouseUp`.
+    #[derive(Component)]
     pub EventFlags: u32 {
         Idle,
         Hover,
@@ -82,5 +88,6 @@ tlbf::tlbf!(
         Drop,
         DragEnd,
         ClickOutside,
+        MouseWheel,
     }
 );

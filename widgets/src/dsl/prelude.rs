@@ -1,3 +1,5 @@
+#![allow(non_upper_case_globals)]
+
 pub use crate::{color, size2, marker};
 use super::DslInto;
 pub use super::util::*;
@@ -8,7 +10,12 @@ pub use bevy::prelude::BuildChildren;
 use bevy::sprite::Anchor;
 pub use crate::widgets::shape::Shapes;
 pub use std::f32::consts::PI;
+pub use std::f32::INFINITY;
+pub use bevy::prelude::Color;
+pub use bevy_aoui::{Dimension, Opacity};
 pub use bevy_aoui::LayoutControl::{Linebreak, IgnoreLayout};
+pub use crate::anim::{Interpolate, Offset, Rotation, Scale};
+pub use interpolation::EaseFunction;
 pub use crate::events::{
     EventFlags,
     Down as LeftDown, Click as LeftClick, 
@@ -25,8 +32,12 @@ pub use crate::widgets::{
     PropagateFocus, DisplayIf, SetCursor
 };
 
+pub const DragX: crate::widgets::drag::Draggable = crate::widgets::drag::Draggable::X;
+pub const DragY: crate::widgets::drag::Draggable = crate::widgets::drag::Draggable::Y;
+pub const DragBoth: crate::widgets::drag::Draggable = crate::widgets::drag::Draggable::BOTH;
+pub const DragSnapBack: crate::widgets::drag::DragSnapBack = crate::widgets::drag::DragSnapBack::DEFAULT;
+
 /// This can be use anywhere where you want to use the default anchor.
-#[allow(non_upper_case_globals)]
 pub const Inherit: Option<Anchor> = None;
 
 /// Multiply by epsilon, useful in Z.

@@ -1,10 +1,10 @@
 use bevy::{
     prelude::*, 
-    sprite::{Sprite, Anchor, Mesh2dHandle, Material2d}, 
+    sprite::{Sprite, Mesh2dHandle, Material2d}, 
     text::{Text2dBounds, TextLayoutInfo}
 };
 
-use crate::{Transform2D, RotatedRect, BuildGlobal, Hitbox, AoUI, BuildTransform, LayoutControl, Dimension, Size2};
+use crate::{Transform2D, RotatedRect, BuildGlobal, Hitbox, AoUI, BuildTransform, LayoutControl, Dimension, Size2, Opacity, Anchor};
 
 
 /// The minimal bundle required for AoUI to function.
@@ -16,6 +16,7 @@ pub struct AoUIBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
+    pub opacity: Opacity,
     pub vis: VisibilityBundle,
 }
 
@@ -27,9 +28,9 @@ pub struct BuildGlobalBundle {
 }
 
 impl BuildGlobalBundle {
-    pub fn at_anchor(anchor: Anchor) -> Self{
+    pub fn new(anchor: Anchor) -> Self{
         Self { 
-            builder: BuildGlobal(Some(anchor)),
+            builder: BuildGlobal(anchor),
             ..Default::default() 
         }
     }
@@ -125,6 +126,7 @@ pub struct AoUISpriteBundle {
     pub build: BuildGlobal,
     pub sprite: Sprite,
     pub texture: Handle<Image>,
+    pub opacity: Opacity,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,
 }
@@ -140,9 +142,10 @@ pub struct AoUITextBundle {
     pub build: BuildGlobal,
     pub hitbox: Hitbox,
     pub text: Text,
-    pub text_anchor: Anchor,
+    pub text_anchor: bevy::sprite::Anchor,
     pub text_bounds: Text2dBounds,
     pub text_layout: TextLayoutInfo,
+    pub opacity: Opacity,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,
 }
@@ -160,6 +163,7 @@ pub struct AoUIMaterialMesh2dBundle<M: Material2d>{
     pub screen: BuildGlobal,
     pub mesh: Mesh2dHandle,
     pub material: Handle<M>,
+    pub opacity: Opacity,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,
 }

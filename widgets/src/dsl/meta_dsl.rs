@@ -6,7 +6,7 @@ macro_rules! filter_children {
     };
     ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident !, $($rest: tt)*) => {
         $crate::filter_children!($commands [$($path)*] [
-            $($out)* 
+            $($out)*
             $field: $macro! (
                 $commands
             )
@@ -14,7 +14,7 @@ macro_rules! filter_children {
     };
     ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*}, $($rest: tt)*) => {
         $crate::filter_children!($commands [$($path)*] [
-            $($out)* 
+            $($out)*
             $field: $macro! (
                 $commands {
                     $($expr)*
@@ -25,7 +25,7 @@ macro_rules! filter_children {
 
     ($commands: tt [$($path: tt)*] [$($out: tt)*] child: $macro: ident ! {$($expr: tt)*}) => {
         $crate::filter_children!($commands [$($path)*] [
-            $($out)* 
+            $($out)*
             child: $macro! (
                 $commands {
                     $($expr)*
@@ -45,62 +45,62 @@ macro_rules! filter_children {
 /// The core macro for our DSL.
 #[macro_export]
 macro_rules! meta_dsl {
-    
+
     ($commands: tt [$($path: tt)*] {$($fields: tt)*} ) => {
         $crate::filter_children!($commands [$($path)*] [] $($fields)*)
     };
 
-    ($commands: tt [$($path: tt)*] 
-        {extra: $expr: expr $(,$f: ident: $e: expr)* $(,)?} 
-        {$($f2: ident: $e2: expr),*} 
-        {$($extras: expr),*} 
+    ($commands: tt [$($path: tt)*]
+        {extra: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
+        {$($f2: ident: $e2: expr),*}
+        {$($extras: expr),*}
         {$($children: expr),*}
     ) => {
         $crate::meta_dsl!($commands
-            [$($path)*] 
-            {$($f: $e),*} 
+            [$($path)*]
+            {$($f: $e),*}
             {$($f2: $e2),*}
             {$($extras,)* $expr}
             {$($children),*}
         )
     };
 
-    ($commands: tt [$($path: tt)*] 
-        {child: $expr: expr $(,$f: ident: $e: expr)* $(,)?} 
-        {$($f2: ident: $e2: expr),*} 
-        {$($extras: expr),*} 
+    ($commands: tt [$($path: tt)*]
+        {child: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
+        {$($f2: ident: $e2: expr),*}
+        {$($extras: expr),*}
         {$($children: expr),*}
     ) => {
         $crate::meta_dsl!($commands
-            [$($path)*] 
-            {$($f: $e),*} 
+            [$($path)*]
+            {$($f: $e),*}
             {$($f2: $e2),*}
             {$($extras),*}
             {$($children,)* $expr}
         )
     };
 
-    ($commands: tt [$($path: tt)*] 
-        {$field: ident: $expr: expr $(,$f: ident: $e: expr)* $(,)?} 
-        {$($f2: ident: $e2: expr),*} 
-        {$($extras: expr),*} 
+    ($commands: tt [$($path: tt)*]
+        {$field: ident: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
+        {$($f2: ident: $e2: expr),*}
+        {$($extras: expr),*}
         {$($children: expr),*}
     ) => {
         $crate::meta_dsl!($commands
-            [$($path)*] 
-            {$($f: $e),*} 
+            [$($path)*]
+            {$($f: $e),*}
             {$($f2: $e2,)* $field: $expr}
             {$($extras),*}
             {$($children),*}
         )
     };
 
-    (($commands: expr $(,$e:expr)*) [$($path: tt)*] {$(,)?} 
+    (($commands: expr $(,$e:expr)*) [$($path: tt)*] {$(,)?}
         {$($field: ident: $expr: expr),*}
-        {$($extras: expr),*} 
+        {$($extras: expr),*}
         {$($children: expr),*}
     ) => {
-        {  
+        {
             use $crate::dsl::DslInto;
             let extras = ($($extras),*);
             let children = [$($children),*];
@@ -122,9 +122,9 @@ macro_rules! meta_dsl {
 macro_rules! transform2d {
     ($this: expr) => {
         ::bevy_aoui::Transform2D {
-            center: $this.center,
+            center: $this.center.unwrap_or(::bevy_aoui::Anchor::Inherit),
             anchor: $this.anchor,
-            parent_anchor: $this.parent_anchor,
+            parent_anchor: $this.parent_anchor.unwrap_or(::bevy_aoui::Anchor::Inherit),
             offset: $this.offset,
             rotation: $this.rotation,
             scale: match $this.scale{
@@ -174,9 +174,9 @@ macro_rules! widget_extension {
     ) => {
         #[derive(Debug, Default)]
         $vis0 struct $name {
-            pub anchor: ::bevy::sprite::Anchor,
-            pub parent_anchor: Option<::bevy::sprite::Anchor>,
-            pub center: Option<::bevy::sprite::Anchor>,
+            pub anchor: ::bevy_aoui::Anchor,
+            pub parent_anchor: Option<::bevy_aoui::Anchor>,
+            pub center: Option<::bevy_aoui::Anchor>,
             pub visible: Option<bool>,
             pub offset: ::bevy_aoui::Size2,
             pub rotation: f32,

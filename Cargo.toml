@@ -2,5 +2,6 @@
 members = [
     "aoui",
     "widgets",
+    "aoui_rive"
 ]
 resolver="2"

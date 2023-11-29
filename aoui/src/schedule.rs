@@ -6,7 +6,7 @@ use bevy::transform::systems::{propagate_transforms, sync_simple_transforms};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::compute::*;
+use crate::{compute::*, Opacity};
 use crate::{RotatedRect, BuildGlobal, BuildTransform, Dimension, AoUIREM, DimensionSize, Transform2D};
 
 /// Fetch info for the tree, happens before `AoUITreeUpdate`.
@@ -71,7 +71,7 @@ impl bevy::prelude::Plugin for AoUIPlugin {
 
 /// Copy our `anchor` component's value to the `Anchor` component
 pub fn copy_anchor(mut query: Query<(&mut Anchor, &Transform2D)>) {
-    query.par_iter_mut().for_each(|(mut a, anc)| *a = anc.anchor)
+    query.par_iter_mut().for_each(|(mut a, anc)| *a = anc.anchor.into())
 }
 
 /// Copy evaluated `TextLayoutInfo` value to our `Dimension::Copied` value
@@ -88,7 +88,7 @@ pub fn copy_dimension_text(mut query: Query<(&TextLayoutInfo, &mut Dimension)>) 
 /// Copy our `Anchors` component's value to the `Sprite` component
 pub fn copy_anchor_sprite(mut query: Query<(&mut Sprite, &Transform2D)>) {
     query.par_iter_mut().for_each(|(mut sp, anc)| {
-        sp.anchor = anc.anchor;
+        sp.anchor = anc.anchor.into();
     })
 }
 
@@ -110,7 +110,7 @@ pub fn copy_dimension_sprite(mut query: Query<(&Sprite, &Handle<Image>, &mut Dim
 /// Copy anchor to the `TextureAtlasSprite` component
 pub fn copy_anchor_atlas(mut query: Query<(&mut TextureAtlasSprite, &Transform2D)>) {
     query.par_iter_mut().for_each(|(mut sp, anc)| {
-        sp.anchor = anc.anchor;
+        sp.anchor = anc.anchor.into();
     })
 }
 
@@ -167,17 +167,19 @@ pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFont
     })
 }
 
-/// Synchonize size between `Sprite` and `Dimension`
-// pub fn sync_size_text(mut query: Query<(&mut TextLayoutInfo, &Dimension)>) {
-//     query.par_iter_mut().for_each(|(mut sp, dimension)| {
-//         match dimension.dim {
-//             DimensionSize::Owned(_) => {
-//                 sp. = Some(dimension.size)
-//             },
-//             _ => (),
-//         }
-//     })
-// }
+/// Copy opacity as text alpha
+pub fn sync_opacity_text(mut query: Query<(&mut Text, &Opacity), Without<OptOutFontSizeSync>>) {
+    query.par_iter_mut().for_each(|(mut sp, opacity)| {
+        sp.sections.iter_mut().for_each(|x| x.style.color = x.style.color.with_a(opacity.computed))
+    })
+}
+
+/// Copy opacity as sprite alpha
+pub fn sync_opacity_sprite(mut query: Query<(&mut Sprite, &Opacity), Without<OptOutFontSizeSync>>) {
+    query.par_iter_mut().for_each(|(mut sp, opacity)| {
+        sp.color = sp.color.with_a(opacity.computed)
+    })
+}
 
 /// Build a transform using [`RotatedRect`].
 pub fn build_transform(mut query: Query<(&RotatedRect, &BuildTransform, &mut Transform)>) {
@@ -196,7 +198,7 @@ pub fn finalize(
         *scene = Affine3A::from_scale_rotation_translation(
             rect.scale.extend(1.0), 
             Quat::from_rotation_z(rect.rotation), 
-            rect.anchor(build.0.unwrap_or(transform.anchor)).extend(rect.z)
+            rect.anchor(build.0.or(transform.anchor)).extend(rect.z)
         ).into()
     });
 }

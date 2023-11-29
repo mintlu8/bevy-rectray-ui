@@ -72,6 +72,7 @@
 pub mod dsl;
 pub mod widgets;
 pub mod events;
+pub mod anim;
 
 mod dto;
 
@@ -86,6 +87,7 @@ impl bevy::prelude::Plugin for AoUIExtensionsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .add_plugins(events::AoUICursorEventsPlugin)
+            .add_plugins(anim::AoUIAnimationPlugin)
             .add_plugins(widgets::schedule::FullWidgetsPlugin)
         ;
     }

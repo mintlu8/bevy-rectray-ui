@@ -1,6 +1,6 @@
-use bevy::prelude::*;
-use bevy_aoui::{AoUIPlugin, Transform2D};
-use bevy_aoui_widgets::{AoUIExtensionsPlugin, events::CursorState};
+use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
+use bevy_aoui::AoUIPlugin;
+use bevy_aoui_widgets::AoUIExtensionsPlugin;
 use bevy_prototype_lyon::prelude::*;
 
 pub fn main() {
@@ -12,6 +12,8 @@ pub fn main() {
             }),
             ..Default::default()
         }))
+        .add_plugins(FrameTimeDiagnosticsPlugin)
+        .add_plugins(LogDiagnosticsPlugin::default())
         .add_systems(Startup, init)
         .add_plugins(AoUIPlugin)
         .add_plugins(AoUIExtensionsPlugin)
@@ -23,21 +25,18 @@ pub fn main() {
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui_widgets::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    marker!(Dragged);
-    rectangle! ((commands, assets) {
+    sprite! ((commands, assets) {
         dimension: [100, 100],
         hitbox: Rect(1),
-        fill: color!(lavender),
+        //fill: color!(lavender),
+        sprite: assets.load("square.png"),
         extra: EventFlags::Hover|EventFlags::Drag,
-        extra: Dragged,
-        extra: handler!{LeftDrag => 
-            fn handle_drag(mut query: Query<&mut Transform2D, With<Dragged>>, res: Res<CursorState>) {
-                query.single_mut().offset.edit_raw(|x| *x = res.cursor_position())
-            }
-        },
+        extra: DragBoth,
         extra: SetCursor { 
             flags: EventFlags::Hover|EventFlags::Drag, 
             icon: CursorIcon::Hand,
-        }
+        },
+        extra: DragSnapBack,
+        extra: Interpolate::<Offset>::new(EaseFunction::BounceOut, 4.0),
     });
 }

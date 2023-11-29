@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy_aoui::{*, bundles::*};
-use bevy::{prelude::*, sprite::Anchor, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}};
+use bevy::{prelude::*, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}};
 use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox}, EguiPlugin};
 
 
@@ -14,7 +14,13 @@ In nec finibus metus, ac hendrerit augue. Lorem ipsum dolor sit amet, consectetu
 
 pub fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                present_mode: bevy::window::PresentMode::AutoNoVsync,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }))
         .add_plugins(EguiPlugin)
         .add_plugins(AoUIPlugin)
         .add_plugins(LogDiagnosticsPlugin::default())
@@ -89,18 +95,7 @@ pub fn egui_window(mut ctx: EguiContexts,
         ui.add(Slider::new(x, 0.0..=4.0).text("scale x"));
         ui.add(Slider::new(y, 0.0..=4.0).text("scale y"));
 
-        let mut anc = match spawned.iter().next().unwrap().anchor {
-            Anchor::BottomLeft => "BottomLeft",
-            Anchor::BottomCenter => "BottomCenter",
-            Anchor::BottomRight => "BottomRight",
-            Anchor::CenterLeft => "CenterLeft",
-            Anchor::Center => "Center",
-            Anchor::CenterRight => "CenterRight",
-            Anchor::TopLeft => "TopLeft",
-            Anchor::TopCenter => "TopCenter",
-            Anchor::TopRight => "TopRight",
-            Anchor::Custom(_) => unreachable!(),
-        };
+        let mut anc = spawned.iter().next().unwrap().anchor.str_name();
 
         ComboBox::from_label("Anchor")
             .selected_text(anc)

@@ -1,8 +1,7 @@
 use bevy::prelude::Vec2;
-use bevy::sprite::Anchor;
 use bevy::prelude::Reflect;
 
-use crate::LayoutControl;
+use crate::{LayoutControl, Anchor};
 
 /// Horizontal or Vertical.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
@@ -154,33 +153,19 @@ impl From<&Alignment> for Trinary {
 
 
 pub(super) fn hbucket(anchor: &Anchor) -> Trinary {
-    match anchor {
-        Anchor::BottomLeft => Trinary::Neg,
-        Anchor::CenterLeft => Trinary::Neg,
-        Anchor::TopLeft => Trinary::Neg,
-        Anchor::BottomCenter => Trinary::Mid,
-        Anchor::Center => Trinary::Mid,
-        Anchor::TopCenter => Trinary::Mid,
-        Anchor::BottomRight => Trinary::Pos,
-        Anchor::CenterRight => Trinary::Pos,
-        Anchor::TopRight => Trinary::Pos,
-        Anchor::Custom(_) => panic!("Custom anchor is not alloed in span."),
+    match anchor.x() {
+        x if x < -0.16 => Trinary::Neg,
+        x if x > 0.16 => Trinary::Pos,
+        _ => Trinary::Mid,
     }
 }
 
 
 pub(super) fn vbucket(anchor: &Anchor) -> Trinary {
-    match anchor {
-        Anchor::BottomLeft => Trinary::Neg,
-        Anchor::BottomCenter => Trinary::Neg,
-        Anchor::BottomRight => Trinary::Neg,
-        Anchor::CenterLeft => Trinary::Mid,
-        Anchor::Center => Trinary::Mid,
-        Anchor::CenterRight => Trinary::Mid,
-        Anchor::TopLeft => Trinary::Pos,
-        Anchor::TopCenter => Trinary::Pos,
-        Anchor::TopRight => Trinary::Pos,
-        Anchor::Custom(_) => panic!("Custom anchor is not alloed in span."),
+    match anchor.y() {
+        y if y < -0.16 => Trinary::Neg,
+        y if y > 0.16 => Trinary::Pos,
+        _ => Trinary::Mid,
     }
 }
 

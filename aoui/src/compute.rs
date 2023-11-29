@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::HashSet, window::PrimaryWindow, ecs::query::{ReadOnlyWorldQuery, WorldQuery}};
+use bevy::{prelude::*, window::PrimaryWindow, ecs::query::{ReadOnlyWorldQuery, WorldQuery}, math::Affine2};
 use itertools::Itertools;
 
 use crate::*;
@@ -8,6 +8,7 @@ type AoUIEntity<'t> = (
     &'t mut Dimension,
     &'t Transform2D,
     &'t mut RotatedRect,
+    &'t mut Opacity,
 );
 
 #[allow(clippy::too_many_arguments)]
@@ -16,19 +17,25 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
     parent: ParentInfo,
     entity: Entity,
     rem: f32,
-    entity_query: &mut Query<AoUIEntity, TAll>,
+    mut_query: &mut Query<AoUIEntity, TAll>,
     flex_query: &Query<&Container>,
     scene_query: &Query<&SceneLayout>,
+    parent_query: &Query<&Parent>,
     child_query: &Query<&Children>,
     control_query: &Query<&LayoutControl>,
-    queue: &mut Vec<(Entity, ParentInfo)>,
-    visited: &mut HashSet<Entity>) {
+    queue: &mut Vec<(Entity, ParentInfo)>) {
+
+    if parent_query.get(entity).ok().map(|x| x.get()) != parent.entity {
+        panic!("Malformed hierarchy, parent child mismatch.")
+    }
 
     // SAFETY: safe since double mut access is gated by visited
-    let Ok((entity, mut dim, transform, mut orig, ..)) = (unsafe {entity_query.get_unchecked(entity)}) else {return};
-
+    let Ok((entity, mut dim, transform, mut orig, mut opacity, ..)) = (unsafe {mut_query.get_unchecked(entity)}) else {return};
+    
     let (dimension, em) = dim.update(parent.dimension, parent.em, rem);
     let offset = transform.offset.as_pixels(parent.dimension, em, rem);
+    opacity.computed = opacity.opactity * parent.opacity;
+    let opacity = opacity.computed;
 
     if let Ok(layout) = flex_query.get(entity) {
         let children = child_query.get(entity).map(|x| x.iter()).into_iter().flatten();
@@ -36,9 +43,11 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         let mut other_entities = Vec::new();
         let mut args = Vec::new();
         for child in children {
-            if !visited.insert(*child) { continue; }
+            if parent_query.get(*child).ok().map(|x| x.get()) != Some(entity) {
+                panic!("Malformed hierarchy, parent child mismatch.")
+            }
             // SAFETY: safe since double mut access is gated by visited
-            if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { entity_query.get_unchecked(*child) } {
+            if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { mut_query.get_unchecked(*child) } {
                 match control_query.get(*child) {
                     Ok(LayoutControl::IgnoreLayout) => other_entities.push((
                         *child, 
@@ -61,6 +70,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         dim.size = size;
         let rect = RotatedRect::construct(
             &parent,
+            transform.parent_anchor,
             transform.anchor,
             offset,
             size,
@@ -72,10 +82,10 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         
         queue.extend(layout_entities.into_iter()
             .zip_eq(placements.into_iter().map(|x| x / size - Vec2::new(0.5, 0.5)))
-            .map(|(entity, anc)| (entity, ParentInfo::from_anchor(&rect, anc, dimension, em))));
+            .map(|(e, anc)| (e, ParentInfo::from_anchor(Some(entity), &rect, anc, dimension, em, opacity))));
         *orig = rect;
-        for (child, anchor) in other_entities {
-            let parent = ParentInfo::new(&rect, anchor, size, em);
+        for (child, _) in other_entities {
+            let parent = ParentInfo::new(Some(entity), &rect, size, em, opacity);
             queue.push((child, parent))
         }
         return;
@@ -90,6 +100,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
 
     let rect = RotatedRect::construct(
         &parent,
+        transform.parent_anchor.or(transform.anchor),
         transform.anchor,
         offset,
         dimension,
@@ -101,12 +112,9 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
 
     if let Ok(children) = child_query.get(entity) {
         for child in children {
-            if !visited.insert(*child) { continue; }
             // SAFETY: safe since double mut access is gated by visited
-            if let Ok((_, _, t, ..)) = unsafe { entity_query.get_unchecked(*child) } {
-                let parent = ParentInfo::new(&rect, t.get_parent_anchor(), dimension, em);
-                queue.push((*child, parent))
-            }
+            let parent = ParentInfo::new(Some(entity), &rect, dimension, em, opacity);
+            queue.push((*child, parent))
         }
     }
 
@@ -120,26 +128,25 @@ pub trait RootQuery<'t> {
     type Query: WorldQuery;
     type ReadOnly: ReadOnlyWorldQuery;
 
-    fn as_rect(query: &Query<Self::Query, Self::ReadOnly>) -> RotatedRect;
+    fn as_rect(query: &Query<Self::Query, Self::ReadOnly>) -> (RotatedRect, Vec2);
 }
 
 impl<'t> RootQuery<'t> for PrimaryWindow {
     type Query= &'t Window;
     type ReadOnly = With<PrimaryWindow>;
 
-    fn as_rect(query: &Query<Self::Query, Self::ReadOnly>) -> RotatedRect {
+    fn as_rect(query: &Query<Self::Query, Self::ReadOnly>) -> (RotatedRect, Vec2) {
         let window = match query.get_single(){
             Ok(w) => w,
             Err(_) => return Default::default(), 
         };
         let dim = Vec2::new(window.width(), window.height());
-        RotatedRect {
-            center: Vec2::ZERO,
-            dimension: dim,
+        (RotatedRect {
+            affine: Affine2::from_scale(dim),
             rotation: 0.0,
             scale: Vec2::ONE,
             z: 0.0
-        }
+        }, dim)
     }
 }
 
@@ -162,27 +169,35 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>, TRoot: ReadOnlyWorldQuery, 
     mut entity_query: Query<AoUIEntity, TAll>,
     flex_query: Query<&Container>,
     sparse_query: Query<&SceneLayout>,
+    parent_query: Query<&Parent>,
     child_query: Query<&Children>,
     control_query: Query<&LayoutControl>,
     res_rem: Option<Res<AoUIREM>>,
 ) {
     let rem = res_rem.map(|x| x.0).unwrap_or(16.0);
 
-    let window_rect = R::as_rect(&root);
-    let dim = window_rect.dimension;
+    let (window_rect, dim) = R::as_rect(&root);
 
-    let mut visited = HashSet::new();
     let mut queue = Vec::new();
 
-    for (entity, _, t, ..) in entity_query.iter_many(root_entities.iter()) {
-        if !visited.insert(entity) { return; }
-        let parent = ParentInfo::new(&window_rect, t.get_parent_anchor(), dim, rem);
+    for (entity, ..) in entity_query.iter_many(root_entities.iter()) {
+        let parent = ParentInfo::new(None, &window_rect, dim, rem, 1.0);
         queue.push((entity, parent))
     }
 
     while !queue.is_empty() {
         for (entity, parent) in std::mem::take(&mut queue) {
-            propagate(parent, entity, rem, &mut entity_query, &flex_query, &sparse_query, &child_query, &control_query, &mut queue, &mut visited);
+            propagate(parent, 
+                entity, 
+                rem, 
+                &mut entity_query, 
+                &flex_query, 
+                &sparse_query, 
+                &parent_query, 
+                &child_query, 
+                &control_query, 
+                &mut queue
+            );
         }
     }
 }

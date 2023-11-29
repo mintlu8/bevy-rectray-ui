@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy_aoui::{*, bundles::*};
-use bevy::{prelude::*, sprite::Anchor, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
+use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
 use bevy_egui::{EguiContexts, egui::{self, Slider}, EguiPlugin};
 pub fn main() {
     App::new()
@@ -48,7 +48,7 @@ pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, enitity: 
             ..Default::default()
         }).id();
 
-        spawn_fractal(commands, count - 1, size / 4.0, child, texture.clone());
+        spawn_fractal(commands, count - 1, size / 3.0, child, texture.clone());
         commands.entity(enitity).push_children(&[child]);
     }
 }
@@ -60,20 +60,17 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
 
-    for anchor in ANCHORS {
-        let enitity = commands.spawn(AoUISpriteBundle {
-            sprite: Sprite {
-                color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 1.0),
-                custom_size: Some(Vec2::new(200.0, 200.0)),
-                anchor: anchor.clone(),
-                ..Default::default()
-            },
-            texture: texture.clone(),
+    let enitity = commands.spawn(AoUISpriteBundle {
+        sprite: Sprite {
+            color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 1.0),
+            custom_size: Some(Vec2::new(800.0, 800.0)),
             ..Default::default()
-        }).id();
+        },
+        texture: texture.clone(),
+        ..Default::default()
+    }).id();
 
-        spawn_fractal(&mut commands, 3, 50.0, enitity, texture.clone());
-    }
+    spawn_fractal(&mut commands, 5, 250.0, enitity, texture.clone());
 }
 
 pub fn egui_window(mut ctx: EguiContexts, 

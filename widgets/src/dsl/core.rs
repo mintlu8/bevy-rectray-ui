@@ -1,171 +1,73 @@
-use bevy::{sprite::Anchor, prelude::{Vec2, Image, Handle, Color, Rect, Commands, Entity}, text::{Font, Text, TextSection, TextStyle, BreakLineOn, Text2dBounds}, math::bool};
-use bevy_aoui::{Size2, SetEM, bundles::{AoUIBundle, AoUISpriteBundle, AoUITextBundle}, Hitbox};
+use bevy::text::{Font, Text, TextSection, TextStyle, BreakLineOn, Text2dBounds, TextLayoutInfo};
+use bevy::prelude::{Vec2, Image, Handle, Color, Rect};
+use bevy_aoui::bundles::BuildGlobalBundle;
 
 
-use crate::{dsl::DslInto, transform2d, dimension};
-
-use super::{prelude::OneOrTwo, AoUIWidget};
-
-#[cfg(never)]
-/// Template for a minimal DSL item.
-#[derive(Debug, Default)]
-pub struct Minimal {
-    pub center: Option<Anchor>,
-    pub anchor: Anchor,
-    pub offset: Size2,
-    pub rotation: f32,
-    pub scale: Option<OneOrTwo<Vec2>>,
-    pub z: f32,
-    pub dimension: Option<Size2>,
-    pub font_size: SetEM,
-    pub hitbox: Option<Hitbox>,
-}
+use crate::widget_extension;
 
 
-/// An empty sprite.
-#[derive(Debug, Default)]
-pub struct FrameBuilder {
-    pub anchor: Anchor,
-    pub parent_anchor: Option<Anchor>,
-    pub center: Option<Anchor>,
-    pub visible: Option<bool>,
-    pub offset: Size2,
-    pub rotation: f32,
-    pub scale: Option<OneOrTwo<Vec2>>,
-    pub z: f32,
-    pub dimension: Option<Size2>,
-    pub font_size: SetEM,
-    pub hitbox: Option<Hitbox>,
-}
+widget_extension!(pub struct FrameBuilder {}, this, commands);
 
-impl AoUIWidget for FrameBuilder {
-    fn spawn_with(self, commands: &mut Commands) -> Entity {
-        let mut base = commands.spawn((
-            AoUIBundle {
-                transform: transform2d!(self),
-                dimension: dimension!(self),
-                vis: self.visible.dinto(),
-                ..Default::default()
-            },
-        ));
-        if let Some(hitbox) = self.hitbox {
-            base.insert(hitbox);
-        }
-        base.id()
-    }
-}
-   
+widget_extension!(
+    pub struct SpriteBuilder {
+        pub sprite: Handle<Image>,
+        pub size: Option<Vec2>,
+        pub color: Option<Color>,
+        pub rect: Option<Rect>,
+        pub flip: [bool; 2],
+    },
+    this, commands,
+    components: (
+        bevy::prelude::Sprite {
+            custom_size: this.size,
+            color: this.color.unwrap_or(Color::WHITE),
+            rect: this.rect,
+            flip_x: this.flip[0],
+            flip_y: this.flip[1],
+            ..Default::default()
+        },
+        this.sprite,
+        BuildGlobalBundle::default()
+    )
+);
 
 
-/// An image base sprite.
-#[derive(Debug, Default)]
-pub struct SpriteBuilder {
-    pub anchor: Anchor,
-    pub parent_anchor: Option<Anchor>,
-    pub center: Option<Anchor>,
-    pub visible: Option<bool>,
-    pub offset: Size2,
-    pub rotation: f32,
-    pub scale: Option<OneOrTwo<Vec2>>,
-    pub z: f32,
-    pub dimension: Option<Size2>,
-    pub font_size: SetEM,
-    pub hitbox: Option<Hitbox>,
-
-    pub sprite: Handle<Image>,
-    pub size: Option<Vec2>,
-    pub color: Option<Color>,
-    pub rect: Option<Rect>,
-    pub flip: [bool; 2],
-}
-
-impl AoUIWidget for SpriteBuilder {
-    fn spawn_with(self, commands: &mut Commands) -> Entity {
-        let [flip_x, flip_y] = self.flip;
-        let mut base = commands.spawn((
-            AoUISpriteBundle {
-                transform: transform2d!(self),
-                dimension: dimension!(self),
-                sprite: bevy::prelude::Sprite {
-                    custom_size: self.size,
-                    rect: self.rect,
-                    color: self.color.unwrap_or(Color::WHITE),
-                    flip_x,
-                    flip_y,
+widget_extension!(
+    pub struct TextBoxBuilder {
+        pub text: String,
+        pub font: Handle<Font>,
+        /// Note if not specified this is `UNBOUNDED`.
+        pub bounds: Option<Vec2>,
+        pub color: Option<Color>,
+        pub wrap: bool,
+        pub break_line_on: Option<BreakLineOn>,
+    },
+    this, commands,
+    components: (
+        Text {
+            sections: vec![TextSection::new(
+                this.text,
+                TextStyle {
+                    font: this.font,
+                    color: this.color.unwrap_or(Color::WHITE),
                     ..Default::default()
-                }, 
-                texture: self.sprite,
-                vis: self.visible.dinto(),
-                ..Default::default()
+                }
+            )],
+            linebreak_behavior: if let Some(b) = this.break_line_on {
+                b
+            } else if this.wrap {
+                BreakLineOn::WordBoundary
+            } else {
+                BreakLineOn::NoWrap
             },
-        ));
-        if let Some(hitbox) = self.hitbox {
-            base.insert(hitbox);
-        }
-        base.id()
-    }
-}
-
-/// A text box.
-#[derive(Debug, Default)]
-pub struct TextBoxBuilder {
-    pub anchor: Anchor,
-    pub parent_anchor: Option<Anchor>,
-    pub center: Option<Anchor>,
-    pub visible: Option<bool>,
-    pub offset: Size2,
-    pub rotation: f32,
-    pub scale: Option<OneOrTwo<Vec2>>,
-    pub z: f32,
-    pub dimension: Option<Size2>,
-    pub font_size: SetEM,
-    pub hitbox: Option<Hitbox>,
-
-    pub text: String,
-    pub font: Handle<Font>,
-    /// Note if not specified this is `UNBOUNDED`.
-    pub bounds: Option<Vec2>,
-    pub color: Option<Color>,
-    pub wrap: bool,
-    pub break_line_on: Option<BreakLineOn>,
-}
-
-
-impl AoUIWidget for TextBoxBuilder {
-    fn spawn_with(self, commands: &mut Commands) -> Entity {
-        let mut base = commands.spawn((
-            AoUITextBundle {
-                transform: transform2d!(self),
-                dimension: dimension!(self),
-                vis: self.visible.dinto(),
-                text: Text {
-                    sections: vec![TextSection::new(
-                        self.text, 
-                        TextStyle {
-                            font: self.font,
-                            color: self.color.unwrap_or(Color::WHITE),
-                            ..Default::default()
-                        }
-                    )],
-                    linebreak_behavior: if let Some(b) = self.break_line_on {
-                        b
-                    } else if self.wrap {
-                        BreakLineOn::WordBoundary
-                    } else {
-                        BreakLineOn::NoWrap
-                    },
-                    ..Default::default()
-                },
-                text_bounds: match self.bounds {
-                    Some(size) => Text2dBounds { size },
-                    None => Text2dBounds::UNBOUNDED,
-                },
-                ..Default::default()
-            },
-        ));
-        if let Some(hitbox) = self.hitbox {
-            base.insert(hitbox);
-        }       
-        base.id()
-    }
-}
+            ..Default::default()
+        },
+        match this.bounds {
+            Some(size) => Text2dBounds { size },
+            None => Text2dBounds::UNBOUNDED,
+        },
+        TextLayoutInfo::default(),
+        Into::<bevy::sprite::Anchor>::into(this.anchor),
+        BuildGlobalBundle::default()
+    )
+);

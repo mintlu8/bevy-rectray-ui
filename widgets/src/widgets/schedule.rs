@@ -1,9 +1,9 @@
 use bevy::{prelude::{Plugin, PostUpdate, IntoSystemConfigs, Update}, ecs::schedule::{SystemSet, IntoSystemSetConfigs}, app::PreUpdate};
-use bevy_aoui::schedule::AoUIStoreOutput;
+use bevy_aoui::schedule::{AoUIStoreOutput, AoUILoadInput};
 
 use crate::events::AoUIEventSet;
 
-use super::{shape, inputbox, button::{self, CursorDefault}};
+use super::{shape, inputbox, button::{self, CursorDefault}, drag::{self, drag_start}};
 
 /// Plugin for widgets that do not depend on events.
 pub struct CoreWidgetsPlugin;
@@ -16,13 +16,14 @@ impl Plugin for CoreWidgetsPlugin {
         ;
     }
 }
-pub(crate) struct FullWidgetsPlugin;
 
 
 
 
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct AoUIWidgetsEventSet;
+
+pub(crate) struct FullWidgetsPlugin;
 
 impl Plugin for FullWidgetsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
@@ -44,7 +45,11 @@ impl Plugin for FullWidgetsPlugin {
                 inputbox::update_inputbox_cursor,
                 button::set_cursor,
                 button::conditional_visibility,
+                drag::drag_start,
+                drag::drag_end,
+                drag::dragging.after(drag_start),
             ))
+            .add_systems(PostUpdate, drag::apply_constraints.in_set(AoUILoadInput))
             .add_systems(PostUpdate, inputbox::sync_em_inputbox.in_set(AoUIStoreOutput))
         ;
     }

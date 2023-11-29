@@ -57,13 +57,16 @@ impl Hitbox {
     }
 
     pub fn contains(&self, rect: &RotatedRect, point: Vec2) -> bool {
-        let local_pt = rect.local_space(point);
-        let local_dim = rect.dimension * self.scale / 2.0;
+        let local = point - rect.center();
+        let x = rect.affine.transform_vector2(Vec2::new(0.5, 0.0));
+        let y = rect.affine.transform_vector2(Vec2::new(0.0, 0.5));
         match self.shape {
-            HitboxShape::Rect => local_pt.abs().cmple(local_dim.abs()).all(),
-            HitboxShape::Ellipse =>
-                local_pt.x.powi(2) / local_dim.x.powi(2) +
-                local_pt.y.powi(2) / local_dim.y.powi(2) <= 1.0
+            HitboxShape::Rect => {
+                local.dot(x).abs() < x.length_squared() && local.dot(y).abs() < y.length_squared()
+            },
+            HitboxShape::Ellipse => {
+                local.dot(x).abs() / x.length_squared() + local.dot(y).abs() / y.length_squared() <= 1.0
+            }
         }
     }
 }

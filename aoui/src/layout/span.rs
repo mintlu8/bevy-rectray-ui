@@ -1,7 +1,7 @@
-use crate::LayoutControl;
+use crate::{LayoutControl, Anchor};
 
 use super::util::*;
-use bevy::{prelude::Vec2, sprite::Anchor};
+use bevy::prelude::Vec2;
 
 pub(crate) fn compact(
     margin: Vec2,

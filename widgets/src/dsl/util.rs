@@ -49,6 +49,27 @@ pub enum AoUISpacialConsts {
     BottomToTop,
 }
 
+impl DslInto<bevy_aoui::Anchor> for AoUISpacialConsts {
+    fn dinto(self) -> bevy_aoui::Anchor {
+        match self {
+            AoUISpacialConsts::TopLeft => bevy_aoui::Anchor::TopLeft,
+            AoUISpacialConsts::TopCenter => bevy_aoui::Anchor::TopCenter,
+            AoUISpacialConsts::TopRight => bevy_aoui::Anchor::TopRight,
+            AoUISpacialConsts::CenterLeft => bevy_aoui::Anchor::CenterLeft,
+            AoUISpacialConsts::Center => bevy_aoui::Anchor::Center,
+            AoUISpacialConsts::CenterRight => bevy_aoui::Anchor::CenterRight,
+            AoUISpacialConsts::BottomLeft => bevy_aoui::Anchor::BottomLeft,
+            AoUISpacialConsts::BottomCenter => bevy_aoui::Anchor::BottomCenter,
+            AoUISpacialConsts::BottomRight => bevy_aoui::Anchor::BottomRight,
+            AoUISpacialConsts::Top => bevy_aoui::Anchor::TopCenter,
+            AoUISpacialConsts::Bottom => bevy_aoui::Anchor::BottomCenter,
+            AoUISpacialConsts::Left => bevy_aoui::Anchor::CenterLeft,
+            AoUISpacialConsts::Right => bevy_aoui::Anchor::CenterRight,
+            c => panic!("{:?} is not an Anchor.", c),
+        }
+    }
+}
+
 impl DslInto<Anchor> for AoUISpacialConsts {
     fn dinto(self) -> Anchor {
         match self {

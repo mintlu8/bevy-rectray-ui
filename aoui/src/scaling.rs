@@ -142,6 +142,14 @@ impl Size2 {
         (self.x, self.y)
     }
 
+    /// Obtains this struct's value if units are pixels.
+    pub fn get_pixels(&self) -> Option<Vec2> {
+        match (self.x, self.y) {
+            (SizeUnit::Pixels, SizeUnit::Pixels) => Some(self.raw),
+            _ => None,
+        }
+    }
+
     /// Obtains this struct's underlying value.
     /// 
     /// The unit and meaning of this value depends on the use case.

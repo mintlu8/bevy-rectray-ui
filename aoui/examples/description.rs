@@ -1,5 +1,5 @@
 use bevy_aoui::{*, bundles::*};
-use bevy::{prelude::*, sprite::Anchor, text::Text2dBounds};
+use bevy::{prelude::*, text::Text2dBounds};
 
 pub fn main() {
     App::new()
@@ -23,7 +23,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let textbox = commands.spawn((AoUISpriteBundle {
         transform: Transform2D::UNIT,
         sprite: Sprite { 
-            anchor: Anchor::Center,
+            anchor: Anchor::Center.into(),
             color: Color::DARK_GRAY,
             ..Default::default()
         },

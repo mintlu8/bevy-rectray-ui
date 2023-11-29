@@ -22,6 +22,11 @@ bevy_prototype_lyon = "^0.10.0"
 colorthis = {version = "^0.1.1", features=["compact"]}
 serde = "^1"
 postcard = {version = "^1", default-features = false, features = ["use-std"]}
-string_iter = "^0.1.0"
+string_iter = "^0.1"
 tlbf = "^0.2"
+interpolation = "^0.3"
+
+[dev-dependencies]
+bevy = "^0.12"
+
 

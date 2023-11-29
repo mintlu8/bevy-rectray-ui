@@ -2,6 +2,7 @@
 pub mod shape;
 pub mod schedule;
 pub mod inputbox;
+pub mod drag;
 mod button;
 use bevy::{render::color::Color, ecs::component::Component};
 

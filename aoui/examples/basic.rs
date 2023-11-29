@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy_aoui::{*, bundles::*};
-use bevy::{prelude::*, sprite::Anchor};
+use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox, Ui}, EguiPlugin};
 
 pub fn main() {
@@ -29,7 +29,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             ..Default::default()
         },
         transform: Transform2D { 
-            center: Some(Anchor::Center),
+            center: Anchor::Center,
             anchor: Anchor::Center,
             ..Default::default()
         },
@@ -44,7 +44,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             ..Default::default()
         },
         transform: Transform2D { 
-            center: Some(Anchor::Center),
+            center: Anchor::Center,
             anchor: Anchor::Center,
             ..Default::default()
         },
@@ -54,59 +54,36 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     },A)).add_child(b);
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Anchor2 {
-    BottomLeft,
-    BottomCenter,
-    BottomRight,
-    CenterLeft,
-    Center,
-    CenterRight,
-    TopLeft,
-    TopCenter,
-    TopRight,
-}
 
 fn anchor_ui(ui: &mut Ui, anchor: &mut Anchor, name: &str) {
-    let mut anc = match anchor {
-        Anchor::BottomLeft => Anchor2::BottomLeft,
-        Anchor::BottomCenter => Anchor2::BottomCenter,
-        Anchor::BottomRight => Anchor2::BottomRight,
-        Anchor::CenterLeft => Anchor2::CenterLeft,
-        Anchor::Center => Anchor2::Center,
-        Anchor::CenterRight => Anchor2::CenterRight,
-        Anchor::TopLeft => Anchor2::TopLeft,
-        Anchor::TopCenter => Anchor2::TopCenter,
-        Anchor::TopRight => Anchor2::TopRight,
-        Anchor::Custom(_) => unreachable!(),
-    };
-
+    let mut anc = anchor.str_name();
     ComboBox::from_label(name)
         .selected_text(format!("{:?}", anc))
         .show_ui(ui, |ui| {
-            ui.selectable_value(&mut anc, Anchor2::BottomLeft, "BottomLeft");
-            ui.selectable_value(&mut anc, Anchor2::BottomCenter, "BottomCenter");
-            ui.selectable_value(&mut anc, Anchor2::BottomRight, "BottomRight");
-            ui.selectable_value(&mut anc, Anchor2::CenterLeft, "CenterLeft");
-            ui.selectable_value(&mut anc, Anchor2::Center, "Center");
-            ui.selectable_value(&mut anc, Anchor2::CenterRight, "CenterRight");
-            ui.selectable_value(&mut anc, Anchor2::TopLeft, "TopLeft");
-            ui.selectable_value(&mut anc, Anchor2::TopCenter, "TopCenter");
-            ui.selectable_value(&mut anc, Anchor2::TopRight, "TopRight");
+            ui.selectable_value(&mut anc, "BottomLeft", "BottomLeft");
+            ui.selectable_value(&mut anc, "BottomCenter", "BottomCenter");
+            ui.selectable_value(&mut anc, "BottomRight", "BottomRight");
+            ui.selectable_value(&mut anc, "CenterLeft", "CenterLeft");
+            ui.selectable_value(&mut anc, "Center", "Center");
+            ui.selectable_value(&mut anc, "CenterRight", "CenterRight");
+            ui.selectable_value(&mut anc, "TopLeft", "TopLeft");
+            ui.selectable_value(&mut anc, "TopCenter", "TopCenter");
+            ui.selectable_value(&mut anc, "TopRight", "TopRight");
         }
     );
 
     
     *anchor = match anc {
-        Anchor2::BottomLeft => Anchor::BottomLeft,
-        Anchor2::BottomCenter =>  Anchor::BottomCenter,
-        Anchor2::BottomRight => Anchor::BottomRight,
-        Anchor2::CenterLeft => Anchor::CenterLeft,
-        Anchor2::Center => Anchor::Center,
-        Anchor2::CenterRight => Anchor::CenterRight,
-        Anchor2::TopLeft => Anchor::TopLeft,
-        Anchor2::TopCenter => Anchor::TopCenter,
-        Anchor2::TopRight => Anchor::TopRight,
+        "BottomLeft" => Anchor::BottomLeft,
+        "BottomCenter" =>  Anchor::BottomCenter,
+        "BottomRight" => Anchor::BottomRight,
+        "CenterLeft" => Anchor::CenterLeft,
+        "Center" => Anchor::Center,
+        "CenterRight" => Anchor::CenterRight,
+        "TopLeft" => Anchor::TopLeft,
+        "TopCenter" => Anchor::TopCenter,
+        "TopRight" => Anchor::TopRight,
+        _ => unreachable!()
     };
 }
 
@@ -120,7 +97,7 @@ pub fn egui_window(mut ctx: EguiContexts,
     egui::Window::new("Console").show(ctx.ctx_mut(), |ui| {
         ui.label("Root Entity");
         anchor_ui(ui, &mut root.anchor, "Anchor");
-        anchor_ui(ui, &mut root.center.as_mut().unwrap(), "Center");
+        anchor_ui(ui, &mut root.center, "Center");
         ui.add(Slider::new(&mut root.offset.raw_mut().x, -400.0..=400.0).text("Offset X"));
         ui.add(Slider::new(&mut root.offset.raw_mut().y, -400.0..=400.0).text("Offset Y"));
         ui.add(Slider::new(&mut root_dim.raw_mut().x, 0.0..=600.0).text("Dimension X"));
@@ -130,7 +107,7 @@ pub fn egui_window(mut ctx: EguiContexts,
         ui.add(Slider::new(&mut root.scale.y, 0.0..=10.0).text("Scale Y"));
         ui.label("Child Entity");
         anchor_ui(ui, &mut child.anchor, "Child Anchor");
-        anchor_ui(ui, &mut child.center.as_mut().unwrap(), "Child Center");
+        anchor_ui(ui, &mut child.center, "Child Center");
         ui.add(Slider::new(&mut child.offset.raw_mut().x, -400.0..=400.0).text("Offset X"));
         ui.add(Slider::new(&mut child.offset.raw_mut().y, -400.0..=400.0).text("Offset Y"));
         ui.add(Slider::new(&mut child_dim.raw_mut().x, 0.0..=600.0).text("Dimension X"));
@@ -140,7 +117,7 @@ pub fn egui_window(mut ctx: EguiContexts,
         ui.add(Slider::new(&mut child.scale.y, 0.0..=10.0).text("Scale Y"));
         if ui.button("Reset Parent").clicked() {
             root.anchor = Anchor::Center;
-            root.center = Some(Anchor::Center);
+            root.center = Anchor::Center;
             root.offset = Size2::ZERO;
             root.rotation = 0.0;
             root.scale = Vec2::ONE;
@@ -148,7 +125,7 @@ pub fn egui_window(mut ctx: EguiContexts,
         }
         if ui.button("Reset Child").clicked() {
             child.anchor = Anchor::Center;
-            child.center = Some(Anchor::Center);
+            child.center = Anchor::Center;
             child.offset = Size2::ZERO;
             child.rotation = 0.0;
             child.scale = Vec2::ONE;

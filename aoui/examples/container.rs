@@ -4,7 +4,7 @@ use std::f32::consts::PI;
 
 use bevy_aoui::{*, bundles::*};
 use bevy_egui::{self, EguiContexts, egui::{self, ComboBox, Grid, Slider}};
-use bevy::{prelude::*, sprite::Anchor};
+use bevy::prelude::*;
 use rand::Rng;
 
 pub fn main() {
@@ -31,7 +31,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let container = commands.spawn((AoUISpriteBundle {
         sprite: Sprite {
             color: Color::rgb_linear(0.8, 0.8, 0.8),
-            anchor: Anchor::Center,
             ..Default::default()
         },
         dimension: Dimension::INHERIT,
@@ -47,7 +46,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     commands.spawn((AoUISpriteBundle {
         sprite: Sprite {
             color: Color::WHITE,
-            anchor: Anchor::Center,
             ..Default::default()
         },
         dimension: Dimension { 
@@ -118,18 +116,7 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
         ui.add(Slider::new(x, 0.0..=4.0).text("scale x"));
         ui.add(Slider::new(y, 0.0..=4.0).text("scale y"));
 
-        let mut anc = match transform2.anchor {
-            Anchor::BottomLeft => "BottomLeft",
-            Anchor::BottomCenter => "BottomCenter",
-            Anchor::BottomRight => "BottomRight",
-            Anchor::CenterLeft => "CenterLeft",
-            Anchor::Center => "Center",
-            Anchor::CenterRight => "CenterRight",
-            Anchor::TopLeft => "TopLeft",
-            Anchor::TopCenter => "TopCenter",
-            Anchor::TopRight => "TopRight",
-            Anchor::Custom(_) => unreachable!(),
-        };
+        let mut anc = transform2.anchor.str_name();
 
         ComboBox::from_label("Anchor")
             .selected_text(anc)
