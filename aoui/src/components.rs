@@ -208,9 +208,9 @@ pub struct Transform2D{
     pub offset: Size2,
     /// Z depth, by default, this is `parent_z + z + eps * 8`
     pub z: f32,
-    /// Rotation around [`center`].
+    /// Rotation around `center`.
     pub rotation: f32,
-    /// Scaling around [`center`].
+    /// Scaling around `center`.
     pub scale: Vec2,
 }
 

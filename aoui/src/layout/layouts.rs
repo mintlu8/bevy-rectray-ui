@@ -119,7 +119,7 @@ pub enum Layout {
         alignment: Alignment,
         /// if specified, adjust cell size to fill the grid without changing cell count.
         /// 
-        /// This only affects [`Cell::Sized`] mode.
+        /// This only affects [`Cells::Sized`] mode.
         stretch: bool,
     },
     /// A 2D grid with unevenly subdivided cells.
