@@ -1,6 +1,6 @@
 [package]
 name = "bevy_aoui_widgets"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 authors = ["Mincong Lu <mintlux667@gmail.com>"]
@@ -17,7 +17,7 @@ keywords = ["bevy", "ui", "widgets"]
 ab_glyph = "^0.2.23"
 arboard = { version = "^3.2", default-features = false }
 bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite", "bevy_text"] }
-bevy_aoui = {version = "^0.1", path = "../aoui"}
+bevy_aoui = {version = "^0.2", path = "../aoui"}
 bevy_prototype_lyon = "^0.10.0"
 colorthis = {version = "^0.1.1", features=["compact"]}
 serde = "^1"
