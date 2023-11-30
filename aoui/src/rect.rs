@@ -84,15 +84,15 @@ impl Mul<Anchor> for Vec2 {
     }
 }
 
-impl Into<bevy::sprite::Anchor> for Anchor {
-    fn into(self) -> bevy::sprite::Anchor {
-        bevy::sprite::Anchor::Custom(self.0)
+impl From<Anchor> for bevy::sprite::Anchor {
+    fn from(val: Anchor) -> Self {
+        bevy::sprite::Anchor::Custom(val.0)
     }
 }
 
-impl Into<bevy::sprite::Anchor> for &Anchor {
-    fn into(self) -> bevy::sprite::Anchor {
-        bevy::sprite::Anchor::Custom(self.0)
+impl From<&Anchor> for bevy::sprite::Anchor {
+    fn from(val: &Anchor) -> Self {
+        bevy::sprite::Anchor::Custom(val.0)
     }
 }
 

@@ -81,7 +81,7 @@ impl Shapes {
 
 pub fn sync_shape_size(mut query: Query<(&Transform2D, &Dimension, &mut ShapeDimension)>) {
     for (transform, dimension, mut shape) in query.iter_mut() {
-        if &transform.anchor != &shape.as_ref().anchor {
+        if transform.anchor != shape.as_ref().anchor {
             shape.anchor = transform.anchor
         }
 

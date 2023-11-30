@@ -93,6 +93,7 @@ impl DragFactor {
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn drag_start(
     mut query: Query<(&CursorAction, &Transform2D, &mut Draggable, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>)>
 ) {
@@ -147,15 +148,12 @@ pub fn drag_end(
         if !action.is(EventFlags::DragEnd) {
             continue;
         }
-        match snap.drag_start.take() {
-            Some(orig) => {
-                if let Some(inter) = &mut interpolate {
-                    inter.interpolate_to(orig)
-                } else {
-                    transform.offset.edit_raw(|x| *x = orig)
-                }
-            },
-            None => (),
+        if let Some(orig) = snap.drag_start.take() {
+            if let Some(inter) = &mut interpolate {
+                inter.interpolate_to(orig)
+            } else {
+                transform.offset.edit_raw(|x| *x = orig)
+            }
         }
     }
 }

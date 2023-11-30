@@ -38,7 +38,7 @@ impl<T: Interpolation, const N: usize> IntoInterpolate<T> for [(T::Data, f32); N
 
 impl<T: Interpolation> IntoInterpolate<T> for &[(T::Data, f32)] {
     fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]> {
-        self.into_iter().copied().collect()
+        self.iter().copied().collect()
     }
 }
 
