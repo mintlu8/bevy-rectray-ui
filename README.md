@@ -1,5 +1,8 @@
 # Bevy AoUI
 
+[![Crates.io](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
+[![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
+
 A light-weight anchor-offset based 2D sprite layout system for the bevy engine.
 
 Bevy AoUI provides a light-weight rectangular anchor-offset based 2D sprite layout,
@@ -199,3 +202,10 @@ Performance related pull requests and suggestions are welcome.
 | bevy | bevy_aoui | bevy_aoui_widgets |
 | -- | -- | -- |
 | 0.12 | 0.1 | 0.1 |
+
+## TODOs
+
+- [ ] Scissor rect, very important for scrolling support.
+- [ ] Official TextureAtlasSprite widget.
+- [ ] Rich text implementation. (String to entities as children of the `Paragraph` layout.)
+- [ ] Atlas/skeletal animation asset importer.
