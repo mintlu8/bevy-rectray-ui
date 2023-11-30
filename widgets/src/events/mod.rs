@@ -5,11 +5,15 @@ mod systems;
 mod state;
 mod event;
 mod oneshot;
+mod wheel;
+mod cursor;
 
 pub use event::*;
 pub use state::*;
 use systems::*;
 pub use oneshot::*;
+pub use wheel::MouseWheelAction;
+pub use cursor::CustomCursor;
 
 /// Marker component for AoUI's camera, optional.
 /// 
@@ -35,7 +39,9 @@ impl bevy::prelude::Plugin for AoUICursorEventsPlugin {
             .configure_sets(PreUpdate, AoUIEventSet.after(InputSystem))
             .configure_sets(PostUpdate, AoUIEventCleanupSet)
             .add_systems(PreUpdate, mouse_button_input.in_set(AoUIEventSet))
+            .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AoUIEventSet))
             .add_systems(PostUpdate, remove_focus.in_set(AoUIEventCleanupSet))
+            .add_systems(Update, cursor::custom_cursor_controller)
             .add_systems(Update, (
                 call_oneshot::<EventFlags>,
                 call_oneshot::<Click>,
@@ -57,6 +63,7 @@ impl bevy::prelude::Plugin for AoUICursorEventsPlugin {
                 call_oneshot::<RightPressed>,
                 call_oneshot::<RightDrag>,
                 call_oneshot::<OnSubmit>,
+                lose_focus_detection,
             ))
         ;
     }

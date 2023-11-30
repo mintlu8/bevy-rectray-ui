@@ -37,6 +37,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             icon: CursorIcon::Hand,
         },
         extra: DragSnapBack,
-        extra: Interpolate::<Offset>::new(EaseFunction::BounceOut, 4.0),
+        extra: Interpolate::<Offset>::ease(EaseFunction::BounceOut, Vec2::ZERO, 4.0),
     });
 }

@@ -6,7 +6,7 @@ use bevy::transform::systems::{propagate_transforms, sync_simple_transforms};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::{compute::*, Opacity};
+use crate::compute::*;
 use crate::{RotatedRect, BuildGlobal, BuildTransform, Dimension, AoUIREM, DimensionSize, Transform2D};
 
 /// Fetch info for the tree, happens before `AoUITreeUpdate`.
@@ -164,20 +164,6 @@ pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimensio
 pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFontSizeSync>>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
         sp.sections.iter_mut().for_each(|x| x.style.font_size = dimension.em)
-    })
-}
-
-/// Copy opacity as text alpha
-pub fn sync_opacity_text(mut query: Query<(&mut Text, &Opacity), Without<OptOutFontSizeSync>>) {
-    query.par_iter_mut().for_each(|(mut sp, opacity)| {
-        sp.sections.iter_mut().for_each(|x| x.style.color = x.style.color.with_a(opacity.computed))
-    })
-}
-
-/// Copy opacity as sprite alpha
-pub fn sync_opacity_sprite(mut query: Query<(&mut Sprite, &Opacity), Without<OptOutFontSizeSync>>) {
-    query.par_iter_mut().for_each(|(mut sp, opacity)| {
-        sp.color = sp.color.with_a(opacity.computed)
     })
 }
 

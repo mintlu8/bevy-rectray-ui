@@ -6,6 +6,7 @@ use bevy::window::{Window, PrimaryWindow, ReceivedCharacter};
 use bevy::text::{Text, Font};
 use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
 use bevy_aoui::{RotatedRect, Transform2D, Dimension, bundles::AoUITextBundle};
+use crate::dsl::prelude::{Interpolate, Offset};
 use crate::dto::Submit;
 use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction};
 use ab_glyph::Font as FontTrait;
@@ -284,8 +285,8 @@ pub fn update_inputbox_cursor(
     fonts: Res<Assets<Font>>,
     query: Query<(Entity, &InputBox, &Dimension, &Handle<Font>, &TextColor), (Changed<InputBox>, Without<InputBoxCursorArea>, Without<Text>)>,
     mut text: Query<(Entity, &Parent, Option<&Children>), (With<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>, Without<Text>)>,
-    mut bar: Query<(&Parent, &mut Transform2D, &mut Visibility), (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<Text>)>,
-    mut area: Query<(&Parent, &mut Transform2D, &mut Dimension, &mut Visibility), (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<Text>)>,
+    mut bar: Query<(&Parent, &mut Transform2D, Option<&mut Interpolate<Offset>>, &mut Visibility), (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<Text>)>,
+    mut area: Query<(&Parent, &mut Transform2D, &mut Dimension, Option<&mut Interpolate<Offset>>, Option<&mut Interpolate<Dimension>>, &mut Visibility), (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<Text>)>,
     mut letters: Query<(Entity, &mut Transform2D, &mut Dimension, &mut Text, &mut Visibility), (Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>
 ) {
     use ab_glyph::ScaleFont as FontTrait;
@@ -340,7 +341,7 @@ pub fn update_inputbox_cursor(
                 } else {
                     // fixing broken state makes little sense here.
                     warn!("Glyph entity invalidated in textbox, aborting.");
-                    return;
+                    continue;
                 }
             } else {
                 added.push(commands.spawn({
@@ -381,11 +382,15 @@ pub fn update_inputbox_cursor(
             for (.., mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 *vis = Visibility::Hidden;
             };
-            return;
+            continue;
         }
         if input_box.cursor_len == 0 {
-            for (_, mut transform, mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
-                transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
+            for (_, mut transform, mut interpolate, mut vis, ) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
+                if let Some(interpolate) = &mut interpolate {
+                    interpolate.interpolate_to(Vec2::new((start + end) / 2.0, transform.offset.raw().y));
+                } else {
+                    transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
+                }
                 *vis = Visibility::Inherited;
             };
             for (.., mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
@@ -395,9 +400,17 @@ pub fn update_inputbox_cursor(
             for (.., mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 *vis = Visibility::Hidden;
             };
-            for (.., mut transform, mut dimension, mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
-                transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
-                dimension.edit_raw(|v| v.x = end - start);
+            for (.., mut transform, mut dimension, mut transform_inter, mut dim_inter, mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
+                if let Some(interpolate) = &mut transform_inter {
+                    interpolate.interpolate_to(Vec2::new((start + end) / 2.0, transform.offset.raw().y));
+                } else {
+                    transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
+                }
+                if let Some(interpolate) = &mut dim_inter {
+                    interpolate.interpolate_to(Vec2::new(end - start, dimension.raw().y));
+                } else {
+                    dimension.edit_raw(|v| v.x = end - start);
+                }
                 *vis = Visibility::Inherited;
             };
 

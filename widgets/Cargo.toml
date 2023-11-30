@@ -25,6 +25,8 @@ postcard = {version = "^1", default-features = false, features = ["use-std"]}
 string_iter = "^0.1"
 tlbf = "^0.2"
 interpolation = "^0.3"
+smallvec = { version = "^1.11", features = ["const_new"] }
+generic_static = "^0.2"
 
 [dev-dependencies]
 bevy = "^0.12"

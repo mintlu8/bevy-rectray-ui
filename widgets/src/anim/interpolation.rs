@@ -1,84 +1,212 @@
 use std::ops::{Add, Mul};
 
-use bevy::{math::Vec2, render::color::Color, ecs::{component::Component, system::{Query, Res}}, time::Time, sprite::Sprite};
+use bevy::{math::{Vec2, Vec4}, render::color::Color, ecs::{component::Component, system::{Query, Res}}, time::Time, sprite::Sprite, text::Text};
 use bevy_aoui::{Transform2D, Dimension, Opacity};
 use interpolation::{EaseFunction, Ease};
+use smallvec::SmallVec;
 
-#[derive(Debug, Component)]
+#[derive(Debug, Clone, Component)]
 #[component(storage="SparseSet")]
-/// A CSS like easing animation executor. 
-/// 
-/// To use, instead of directy editing `Transform2D`, call `register`.
+
+/// AoUI's smart tweener that manages an external value.
 pub struct Interpolate<T: Interpolation>{
-    curve: EaseFunction,
-    range: Option<(T::Data, T::Data)>,
+    curve: Option<EaseFunction>,
+    /// Interpolates through these keyframes.
+    /// 
+    /// Invariant: this field must have at least 1 value.
+    range: SmallVec<[(T::Data, f32); 1]>,
     current: f32,
     time: f32,
+    default_time: f32,
+    repeat: bool,
 }
 
-impl<T: Interpolation> Default for Interpolate<T> {
-    fn default() -> Self {
-        Self { 
-            curve: EaseFunction::QuarticInOut, 
-            range: None, 
-            current: 0.0, 
-            time: 0.0,
-        }
+pub trait IntoInterpolate<T: Interpolation> {
+    fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]>;
+}
+impl<T: Interpolation> IntoInterpolate<T> for (T::Data, T::Data) {
+    fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]> {
+        [(self.0, 0.0), (self.1, 1.0)].into_iter().collect()
     }
 }
 
+impl<T: Interpolation, const N: usize> IntoInterpolate<T> for [(T::Data, f32); N] {
+    fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]> {
+        self.into_iter().collect()
+    }
+}
+
+impl<T: Interpolation> IntoInterpolate<T> for &[(T::Data, f32)] {
+    fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]> {
+        self.into_iter().copied().collect()
+    }
+}
+
+impl<T: Interpolation> IntoInterpolate<T> for SmallVec<[(T::Data, f32); 1]> {
+    fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]> {
+        self
+    }
+}
 
 impl<T: Interpolation> Interpolate<T> {
 
-    pub fn new(curve: EaseFunction, time: f32) -> Self {
+    pub const fn linear(position: T::Data, time: f32) -> Self {
+        Interpolate {
+            curve: None,
+            time: 0.0,
+            default_time: time,
+            range: SmallVec::from_const([(position, 0.0)]),
+            current: 0.0,
+            repeat: false,
+        }
+    }
+
+    pub const fn ease(curve: EaseFunction, position: T::Data, time: f32) -> Self {
+        Interpolate {
+            curve: Some(curve),
+            time: 0.0,
+            default_time: time,
+            range: SmallVec::from_const([(position, 0.0)]),
+            current: 0.0,
+            repeat: false,
+        }
+    }
+
+    pub fn repeat(curve: Option<EaseFunction>, positions: impl IntoInterpolate<T>, time: f32) -> Self {
         Interpolate {
             curve,
             time,
-            range: None,
-            current: 0.0
+            default_time: time,
+            range: positions.into_interpolate(),
+            current: 0.0,
+            repeat: true,
         }
     }
 
-    pub fn get(&self) -> Option<T::Data> {
-        let (from, to) = self.range?;
-        if self.time <= 0.0 {
-            return Some(to);
+    pub fn get(&self) -> T::Data {
+        if self.range.len() == 1 || self.time <= 0.0 || (!self.repeat && self.current >= self.time) {
+            return self.range.last().expect("Interpolate has no value, this is a bug.").0;
         }
-        let p = (self.current / self.time).clamp(0.0, 1.0).calc(self.curve);
-        Some(from * (1.0 - p) + to * p)
+        if self.current <= 0.0 {
+            return self.range.first().unwrap().0;
+        }
+        let p = if self.repeat {
+            let v = (self.current / self.time).rem_euclid(2.0);
+            1.0 - (1.0 - v).abs()
+        } else {
+            (self.current / self.time).clamp(0.0, 1.0)
+        };
+        let p = match self.curve {
+            Some(curve) => p.calc(curve),
+            None => p,
+        };
+        let (mut i0, mut f0) = self.range[0];
+        for (i1, f1) in self.range.iter().skip(1).copied() {
+            if p < f1 {
+                let a = p - f0;
+                let len = f1 - f0;
+                return i0 * ((len - a) / len) + i1 * (a / len);
+            }
+            (i0, f0) = (i1, f1);
+        }
+        self.range.last().unwrap().0
+    }
+
+    pub fn target(&self) -> T::Data {
+        self.range.last().expect("Interpolate has no value, this is a bug.").0
     }
 
     /// End animation and obtain the target.
-    pub fn take_target(&mut self) -> Option<T::Data> {
-        self.range.take().map(|(_, x)| x)
+    pub fn take_target(&mut self) -> T::Data {
+        let pos = self.get();
+        let result = self.target();
+        self.range = SmallVec::from_const([(pos, 0.0)]);
+        result
     }
 
     /// Returns true on the last frame.
-    pub fn step(&mut self, time: f32) -> bool {
-        if self.range.is_some() {
-            self.current += time;
-            if self.current > self.time {
-                self.range = None;
-                return true
-            }
+    pub fn update(&mut self, time: f32) {
+        self.current += time;
+    }
+
+    pub fn set(&mut self, pos: T::Data) {
+        self.range = SmallVec::from_const([(pos, 0.0)]);
+        self.current = 0.0;
+        self.time = self.default_time;
+    }
+    
+    /// Rules: if range is the same, ignore
+    /// 
+    /// If is already moving, use current position as `from`
+    pub fn interpolate_to(&mut self, to: T::Data) {
+        if self.target() != to {
+            self.range = [(self.get(), 0.0), (to, 1.0)].into_iter().collect();
+            self.current = 0.0;
+            self.time = self.default_time;
         }
-        false
     }
 
-    pub fn register(&mut self, from: T::Data, to: T::Data) {
-        self.range = Some((from, to));
-        self.current = 0.0;
+    /// `reverse` if to is start, otherwise call `interpolate_to`.
+    pub fn interpolate_to_or_reverse(&mut self, to: T::Data) {
+        if self.range.len() > 1 && self.range[0].0 == to {
+            self.reverse()
+        } else {
+            self.interpolate_to(to)
+        }
     }
 
-    pub fn register_with_time(&mut self, from: T::Data, to: T::Data, time: f32) {
-        self.range = Some((from, to));
-        self.current = 0.0;
+    /// Reverse the current curve.
+    pub fn reverse(&mut self) {
+        self.range.reverse();
+        self.range.iter_mut().for_each(|(_, x)| *x = 1.0 - *x);
+        self.current = (self.time - self.current).clamp(0.0, self.time);
+    }
+
+
+    /// Rules: 
+    /// 
+    /// If target is the same, always ignore.
+    /// 
+    /// If not, always replaces the first value with the current position.
+    pub fn interpolate(&mut self, range: impl IntoInterpolate<T>) {
+        let mut range = range.into_interpolate();
+        if self.range.last() != range.last() {
+            let pos = self.get();
+            range[0] = (pos, 0.0);
+            self.range = range;
+            self.current = 0.0;
+            self.time = self.default_time;
+        }
+    }
+
+    /// `reverse` if range end is the start of current animation
+    /// otherwise call `interpolate`.
+    pub fn interpolate_or_reverse(&mut self, range: impl IntoInterpolate<T>) {
+        let range = range.into_interpolate();
+        if self.range.len() > 1 && range.last() == self.range.first() {
+            self.reverse()
+        } else {
+            self.interpolate(range)
+        }
+    }
+    
+    /// Rules: if range is the same, ignore
+    /// 
+    /// If is already moving, use current position as `from`
+    pub fn interpolate_with_time(&mut self, range: impl IntoInterpolate<T>, time: f32) {
+        let mut range = range.into_interpolate();
+        if self.range.last() != range.last() {
+            let pos = self.get();
+            range[0] = (pos, 0.0);
+            self.range = range;
+            self.current = 0.0;
+        }
         self.time = time;
     }
 }
 
 pub trait Interpolation {
-    type Data: Add<Self::Data, Output = Self::Data> + Mul<f32, Output = Self::Data> + Copy;
+    type Data: Add<Self::Data, Output = Self::Data> + Mul<f32, Output = Self::Data> + Copy + PartialEq;
 }
 
 macro_rules! impl_interpolation {
@@ -100,7 +228,7 @@ impl Interpolation for Dimension {
 }
 
 impl Interpolation for Color {
-    type Data = Color;
+    type Data = Vec4;
 }
 
 impl Interpolation for Opacity {
@@ -111,8 +239,7 @@ pub fn interpolate_offset(
     mut query: Query<(&mut Transform2D, &Interpolate<Offset>)>
 ) {
     for (mut transform, interpolate) in query.iter_mut() {
-        let Some(v) = interpolate.get() else {continue};
-        transform.offset.edit_raw(|x| *x = v);
+        transform.offset.edit_raw(|x| *x = interpolate.get());
     }
 }
 
@@ -120,8 +247,7 @@ pub fn interpolate_rotation(
     mut query: Query<(&mut Transform2D, &Interpolate<Rotation>)>
 ) {
     for (mut transform, interpolate) in query.iter_mut() {
-        let Some(v) = interpolate.get() else {continue};
-        transform.rotation = v;
+        transform.rotation = interpolate.get();
     }
 }
 
@@ -129,8 +255,7 @@ pub fn interpolate_scale(
     mut query: Query<(&mut Transform2D, &Interpolate<Scale>)>
 ) {
     for (mut transform, interpolate) in query.iter_mut() {
-        let Some(v) = interpolate.get() else {continue};
-        transform.scale = v;
+        transform.scale = interpolate.get();
     }
 }
 
@@ -139,18 +264,23 @@ pub fn interpolate_dimension(
 ) {
     for (mut dimension, interpolate) in query.iter_mut() {
         if dimension.is_owned() {
-            let Some(v) = interpolate.get() else {continue};
-            dimension.edit_raw(|x| *x = v);
+            dimension.edit_raw(|x| *x = interpolate.get());
         }
     }
 }
 
 pub fn interpolate_color(
-    mut query: Query<(&mut Sprite, &Interpolate<Color>)>
+    mut sp_query: Query<(&mut Sprite, &Interpolate<Color>)>,
+    mut text_query: Query<(&mut Text, &Interpolate<Color>)>
 ) {
-    for (mut sprite, interpolate) in query.iter_mut() {
-        let Some(v) = interpolate.get() else {continue};
-        sprite.color = v;
+    for (mut sprite, interpolate) in sp_query.iter_mut() {
+        sprite.color = interpolate.get().into();
+    }
+    for (mut text, interpolate) in text_query.iter_mut() {
+        let color = interpolate.get();
+        for section in text.sections.iter_mut() {
+            section.style.color = color.into();
+        }
     }
 }
 
@@ -158,8 +288,7 @@ pub fn interpolate_opacity(
     mut query: Query<(&mut Opacity, &Interpolate<Opacity>)>
 ) {
     for (mut opacity, interpolate) in query.iter_mut() {
-        let Some(v) = interpolate.get() else {continue};
-        opacity.opactity = v;
+        opacity.opactity = interpolate.get();
     }
 }
 
@@ -174,21 +303,21 @@ pub fn update_interpolate(
 ) {
     let time = time.delta_seconds();
     for mut item in query0.iter_mut() {
-        item.step(time);
+        item.update(time);
     }
     for mut item in query1.iter_mut() {
-        item.step(time);
+        item.update(time);
     }
     for mut item in query2.iter_mut() {
-        item.step(time);
+        item.update(time);
     }
     for mut item in query3.iter_mut() {
-        item.step(time);
+        item.update(time);
     }
     for mut item in query4.iter_mut() {
-        item.step(time);
+        item.update(time);
     }
     for mut item in query5.iter_mut() {
-        item.step(time);
+        item.update(time);
     }
 }

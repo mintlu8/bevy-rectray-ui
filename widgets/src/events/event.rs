@@ -91,3 +91,10 @@ tlbf::tlbf!(
         MouseWheel,
     }
 );
+
+
+impl EventFlags {
+    pub const fn const_or(self, other: EventFlags) -> Self{
+        Self(self.0 | other.0)
+    }
+}

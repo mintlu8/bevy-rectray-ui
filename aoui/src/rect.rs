@@ -108,7 +108,7 @@ pub struct RotatedRect{
     pub rotation: f32,
     /// Z depth of the Rect.
     pub z: f32,
-    /// Scale of the rect, already baked in dimension.
+    /// Scale of the rect.
     pub scale: Vec2,
 }
 
@@ -173,7 +173,7 @@ impl RotatedRect {
         self.affine.translation
     }
 
-    /// convert a screen sapce point to local space, centered on `Center`.
+    /// convert a screen space point to local space, centered on `Center`.
     #[inline]
     pub fn local_space(&self, position: Vec2) -> Vec2 {
         Vec2::from_angle(-self.rotation).rotate(position - self.center())

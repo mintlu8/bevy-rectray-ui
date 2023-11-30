@@ -105,7 +105,7 @@ pub fn drag_start(
                 drag.set(pixels);
                 if let Some(snap) = &mut snap {
                     if let Some(inter) = &mut interpolate {
-                        snap.set(inter.take_target().unwrap_or(pixels));
+                        snap.set(inter.take_target());
                     } else {
                         snap.set(pixels);
                     }
@@ -119,19 +119,23 @@ pub fn drag_start(
 
 pub fn dragging(
     state: Res<CursorState>,
-    mut query: Query<(&CursorFocus, &Draggable, &mut Transform2D,)>
+    mut query: Query<(&CursorFocus, &Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>)>
 ) {
     let delta = state.cursor_position() - state.down_position();
-    for (action, drag, mut transform) in query.iter_mut() {
+    for (action, drag, mut transform, interpolate) in query.iter_mut() {
         if !action.intersects(EventFlags::Drag | EventFlags::MidDrag | EventFlags:: RightDrag) {
             continue;
         }
-        transform.offset.edit_raw(|x| *x = drag.last_drag_start() + {
+        let pos = drag.last_drag_start() + {
             Vec2::new(
                 if drag.x {delta.x} else {0.0}, 
                 if drag.y {delta.y} else {0.0}, 
             )
-        })
+        };
+        transform.offset.edit_raw(|x| *x = pos);
+        if let Some(mut interpolate) = interpolate {
+            interpolate.set(pos)
+        }
     }
 }
 
@@ -146,7 +150,7 @@ pub fn drag_end(
         match snap.drag_start.take() {
             Some(orig) => {
                 if let Some(inter) = &mut interpolate {
-                    inter.register(transform.offset.raw(), orig)
+                    inter.interpolate_to(orig)
                 } else {
                     transform.offset.edit_raw(|x| *x = orig)
                 }

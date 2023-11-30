@@ -1,6 +1,6 @@
 use std::sync::OnceLock;
 
-use bevy::ecs::{system::{SystemId, Query, Commands}, component::Component};
+use bevy::ecs::{system::{SystemId, Query, Commands}, component::Component, removal_detection::RemovedComponents, query::Without};
 
 use crate::{events::{EventFlags, CursorAction, CursorFocus, ClickOutside, CursorClickOutside}, dto::Submit};
 
@@ -98,5 +98,20 @@ impl EventQuery for OnSubmit {
 
     fn validate(&self, _: &Self::Component) -> bool {
         true
+    }
+}
+
+/// Check if widget has lost focus (drag, hover, pressed).
+pub struct LoseFocus;
+
+pub fn lose_focus_detection(
+    mut commands: Commands,
+    mut removed: RemovedComponents<CursorFocus>,
+    actions: Query<&OneShot<LoseFocus>, Without<CursorFocus>>,
+) {
+    for action in actions.iter_many(removed.read()) {
+        if let Some(system) = action.cell.get() {
+            commands.run_system(*system)
+        }
     }
 }

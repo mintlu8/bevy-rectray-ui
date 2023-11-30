@@ -1,19 +1,22 @@
 #[doc(hidden)]
 #[macro_export]
-macro_rules! filter_children {
+macro_rules! inline_context {
     ($commands: tt [$($path: tt)*] [$($fields: tt)*]) => {
         $crate::meta_dsl!($commands [$($path)*] {$($fields)*} {} {} {})
     };
-    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident !, $($rest: tt)*) => {
-        $crate::filter_children!($commands [$($path)*] [
+
+    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*}) => {
+        $crate::inline_context!($commands [$($path)*] [
             $($out)*
             $field: $macro! (
-                $commands
+                $commands {
+                    $($expr)*
+                }
             )
-        ], $($rest)*)
+        ])
     };
-    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*}, $($rest: tt)*) => {
-        $crate::filter_children!($commands [$($path)*] [
+    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*} ,$($rest: tt)*) => {
+        $crate::inline_context!($commands [$($path)*] [
             $($out)*
             $field: $macro! (
                 $commands {
@@ -22,23 +25,12 @@ macro_rules! filter_children {
             ),
         ] $($rest)*)
     };
-
-    ($commands: tt [$($path: tt)*] [$($out: tt)*] child: $macro: ident ! {$($expr: tt)*}) => {
-        $crate::filter_children!($commands [$($path)*] [
-            $($out)*
-            child: $macro! (
-                $commands {
-                    $($expr)*
-                }
-            )
-        ])
-    };
     ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $head: expr, $($rest: tt)*) => {
-        $crate::filter_children!($commands [$($path)*] [$($out)* $field: $head,] $($rest)*)
+        $crate::inline_context!($commands [$($path)*] [$($out)* $field: $head,] $($rest)*)
     };
 
     ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $head: expr) => {
-        $crate::filter_children!($commands [$($path)*] [$($out)* $field: $head])
+        $crate::inline_context!($commands [$($path)*] [$($out)* $field: $head])
     };
 }
 
@@ -47,7 +39,7 @@ macro_rules! filter_children {
 macro_rules! meta_dsl {
 
     ($commands: tt [$($path: tt)*] {$($fields: tt)*} ) => {
-        $crate::filter_children!($commands [$($path)*] [] $($fields)*)
+        $crate::inline_context!($commands [$($path)*] [] $($fields)*)
     };
 
     ($commands: tt [$($path: tt)*]
@@ -177,6 +169,8 @@ macro_rules! widget_extension {
             pub anchor: ::bevy_aoui::Anchor,
             pub parent_anchor: Option<::bevy_aoui::Anchor>,
             pub center: Option<::bevy_aoui::Anchor>,
+            /// Propagated opacity
+            pub opacity: ::bevy_aoui::Opacity,
             pub visible: Option<bool>,
             pub offset: ::bevy_aoui::Size2,
             pub rotation: f32,
@@ -197,6 +191,7 @@ macro_rules! widget_extension {
                         bevy_aoui::bundles::AoUIBundle {
                             transform: $crate::transform2d!($this),
                             dimension: $crate::dimension!($this),
+                            opacity: $this.opacity,
                             vis: $this.visible.dinto(),
                             ..Default::default()
                         },

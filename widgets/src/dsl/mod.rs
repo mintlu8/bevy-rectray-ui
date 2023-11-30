@@ -79,11 +79,13 @@ pub trait AoUIWidget: Sized {
     fn spawn_with(self, commands: &mut Commands) -> Entity;
 }
 
-/// Construct a marker component by name.
+/// Construct marker components by name.
 #[macro_export]
 macro_rules! marker {
-    ($name:ident) => {
-        #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ::bevy::prelude::Component)]
-        struct $name;
+    ($($name:ident),* $(,)?) => {
+        $(
+            #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ::bevy::prelude::Component)]
+            struct $name;
+        )*
     };
 }

@@ -26,8 +26,11 @@ pub use crate::events::{
     Pressed as LeftPressed, Drag as LeftDrag,
     MidPressed, MidDrag,
     RightPressed, RightDrag,
-    OnSubmit
+    OnSubmit,
+    LoseFocus,
+    CustomCursor,
 };
+pub use bevy::window::CursorIcon;
 pub use crate::widgets::{
     PropagateFocus, DisplayIf, SetCursor
 };

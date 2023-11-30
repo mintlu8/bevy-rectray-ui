@@ -79,6 +79,8 @@ mod dto;
 pub use dto::Submit;
 use widgets::inputbox;
 
+#[doc(hidden)]
+pub use generic_static::StaticTypeMap;
 
 /// Plugin for both widgets and events.
 pub struct AoUIExtensionsPlugin;

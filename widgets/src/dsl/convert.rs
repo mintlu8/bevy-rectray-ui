@@ -1,5 +1,7 @@
 use bevy::{prelude::{Vec2, UVec2, IVec2, Rect}, sprite::Anchor, render::view::{VisibilityBundle, Visibility}};
-use bevy_aoui::Size2;
+use bevy_aoui::{Size2, Opacity};
+
+use super::OneOrTwo;
 
 
 pub trait DslInto<T> {
@@ -39,6 +41,18 @@ impl DslInto<f32> for i32 {
 impl DslInto<f32> for usize {
     fn dinto(self) -> f32 {
         self as f32
+    }
+}
+
+impl DslInto<Opacity> for f32 {
+    fn dinto(self) -> Opacity {
+        Opacity::new(self)
+    }
+}
+
+impl DslInto<Opacity> for bool {
+    fn dinto(self) -> Opacity {
+        Opacity::new(if self {1.0} else {0.0})
     }
 }
 
@@ -172,6 +186,7 @@ macro_rules! fvec2 {
 
 fvec2!(Vec2, x, y, Vec2 {x, y});
 fvec2!(Option<Vec2>, x, y, Some(Vec2 {x, y}));
+fvec2!(Option<OneOrTwo<Vec2>>, x, y, Some(OneOrTwo(Vec2 {x, y})));
 fvec2!(Size2, x, y, Size2::pixels(x, y));
 fvec2!(Option<Size2>, x, y, Some(Size2::pixels(x, y)));
 fvec2!(Anchor, x, y, Anchor::Custom(Vec2 { x, y }));
