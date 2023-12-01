@@ -15,8 +15,7 @@
 //! 
 //! Tabs are not supported.
 //! 
-//! `N` consecutive newlines as rendered as `N-1` newlines.
-//! use {br} for a newline.
+//! `N` consecutive newlines will be rendered as `N-1` newlines.
 //! 
 //! # Control Codes
 //! 
