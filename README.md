@@ -15,6 +15,9 @@ anchor-offset system and high level ergonomics through its layout system.
 
 Before you start you should check out `bevy_aoui_widgets`'s examples if you like shapes or DSL.
 
+[![Widgets](https://img.shields.io/crates/v/bevy_aoui_widgets.svg)](https://crates.io/crates/bevy_aoui_widgets)
+[![Docs](https://docs.rs/bevy_aoui_widgets/badge.svg)](https://docs.rs/bevy_aoui_widgets/latest/bevy_aoui_widgets/)
+
 First add the AoUI Plugin:
 
 ```rust
