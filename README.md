@@ -204,7 +204,7 @@ Performance related pull requests and suggestions are welcome.
 
 | bevy | bevy_aoui | bevy_aoui_widgets |
 | -- | -- | -- |
-| 0.12 | 0.1 | 0.1 |
+| 0.12 | 0.1-latest | 0.1-latest |
 
 ## TODOs
 
