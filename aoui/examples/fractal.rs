@@ -13,7 +13,7 @@ pub fn main() {
             ..Default::default()
         }))
         .add_plugins(LogDiagnosticsPlugin::default())
-        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
         .add_systems(Update, egui_window)
         .add_plugins(EguiPlugin)
@@ -41,7 +41,7 @@ pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, enitity: 
                 ..Default::default()
             },
             transform: Transform2D { 
-                anchor: anchor.clone(),
+                anchor: *anchor,
                 ..Default::default()
             },
             texture: texture.clone(),

@@ -5,7 +5,7 @@ use bevy::{prelude::*, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPl
 use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox}, EguiPlugin};
 
 
-static LOREM_IPSUM: &'static str = 
+static LOREM_IPSUM: &str = 
 r#"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut condimentum nunc luctus erat tristique facilisis. Nullam nulla dolor, suscipit id feugiat in, vestibulum ut purus. Etiam erat magna, suscipit at felis nec, molestie dignissim tellus. Nullam id eros vitae nisl fermentum accumsan. Donec vitae ante ut dolor accumsan pellentesque eu a sapien. Vivamus dapibus augue lectus, quis hendrerit dui sollicitudin non. Cras enim ante, fermentum eu lectus a, pellentesque efficitur mauris. Integer non sapien metus. Phasellus eget mi condimentum, vestibulum eros et, porta nisl. Cras suscipit egestas tincidunt. Donec id sodales orci.
  
 Nunc ac convallis augue. Vivamus vel nisl et eros euismod scelerisque. Sed nec leo eu lacus eleifend pulvinar a quis risus. Duis metus ex, facilisis nec augue nec, aliquam euismod nibh. Integer sit amet tincidunt neque, vel ultrices diam. Donec efficitur malesuada scelerisque. Proin id tincidunt justo.
@@ -24,7 +24,7 @@ pub fn main() {
         .add_plugins(EguiPlugin)
         .add_plugins(AoUIPlugin)
         .add_plugins(LogDiagnosticsPlugin::default())
-        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
         .add_systems(Update, egui_window)
         .run();

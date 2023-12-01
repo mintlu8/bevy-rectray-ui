@@ -105,55 +105,55 @@ impl FontFetcher for Handle<Font> {
 
 impl<H: BuildHasher> FontFetcher for HashMap<String, Handle<Font>, H> {
     fn get(&self, name: &str, _: FontStyle) -> Handle<Font> {
-        HashMap::get(&self, name).cloned().unwrap_or_default()
+        HashMap::get(self, name).cloned().unwrap_or_default()
     }
 }
 
 impl<'t, H: BuildHasher> FontFetcher for HashMap<&'t str, Handle<Font>, H> {
     fn get(&self, name: &str, _: FontStyle) -> Handle<Font> {
-        HashMap::get(&self, name).cloned().unwrap_or_default()
+        HashMap::get(self, name).cloned().unwrap_or_default()
     }
 }
 
 impl<'t, H: BuildHasher> FontFetcher for HashMap<(&'t str, FontStyle), Handle<Font>, H> {
     fn get(&self, name: &str, style: FontStyle) -> Handle<Font> {
-        HashMap::get(&self, &(name, style)).cloned().unwrap_or_else(
-            || HashMap::get(&self, &(name, FontStyle::None)).cloned().unwrap_or_default())
+        HashMap::get(self, &(name, style)).cloned().unwrap_or_else(
+            || HashMap::get(self, &(name, FontStyle::None)).cloned().unwrap_or_default())
     }
 }
 
-impl<'t, H: BuildHasher> FontFetcher for HashMap<(String, FontStyle), Handle<Font>, H> {
+impl<H: BuildHasher> FontFetcher for HashMap<(String, FontStyle), Handle<Font>, H> {
     fn get(&self, name: &str, style: FontStyle) -> Handle<Font> {
-        HashMap::get(&self, &(name.to_owned(), style)).cloned().unwrap_or_else(
-            || HashMap::get(&self, &(name.to_owned(), FontStyle::None)).cloned().unwrap_or_default())
+        HashMap::get(self, &(name.to_owned(), style)).cloned().unwrap_or_else(
+            || HashMap::get(self, &(name.to_owned(), FontStyle::None)).cloned().unwrap_or_default())
     }
 }
 
 const _: () = {
     use bevy::utils::HashMap;
-    impl<'t> FontFetcher for HashMap<String, Handle<Font>> {
+    impl FontFetcher for HashMap<String, Handle<Font>> {
         fn get(&self, name: &str, _: FontStyle) -> Handle<Font> {
-            HashMap::get(&self, name).cloned().unwrap_or_default()
+            HashMap::get(self, name).cloned().unwrap_or_default()
         }
     }
     
     impl<'t> FontFetcher for HashMap<&'t str, Handle<Font>> {
         fn get(&self, name: &str, _: FontStyle) -> Handle<Font> {
-            HashMap::get(&self, name).cloned().unwrap_or_default()
+            HashMap::get(self, name).cloned().unwrap_or_default()
         }
     }
     
     impl<'t> FontFetcher for HashMap<(&'t str, FontStyle), Handle<Font>> {
         fn get(&self, name: &str, style: FontStyle) -> Handle<Font> {
-            HashMap::get(&self, &(name, style)).cloned().unwrap_or_else(
-                || HashMap::get(&self, &(name, FontStyle::None)).cloned().unwrap_or_default())
+            HashMap::get(self, &(name, style)).cloned().unwrap_or_else(
+                || HashMap::get(self, &(name, FontStyle::None)).cloned().unwrap_or_default())
         }
     }
     
-    impl<'t> FontFetcher for HashMap<(String, FontStyle), Handle<Font>> {
+    impl FontFetcher for HashMap<(String, FontStyle), Handle<Font>> {
         fn get(&self, name: &str, style: FontStyle) -> Handle<Font> {
-            HashMap::get(&self, &(name.to_owned(), style)).cloned().unwrap_or_else(
-                || HashMap::get(&self, &(name.to_owned(), FontStyle::None)).cloned().unwrap_or_default())
+            HashMap::get(self, &(name.to_owned(), style)).cloned().unwrap_or_else(
+                || HashMap::get(self, &(name.to_owned(), FontStyle::None)).cloned().unwrap_or_default())
         }
     }
 };
@@ -179,7 +179,7 @@ fn hex1(s: u8) -> f32 {
     (
         match s {
             b'0'..=b'9' => s - b'0',
-            b'a'..=b'z' => s - b'a' + 10 as u8,
+            b'a'..=b'z' => s - b'a' + 10_u8,
             _ => panic!("Invalid hex number {s}")
         } * 0x11
     ) as f32 / 255.0
@@ -189,12 +189,12 @@ fn hex2(a: u8, b: u8) -> f32 {
     (
         match a {
             b'0'..=b'9' => a - b'0',
-            b'a'..=b'z' => a - b'a' + 10 as u8,
+            b'a'..=b'z' => a - b'a' + 10_u8,
             _ => panic!("Invalid hex number {a}")
         } * 16 + 
         match b {
             b'0'..=b'9' => b - b'0',
-            b'a'..=b'z' => b - b'a' + 10 as u8,
+            b'a'..=b'z' => b - b'a' + 10_u8,
             _ => panic!("Invalid hex number {b}")
         }
     ) as f32 / 255.0
@@ -246,7 +246,7 @@ impl<'t> Iterator for FindSplit<'t, '_> {
     type Item = &'t str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.s.len() == 0 {
+        if self.s.is_empty() {
             return None;
         }
         if self.one {
@@ -500,7 +500,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                             return;
                         }
                     }
-                    let scoped = if cc.ends_with(":") {
+                    let scoped = if cc.ends_with(':') {
                         let len = cc.len();
                         cc = &cc[..len - 1];
                         true
@@ -530,11 +530,11 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                         cc => match prefix {
                             Some('@') => self.push_font(cc.to_owned(), scoped),
                             Some('+') => {
-                                let size = cc.parse().expect(&format!("{} is not a valid font size.", cc));
+                                let size = cc.parse().unwrap_or_else(|_| panic!("{} is not a valid font size.", cc));
                                 self.push_size(SetEM::Pixels(size), scoped);
                             },
                             Some('*') => {
-                                let size = cc.parse().expect(&format!("{} is not a valid font size.", cc));
+                                let size = cc.parse().unwrap_or_else(|_| panic!("{} is not a valid font size.", cc));
                                 self.push_size(SetEM::Ems(size), scoped);
                             },
                             Some('#') => {
