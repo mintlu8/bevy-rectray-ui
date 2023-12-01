@@ -210,5 +210,5 @@ Performance related pull requests and suggestions are welcome.
 
 * [ ] Scissor rect, very important for scrolling support.
 * [ ] Official TextureAtlasSprite widget.
-* [ ] Rich text implementation. (String to entities as children of the `Paragraph` layout.)
+* [x] Rich text implementation.
 * [ ] Atlas/skeletal animation asset importer.
