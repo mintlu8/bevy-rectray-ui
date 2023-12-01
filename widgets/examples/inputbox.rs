@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_aoui::AoUIPlugin;
 use bevy_aoui_widgets::{AoUIExtensionsPlugin, handler, Submit, widgets::CursorDefault};
+use bevy_prototype_lyon::prelude::*;
 
 
 pub fn main() {
@@ -16,6 +17,7 @@ pub fn main() {
         .init_resource::<CursorDefault>()
         .add_plugins(AoUIPlugin)
         .add_plugins(AoUIExtensionsPlugin)
+        .add_plugins(ShapePlugin)
         .run();
 }
 

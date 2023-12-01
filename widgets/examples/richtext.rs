@@ -1,7 +1,6 @@
 use bevy::{prelude::*, utils::HashMap};
 use bevy_aoui::AoUIPlugin;
 use bevy_aoui_widgets::{AoUIExtensionsPlugin, widgets::richtext::{RichTextBuilder, FontStyle}};
-use bevy_prototype_lyon::prelude::*;
 
 pub fn main() {
     App::new()
@@ -15,7 +14,6 @@ pub fn main() {
         .add_systems(Startup, init)
         .add_plugins(AoUIPlugin)
         .add_plugins(AoUIExtensionsPlugin)
-        .add_plugins(ShapePlugin)
         .run();
 }
 
