@@ -22,6 +22,12 @@ pub enum SetEM {
     Rems(f32),
 }
 
+impl From<f32> for SetEM {
+    fn from(value: f32) -> Self {
+        Self::Pixels(value)
+    }
+}
+
 /// The unit of a Size `px`, `em`, `rem`, `percent`
 #[derive(Debug, Default, Clone, Copy, PartialEq, Reflect)]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]

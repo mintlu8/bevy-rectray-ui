@@ -68,10 +68,15 @@ pub(crate) fn span<const REV: bool>(
             Trinary::Mid => { mid_len += 1; &mut mid_cursor },
             Trinary::Pos => { pos_len += 1; &mut pos_cursor },
         };
-        let cell_size = major_dir(item.dimension) + minor_dim;
-        result.push(*cursor + cell_size * (item.anchor.as_vec() + 0.5));
-        categories.push(bucket);
-        *cursor += major_dir(item.dimension)
+        if *cursor == Vec2::ZERO && item.control == LayoutControl::WhiteSpace {
+            result.push(Vec2::ZERO);
+            categories.push(bucket);
+        } else {
+            let cell_size = major_dir(item.dimension) + minor_dim;
+            result.push(*cursor + cell_size * (item.anchor.as_vec() + 0.5));
+            categories.push(bucket);
+            *cursor += major_dir(item.dimension)
+        }
     }
     let margin = if stretch {
         if result.len() <= 1 {

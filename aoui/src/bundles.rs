@@ -20,6 +20,16 @@ pub struct AoUIBundle {
     pub vis: VisibilityBundle,
 }
 
+impl AoUIBundle {
+    pub fn empty(anchor: Anchor, size: impl Into<Size2>) -> Self{
+        AoUIBundle {
+            transform: Transform2D::UNIT.with_anchor(anchor),
+            dimension: Dimension::owned(size.into()),
+            ..Default::default()
+        }
+    }
+}
+
 /// A bundle generating a [`GlobalTransform`] with AoUI.
 #[derive(Debug, Default, Bundle)]
 pub struct BuildGlobalBundle {

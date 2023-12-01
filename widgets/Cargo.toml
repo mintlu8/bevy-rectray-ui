@@ -27,6 +27,8 @@ tlbf = "^0.2"
 interpolation = "^0.3"
 smallvec = { version = "^1.11", features = ["const_new"] }
 generic_static = "^0.2"
+parse-color = "^0.1.2"
+xi-unicode = "0.3.0"
 
 [dev-dependencies]
 bevy = "^0.12"

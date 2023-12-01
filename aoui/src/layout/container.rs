@@ -37,6 +37,8 @@ pub enum LayoutControl {
     LinebreakMarker,
     /// Ignore the layout completely.
     IgnoreLayout,
+    /// For `span` and `paragraph`, ignore if this is the first item.
+    WhiteSpace,
 }
 
 
