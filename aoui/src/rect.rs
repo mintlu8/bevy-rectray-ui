@@ -21,11 +21,11 @@ impl Anchor {
     pub const TopCenter: Self = Self(Vec2::new(0.0, 0.5));
     pub const TopRight: Self = Self(Vec2::new(0.5, 0.5));
 
-    pub fn new(v: Vec2) -> Self {
+    pub const fn new(v: Vec2) -> Self {
         Self(v)
     }
 
-    pub fn custom(x: f32, y: f32) -> Self {
+    pub const fn custom(x: f32, y: f32) -> Self {
         Self(Vec2::new(x, y))
     }
 
@@ -215,20 +215,20 @@ const _: () = {
     use serde::{Serialize, Deserialize};
     impl Serialize for RotatedRect {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-            (
-                self.affine,
+            let [a, b, c, d, e, f] = self.affine.to_cols_array();
+            [a, b, c, d, e, f, 
                 self.rotation, self.z, 
                 self.scale.x, self.scale.y
-            ).serialize(serializer)
+            ].serialize(serializer)
         }
     }
 
 
     impl<'de> Deserialize<'de> for RotatedRect {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
-            let (af, r, z, sx, sy) = <_>::deserialize(deserializer)?; 
+            let [a,b,c,d,e,f,r,z,sx,sy] = <_>::deserialize(deserializer)?; 
             Ok(Self { 
-                affine: af,
+                affine: Affine2::from_cols_array(&[a, b, c, d, e, f]),
                 rotation: r, z,
                 scale: Vec2::new(sx, sy),
             })
