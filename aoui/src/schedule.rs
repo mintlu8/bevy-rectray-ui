@@ -155,7 +155,9 @@ pub struct OptOutFontSizeSync;
 /// Copy owned dimension as text bounds. 
 pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimension), Without<OptOutTextBoundsSync>>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        dimension.run_if_owned(|size| sp.size = size)
+        if sp.as_ref().size != dimension.size {
+            dimension.run_if_owned(|size| sp.size = size)
+        }
     })
 }
 
@@ -163,7 +165,9 @@ pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimensio
 /// Copy em as text size.
 pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFontSizeSync>>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        sp.sections.iter_mut().for_each(|x| x.style.font_size = dimension.em)
+        if sp.as_ref().sections.iter().any(|x| x.style.font_size != dimension.em) {
+            sp.sections.iter_mut().for_each(|x| x.style.font_size = dimension.em)
+        }
     })
 }
 

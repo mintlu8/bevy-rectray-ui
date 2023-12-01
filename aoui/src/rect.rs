@@ -99,7 +99,7 @@ impl From<&Anchor> for bevy::sprite::Anchor {
 /// A rotated 2D rectangle.
 /// 
 /// Note: `scale` is pre-multiplied into `dimension`.
-#[derive(Debug, Clone, Copy, Component, Default, Reflect)]
+#[derive(Debug, Clone, Copy, Component, PartialEq, Default, Reflect)]
 #[non_exhaustive]
 pub struct RotatedRect{
     /// Affine of the rect.

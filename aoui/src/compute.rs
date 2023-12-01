@@ -29,7 +29,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         panic!("Malformed hierarchy, parent child mismatch.")
     }
 
-    // SAFETY: safe since double mut access is gated by visited
+    // SAFETY: safe since double mut access is gated by the hierarchy check
     let Ok((entity, mut dim, transform, mut orig, mut opacity, ..)) = (unsafe {mut_query.get_unchecked(entity)}) else {return};
     
     let (dimension, em) = dim.update(parent.dimension, parent.em, rem);
@@ -46,7 +46,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             if parent_query.get(*child).ok().map(|x| x.get()) != Some(entity) {
                 panic!("Malformed hierarchy, parent child mismatch.")
             }
-            // SAFETY: safe since double mut access is gated by visited
+            // SAFETY: safe since double mut access is gated by the hierarchy check
             if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { mut_query.get_unchecked(*child) } {
                 match control_query.get(*child) {
                     Ok(LayoutControl::IgnoreLayout) => other_entities.push((
@@ -100,7 +100,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
 
     let rect = RotatedRect::construct(
         &parent,
-        transform.parent_anchor.or(transform.anchor),
+        transform.parent_anchor,
         transform.anchor,
         offset,
         dimension,
@@ -111,9 +111,8 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
     );
 
     if let Ok(children) = child_query.get(entity) {
+        let parent = ParentInfo::new(Some(entity), &rect, dimension, em, opacity);
         for child in children {
-            // SAFETY: safe since double mut access is gated by visited
-            let parent = ParentInfo::new(Some(entity), &rect, dimension, em, opacity);
             queue.push((*child, parent))
         }
     }
