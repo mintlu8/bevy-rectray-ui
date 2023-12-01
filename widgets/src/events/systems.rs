@@ -177,48 +177,49 @@ pub fn mouse_button_input(
                 commands.entity(entity).insert(CursorFocus(EventFlags::MidPressed));
             }
         }
-    } else if buttons.just_released(MouseButton::Left) {
-        let down = state.down_pos;
-        query.iter().filter(|(.., flags)| flags.contains(Click))
-            .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos) && hitbox.contains(rect, down))
-            .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
-            .map(|(entity, .., flags)| 
-                if flags.contains(DoubleClick) && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
-                    commands.entity(entity).insert(CursorAction(EventFlags::DoubleClick));
-                    state.clear_dbl_click();
-                } else {
-                    commands.entity(entity).insert(CursorAction(EventFlags::Click));
-                }
-            )
-            .map(|_| state.catched = true);
-        query.iter().filter(|(.., flags)| flags.contains(ClickOutside))
-            .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
-            .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
-    } else if buttons.just_released(MouseButton::Right) {
-        let down = state.down_pos;
-        query.iter().filter(|(.., flags)| flags.contains(RightClick))
-            .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos) && hitbox.contains(rect, down))
-            .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
-            .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::RightClick))))
-            .map(|_| state.catched = true);
-        query.iter().filter(|(.., flags)| flags.contains(ClickOutside))
-            .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
-            .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
-    } else if buttons.just_released(MouseButton::Middle) {
-        let down = state.down_pos;
-        query.iter().filter(|(.., flags)| flags.contains(MidClick))
-            .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos) && hitbox.contains(rect, down))
-            .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
-            .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::MidClick))))
-            .map(|_| state.catched = true);
-        query.iter().filter(|(.., flags)| flags.contains(ClickOutside))
-            .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
-            .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
     } else {
+        if buttons.just_released(MouseButton::Left) {
+            let down = state.down_pos;
+            query.iter().filter(|(.., flags)| flags.contains(Click))
+                .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos) && hitbox.contains(rect, down))
+                .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
+                .map(|(entity, .., flags)| 
+                    if flags.contains(DoubleClick) && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
+                        commands.entity(entity).insert(CursorAction(EventFlags::DoubleClick));
+                        state.clear_dbl_click();
+                    } else {
+                        commands.entity(entity).insert(CursorAction(EventFlags::Click));
+                    }
+                )
+                .map(|_| state.catched = true);
+            query.iter().filter(|(.., flags)| flags.contains(ClickOutside))
+                .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
+                .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
+        } else if buttons.just_released(MouseButton::Right) {
+            let down = state.down_pos;
+            query.iter().filter(|(.., flags)| flags.contains(RightClick))
+                .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos) && hitbox.contains(rect, down))
+                .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
+                .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::RightClick))))
+                .map(|_| state.catched = true);
+            query.iter().filter(|(.., flags)| flags.contains(ClickOutside))
+                .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
+                .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
+        } else if buttons.just_released(MouseButton::Middle) {
+            let down = state.down_pos;
+            query.iter().filter(|(.., flags)| flags.contains(MidClick))
+                .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos) && hitbox.contains(rect, down))
+                .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
+                .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::MidClick))))
+                .map(|_| state.catched = true);
+            query.iter().filter(|(.., flags)| flags.contains(ClickOutside))
+                .filter(|(_, rect, hitbox, _)| !hitbox.contains(rect, mouse_pos))
+                .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
+        }
         query.iter().filter(|(.., flags)| flags.intersects(Hover))
             .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
             .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
             .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorFocus(EventFlags::Hover))))
             .map(|_| state.catched = true);
-    }
+    }   
 }
