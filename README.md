@@ -3,9 +3,6 @@
 [![AoUI](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
 [![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
 
-[![Widgets](https://img.shields.io/crates/v/bevy_aoui_widgets.svg)](https://crates.io/crates/bevy_aoui_widgets)
-[![Docs](https://docs.rs/bevy_aoui_widgets/badge.svg)](https://docs.rs/bevy_aoui_widgets/latest/bevy_aoui_widgets/)
-
 A light-weight anchor-offset based 2D sprite layout system for the bevy engine.
 
 Bevy AoUI provides a light-weight rectangular anchor-offset based 2D sprite layout,
