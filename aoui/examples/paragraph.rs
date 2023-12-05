@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, bundles::*};
+use bevy_aoui::{*, bundles::*, layout::*};
 use bevy::{prelude::*, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}};
 use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox}, EguiPlugin};
 
@@ -44,11 +44,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         texture: assets.load("square.png"),
         ..Default::default()
     }, Container {
-        layout: Layout::Paragraph { 
+        layout: Box::new(ParagraphLayout { 
             direction: FlexDir::LeftToRight, 
             stack: FlexDir::TopToBottom,
             stretch: false,
-        },
+        }),
         margin: Size2::em(0.4, 0.0),
     })).id();
     let mut words = Vec::new();
@@ -130,7 +130,7 @@ pub fn egui_window(mut ctx: EguiContexts,
         let font_size = dimension.set_em.raw_mut();
         ui.add(Slider::new(font_size, 0.0..=12.0).text("font size (em)"));
 
-        let Layout::Paragraph { direction, stack, stretch } = &mut container.layout else {return};
+        let Some(ParagraphLayout { direction, stack, stretch }) = container.layout.downcast_mut() else {return};
 
         ComboBox::from_label("Direction")
             .selected_text(match direction {

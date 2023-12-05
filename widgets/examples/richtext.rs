@@ -67,4 +67,30 @@ Awesome {br} right?
 
     let children = builder.build();
     commands.entity(rich).push_children(&children);
+
+
+    let zip_test = paragraph! ((commands) {
+        dimension: [10, 600],
+        anchor: Left,
+        //margin: [8, 0],
+        font_size: 32,
+    });
+
+
+    let mut builder = RichTextBuilder::new(&mut commands, assets.load("ComicNeue-Regular.ttf"))
+        .configure_size(assets.load("ComicNeue-Regular.ttf"), 32.0)
+        .with_color(Color::WHITE);
+        //.with_ignore_space(true);
+
+    builder.push_str(r#"
+    ZipTest
+
+    {red:ThisDoesn'tWork},
+
+    {zip:{red:ButThisDoes},}
+
+    {zip:{red:AndThisToo}!!}
+"#);
+    let children = builder.build();
+    commands.entity(zip_test).push_children(&children);
 }

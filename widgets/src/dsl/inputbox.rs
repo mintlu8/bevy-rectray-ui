@@ -1,15 +1,13 @@
-use bevy::hierarchy::BuildChildren;
 use bevy::ecs::entity::Entity;
 use bevy::render::color::Color;
 use bevy::text::Font;
 use bevy::asset::Handle;
 use bevy::window::CursorIcon;
-use bevy_aoui::{bundles::AoUIBundle, Dimension};
 use crate::dsl::prelude::{PropagateFocus, SetCursor};
 use crate::events::EventFlags;
 use crate::widget_extension;
 use crate::widgets::TextColor;
-use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxText, InputBoxCursorArea};
+use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea};
 
 widget_extension!(
     pub struct InputBoxBuilder {
@@ -19,7 +17,7 @@ widget_extension!(
         pub cursor_bar: Option<Entity>,
         pub cursor_area: Option<Entity>,
     },
-    this, commands,
+    this, ctx,
     components: (
         InputBox::new(&this.text),
         TextColor(this.color.expect("color is required.")),
@@ -27,13 +25,13 @@ widget_extension!(
         this.font,
     ),
     spawn: (
-        commands.spawn ((
-            AoUIBundle {
-                dimension: Dimension::INHERIT,
-                ..Default::default()
-            },
-            InputBoxText,
-        )).id(),
+        // ctx.commands().spawn ((
+        //     AoUIBundle {
+        //         dimension: Dimension::INHERIT,
+        //         ..Default::default()
+        //     },
+        //     InputBoxText,
+        // )).id(),
         this.cursor_bar.expect("cursor_bar is required.") => InputBoxCursorBar,
         this.cursor_area.expect("cursor_area is required.") => InputBoxCursorArea,
     )
@@ -58,13 +56,11 @@ widget_extension!(
             flags: EventFlags::Hover|EventFlags::Pressed,
             icon: CursorIcon::Hand,
         },
-    ),
-    pattern: (
         Some(cursor) = this.cursor => SetCursor {
             flags: EventFlags::Hover|EventFlags::Pressed,
             icon: cursor,
         },
-    ),
+    )
 );
 
 /// Construct a button.

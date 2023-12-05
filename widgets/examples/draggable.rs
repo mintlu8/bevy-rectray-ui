@@ -25,10 +25,9 @@ pub fn main() {
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui_widgets::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    sprite! ((commands, assets) {
+    sprite! (commands {
         dimension: [100, 100],
         hitbox: Rect(1),
-        //fill: color!(lavender),
         sprite: assets.load("square.png"),
         extra: EventFlags::Hover|EventFlags::Drag,
         extra: DragBoth,

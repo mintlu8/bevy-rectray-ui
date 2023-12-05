@@ -4,7 +4,17 @@ use bevy::{prelude::{Vec2, Resource}, reflect::Reflect};
 /// 
 /// By default this is `[16, 16]`.
 #[derive(Debug, Resource)]
-pub struct AoUIREM(pub f32);
+pub struct AoUIREM(f32);
+
+impl AoUIREM {
+    pub fn get(&self) -> f32 {
+        self.0
+    }
+
+    pub fn set(&mut self, rem: f32) {
+        self.0 = rem
+    }
+}
 impl Default for AoUIREM {
     fn default() -> Self {
         Self(16.0)

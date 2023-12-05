@@ -1,12 +1,10 @@
 mod convert;
 mod util;
-use std::fmt::Debug;
 
 use bevy::prelude::{Commands, Entity, BuildChildren, Bundle};
 #[doc(hidden)]
 pub use colorthis::rgbaf;
 
-mod core;
 mod layouts;
 mod shapes;
 mod inputbox;
@@ -20,43 +18,34 @@ pub use layouts::{SpanContainerNames, GridContainerNames};
 pub use util::OneOrTwo;
 
 pub mod builders {
+    use crate::widget_extension;
+
+    widget_extension!(pub struct FrameBuilder {}, this, commands, components: ());
+    widget_extension!(pub struct SpriteBuilder: Sprite {}, this, commands, components: ());
+    widget_extension!(pub struct TextBoxBuilder: Text {}, this, commands, components: ());
+
     pub use super::shapes::ShapeBuilder;
-    pub use super::layouts::{DynamicFrameBuilder, SpanContainerBuilder, GridContainerBuilder};
-    pub use super::core::{FrameBuilder, SpriteBuilder, TextBoxBuilder};
+    pub use super::layouts::{PaddingBuilder, SpanContainerBuilder, GridContainerBuilder};
     pub use super::inputbox::{InputBoxBuilder, ButtonBuilder};
 }
 
-#[doc(hidden)]
-/// Implementation detail for meta_dsl.
-pub trait FnChildren {
-    type Out: AsRef<[Entity]> + Default;
-    fn exec(self, commands: &mut Commands) -> Self::Out;
+/// Construct an empty sprite.
+#[macro_export]
+macro_rules! frame {
+    {$commands: tt {$($tt:tt)*}} => 
+        {$crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {$($tt)*})};
 }
-
-impl<F, Out> FnChildren for F where F: FnOnce(&mut Commands) -> Out, Out: AsRef<[Entity]> + Default {
-    type Out = Out;
-
-    fn exec(self, commands: &mut Commands) -> Self::Out {
-        self(commands)
-    }
+/// Construct an image based sprite.
+#[macro_export]
+macro_rules! sprite {
+    {$commands: tt {$($tt:tt)*}} => 
+        {$crate::meta_dsl!($commands [$crate::dsl::builders::SpriteBuilder] {$($tt)*})};
 }
-
-#[doc(hidden)]
-#[derive(Debug, Default)]
-/// Implementation detail for meta_dsl.
-pub enum EntitiesBuilder<F: FnChildren>{
-    Some(F),
-    #[default]
-    None,
-}
-
-impl<F: FnChildren> EntitiesBuilder<F> {
-    pub fn build_entities(self, commands: &mut Commands) -> F::Out{
-        match self {
-            EntitiesBuilder::Some(f) => f.exec(commands),
-            EntitiesBuilder::None => Default::default(),
-        }
-    }
+/// Construct a textbox.
+#[macro_export]
+macro_rules! textbox {
+    {$commands: tt {$($tt:tt)*}} => 
+        {$crate::meta_dsl!($commands [$crate::dsl::builders::TextBoxBuilder] {$($tt)*})};
 }
 
 /// Enable commands to spawn our widgets.
@@ -76,12 +65,12 @@ impl<'w, 's> AoUICommands for Commands<'w, 's> {
 }
 
 pub trait AoUIWidget: Sized {
-    fn spawn_with(self, commands: &mut Commands) -> Entity;
+    fn spawn_with<'w, 's>(self, commands: &mut Commands<'w, 's>) -> Entity;
 }
 
 /// Construct marker components by name.
 #[macro_export]
-macro_rules! marker {
+macro_rules! markers {
     ($($name:ident),* $(,)?) => {
         $(
             #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ::bevy::prelude::Component)]

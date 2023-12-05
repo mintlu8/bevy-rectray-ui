@@ -8,7 +8,7 @@
 //! * Bold: `**text**`
 //! * Bold Italics: `***text***`
 //! * Underline: `__text__` (not implemented)
-//! * Strikethroigh: `~~text~~`
+//! * Strikethroigh: `~~text~~` (not implemented)
 //! 
 //! Ascii whitespaces are either rendered as one space or linebreaks.
 //! Use a unicode space if you want multiple spaces.
@@ -51,12 +51,22 @@
 //! * `{*2}`
 //! 
 //! This sets the font size to 2 em
+//! 
+//! * `{0}` - `{9}`
+//! 
+//! Spawn an empty entity for future insetrtion.
+//! 
+//! * `{zip: {red:a}.}`
+//! 
+//! Zip prevents linebreaks inside by wrapping its contents inside a `compact` layout.
+//! This is needed to preserve linebreak behavior across style groups.
+//! Changing anchor inside is unspecified behavior.
 
 use std::{collections::HashMap, hash::{Hash, BuildHasher}};
 
-use bevy::{asset::{Handle, Assets}, text::{Font, Text, TextStyle}, ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component, query::Changed}, render::color::Color, math::Vec2};
-use bevy_aoui::{Transform2D, Anchor, bundles::{AoUITextBundle, AoUIBundle}, SetEM, Dimension};
-use bevy_aoui::LayoutControl;
+use bevy::{asset::{Handle, Assets}, text::{Font, Text, TextStyle}, ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component, query::Changed}, render::color::Color, math::Vec2, hierarchy::BuildChildren};
+use bevy_aoui::{Transform2D, Anchor, bundles::{AoUITextBundle, AoUIBundle}, SetEM, Dimension, layout::{Container, CompactLayout, FlexDir}, Size2};
+use bevy_aoui::layout::LayoutControl;
 /// This widget always has the width of a space and line height of a widget.
 #[derive(Debug, Clone, Component)]
 pub struct FontSpace {
@@ -163,6 +173,7 @@ enum RichTextScope {
     Color,
     Size,
     Anchor,
+    Zip,
 }
 
 
@@ -211,9 +222,11 @@ pub struct RichTextBuilder<'t, 'w, 's, F: FontFetcher, B: Bundle + Clone = ()>{
     size_stack: Vec<SetEM>,
     font_stack: Vec<String>,
     anchor_stack: Vec<Anchor>,
+    zip: Option<Vec<Entity>>,
     buffer: Vec<Entity>,
     pop_stack: Vec<RichTextScope>,
     ignore_space: bool,
+    margin: Size2,
 }
 
 impl<'a, 'w, 's, F: FontFetcher> RichTextBuilder<'a, 'w, 's, F> {
@@ -228,9 +241,11 @@ impl<'a, 'w, 's, F: FontFetcher> RichTextBuilder<'a, 'w, 's, F> {
             size_stack: Vec::new(),
             font_stack: Vec::new(),
             anchor_stack: Vec::new(),
+            zip: None,
             buffer: Vec::new(), 
             pop_stack: Vec::new(),
             ignore_space: false,
+            margin: Size2::ZERO,
         }
     }
 }
@@ -281,9 +296,9 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
 
     #[must_use]
     pub fn with_bundle<B2: Bundle + Clone>(self, bun: B2) -> RichTextBuilder<'a, 'w, 's, F, B2>{
-        let RichTextBuilder { bundle:_, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, buffer, pop_stack, ignore_space } = self;
+        let RichTextBuilder { bundle:_, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, zip, buffer, pop_stack, ignore_space, margin } = self;
         let bundle = bun;
-        RichTextBuilder { bundle, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, buffer, pop_stack, ignore_space }
+        RichTextBuilder { bundle, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, zip, buffer, pop_stack, ignore_space, margin }
     }
 
     #[must_use]
@@ -330,7 +345,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
     /// 
     /// ## Space mode
     /// 
-    /// * Spaces will disrupt flow.
+    /// * Spaces might disrupt flow.
     #[must_use]
     pub fn with_ignore_space(mut self, ignore_space: bool) -> Self{
         self.ignore_space = ignore_space;
@@ -373,6 +388,15 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
         self.color_stack.last().copied().unwrap_or(Color::WHITE)
     }
 
+    fn push_zip(&mut self) {
+        if self.zip.is_some() {
+            panic!("Cannot zip in a zip scope.");
+        }
+        self.zip = Some(Vec::new());
+        self.pop_stack.push(RichTextScope::Zip);
+    }
+
+
     fn push_anchor(&mut self, v: Anchor, scoped: bool) {
         if !scoped {
             self.anchor_stack.pop();
@@ -400,7 +424,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
             ($s: expr) => {
                 {
                     let anchor = self.anchor();
-                    self.buffer.push(self.commands.spawn(
+                    let entity = self.commands.spawn(
                         AoUITextBundle {
                             dimension: bevy_aoui::Dimension {
                                 set_em: self.size(),
@@ -416,7 +440,12 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                     )
                     .insert(self.bundle.clone())
                     .insert(Transform2D::UNIT.with_anchor(anchor))
-                    .id());
+                    .id();
+                    if let Some(zip) = &mut self.zip {
+                        zip.push(entity);
+                    } else {
+                        self.buffer.push(entity)
+                    };
                 }
             };
         }
@@ -513,6 +542,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                     };
                     match cc.to_lowercase().as_str() {
                         "br" => line_gap!(),
+                        "zip" => self.push_zip(),
                         "left" => self.push_anchor(Anchor::CenterLeft, scoped),
                         "right" => self.push_anchor(Anchor::CenterRight, scoped),
                         "top" => self.push_anchor(Anchor::TopCenter, scoped),
@@ -584,6 +614,27 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                             Some(RichTextScope::Color) => { self.color_stack.pop(); },
                             Some(RichTextScope::Font) => { self.font_stack.pop(); },
                             Some(RichTextScope::Size) => { self.size_stack.pop(); },
+                            Some(RichTextScope::Zip) => {
+                                let anchor = self.anchor();
+                                self.buffer.push(self.commands.spawn((
+                                    AoUIBundle {
+                                        dimension: bevy_aoui::Dimension {
+                                            set_em: self.size(),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    Container {
+                                        layout: Box::new(CompactLayout {
+                                            direction: FlexDir::LeftToRight
+                                        }),
+                                        margin: self.margin,
+                                    }
+                                ))
+                                .insert(Transform2D::UNIT.with_anchor(anchor))
+                                .push_children(&self.zip.take().expect("zip hierarchy mismatch"))
+                                .id());
+                            },
                             None => panic!("brackets mismatch"),
                         }
                     }

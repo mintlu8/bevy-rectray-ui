@@ -63,16 +63,15 @@ widget_extension! {
         },
         Mesh2dHandle::default(),
         this.default_material,
-    ),
-    pattern: (
         Some(fill) = this.fill => fill,
-        Some(mut stroke) = this.stroke => {
+        Some(stroke) = this.stroke => {
+            let mut stroke = stroke;
             if let Some(OneOrTwo([l ,r])) = this.caps.dinto() {
                 stroke.options = stroke.options.with_start_cap(l).with_end_cap(r)
             }
             stroke
         }
-    )
+    ),
 }
 
 

@@ -46,6 +46,12 @@ pub struct CursorClickOutside;
 #[component(storage="SparseSet")]
 pub struct MouseWheelAction(Vec2);
 
+impl MouseWheelAction {
+    pub fn get(&self) -> Vec2 {
+        self.0
+    }
+}
+
 tlbf::tlbf!(
     /// Flags for cursor events.
     ///

@@ -1,5 +1,5 @@
 use bevy::{math::Vec2, sprite::Anchor};
-use bevy_aoui::{Size2, SetEM, Alignment, FlexDir};
+use bevy_aoui::{Size2, SetEM, layout::Alignment, layout::FlexDir};
 
 use super::convert::DslInto;
 
@@ -156,6 +156,19 @@ macro_rules! color {
             ::bevy::prelude::Color::RgbaLinear, 
             $color => {red, green, blue, alpha}
         ).as_rgba()
+    };
+}
+
+
+
+/// Color constrution macro, see [`colorthis`]. This constructs a vector4.
+#[macro_export]
+macro_rules! colorv4 {
+    ($color: tt) => {
+        ::bevy_aoui_widgets::dsl::rgbaf!(
+            ::bevy::prelude::Color::RgbaLinear, 
+            $color => {red, green, blue, alpha}
+        ).as_rgba().as_vec4()
     };
 }
 

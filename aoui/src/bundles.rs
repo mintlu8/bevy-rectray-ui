@@ -4,7 +4,7 @@ use bevy::{
     text::{Text2dBounds, TextLayoutInfo}
 };
 
-use crate::{Transform2D, RotatedRect, BuildGlobal, Hitbox, AoUI, BuildTransform, LayoutControl, Dimension, Size2, Opacity, Anchor};
+use crate::{Transform2D, RotatedRect, BuildGlobal, Hitbox, AoUI, BuildTransform, layout::LayoutControl, Dimension, Size2, Opacity, Anchor};
 
 
 /// The minimal bundle required for AoUI to function.

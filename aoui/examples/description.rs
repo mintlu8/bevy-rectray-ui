@@ -1,4 +1,4 @@
-use bevy_aoui::{*, bundles::*};
+use bevy_aoui::{*, bundles::*, layout::*};
 use bevy::{prelude::*, text::Text2dBounds};
 
 pub fn main() {
@@ -31,11 +31,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         texture: assets.load("square.png"),
         ..Default::default()
     }, Container {
-        layout: Layout::Paragraph { 
+        layout: Box::new(ParagraphLayout { 
             direction: FlexDir::LeftToRight, 
             stack: FlexDir::TopToBottom,
             stretch: false,
-        },
+        }),
         margin: Size2::pixels(4.0, 0.0),
     })).id();
     let mut words = Vec::new();

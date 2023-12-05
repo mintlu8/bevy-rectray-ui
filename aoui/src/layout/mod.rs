@@ -4,6 +4,6 @@ pub(crate) mod span;
 pub(crate) mod grid;
 pub(crate) mod container;
 
-pub use layouts::{Cells, Columns, Layout};
+pub use layouts::*;
 pub use util::*;
 pub use container::*;

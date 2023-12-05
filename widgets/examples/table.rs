@@ -42,10 +42,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             text: "5 columns of 20%, 10%, 20%, 30%, 20%" 
         },
     });
-    fixed_table! ((commands, assets) {
+    table! ((commands, assets) {
         anchor: Center,
         dimension: [700, 100],
-        columns: [0.2, 0.3, 0.5, 0.8],
+        columns: [(SizeUnit::Percent, 0.2), (SizeUnit::Percent, 0.1), (SizeUnit::Percent, 0.2), (SizeUnit::Percent, 0.3), (SizeUnit::Percent, 0.2)],
         z: 1,
         extra: Sprite::default(),
         child: rectangle! {

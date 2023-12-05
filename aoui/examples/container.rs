@@ -2,14 +2,20 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, bundles::*};
+use bevy_aoui::{*, bundles::*, layout::*};
 use bevy_egui::{self, EguiContexts, egui::{self, ComboBox, Grid, Slider}};
 use bevy::prelude::*;
 use rand::Rng;
 
 pub fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                present_mode: bevy::window::PresentMode::AutoNoVsync,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }))
         .add_plugins(bevy_egui::EguiPlugin)
         .add_systems(Startup, init)
         .add_plugins(AoUIPlugin)
@@ -36,10 +42,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         dimension: Dimension::INHERIT,
         ..Default::default()
     }, Container {
-        layout: Layout::Span {
+        layout: Box::new(SpanLayout {
             direction: FlexDir::LeftToRight,
             stretch: false,
-        },
+        }),
         margin: Size2::pixels(2.0, 2.0),
     }, RootFlex)).id();
 
@@ -93,12 +99,13 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
 ) {
     let (mut transform, mut dimension) = root.single_mut();
     let (flexbox, mut container, mut transform2) = container.single_mut();
-    let mut layout_type = match container.layout {
-        Layout::Compact {..} => "compact",
-        Layout::Span {..} => "span",
-        Layout::Paragraph {..} => "paragraph",
-        Layout::Grid {..} => "grid",
-        Layout::Table {..} => "table",
+    let mut layout_type = match &container.layout {
+        x if x.downcast_ref::<CompactLayout>().is_some() => "compact",
+        x if x.downcast_ref::<SpanLayout>().is_some() => "span",
+        x if x.downcast_ref::<ParagraphLayout>().is_some() => "paragraph",
+        x if x.downcast_ref::<FixedGridLayout>().is_some() => "fixed grid",
+        x if x.downcast_ref::<SizedGridLayout>().is_some() => "sized grid",
+        x if x.downcast_ref::<DynamicTableLayout>().is_some() => "table",
         _ => unimplemented!(),
     };
 
@@ -157,7 +164,7 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
             });
         match layout_type {
             "compact" => {
-                if let Layout::Compact { direction } = &mut container.layout {
+                if let Some(CompactLayout { direction }) = container.layout.downcast_mut() {
                     ComboBox::from_label("Direction")
                     .selected_text(match direction {
                         FlexDir::LeftToRight => "left to right",
@@ -172,13 +179,13 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                         ui.selectable_value(direction, FlexDir::TopToBottom, "top to bottom");
                     });
                 } else {
-                    container.layout = Layout::Compact { 
+                    container.layout = Box::new(CompactLayout { 
                         direction: FlexDir::LeftToRight
-                    }
+                    })
                 }
             }
             "span" => {
-                if let Layout::Span { direction, stretch } = &mut container.layout {
+                if let Some(SpanLayout { direction, stretch }) = container.layout.downcast_mut() {
                     ComboBox::from_label("Direction")
                     .selected_text(match direction {
                         FlexDir::LeftToRight => "left to right",
@@ -194,14 +201,14 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                     });
                     ui.checkbox(stretch, "Stretch");
                 } else {
-                    container.layout = Layout::Span { 
+                    container.layout = Box::new(SpanLayout { 
                         direction: FlexDir::LeftToRight, 
                         stretch: false 
-                    }
+                    })
                 }
             }
             "paragraph" => {
-                if let Layout::Paragraph { direction, stack, stretch } = &mut container.layout {
+                if let Some(ParagraphLayout { direction, stack, stretch }) = container.layout.downcast_mut() {
                     ComboBox::from_label("Direction")
                         .selected_text(match direction {
                             FlexDir::LeftToRight => "left to right",
@@ -249,42 +256,18 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                     }
                     ui.checkbox(stretch, "Stretch");
                 } else {
-                    container.layout = Layout::Paragraph { 
+                    container.layout = Box::new(ParagraphLayout { 
                         direction: FlexDir::LeftToRight, 
                         stack: FlexDir::TopToBottom, 
                         stretch: false
-                    }
+                    })
                 }
             }
-            "grid" => {
-                if let Layout::Grid { cell, row_dir, column_dir, alignment, stretch } = &mut container.layout {
-                    let mut sized = matches!(cell, Cells::Sized(..));
-                    if ui.radio_value(&mut sized, true, "Sized").changed() {
-                        match sized {
-                            true => *cell = Cells::Sized(Vec2::splat(40.0)),
-                            false => *cell = Cells::Counted(UVec2 { x: 10, y: 10 }),
-                        }
-                    };
-                    if ui.radio_value(&mut sized, false, "Fixed").changed() {
-                        match sized {
-                            true => *cell = Cells::Sized(Vec2::splat(40.0)),
-                            false => *cell = Cells::Counted(
-                                (dimension.raw() / Vec2::splat(40.0)).as_uvec2()
-                            ),
-                        }
-                    };
-                    match cell {
-                        Cells::Counted(count) => {
-                            let UVec2 { x, y } = count;
-                            ui.add(Slider::new(x, 1..=50).text("width"));
-                            ui.add(Slider::new(y, 1..=50).text("height"));
-                        },
-                        Cells::Sized(size) => {
-                            let Vec2 { x, y } = size;
-                            ui.add(Slider::new(x, 0.0..=200.0).text("width"));
-                            ui.add(Slider::new(y, 0.0..=200.0).text("height"));
-                        },
-                    }
+            "sized grid" => {
+                if let Some(SizedGridLayout { cell_size, row_dir, column_dir, alignment, stretch }) = container.layout.downcast_mut() {
+                    let Vec2 { x, y } = cell_size.raw_mut();
+                    ui.add(Slider::new(x, 0.0..=200.0).text("width"));
+                    ui.add(Slider::new(y, 0.0..=200.0).text("height"));
                     ComboBox::from_label("Row Direction")
                         .selected_text(match row_dir {
                             FlexDir::LeftToRight => "left to right",
@@ -363,22 +346,109 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                     
                     ui.checkbox(stretch, "Stretch");
                 } else {
-                    container.layout = Layout::Grid { 
-                        cell: Cells::Sized(Vec2::splat(40.0)), 
+                    container.layout = Box::new(SizedGridLayout { 
+                        cell_size: Vec2::splat(40.0).into(),
                         row_dir: FlexDir::LeftToRight, 
                         column_dir: FlexDir::TopToBottom, 
                         alignment: Alignment::Left,
                         stretch: false, 
+                    })
+                }
+            }
+            "fixed grid" => {
+                if let Some(FixedGridLayout { cells, row_dir, column_dir, alignment }) = container.layout.downcast_mut() {
+                    let UVec2 { x, y } = cells;
+                    ui.add(Slider::new(x, 1..=50).text("width"));
+                    ui.add(Slider::new(y, 1..=50).text("height"));
+                    ComboBox::from_label("Row Direction")
+                        .selected_text(match row_dir {
+                            FlexDir::LeftToRight => "left to right",
+                            FlexDir::RightToLeft => "right to left",
+                            FlexDir::BottomToTop => "bottom to top",
+                            FlexDir::TopToBottom => "top to bottom",
+                        })
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(row_dir, FlexDir::LeftToRight, "left to right");
+                            ui.selectable_value(row_dir, FlexDir::RightToLeft, "right to left");
+                            ui.selectable_value(row_dir, FlexDir::BottomToTop, "bottom to top");
+                            ui.selectable_value(row_dir, FlexDir::TopToBottom, "top to bottom");
+                        });
+                    match row_dir {
+                        FlexDir::LeftToRight|FlexDir::RightToLeft => {
+                            ComboBox::from_label("Column Direction")
+                                .selected_text(match column_dir {
+                                    FlexDir::TopToBottom => "top to bottom",
+                                    FlexDir::BottomToTop => "bottom to top",
+                                    _ => {
+                                        *column_dir = FlexDir::TopToBottom;
+                                        "top to bottom"
+                                    }
+                                })
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(column_dir, FlexDir::TopToBottom, "top to bottom");
+                                    ui.selectable_value(column_dir, FlexDir::BottomToTop, "bottom to top");
+                                });
+                            ComboBox::from_label("Row Alignment")
+                                .selected_text(match alignment {
+                                    Alignment::Left => "left",
+                                    Alignment::Center => "center",
+                                    Alignment::Right => "right",
+                                    _ => {
+                                        *alignment = Alignment::Left;
+                                        "left"
+                                    }
+                                })
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(alignment, Alignment::Left, "left");
+                                    ui.selectable_value(alignment, Alignment::Center, "center");
+                                    ui.selectable_value(alignment, Alignment::Right, "right");
+                                });
+                        }
+                        FlexDir::BottomToTop|FlexDir::TopToBottom => {
+                            ComboBox::from_label("Column Direction")
+                                .selected_text(match column_dir {
+                                    FlexDir::LeftToRight => "left to right",
+                                    FlexDir::RightToLeft => "right to left",
+                                    _ => {
+                                        *column_dir = FlexDir::LeftToRight;
+                                        "left to right"
+                                    }
+                                })
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(column_dir, FlexDir::LeftToRight, "left to right");
+                                    ui.selectable_value(column_dir, FlexDir::RightToLeft, "right to left");
+                                });
+                            ComboBox::from_label("Row Alignment")
+                                .selected_text(match alignment {
+                                    Alignment::Top => "top",
+                                    Alignment::Center => "center",
+                                    Alignment::Bottom => "bottom",
+                                    _ => {
+                                        *alignment = Alignment::Top;
+                                        "top"
+                                    }
+                                })
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(alignment, Alignment::Top, "top");
+                                    ui.selectable_value(alignment, Alignment::Center, "center");
+                                    ui.selectable_value(alignment, Alignment::Bottom, "bottom");
+                                });
+                        }
                     }
+                    } else {
+                    container.layout = Box::new(FixedGridLayout  { 
+                        cells: UVec2 { x: 5, y: 5 }, 
+                        row_dir: FlexDir::LeftToRight, 
+                        column_dir: FlexDir::TopToBottom, 
+                        alignment: Alignment::Left,
+                    })
                 }
                 
             }
             "table" => {
-                if let Layout::Table { columns, row_dir, column_dir, stretch } = &mut container.layout {
+                if let Some(DynamicTableLayout { columns, row_dir, column_dir, stretch }) = container.layout.downcast_mut() {
                     ui.label("Checkout another example for a demo on fixed columns.");
-                    if let Columns::Dynamic(count) = columns {
-                        ui.add(Slider::new(count, 1..=20).text("columns"));
-                    }
+                    ui.add(Slider::new(columns, 1..=20).text("columns"));
                     ComboBox::from_label("Row Direction")
                         .selected_text(match row_dir {
                             FlexDir::LeftToRight => "left to right",
@@ -426,12 +496,12 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                     }
                     ui.checkbox(stretch, "Stretch");
                 } else {
-                    container.layout = Layout::Table { 
-                        columns: Columns::Dynamic(5), 
+                    container.layout = Box::new(DynamicTableLayout{ 
+                        columns: 5, 
                         row_dir: FlexDir::LeftToRight, 
                         column_dir: FlexDir::TopToBottom, 
                         stretch: false, 
-                    }
+                    })
                 }
             }
             _ => unreachable!()

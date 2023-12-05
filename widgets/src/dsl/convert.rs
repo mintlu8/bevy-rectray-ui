@@ -1,5 +1,5 @@
 use bevy::{prelude::{Vec2, UVec2, IVec2, Rect}, sprite::Anchor, render::view::{VisibilityBundle, Visibility}};
-use bevy_aoui::{Size2, Opacity};
+use bevy_aoui::{Size2, Opacity, SizeUnit};
 
 use super::OneOrTwo;
 
@@ -79,6 +79,31 @@ impl<const N: usize> DslInto<Vec<f32>> for [i32; N] {
         self.into_iter().map(|x| x as f32).collect()
     }
 }
+
+impl<const N: usize> DslInto<Vec<(SizeUnit, f32)>> for [i32; N] {
+    fn dinto(self) -> Vec<(SizeUnit, f32)> {
+        self.into_iter().map(|x| (SizeUnit::Pixels, x as f32)).collect()
+    }
+}
+
+impl<const N: usize> DslInto<Vec<(SizeUnit, f32)>> for [f32; N] {
+    fn dinto(self) -> Vec<(SizeUnit, f32)> {
+        self.into_iter().map(|x| (SizeUnit::Pixels, x as f32)).collect()
+    }
+}
+
+impl DslInto<Vec<(SizeUnit, f32)>> for &[i32] {
+    fn dinto(self) -> Vec<(SizeUnit, f32)> {
+        self.into_iter().map(|x| (SizeUnit::Pixels, *x as f32)).collect()
+    }
+}
+
+impl DslInto<Vec<(SizeUnit, f32)>> for &[f32] {
+    fn dinto(self) -> Vec<(SizeUnit, f32)> {
+        self.into_iter().map(|x| (SizeUnit::Pixels, *x as f32)).collect()
+    }
+}
+
 
 impl DslInto<Vec<f32>> for &[i32] {
     fn dinto(self) -> Vec<f32> {

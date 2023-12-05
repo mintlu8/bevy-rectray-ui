@@ -77,7 +77,6 @@ pub mod anim;
 mod dto;
 
 pub use dto::Submit;
-use widgets::inputbox;
 
 #[doc(hidden)]
 pub use generic_static::StaticTypeMap;

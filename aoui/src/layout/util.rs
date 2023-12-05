@@ -1,7 +1,8 @@
+use bevy::ecs::entity::Entity;
 use bevy::prelude::Vec2;
 use bevy::prelude::Reflect;
 
-use crate::{LayoutControl, Anchor};
+use crate::{layout::LayoutControl, Anchor};
 
 /// Horizontal or Vertical.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
@@ -119,6 +120,8 @@ impl From<&FlexDir> for Binary {
 #[doc(hidden)]
 #[derive(Debug, Clone)]
 pub struct LayoutItem {
+    /// entity of the item
+    pub entity: Entity,
     /// anchor of this item
     pub anchor: Anchor,
     /// dimension of this item
@@ -127,6 +130,7 @@ pub struct LayoutItem {
     pub control: LayoutControl,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Trinary {
     Neg, Mid, Pos
 }

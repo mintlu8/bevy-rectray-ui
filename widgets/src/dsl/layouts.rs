@@ -1,6 +1,6 @@
 
-use bevy::math::{Vec2, UVec2};
-use bevy_aoui::{Size2, FlexDir, Container, Layout, Alignment};
+use bevy::math::UVec2;
+use bevy_aoui::{Size2, layout::*, SizeUnit};
 pub use bevy_aoui::bundles::LinebreakBundle as Linebreak;
 
 /// Construct a dummy entity for linebreak in a layout.
@@ -35,7 +35,7 @@ use super::util::OneOrTwo;
 
 
 widget_extension! {
-    pub struct DynamicFrameBuilder {
+    pub struct PaddingBuilder {
         margin: OneOrTwo<Size2>,
         pub x: Option<bool>,
         pub y: Option<bool>,
@@ -43,10 +43,10 @@ widget_extension! {
     this, commands,
     components: (
         Container {
-            layout: Layout::Dynamic { 
+            layout: Box::new(Padding { 
                 x: this.x.unwrap_or(true), 
                 y: this.y.unwrap_or(true), 
-            },
+            }),
             margin: this.margin.0,
         }
     ),
@@ -64,8 +64,7 @@ pub enum GridContainerNames {
     FixedGrid,
     SizedGrid,
     FlexTable,
-    FixedTable,
-    SizedTable,
+    Table,
 }
 
 widget_extension! {
@@ -80,21 +79,21 @@ widget_extension! {
     components: (
         Container {
             layout: match this.r#type {
-                Some(SpanContainerNames::Compact) => Layout::Compact { 
+                Some(SpanContainerNames::Compact) => Box::new(CompactLayout { 
                     direction: this.direction.unwrap_or(FlexDir::LeftToRight) 
-                },
-                Some(SpanContainerNames::Span) => Layout::Span { 
+                }),
+                Some(SpanContainerNames::Span) => Box::new(SpanLayout { 
                     direction: this.direction.unwrap_or(FlexDir::LeftToRight), 
                     stretch: this.stretch,
-                },
-                Some(SpanContainerNames::Paragraph) => Layout::Paragraph { 
+                }),
+                Some(SpanContainerNames::Paragraph) => Box::new(ParagraphLayout { 
                     direction: this.direction.unwrap_or(FlexDir::LeftToRight), 
                     stack: this.stack.unwrap_or(match this.direction {
                         Some(FlexDir::BottomToTop|FlexDir::TopToBottom) => FlexDir::LeftToRight,
                         _ => FlexDir::TopToBottom,
                     }), 
                     stretch: this.stretch
-                },
+                }),
                 None => panic!("Please specify the container type."),
             },
             margin: this.margin.0
@@ -106,9 +105,9 @@ widget_extension! {
     pub struct GridContainerBuilder {
         pub r#type: Option<GridContainerNames>,
         pub cell_count: Option<UVec2>,
-        pub cell_size: Option<Vec2>,
+        pub cell_size: Option<Size2>,
         pub column_count: Option<usize>,
-        pub columns: Vec<f32>,
+        pub columns: Vec<(SizeUnit, f32)>,
         pub row: Option<FlexDir>,
         pub column: Option<FlexDir>,
         pub alignment: Option<Alignment>,
@@ -129,38 +128,31 @@ widget_extension! {
             });
             Container {
                 layout: match this.r#type {
-                    Some(GridContainerNames::FixedGrid) => Layout::Grid {
-                        cell: bevy_aoui::Cells::Counted(this.cell_count.expect("cell_count must be specified.")),
+                    Some(GridContainerNames::FixedGrid) => Box::new(FixedGridLayout {
+                        cells: this.cell_count.expect("cell_count must be specified."),
+                        row_dir,
+                        column_dir,
+                        alignment,
+                    }),
+                    Some(GridContainerNames::SizedGrid) => Box::new(SizedGridLayout {
+                        cell_size: this.cell_size.expect("cell_size must be specified."),
                         row_dir,
                         column_dir,
                         alignment,
                         stretch: this.stretch,
-                    },
-                    Some(GridContainerNames::SizedGrid) => Layout::Grid {
-                        cell: bevy_aoui::Cells::Sized(this.cell_size.expect("cell_size must be specified.")),
-                        row_dir,
-                        column_dir,
-                        alignment,
-                        stretch: this.stretch,
-                    },
-                    Some(GridContainerNames::FlexTable) => Layout::Table {
-                        columns: bevy_aoui::Columns::Dynamic(this.column_count.unwrap_or(usize::MAX)),
+                    }),
+                    Some(GridContainerNames::FlexTable) => Box::new(DynamicTableLayout {
+                        columns: this.column_count.expect("column_count must be specified."),
                         row_dir,
                         column_dir,
                         stretch: this.stretch,
-                    },
-                    Some(GridContainerNames::FixedTable) => Layout::Table {
-                        columns: bevy_aoui::Columns::Porportions(this.columns),
+                    }),
+                    Some(GridContainerNames::Table) => Box::new(TableLayout {
+                        columns: this.columns,
                         row_dir,
                         column_dir,
                         stretch: this.stretch,
-                    },
-                    Some(GridContainerNames::SizedTable) => Layout::Table {
-                        columns: bevy_aoui::Columns::Sized(this.columns),
-                        row_dir,
-                        column_dir,
-                        stretch: this.stretch,
-                    },
+                    }),
                     None => panic!("Please specify the container type."),
                 },
                 margin: this.margin.0,
@@ -186,7 +178,7 @@ macro_rules! hbox {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::SpanContainerBuilder] {
             r#type: $crate::dsl::SpanContainerNames::Compact,
-            direction: ::bevy_aoui::FlexDir::LeftToRight,
+            direction: ::bevy_aoui::layout::FlexDir::LeftToRight,
             $($tt)*
         })
     };
@@ -198,7 +190,7 @@ macro_rules! vbox {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::SpanContainerBuilder] {
             r#type: $crate::dsl::SpanContainerNames::Compact,
-            direction: ::bevy_aoui::FlexDir::TopToBottom,
+            direction: ::bevy_aoui::layout::FlexDir::TopToBottom,
             $($tt)*
         })
     };
@@ -221,7 +213,7 @@ macro_rules! hspan {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::SpanContainerBuilder] {
             r#type: $crate::dsl::SpanContainerNames::Span,
-            direction: ::bevy_aoui::FlexDir::LeftToRight,
+            direction: ::bevy_aoui::layout::FlexDir::LeftToRight,
             $($tt)*
         })
     };
@@ -233,7 +225,7 @@ macro_rules! vspan {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::SpanContainerBuilder] {
             r#type: $crate::dsl::SpanContainerNames::Span,
-            direction: ::bevy_aoui::FlexDir::TopToBottom,
+            direction: ::bevy_aoui::layout::FlexDir::TopToBottom,
             $($tt)*
         })
     };
@@ -285,21 +277,10 @@ macro_rules! flex_table {
 
 /// Construct a fixed table layout.
 #[macro_export]
-macro_rules! fixed_table {
+macro_rules! table {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::GridContainerBuilder] {
-            r#type: $crate::dsl::GridContainerNames::FixedTable,
-            $($tt)*
-        })
-    };
-}
-
-/// Construct a sized table layout.
-#[macro_export]
-macro_rules! sized_table {
-    {$commands: tt {$($tt:tt)*}} => {
-        $crate::meta_dsl!($commands [$crate::dsl::builders::GridContainerBuilder] {
-            r#type: $crate::dsl::GridContainerNames::SizedTable,
+            r#type: $crate::dsl::GridContainerNames::Table,
             $($tt)*
         })
     };

@@ -171,15 +171,11 @@ mod hitbox;
 mod compute;
 mod scaling;
 
-mod layout;
-mod scene;
-
+pub mod layout;
 pub use rect::*;
 pub use components::*;
 pub use schedule::AoUIPlugin;
 pub use hitbox::*;
-pub use layout::*;
-pub use scene::*;
 pub use scaling::*;
 
 pub mod schedule;

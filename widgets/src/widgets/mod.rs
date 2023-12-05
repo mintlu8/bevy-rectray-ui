@@ -4,7 +4,7 @@ pub mod schedule;
 pub mod inputbox;
 pub mod drag;
 pub mod richtext;
-//pub mod scroll;
+pub mod scroll;
 mod button;
 use bevy::{render::color::Color, ecs::component::Component};
 

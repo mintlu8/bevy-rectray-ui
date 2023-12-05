@@ -3,7 +3,7 @@ use bevy_aoui::schedule::{AoUIStoreOutput, AoUILoadInput};
 
 use crate::events::AoUIEventSet;
 
-use super::{shape, inputbox, button::{self, CursorDefault}, drag::{self, drag_start}, richtext};
+use super::{shape, inputbox, button::{self, CursorDefault}, drag::{self, drag_start}, richtext, scroll};
 
 /// Plugin for widgets that do not depend on events.
 pub struct CoreWidgetsPlugin;
@@ -48,6 +48,7 @@ impl Plugin for FullWidgetsPlugin {
                 drag::drag_start,
                 drag::drag_end,
                 drag::dragging.after(drag_start),
+                scroll::scrolling,
             ))
             .add_systems(PostUpdate, drag::apply_constraints.in_set(AoUILoadInput))
             .add_systems(PostUpdate, richtext::synchronize_spaces.in_set(AoUILoadInput))
