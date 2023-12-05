@@ -45,7 +45,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     builder.push_str(r#"
 Hello, {orange:Rustaceans!}
 
-Let's make out text {red:red} and {blue:blue.}
+Let's make our text {red:red} and {blue:blue.}
 
 We can make it **bold** or *italic,* even {red:red and ***bold and italic.***}
 
@@ -63,7 +63,7 @@ and use the color {green} green,
 {right} and right align everything.
 
 Awesome {br} right?
-"#);
+"#).unwrap();
 
     let children = builder.build();
     commands.entity(rich).push_children(&children);
@@ -90,7 +90,7 @@ Awesome {br} right?
     {zip:{red:ButThisDoes},}
 
     {zip:{red:AndThisToo}!!}
-"#);
+"#).unwrap();
     let children = builder.build();
     commands.entity(zip_test).push_children(&children);
 }

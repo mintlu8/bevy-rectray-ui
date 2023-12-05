@@ -11,9 +11,8 @@
 //! * Strikethroigh: `~~text~~` (not implemented)
 //! 
 //! Ascii whitespaces are either rendered as one space or linebreaks.
-//! Use a unicode space if you want multiple spaces.
-//! 
-//! Tabs are not supported.
+//! Use a unicode space if you want multiple spaces. Leading and trailing
+//! whiespaces are always trimmed. Tabs are not supported.
 //! 
 //! `N` consecutive newlines will be rendered as `N-1` newlines.
 //! 
@@ -33,7 +32,7 @@
 //! 
 //! `{left}` or `{topleft}`
 //! 
-//! This modifies the anchor of text segments. Changes on the main
+//! This modifies the anchor of text segments. Changes on the horizontal
 //! axis will modify the text's alignment.
 //! 
 //! * `{red}` or `{#FFAABBCC}`
@@ -54,7 +53,7 @@
 //! 
 //! * `{0}` - `{9}`
 //! 
-//! Spawn an empty entity for future insetrtion.
+//! Spawn an empty entity for future insertion.
 //! 
 //! * `{zip: {red:a}.}`
 //! 
@@ -62,18 +61,19 @@
 //! This is needed to preserve linebreak behavior across style groups.
 //! Changing anchor inside is unspecified behavior.
 
-use std::{collections::HashMap, hash::{Hash, BuildHasher}};
+use std::{collections::HashMap, hash::{Hash, BuildHasher}, num::ParseFloatError};
 
 use bevy::{asset::{Handle, Assets}, text::{Font, Text, TextStyle}, ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component, query::Changed}, render::color::Color, math::Vec2, hierarchy::BuildChildren};
 use bevy_aoui::{Transform2D, Anchor, bundles::{AoUITextBundle, AoUIBundle}, SetEM, Dimension, layout::{Container, CompactLayout, FlexDir}, Size2};
 use bevy_aoui::layout::LayoutControl;
+
 /// This widget always has the width of a space and line height of a widget.
 #[derive(Debug, Clone, Component)]
-pub struct FontSpace {
+pub struct GlyphSpace {
     font: Handle<Font>
 }
 
-pub fn synchronize_spaces(mut query: Query<(&FontSpace, &mut Dimension), Changed<Dimension>>, fonts: Res<Assets<Font>> ){
+pub fn synchronize_glyph_spaces(mut query: Query<(&GlyphSpace, &mut Dimension), Changed<Dimension>>, fonts: Res<Assets<Font>> ){
     use ab_glyph::{Font, ScaleFont};
     query.par_iter_mut().for_each(|(font, mut dimension)| {
         if let Some(font) = fonts.get(&font.font) {
@@ -185,29 +185,29 @@ fn is_ws(s: &str) -> bool {
     s.chars().all(|x| x.is_ascii_whitespace())
 }
 
-fn hex1(s: u8) -> f32 {
-    (
+fn hex1(s: u8) -> Result<f32, RichTextError> {
+    Ok((
         match s {
             b'0'..=b'9' => s - b'0',
             b'a'..=b'z' => s - b'a' + 10_u8,
-            _ => panic!("Invalid hex number {s}")
+            _ => return Err(RichTextError::InvalidHexDigit(s))
         } * 0x11
-    ) as f32 / 255.0
+    ) as f32 / 255.0)
 }
 
-fn hex2(a: u8, b: u8) -> f32 {
-    (
+fn hex2(a: u8, b: u8) -> Result<f32, RichTextError> {
+    Ok((
         match a {
             b'0'..=b'9' => a - b'0',
             b'a'..=b'z' => a - b'a' + 10_u8,
-            _ => panic!("Invalid hex number {a}")
+            _ => return Err(RichTextError::InvalidHexDigit(a))
         } * 16 + 
         match b {
             b'0'..=b'9' => b - b'0',
             b'a'..=b'z' => b - b'a' + 10_u8,
-            _ => panic!("Invalid hex number {b}")
+            _ => return Err(RichTextError::InvalidHexDigit(b))
         }
-    ) as f32 / 255.0
+    ) as f32 / 255.0)
 }
 
 pub struct RichTextBuilder<'t, 'w, 's, F: FontFetcher, B: Bundle + Clone = ()>{
@@ -225,7 +225,6 @@ pub struct RichTextBuilder<'t, 'w, 's, F: FontFetcher, B: Bundle + Clone = ()>{
     zip: Option<Vec<Entity>>,
     buffer: Vec<Entity>,
     pop_stack: Vec<RichTextScope>,
-    ignore_space: bool,
     margin: Size2,
 }
 
@@ -244,7 +243,6 @@ impl<'a, 'w, 's, F: FontFetcher> RichTextBuilder<'a, 'w, 's, F> {
             zip: None,
             buffer: Vec::new(), 
             pop_stack: Vec::new(),
-            ignore_space: false,
             margin: Size2::ZERO,
         }
     }
@@ -296,9 +294,9 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
 
     #[must_use]
     pub fn with_bundle<B2: Bundle + Clone>(self, bun: B2) -> RichTextBuilder<'a, 'w, 's, F, B2>{
-        let RichTextBuilder { bundle:_, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, zip, buffer, pop_stack, ignore_space, margin } = self;
+        let RichTextBuilder { bundle:_, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, zip, buffer, pop_stack, margin } = self;
         let bundle = bun;
-        RichTextBuilder { bundle, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, zip, buffer, pop_stack, ignore_space, margin }
+        RichTextBuilder { bundle, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, zip, buffer, pop_stack, margin }
     }
 
     #[must_use]
@@ -331,24 +329,11 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
         self
     }
 
-    /// Edit the space handling strategy, if set, spaces are rendered.
-    /// 
-    /// If not set, you can use the margin of the `paragraph` layout
-    /// to simulate spaces.
-    /// 
-    /// # Limitations:
-    /// 
-    /// ## Margin mode
-    /// 
-    /// * Not portable across languages. 
-    /// * Must group punctuations with style groups.
-    /// 
-    /// ## Space mode
-    /// 
-    /// * Spaces might disrupt flow.
+    /// Set margin for zipped entities.
+    /// Usually not needed.
     #[must_use]
-    pub fn with_ignore_space(mut self, ignore_space: bool) -> Self{
-        self.ignore_space = ignore_space;
+    pub fn with_margin(mut self, margin: impl Into<Size2>) -> Self{
+        self.margin = margin.into();
         self
     }
 
@@ -388,12 +373,13 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
         self.color_stack.last().copied().unwrap_or(Color::WHITE)
     }
 
-    fn push_zip(&mut self) {
+    fn push_zip(&mut self) -> Result<(), RichTextError> {
         if self.zip.is_some() {
-            panic!("Cannot zip in a zip scope.");
+            return Err(RichTextError::ZipInZip);
         }
         self.zip = Some(Vec::new());
         self.pop_stack.push(RichTextScope::Zip);
+        Ok(())
     }
 
 
@@ -417,7 +403,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
         self.buffer.push(entity);
     }
 
-    pub fn push_str(&mut self, s: &str) {
+    pub fn push_str(&mut self, s: &str) -> Result<(), RichTextError>{
         use xi_unicode::LineBreakIterator;
 
         macro_rules! spawn {
@@ -472,7 +458,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
 
         macro_rules! space {
             () => {
-                if !self.ignore_space && self.buffer.len() != last_space { 
+                if self.buffer.len() != last_space { 
                     last_space = self.buffer.len() + 1;
                     self.buffer.push(self.commands.spawn((
                         AoUIBundle{
@@ -510,7 +496,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
         while let Some(item) = iter.next() {
             match item {
                 "{" => {
-                    let mut cc = iter.next().expect("Brackets Mismatch1");
+                    let mut cc = iter.next().ok_or(RichTextError::BracketsNotClosed)?;
                     let prefix = match cc {
                         "{" => { spawn!("{"); continue; }
                         "*" => Some('*'),
@@ -522,10 +508,10 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                         _ => None,
                     };
                     if let Some(prefix) = prefix {
-                        cc = iter.next().expect("Brackets Mismatch2");
+                        cc = iter.next().ok_or(RichTextError::BracketsNotClosed)?;
                         if cc == "}" {
                             spawn!(prefix);
-                            return;
+                            break;
                         }
                     }
                     let scoped = if cc.ends_with(':') {
@@ -536,13 +522,13 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                         match iter.next() {
                             Some(":") => true,
                             Some("}") => false,
-                            Some(cc) => panic!("Expected ':' or '}}', found {}", cc),
-                            None => panic!("Expected ':' or '}}'."),
+                            Some(cc) => return Err(RichTextError::NotColonOrEndParam(cc.to_owned())),
+                            None => return Err(RichTextError::NotColonOrEndParam("end of string.".to_owned())),
                         }
                     };
                     match cc.to_lowercase().as_str() {
                         "br" => line_gap!(),
-                        "zip" => self.push_zip(),
+                        "zip" => self.push_zip()?,
                         "left" => self.push_anchor(Anchor::CenterLeft, scoped),
                         "right" => self.push_anchor(Anchor::CenterRight, scoped),
                         "top" => self.push_anchor(Anchor::TopCenter, scoped),
@@ -559,25 +545,25 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                         cc => match prefix {
                             Some('@') => self.push_font(cc.to_owned(), scoped),
                             Some('+') => {
-                                let size = cc.parse().unwrap_or_else(|_| panic!("{} is not a valid font size.", cc));
+                                let size = cc.parse()?;
                                 self.push_size(SetEM::Pixels(size), scoped);
                             },
                             Some('*') => {
-                                let size = cc.parse().unwrap_or_else(|_| panic!("{} is not a valid font size.", cc));
+                                let size = cc.parse()?;
                                 self.push_size(SetEM::Ems(size), scoped);
                             },
                             Some('#') => {
                                 let b = cc.as_bytes();
                                 let color = match b {
-                                    [a,b,c] => Color::rgba_linear(hex1(*a), hex1(*b), hex1(*c), 1.0),
-                                    [a,b,c,d] => Color::rgba_linear(hex1(*a), hex1(*b), hex1(*c), hex1(*d)),
-                                    [a,b,c,d,e,f] => Color::rgba_linear(hex2(*a, *b), hex2(*c, *d), hex2(*e, *f), 1.0),
-                                    [a,b,c,d,e,f,g,h] => Color::rgba_linear(hex2(*a, *b), hex2(*c, *d), hex2(*e, *f), hex2(*g, *h)),
-                                    _ => panic!("Invalid hex color {cc}, has to be of length 3, 4, 6 or 8.")
+                                    [a,b,c] => Color::rgba_linear(hex1(*a)?, hex1(*b)?, hex1(*c)?, 1.0),
+                                    [a,b,c,d] => Color::rgba_linear(hex1(*a)?, hex1(*b)?, hex1(*c)?, hex1(*d)?),
+                                    [a,b,c,d,e,f] => Color::rgba_linear(hex2(*a, *b)?, hex2(*c, *d)?, hex2(*e, *f)?, 1.0),
+                                    [a,b,c,d,e,f,g,h] => Color::rgba_linear(hex2(*a, *b)?, hex2(*c, *d)?, hex2(*e, *f)?, hex2(*g, *h)?),
+                                    _ => return Err(RichTextError::InvalidHexColor(cc.to_owned()))
                                 };
                                 self.push_color(color, scoped);
                             },
-                            Some(pfx) => panic!("Invalid prefix {pfx}"),
+                            Some(pfx) => return Err(RichTextError::UnsupportedPrefix(pfx)),
                             None => {
                                 if let Some([r, g, b, a]) = parse_color::parse_flat_lower(cc) {
                                     let color = Color::rgba_linear(
@@ -588,7 +574,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                                     );
                                     self.push_color(color, scoped);
                                 } else {
-                                    panic!("Invalid control code {cc}");
+                                    return Err(RichTextError::InvalidControlCode(cc.to_owned()))
                                 }
                             }
                         }
@@ -632,10 +618,10 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                                     }
                                 ))
                                 .insert(Transform2D::UNIT.with_anchor(anchor))
-                                .push_children(&self.zip.take().expect("zip hierarchy mismatch"))
+                                .push_children(&self.zip.take().ok_or(RichTextError::HierarchyMismatch)?)
                                 .id());
                             },
-                            None => panic!("brackets mismatch"),
+                            None => return Err(RichTextError::BracketsMismatch),
                         }
                     }
                 },
@@ -663,7 +649,31 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                 s => spawn!(s),
             }
         }
+        Ok(())
     }
 
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum RichTextError {
+    #[error("Open brackets not closed. Maybe escape with '{{'?")]
+    BracketsNotClosed,
+    #[error("Closing Bracket '}}' found without an opening bracket '{{'. Maybe escape with '}}}}'?")]
+    BracketsMismatch,
+    #[error("Hierarchy mismatch, this is likely a bug.")]
+    HierarchyMismatch,
+    #[error("Prefix {} is reserved, but not implemented yet.", 0)]
+    UnsupportedPrefix(char),
+    #[error("Invalid control code {}", 0)]
+    InvalidControlCode(String),
+    #[error("Invalid font size: {}", 0)]
+    InvalidFontSizeCode(#[from] ParseFloatError),
+    #[error("Invalid hex color {}, has to be of length 3, 4, 6 or 8.", 0)]
+    InvalidHexColor(String),
+    #[error("Invalid hex digit 0x{}, expected '0-9|a-f'.", 0)]
+    InvalidHexDigit(u8),
+    #[error("Cannot zip in a zip block")]
+    ZipInZip,
+    #[error("Expected ':' or '}}', found {}.", 0)]
+    NotColonOrEndParam(String)
+}

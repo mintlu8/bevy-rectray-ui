@@ -51,7 +51,7 @@ impl Plugin for FullWidgetsPlugin {
                 scroll::scrolling,
             ))
             .add_systems(PostUpdate, drag::apply_constraints.in_set(AoUILoadInput))
-            .add_systems(PostUpdate, richtext::synchronize_spaces.in_set(AoUILoadInput))
+            .add_systems(PostUpdate, richtext::synchronize_glyph_spaces.in_set(AoUILoadInput))
             .add_systems(PostUpdate, inputbox::sync_em_inputbox.in_set(AoUIStoreOutput))
         ;
     }
