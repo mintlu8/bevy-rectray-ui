@@ -1,7 +1,7 @@
 #![allow(non_upper_case_globals)]
 
-pub use crate::{color, size2, markers};
-use super::DslInto;
+pub use crate::{color, colorv4, gradient, size2, markers};
+pub use super::DslInto;
 pub use super::util::*;
 pub use super::util::Hitbox::*;
 pub use super::util::AoUISpacialConsts::*;
@@ -10,7 +10,8 @@ pub use bevy::prelude::BuildChildren;
 use bevy::sprite::Anchor;
 pub use crate::widgets::shape::Shapes;
 pub use std::f32::consts::PI;
-pub use std::f32::INFINITY;
+pub const INFINITY: f32 = f32::INFINITY;
+pub const EPS: f32 = f32::EPSILON;
 pub use bevy::prelude::Color;
 pub use bevy_aoui::{Dimension, Opacity, SizeUnit};
 pub use bevy_aoui::layout::LayoutControl::{Linebreak, IgnoreLayout};
@@ -26,14 +27,19 @@ pub use crate::events::{
     Pressed as LeftPressed, Drag as LeftDrag,
     MidPressed, MidDrag,
     RightPressed, RightDrag,
-    OnSubmit,
     LoseFocus,
     CustomCursor,
 };
+pub use crate::signal;
+pub use crate::{Submit, Change, Sender, Receiver};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::{
     PropagateFocus, DisplayIf, SetCursor
 };
+
+pub const FlipX: [bool; 2] = [true, false];
+pub const FlipY: [bool; 2] = [false, true];
+pub const FlipBoth: [bool; 2] = [true, true];
 
 pub const DragX: crate::widgets::drag::Draggable = crate::widgets::drag::Draggable::X;
 pub const DragY: crate::widgets::drag::Draggable = crate::widgets::drag::Draggable::Y;
@@ -42,11 +48,6 @@ pub const DragSnapBack: crate::widgets::drag::DragSnapBack = crate::widgets::dra
 
 /// This can be use anywhere where you want to use the default anchor.
 pub const Inherit: Option<Anchor> = None;
-
-/// Multiply by epsilon, useful in Z.
-pub fn eps(value: impl DslInto<f32>) -> f32{
-    value.dinto() * f32::EPSILON
-}
 
 pub use crate::{frame, sprite, textbox};
 pub use crate::{oneshot, handler};

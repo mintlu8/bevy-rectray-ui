@@ -194,11 +194,10 @@ pub struct Transform2D{
     /// and should ideally work the same way for third party implementations.
     pub anchor: Anchor,
     /// The anchor matched on the parent side.
-    ///
-    /// By default this is the same as `anchor`.
+    /// By default and in idiomatic use, this is the same as `anchor`.
     /// 
     /// Unless doing skeletal animations,
-    /// try avoid using this field in idiomatic usage of `AoUI`.
+    /// try avoid using this field if possible.
     pub parent_anchor: Anchor,
     /// Center of `rotation` and `scale`.
     ///
@@ -206,7 +205,8 @@ pub struct Transform2D{
     pub center: Anchor,
     /// Offset from parent's anchor.
     pub offset: Size2,
-    /// Z depth, by default, this is `parent_z + z + eps * 8`
+    /// Z depth, if set, this is `parent_z + z`.
+    /// If not set, this is `parent_z.next_after()`.
     pub z: f32,
     /// Rotation around `center`.
     pub rotation: f32,
@@ -285,7 +285,7 @@ impl Default for Transform2D {
     }
 }
 
-/// Builds a `GlobalTransform` on a `Anchor`, by default `Transform2d::anchor`.
+/// Builds a `GlobalTransform` on a `Anchor`, by default `Transform2D::anchor`.
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct BuildGlobal(pub Anchor);
 
@@ -310,24 +310,26 @@ impl Default for BuildTransform {
     }
 }
 
+/// Stores opacity of the widget, not used by default but
+/// can be used by implementors.
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct Opacity {
-    pub opactity: f32,
+    pub opacity: f32,
     pub computed: f32
 }
 
 impl Opacity {
     pub const FULL: Self = Self {
-        opactity: 1.0,
+        opacity: 1.0,
         computed: 1.0,
     };
     pub const TRANSPARENT: Self = Self {
-        opactity: 0.0,
+        opacity: 0.0,
         computed: 0.0,
     };
     pub const fn new(v: f32) -> Self {
         Self {
-            opactity: v,
+            opacity: v,
             computed: v,
         }
     }

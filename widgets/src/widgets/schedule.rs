@@ -1,7 +1,7 @@
 use bevy::{prelude::{Plugin, PostUpdate, IntoSystemConfigs, Update}, ecs::schedule::{SystemSet, IntoSystemSetConfigs}, app::PreUpdate};
 use bevy_aoui::schedule::{AoUIStoreOutput, AoUILoadInput};
 
-use crate::events::AoUIEventSet;
+use crate::{events::AoUIEventSet, Submit, Change};
 
 use super::{shape, inputbox, button::{self, CursorDefault}, drag::{self, drag_start}, richtext, scroll};
 
@@ -43,6 +43,8 @@ impl Plugin for FullWidgetsPlugin {
             ).in_set(AoUIWidgetsEventSet))
             .add_systems(Update, (
                 inputbox::update_inputbox_cursor,
+                inputbox::format_signal::<Submit>,
+                inputbox::format_signal::<Change>,
                 button::set_cursor,
                 button::conditional_visibility,
                 drag::drag_start,

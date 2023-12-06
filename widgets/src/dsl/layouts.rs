@@ -6,10 +6,7 @@ pub use bevy_aoui::bundles::LinebreakBundle as Linebreak;
 /// Construct a dummy entity for linebreak in a layout.
 #[macro_export]
 macro_rules! linebreak {
-    (($commands: expr $(, $tt:expr)*) $(,)?) => {
-        $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::default()).id()
-    };
-    (($commands: expr $(, $tt:expr)*) {}) => {
+    (($commands: expr $(, $tt:expr)*) $({})? $(,)?) => {
         $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::default()).id()
     };
     (($commands: expr $(, $tt:expr)*), $size: expr $(,)?) => {
@@ -20,6 +17,24 @@ macro_rules! linebreak {
         }
     };
     (($commands: expr $(, $tt:expr)*) {$size: expr}) => {
+        {
+            use $crate::dsl::DslInto;
+            let size: ::bevy_aoui::Size2;
+            OneOrTwo(size) = $size.dinto();
+            $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::new(size)).id()
+        }
+    };
+    ($commands: tt $({})? $(,)?) => {
+        $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::default()).id()
+    };
+    ($commands: tt $size: expr $(,)?) => {
+        {
+            use $crate::dsl::DslInto;
+            let OneOrTwo(size) = $size.dinto();
+            $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::new(size)).id()
+        }
+    };
+    ($commands: tt {$size: expr}) => {
         {
             use $crate::dsl::DslInto;
             let size: ::bevy_aoui::Size2;

@@ -1,17 +1,18 @@
-use bevy::{ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With}, render::view::Visibility, window::{Window, PrimaryWindow, CursorIcon}, hierarchy::Children};
+use bevy::{render::view::Visibility, window::{Window, PrimaryWindow, CursorIcon}, hierarchy::Children};
+use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
 
 use crate::events::{EventFlags, CursorFocus, CursorAction};
 
-// There is no button here, we use events, propagate, oneshot and DisplayIf.
-
-
-/// Insert resource CursorDefault if your cursor does not revert.
+/// Set cursor if [`CursorFocus`] is some [`EventFlags`].
+///
+/// Insert resource [`CursorDefault`] if your cursor does not revert.
 #[derive(Debug, Clone, Copy, Component)]
 pub struct SetCursor {
     pub flags: EventFlags,
     pub icon: CursorIcon,
 }
 
+/// Visible only when some ['EventFlags'](crate::events::EventFlags) are set.
 #[derive(Debug, Clone, Copy, Component)]
 pub struct DisplayIf(pub EventFlags);
 
@@ -35,8 +36,8 @@ pub fn conditional_visibility(mut query: Query<(&DisplayIf, Option<&CursorFocus>
 
 /// If set, we set the cursor to a default value every frame.
 /// 
-/// Not a part of the standard plugin, but should be added if you are
-/// using `SetCursor`
+/// Not a part of the standard plugin, but
+/// can be used if you are using `SetCursor`.
 #[derive(Debug, Resource, Clone, Copy)]
 pub struct CursorDefault(pub CursorIcon);
 
@@ -63,7 +64,7 @@ pub fn set_cursor(
 }
 
 
-/// Marker component for passing active/passive state down their children.
+/// Marker component for passing `CursorFocus`/`CursorAction` to their children.
 /// 
 /// Does **not** propagate through hierarchy if chained.
 #[derive(Debug, Clone, Copy, Component, Default)]

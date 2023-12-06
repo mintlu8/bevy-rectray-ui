@@ -4,10 +4,20 @@ use bevy_aoui::{Size2, Transform2D};
 use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::{Interpolate, Offset}};
 
 
-/// Enables dragging, 
+/// A component that enables dragging and dropping. 
+/// By default the sprite can be dragged anywhere with no restriction.
 /// 
 /// This works with all mouse buttons as long as
-/// you add the corresponding event flags separately.
+/// you add the corresponding event flags.
+/// 
+/// # Supporting components
+/// 
+/// * [`EventFlags`]: Requires `Drag` to be set.
+/// * [`Constraint`]: This stops dragging outside of a bound and provides a linear value if applicable.
+/// * [`DragSnapBack`]: Move the sprite back to its original position if dropped. 
+/// Uses `Transition` if applicable.
+/// * [`DragFactor`]: Yields a value when dragged.
+/// * [`Sender<Changed>`](crate::Sender): A signal that sends the [`DragFactor`] when changed.
 /// 
 /// # Panics
 /// 
@@ -25,6 +35,7 @@ impl Default for Draggable {
     }
 }
 
+/// Component that moves the sprite back to its original position if dropped. 
 #[derive(Debug, Clone, Copy, Component)]
 pub struct DragSnapBack {
     drag_start: Option<Vec2>,
@@ -66,7 +77,7 @@ impl Draggable {
 
 /// This component stops `offset` from going over this range. 
 /// 
-/// Min does not need to be less than max,
+/// Min does not need to be less than max, instead
 /// position close to min produces lower `DragFactor`.
 /// 
 /// The units have to match offset, otherwise this will panic.

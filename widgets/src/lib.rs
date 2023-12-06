@@ -6,10 +6,10 @@
 //! 
 //! Since AoUI presumably sits on top of the bevy app, we provide an event system
 //! for detecting cursor activity exclusively for AoUI widgets. Cursor events not
-//! catched by our system can be handled by other systems.
+//! caught by our system can be handled by other systems.
 //! 
 //! We offer a component insertion based core event system for library developers 
-//! as well as a oneshot system based event handler system for end users.
+//! as well as a one-shot system based event handler system for end users.
 //! 
 //! # Widgets
 //! 
@@ -23,7 +23,7 @@
 //! 
 //! We offer a DSL for streamlining widget construction.
 //! 
-//! Before you start, always import the prelude for syntax consistancy.
+//! Before you start, always import the prelude for syntax consistency.
 //! ```
 //! use bevy_aoui_widgets::dsl::prelude::*;
 //! ```
@@ -75,8 +75,11 @@ pub mod events;
 pub mod anim;
 
 mod dto;
+mod signals;
 
-pub use dto::Submit;
+use bevy::{ecs::world::World, app::{Last, App}};
+pub use dto::{Submit, Change};
+pub use signals::{signal, Sender, Receiver};
 
 #[doc(hidden)]
 pub use generic_static::StaticTypeMap;
@@ -91,5 +94,23 @@ impl bevy::prelude::Plugin for AoUIExtensionsPlugin {
             .add_plugins(anim::AoUIAnimationPlugin)
             .add_plugins(widgets::schedule::FullWidgetsPlugin)
         ;
+    }
+}
+
+pub trait AoUIWorldExtension {
+    fn register_aoui_signal<T: 'static>(&mut self);
+}
+
+impl AoUIWorldExtension for World {
+    fn register_aoui_signal<T: 'static>(&mut self) {
+        self.schedule_scope(Last, |_, s| {
+            s.add_systems(signals::signal_cleanup::<T>);
+        });
+    }
+}
+
+impl AoUIWorldExtension for App {
+    fn register_aoui_signal<T: 'static>(&mut self) {
+        self.add_systems(Last, signals::signal_cleanup::<T>);
     }
 }

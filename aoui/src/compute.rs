@@ -1,4 +1,5 @@
 use bevy::{prelude::*, window::PrimaryWindow, ecs::query::{ReadOnlyWorldQuery, WorldQuery}, math::Affine2};
+use float_next_after::NextAfter;
 
 use crate::{*, layout::*};
 
@@ -34,7 +35,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
     
     let (dimension, em) = dim.update(parent.dimension, parent.em, rem);
     let offset = transform.offset.as_pixels(parent.dimension, em, rem);
-    opacity.computed = opacity.opactity * parent.opacity;
+    opacity.computed = opacity.opacity * parent.opacity;
     let opacity = opacity.computed;
 
     if let Ok(layout) = flex_query.get(entity) {
@@ -80,7 +81,11 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             transform.get_center(),
             transform.rotation,
             transform.scale,
-            parent.z + transform.z + f32::EPSILON * 8.0,
+            if transform.z > 0.0 {
+                parent.z + transform.z
+            } else {
+                parent.z.next_after(f32::INFINITY)
+            }        
         );
 
         queue.extend(entity_anchors.into_iter()
@@ -102,7 +107,11 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         transform.get_center(),
         transform.rotation,
         transform.scale,
-        parent.z + transform.z + f32::EPSILON * 8.0,
+        if transform.z > 0.0 {
+            parent.z + transform.z
+        } else {
+            parent.z.next_after(f32::INFINITY)
+        }
     );
 
     if let Ok(children) = child_query.get(entity) {

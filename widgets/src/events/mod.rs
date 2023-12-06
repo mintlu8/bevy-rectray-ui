@@ -1,5 +1,5 @@
 use bevy::{prelude::*, input::InputSystem};
-use crate::dto::Submit;
+use crate::{dto::Submit, signals::signal_cleanup, Change};
 
 mod systems;
 mod state;
@@ -62,8 +62,12 @@ impl bevy::prelude::Plugin for AoUICursorEventsPlugin {
                 call_oneshot::<MidDrag>,
                 call_oneshot::<RightPressed>,
                 call_oneshot::<RightDrag>,
-                call_oneshot::<OnSubmit>,
                 lose_focus_detection,
+            ))
+            .add_systems(Last, (
+                signal_cleanup::<()>,
+                signal_cleanup::<Submit>,
+                signal_cleanup::<Change>,
             ))
         ;
     }

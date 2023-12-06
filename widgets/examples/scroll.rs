@@ -15,7 +15,7 @@ pub fn main() {
         .add_plugins(AoUIPlugin)
         .add_plugins(AoUIExtensionsPlugin)
         // classic macos stuff
-        .insert_resource(ScrollDirection::INVERSED)
+        .insert_resource(ScrollDirection::INVERTED)
         .run();
 }
 

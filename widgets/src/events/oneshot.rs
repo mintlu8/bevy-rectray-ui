@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use bevy::ecs::{system::{SystemId, Query, Commands}, component::Component, removal_detection::RemovedComponents, query::Without};
 
-use crate::{events::{EventFlags, CursorAction, CursorFocus, ClickOutside, CursorClickOutside}, dto::Submit};
+use crate::events::{EventFlags, CursorAction, CursorFocus, ClickOutside, CursorClickOutside};
 
 /// Event handler though a oneshot system.
 #[derive(Component)]
@@ -89,17 +89,6 @@ impl_entity_query_for_mouse_state! (
     Hover Pressed MidPressed RightPressed
     Drag MidDrag RightDrag
 );
-
-/// One-shot system for checking the sumbit event.
-pub struct OnSubmit;
-
-impl EventQuery for OnSubmit {
-    type Component = Submit;
-
-    fn validate(&self, _: &Self::Component) -> bool {
-        true
-    }
-}
 
 /// Check if widget has lost focus (drag, hover, pressed).
 pub struct LoseFocus;

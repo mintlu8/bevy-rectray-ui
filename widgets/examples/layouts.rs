@@ -30,7 +30,7 @@ macro_rules! anchor_circle {
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui_widgets::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    vbox! ((commands) {
+    vbox! (commands {
         anchor: Top,
         margin: 4,
         child: textbox! { 

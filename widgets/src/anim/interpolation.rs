@@ -8,13 +8,15 @@ use smallvec::SmallVec;
 #[derive(Debug, Clone, Component)]
 #[component(storage="SparseSet")]
 
-/// AoUI's smart tweener that manages an external value.
+/// A smart tweener that manages an external value.
 pub struct Interpolate<T: Interpolation>{
+    /// Easing function of the tweener.
     curve: Option<EaseFunction>,
     /// Interpolates through these keyframes.
     /// 
     /// Invariant: this field must have at least 1 value.
     range: SmallVec<[(T::Data, f32); 1]>,
+    /// Current time.
     current: f32,
     time: f32,
     default_time: f32,
@@ -112,6 +114,12 @@ impl<T: Interpolation> Interpolate<T> {
         self.range.last().unwrap().0
     }
 
+    /// Get source of this interpolation
+    pub fn source(&self) -> T::Data {
+        self.range.first().expect("Interpolate has no value, this is a bug.").0
+    }
+
+    /// Get target of this interpolation
     pub fn target(&self) -> T::Data {
         self.range.last().expect("Interpolate has no value, this is a bug.").0
     }
@@ -129,6 +137,7 @@ impl<T: Interpolation> Interpolate<T> {
         self.current += time;
     }
 
+    /// Set position and stop interpolation.
     pub fn set(&mut self, pos: T::Data) {
         self.range = SmallVec::from_const([(pos, 0.0)]);
         self.current = 0.0;
@@ -146,7 +155,8 @@ impl<T: Interpolation> Interpolate<T> {
         }
     }
 
-    /// `reverse` if to is start, otherwise call `interpolate_to`.
+    /// Call `reverse` if interpolating to current animation's source, 
+    /// otherwise call `interpolate_to`.
     pub fn interpolate_to_or_reverse(&mut self, to: T::Data) {
         if self.range.len() > 1 && self.range[0].0 == to {
             self.reverse()
@@ -163,10 +173,8 @@ impl<T: Interpolation> Interpolate<T> {
     }
 
 
-    /// Rules: 
-    /// 
+    /// Interpolate to a target.
     /// If target is the same, always ignore.
-    /// 
     /// If not, always replaces the first value with the current position.
     pub fn interpolate(&mut self, range: impl IntoInterpolate<T>) {
         let mut range = range.into_interpolate();
@@ -179,8 +187,8 @@ impl<T: Interpolation> Interpolate<T> {
         }
     }
 
-    /// `reverse` if range end is the start of current animation
-    /// otherwise call `interpolate`.
+    /// Call `reverse` if interpolating to current animation's source, 
+    /// otherwise call `interpolate_to`.
     pub fn interpolate_or_reverse(&mut self, range: impl IntoInterpolate<T>) {
         let range = range.into_interpolate();
         if self.range.len() > 1 && range.last() == self.range.first() {
@@ -190,9 +198,9 @@ impl<T: Interpolation> Interpolate<T> {
         }
     }
     
-    /// Rules: if range is the same, ignore
-    /// 
-    /// If is already moving, use current position as `from`
+    /// Interpolate to a target, overwriting default time.
+    /// If target is the same, always ignore.
+    /// If not, always replaces the first value with the current position.
     pub fn interpolate_with_time(&mut self, range: impl IntoInterpolate<T>, time: f32) {
         let mut range = range.into_interpolate();
         if self.range.last() != range.last() {
@@ -205,6 +213,7 @@ impl<T: Interpolation> Interpolate<T> {
     }
 }
 
+/// Trait for a marker type representing a target of interpolation.
 pub trait Interpolation {
     type Data: Add<Self::Data, Output = Self::Data> + Mul<f32, Output = Self::Data> + Copy + PartialEq;
 }
@@ -288,7 +297,7 @@ pub fn interpolate_opacity(
     mut query: Query<(&mut Opacity, &Interpolate<Opacity>)>
 ) {
     for (mut opacity, interpolate) in query.iter_mut() {
-        opacity.opactity = interpolate.get();
+        opacity.opacity = interpolate.get();
     }
 }
 

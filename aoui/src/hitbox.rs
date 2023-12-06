@@ -58,8 +58,8 @@ impl Hitbox {
 
     pub fn contains(&self, rect: &RotatedRect, point: Vec2) -> bool {
         let local = point - rect.center();
-        let x = rect.affine.transform_vector2(Vec2::new(0.5, 0.0));
-        let y = rect.affine.transform_vector2(Vec2::new(0.0, 0.5));
+        let x = rect.affine.transform_vector2(Vec2::new(0.5, 0.0)) / self.scale.x;
+        let y = rect.affine.transform_vector2(Vec2::new(0.0, 0.5)) / self.scale.y;
         match self.shape {
             HitboxShape::Rect => {
                 local.dot(x).abs() < x.length_squared() && local.dot(y).abs() < y.length_squared()

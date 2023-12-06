@@ -4,22 +4,22 @@
 //! 
 //! We use a subset of markdown syntax
 //! 
-//! * Itelics: `*text*`
+//! * Italics: `*text*`
 //! * Bold: `**text**`
 //! * Bold Italics: `***text***`
 //! * Underline: `__text__` (not implemented)
-//! * Strikethroigh: `~~text~~` (not implemented)
+//! * Strikethrough: `~~text~~` (not implemented)
 //! 
 //! Ascii whitespaces are either rendered as one space or linebreaks.
 //! Use a unicode space if you want multiple spaces. Leading and trailing
-//! whiespaces are always trimmed. Tabs are not supported.
+//! whitespaces are always trimmed. Tabs are not supported.
 //! 
 //! `N` consecutive newlines will be rendered as `N-1` newlines.
 //! 
 //! # Control Codes
 //! 
 //! The general syntax is {code} or {code:text}. All control codes
-//! are case insensitive. {code} is in effect until overwitten, 
+//! are case insensitive. {code} is in effect until overwritten, 
 //! {code:text} is in effect until it goes out of scope.
 //! 
 //! * `{br}`
@@ -63,8 +63,11 @@
 
 use std::{collections::HashMap, hash::{Hash, BuildHasher}, num::ParseFloatError};
 
-use bevy::{asset::{Handle, Assets}, text::{Font, Text, TextStyle}, ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component, query::Changed}, render::color::Color, math::Vec2, hierarchy::BuildChildren};
-use bevy_aoui::{Transform2D, Anchor, bundles::{AoUITextBundle, AoUIBundle}, SetEM, Dimension, layout::{Container, CompactLayout, FlexDir}, Size2};
+use bevy::{asset::{Handle, Assets}, text::{Font, Text, TextStyle}, render::color::Color, math::Vec2, hierarchy::BuildChildren};
+use bevy::ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component, query::Changed};
+use bevy_aoui::{Transform2D, Anchor, SetEM, Dimension, Size2};
+use bevy_aoui::layout::{Container, CompactLayout, FlexDir};
+use bevy_aoui::bundles::{AoUITextBundle, AoUIBundle};
 use bevy_aoui::layout::LayoutControl;
 
 /// This widget always has the width of a space and line height of a widget.
@@ -447,7 +450,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                         ..Default::default()
                     },
                     LayoutControl::LinebreakMarker,
-                    FontSpace {
+                    GlyphSpace {
                         font: self.line_gap.0.clone()
                     }
                 )).id())
@@ -472,7 +475,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                             },
                             ..Default::default()
                         },
-                        FontSpace {
+                        GlyphSpace {
                             font: self.font.get(self.font(), self.style),
                         },
                         LayoutControl::WhiteSpace,

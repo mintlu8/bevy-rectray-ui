@@ -200,10 +200,15 @@ macro_rules! widget_extension {
         $crate::widget_extension2! {
             $(#[$($parent_attr:tt)*])*
             $vis0 struct $name { 
+                /// Handle of the image asset.
                 pub sprite: ::bevy::prelude::Handle<bevy::prelude::Image>,
+                /// Size of the image.
                 pub size: Option<::bevy::prelude::Vec2>,
+                /// Color of the image.
                 pub color: Option<::bevy::prelude::Color>,
+                /// Atlas rectangle of the image.
                 pub rect: Option<::bevy::prelude::Rect>,
+                /// Flips the image.
                 pub flip: [bool; 2],
                 $($fields)* 
             },
@@ -241,12 +246,19 @@ macro_rules! widget_extension {
         $crate::widget_extension2! {
             $(#[$($parent_attr:tt)*])*
             $vis0 struct $name { 
+                /// The text string.
                 pub text: String,
+                /// Handle of the font asset.
                 pub font: bevy::prelude::Handle<bevy::prelude::Font>,
-                /// Note if not specified this is `UNBOUNDED`.
+                /// Bounds of the text, should not be set most of the time.
+                ///
+                /// If not specified this is `UNBOUNDED`.
                 pub bounds: Option<bevy::prelude::Vec2>,
+                /// Color of the text.
                 pub color: Option<bevy::prelude::Color>,
+                /// Sets if the text wraps.
                 pub wrap: bool,
+                /// Break line on, maybe use wrap instead.
                 pub break_line_on: Option<bevy::text::BreakLineOn>,
                 $($fields)* 
             },
@@ -312,18 +324,39 @@ macro_rules! widget_extension2 {
         #[derive(Debug, Default)]
         $(#[$($parent_attr)*])*
         $vis0 struct $name {
+            /// Anchor of the sprite.
             pub anchor: ::bevy_aoui::Anchor,
+            /// Matched parent anchor of the sprite, default is `anchor`.
+            /// Usually should not be set in idiomatic use.
             pub parent_anchor: Option<::bevy_aoui::Anchor>,
+            /// Center of the sprite, default is `anchor`.
             pub center: Option<::bevy_aoui::Anchor>,
-            /// Propagated opacity
+            /// Propagated opacity.
             pub opacity: ::bevy_aoui::Opacity,
+            /// Visible, default is inherited.
             pub visible: Option<bool>,
+            /// Offset of the sprite from parent's anchor.
             pub offset: ::bevy_aoui::Size2,
+            /// Rotation of the sprite from `center`.
             pub rotation: f32,
+            /// Scale of the sprite.
             pub scale: Option<$crate::dsl::OneOrTwo<::bevy::math::Vec2>>,
+            /// Z depth of the sprite.
             pub z: f32,
+            /// Owned dimension of the sprite.
+            /// 
+            /// If not set, size is fetched dynamically from various sources.
+            /// 
+            /// The `size` field, if exists, sets the size of the underlying sprite.
             pub dimension: Option<::bevy_aoui::Size2>,
+            /// Propagated font size.
             pub font_size: ::bevy_aoui::SetEM,
+            /// Sets up which event this receives.
+            /// 
+            /// Due to this being a confusing footgun, 
+            /// setting event here automatically sets hitbox to `Rect(1)` if not set manually.
+            pub event: Option<$crate::events::EventFlags>,
+            /// The click detection area of the sprite.
             pub hitbox: Option<::bevy_aoui::Hitbox>,
             $($(#[$($attr)*])* $vis $field: $ty),*
         }
@@ -344,8 +377,13 @@ macro_rules! widget_extension2 {
                         },
                         $($comp),*
                     ));
+                    if let Some(event) = $this.event {
+                        base.insert(event);
+                    }
                     if let Some(hitbox) = $this.hitbox {
                         base.insert(hitbox);
+                    } else if $this.event.is_some() {
+                        base.insert(::bevy_aoui::Hitbox::FULL);
                     }
                     $(if $if {
                         base.insert($comp2);
@@ -488,10 +526,10 @@ macro_rules! widget_extension2 {
             components: ($($comp),*),
             dynamic: ($($if => $comp2,)* $if0 => $expr0),
             pattern: ($($pat = $pat_field => $comp3),*),
-            $(,spawn: (
+            spawn: (
                 $($children $(=> $comp4)? ),*
-            ))?
-        )
+            )
+        );
     };
     (
         $(#[$($parent_attr:tt)*])*
@@ -515,9 +553,9 @@ macro_rules! widget_extension2 {
             components: ($($comp),*),
             dynamic: ($($if => $comp2,)* $if0 => $expr0),
             pattern: ($($pat = $pat_field => $comp3),*),
-            $(,spawn: (
+            spawn: (
                 $($children $(=> $comp4)? ),*
-            ))?
-        )
+            )
+        );
     };
 }

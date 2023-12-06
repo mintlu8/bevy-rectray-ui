@@ -11,11 +11,13 @@ mod inputbox;
 mod oneshot;
 mod meta_dsl;
 
-pub mod prelude;
-
-pub use convert::DslInto;
+#[doc(hidden)]
 pub use layouts::{SpanContainerNames, GridContainerNames};
+#[doc(hidden)]
 pub use util::OneOrTwo;
+
+pub mod prelude;
+pub use convert::DslInto;
 
 pub mod builders {
     use crate::widget_extension;

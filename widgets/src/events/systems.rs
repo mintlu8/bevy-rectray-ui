@@ -9,7 +9,6 @@ pub fn remove_focus(mut commands: Commands,
     query1: Query<Entity, With<CursorFocus>>, 
     query2: Query<Entity, With<CursorAction>>,
     query3: Query<Entity, With<CursorClickOutside>>,
-    query4: Query<Entity, With<Submit>>,
 ) {
     for entity in query1.iter() {
         commands.entity(entity).remove::<CursorFocus>();
@@ -19,9 +18,6 @@ pub fn remove_focus(mut commands: Commands,
     }
     for entity in query3.iter() {
         commands.entity(entity).remove::<CursorClickOutside>();
-    }
-    for entity in query4.iter() {
-        commands.entity(entity).remove::<Submit>();
     }
 }
 

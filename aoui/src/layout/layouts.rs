@@ -62,13 +62,13 @@ impl Layout for Padding {
     }
 }
 
-/// A size agnostic mono-directional compact hbox or vbox.
+/// A size agnostic mono-directional compact HBox or VBox.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct CompactLayout {
     pub direction: FlexDir,
 }
 
-/// A fix-sized mono-directional hbox or vbox.
+/// A fix-sized mono-directional HBox or VBox.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct SpanLayout {
     /// The axis, horizontal or vertical.
@@ -77,7 +77,7 @@ pub struct SpanLayout {
     pub stretch: bool,
 }
 
-/// A fix-sized mono-directional hbox or vbox.
+/// A fix-sized mono-directional HBox or VBox.
 /// 
 /// The width is dynamic compared to `SpanLayout`
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
@@ -89,7 +89,7 @@ pub struct DynamicSpanLayout {
 }
 
 
-/// A statically sized mono-directional hbox or vbox
+/// A statically sized mono-directional HBox or VBox
 ///
 /// # Rules
 ///

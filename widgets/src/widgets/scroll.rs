@@ -8,7 +8,7 @@ pub struct ScrollDirection(Vec2);
 
 impl ScrollDirection {
     pub const UNIT: Self = Self(Vec2::ONE);
-    pub const INVERSED: Self = Self(Vec2::new(1.0, -1.0));
+    pub const INVERTED: Self = Self(Vec2::new(1.0, -1.0));
     pub fn new(dir: Vec2) -> Self {
         Self(dir)
     }

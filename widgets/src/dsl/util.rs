@@ -1,6 +1,8 @@
 use bevy::{math::Vec2, sprite::Anchor};
 use bevy_aoui::{Size2, SetEM, layout::Alignment, layout::FlexDir};
 
+use crate::{Sender, Receiver};
+
 use super::convert::DslInto;
 
 /// Syntax for constructing a hitbox.
@@ -159,16 +161,22 @@ macro_rules! color {
     };
 }
 
-
-
-/// Color constrution macro, see [`colorthis`]. This constructs a vector4.
+/// Color construction macro, see [`colorthis`]. This constructs a vector4.
 #[macro_export]
 macro_rules! colorv4 {
     ($color: tt) => {
         ::bevy_aoui_widgets::dsl::rgbaf!(
             ::bevy::prelude::Color::RgbaLinear, 
             $color => {red, green, blue, alpha}
-        ).as_rgba().as_vec4()
+        ).as_rgba().into()
+    };
+}
+
+/// Color construction macro, see [`colorthis`]. This constructs a vector4.
+#[macro_export]
+macro_rules! gradient {
+    [$(($color: tt, $frac: expr)),* $(,)?] => {
+        [$(($crate::colorv4!($color), $frac)),*]
     };
 }
 
@@ -218,7 +226,7 @@ pub fn percent(f: impl DslInto<f32>) -> SetEM {
     SetEM::Pixels(f.dinto() / 100.0)
 }
 
-/// Vec2 extractor that accepts a singular value.
+/// Accepts 1 or 2 numbers for a `Vec2` or a `Size2`
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct OneOrTwo<T>(pub T);
 
@@ -405,4 +413,26 @@ macro_rules! size2 {
     (1 + [$x: expr, $y: expr] $unit: tt)=> {
         $crate::size2!([1 + $x $unit, 1 + $y $unit])
     };
+}
+
+
+/// This bypasses the option impl on dinto.
+#[doc(hidden)]
+#[derive(Debug, Default)]
+pub enum OptionX<T> {
+    Some(T),
+    #[default]
+    None,
+}
+
+impl<T> DslInto<OptionX<Sender<T>>> for Sender<()>{
+    fn dinto(self) -> OptionX<Sender<T>> {
+        OptionX::Some(self.mark::<T>())
+    }
+}
+
+impl<T> DslInto<OptionX<Receiver<T>>> for Receiver<()>{
+    fn dinto(self) -> OptionX<Receiver<T>> {
+        OptionX::Some(self.mark::<T>())
+    }
 }

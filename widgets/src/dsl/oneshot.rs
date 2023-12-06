@@ -1,9 +1,9 @@
 
-/// Construct a oneshot event dynamically as a `&'static OnceLock<SystemId>`
+/// Construct a one-shot system dynamically as a `&'static OnceLock<SystemId>`
 /// 
 /// This macro cannot capture context and only generates a new `SystemId` on the first call.
 /// 
-/// The functon can capture external generics, which works through static type mapping.
+/// The function can capture external generics, which works through static type mapping.
 /// 
 /// Do not use this macro with multiple worlds.
 #[macro_export]
@@ -61,6 +61,13 @@ macro_rules! oneshot {
 #[macro_export]
 macro_rules! handler {
     (($commands: expr $(, $($_tt:tt)*)?) {$flag: expr => fn $($name: ident)?$(<$($generic: ident$(: $ty: ident)?),*>)? ($($arg:tt)*){$($tt:tt)*}})  => {
+        $crate::events::OneShot::new(
+            $flag,
+            $crate::oneshot!($commands => fn $(<$($generic$(: $ty)?),*>)? ($($arg)*){$($tt)*})
+        )
+    };
+
+    ($commands: tt {$flag: expr => fn $($name: ident)?$(<$($generic: ident$(: $ty: ident)?),*>)? ($($arg:tt)*){$($tt:tt)*}})  => {
         $crate::events::OneShot::new(
             $flag,
             $crate::oneshot!($commands => fn $(<$($generic$(: $ty)?),*>)? ($($arg)*){$($tt)*})

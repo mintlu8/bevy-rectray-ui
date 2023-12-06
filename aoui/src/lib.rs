@@ -17,8 +17,8 @@
 //! while leveraging other parts of bevy's standard library and ecosystem whenever possible.
 //! 
 //! AoUI provides 2 rendering methods: 
-//! * [`BuildGlobal`] genetates `GlobalTransform` directly.
-//! * [`BuildTransform`] genetates `Transform`.
+//! * [`BuildGlobal`] generates `GlobalTransform` directly.
+//! * [`BuildTransform`] generates `Transform`.
 //! 
 //! AoUI propagates translation, rotation, scale and font size down its tree.
 //! 
@@ -131,7 +131,7 @@
 //! Anchor-Offset is well-suited for isolated UI components, but when it comes to arranging
 //! multiple UI elements in a specific order, you'll find the `Container` useful.
 //! 
-//! The `Container` is a layout system that only depands on insertion order and works
+//! The `Container` is a layout system that only depends on insertion order and works
 //! with Bevy's [`Children`](bevy::prelude::Children) component.
 //! 
 //! Check out the book for more information.
@@ -180,4 +180,3 @@ pub use scaling::*;
 
 pub mod schedule;
 pub mod bundles;
-pub mod events;

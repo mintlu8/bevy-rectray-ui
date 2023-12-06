@@ -21,7 +21,7 @@ pub fn main() {
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui_widgets::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    let rich = paragraph! ((commands) {
+    let rich = paragraph! (commands {
         dimension: [600, 600],
         //margin: [8, 0],
         font_size: 32,
@@ -69,7 +69,7 @@ Awesome {br} right?
     commands.entity(rich).push_children(&children);
 
 
-    let zip_test = paragraph! ((commands) {
+    let zip_test = paragraph! (commands {
         dimension: [10, 600],
         anchor: Left,
         //margin: [8, 0],

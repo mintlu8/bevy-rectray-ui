@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use bevy::hierarchy::Children;
 use bevy::asset::{Handle, Assets};
 use bevy::input::{keyboard::KeyCode, Input};
@@ -6,7 +8,7 @@ use bevy::window::{Window, PrimaryWindow, ReceivedCharacter};
 use bevy::text::{Text, Font};
 use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
 use bevy_aoui::{RotatedRect, Transform2D, Dimension, bundles::AoUITextBundle};
-use crate::dsl::prelude::{Interpolate, Offset};
+use crate::{Sender, Receiver, Change};
 use crate::dto::Submit;
 use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction};
 use ab_glyph::Font as FontTrait;
@@ -285,8 +287,8 @@ pub fn update_inputbox_cursor(
     fonts: Res<Assets<Font>>,
     query: Query<(Entity, &InputBox, &Dimension, &Handle<Font>, &TextColor), (Changed<InputBox>, Without<InputBoxCursorArea>, Without<Text>)>,
     mut text: Query<(Entity, &Parent, Option<&Children>), (With<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>, Without<Text>)>,
-    mut bar: Query<(&Parent, &mut Transform2D, Option<&mut Interpolate<Offset>>, &mut Visibility), (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<Text>)>,
-    mut area: Query<(&Parent, &mut Transform2D, &mut Dimension, Option<&mut Interpolate<Offset>>, Option<&mut Interpolate<Dimension>>, &mut Visibility), (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<Text>)>,
+    mut bar: Query<(&Parent, &mut Transform2D, &mut Visibility), (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<Text>)>,
+    mut area: Query<(&Parent, &mut Transform2D, &mut Dimension, &mut Visibility), (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<Text>)>,
     mut letters: Query<(Entity, &mut Transform2D, &mut Dimension, &mut Text, &mut Visibility), (Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>
 ) {
     use ab_glyph::ScaleFont as FontTrait;
@@ -385,12 +387,8 @@ pub fn update_inputbox_cursor(
             continue;
         }
         if input_box.cursor_len == 0 {
-            for (_, mut transform, mut interpolate, mut vis, ) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
-                if let Some(interpolate) = &mut interpolate {
-                    interpolate.interpolate_to(Vec2::new((start + end) / 2.0, transform.offset.raw().y));
-                } else {
-                    transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
-                }
+            for (_, mut transform, mut vis, ) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
+                transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
                 *vis = Visibility::Inherited;
             };
             for (.., mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
@@ -400,17 +398,9 @@ pub fn update_inputbox_cursor(
             for (.., mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 *vis = Visibility::Hidden;
             };
-            for (.., mut transform, mut dimension, mut transform_inter, mut dim_inter, mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
-                if let Some(interpolate) = &mut transform_inter {
-                    interpolate.interpolate_to(Vec2::new((start + end) / 2.0, transform.offset.raw().y));
-                } else {
-                    transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
-                }
-                if let Some(interpolate) = &mut dim_inter {
-                    interpolate.interpolate_to(Vec2::new(end - start, dimension.raw().y));
-                } else {
-                    dimension.edit_raw(|v| v.x = end - start);
-                }
+            for (.., mut transform, mut dimension, mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
+                transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
+                dimension.edit_raw(|v| v.x = end - start);
                 *vis = Visibility::Inherited;
             };
 
@@ -430,27 +420,32 @@ pub fn text_on_click_outside(
     }
 }
 pub fn inputbox_keyboard(
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut InputBox)>,
+    mut query: Query<(&mut InputBox, Option<&Sender<Change>>, Option<&Sender<Submit>>)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {
-    for (entity, mut inputbox) in query.iter_mut().filter(|(_, input)| input.has_focus()) {
+    for (mut inputbox, change, submit) in query.iter_mut().filter(|(input, ..)| input.has_focus()) {
+        let mut changed = false;
         if keys.any_pressed(CONTROL) {
             if keys.just_pressed(KeyCode::C) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                     let _ = clipboard.set_text(inputbox.get());
+                    changed = true;
                 }
             } else if keys.just_pressed(KeyCode::V) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                     if let Ok(text) = clipboard.get_text() {
                         inputbox.push_str(&text);
+                        changed = true;
                     }                   
                 }
             } else if keys.just_pressed(KeyCode::X) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                     let _ = clipboard.set_text(inputbox.swap_selected(""));
+                } else {
+                    inputbox.swap_selected("");
                 }
+                changed = true;
             } else if keys.just_pressed(KeyCode::A) {
                 inputbox.select_all()
             } 
@@ -471,10 +466,24 @@ pub fn inputbox_keyboard(
                 match char.char {
                     '\t' => (),
                     '\r'|'\n' => {
-                        commands.entity(entity).insert(Submit::new(inputbox.get()));
+                        // Serde can't fail serializing a string, probably
+                        if let Some(submit) = submit {
+                            if let Err(e) = submit.send(&inputbox.get()) {
+                                eprintln!("Serialization failed: {e}.");
+                            }
+                        }
                     },
                     '\x08'|'\x7f' => inputbox.backspace(),
                     _ => inputbox.push(char.char)
+                }
+                changed = true;
+            }
+        }
+        if changed {
+            // Serde can't fail serializing a string, probably
+            if let Some(change) = change {
+                if let Err(e) = change.send(&inputbox.get()) {
+                    eprintln!("Serialization failed: {e}.");
                 }
             }
         }
@@ -491,3 +500,41 @@ pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &Dimension)>) {
     })
 }
 
+/// Component that sets text to strings polled from a signal.
+#[derive(Debug, Clone, Component)]
+pub struct SignalFormat<M>{
+    /// the formatting keyword is `{%}`
+    format_string: String,
+    p: PhantomData<M>,
+}
+
+
+impl<M> SignalFormat<M> {
+
+    /// Set text to strings polled from a signal.
+    pub const COPY: Self = Self {
+        format_string: String::new(),
+        p: PhantomData,
+    };
+    
+    /// Format with strings polled from a signal.
+    /// 
+    /// The format characters is `{%}`.
+    pub fn format(s: impl Into<String>) -> Self {
+        Self { 
+            format_string: s.into(), 
+            p: PhantomData 
+        }
+    }
+}
+
+pub fn format_signal<M: Send + Sync + 'static>(mut query: Query<(&SignalFormat<M>, &Receiver<M>, &mut Text)>) {
+    query.par_iter_mut().for_each(|(fmt, sig, mut text)| {
+        let Some(mut string) = sig.poll::<String>() else { return };
+        if !fmt.format_string.is_empty() {
+            string = fmt.format_string.replace("{%}", string.as_str());
+        }
+        let Some(section) = text.sections.first_mut() else {return}; 
+        section.value = string;
+    })
+}

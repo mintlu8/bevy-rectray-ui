@@ -74,7 +74,7 @@ impl Layout for SizedGridLayout {
             (T, L) => grid(margin, entities, columns, cell_size, posy, negx, align),
             (B, R) => grid(margin, entities, columns, cell_size, negy, posx, align),
             (B, L) => grid(margin, entities, columns, cell_size, negy, negx, align),
-            _ => panic!("Direction and stack must be othogonal.")
+            _ => panic!("Direction and stack must be orthogonal.")
         }.normalized()
     }
 }
@@ -102,7 +102,7 @@ impl Layout for TableLayout {
             (T, L) => fixed_table(dim, margin, entities, columns, posy, negx, stretch),
             (B, R) => fixed_table(dim, margin, entities, columns, negy, posx, stretch),
             (B, L) => fixed_table(dim, margin, entities, columns, negy, negx, stretch),
-            _ => panic!("Direction and stack must be othogonal.")
+            _ => panic!("Direction and stack must be orthogonal.")
         }.normalized()
     }
 }
@@ -123,7 +123,7 @@ impl Layout for DynamicTableLayout {
             (T, L) => flex_table(dim, margin, entities, columns, posy, negx, stretch),
             (B, R) => flex_table(dim, margin, entities, columns, negy, posx, stretch),
             (B, L) => flex_table(dim, margin, entities, columns, negy, negx, stretch),
-            _ => panic!("Direction and stack must be othogonal.")
+            _ => panic!("Direction and stack must be orthogonal.")
         }
     }
 }
