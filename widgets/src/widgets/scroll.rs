@@ -3,11 +3,14 @@ use bevy_aoui::{Dimension, Transform2D, Anchor, AoUIREM};
 
 use crate::events::MouseWheelAction;
 
+/// Resource that determines the direction and magnitude of mousewheel scrolling.
 #[derive(Debug, Clone, Copy, Resource)]
 pub struct ScrollDirection(Vec2);
 
 impl ScrollDirection {
+    /// Normal scrolling.
     pub const UNIT: Self = Self(Vec2::ONE);
+    /// Inverted scrolling, e.g. with a trackpad.
     pub const INVERTED: Self = Self(Vec2::new(1.0, -1.0));
     pub fn new(dir: Vec2) -> Self {
         Self(dir)
@@ -20,6 +23,16 @@ impl ScrollDirection {
     }
 }
 
+/// Add size relative scrolling support.
+/// 
+/// This component works out of the box for both smaller
+/// and larger objects relative to the parent.
+/// 
+/// # Setup Requirements
+/// 
+/// * add a single child with the same dimension and
+/// `Anchor::Center` to this widget.
+/// * add children to that child.
 #[derive(Debug, Clone, Copy, Component)]
 pub struct Scrolling {
     x: bool,

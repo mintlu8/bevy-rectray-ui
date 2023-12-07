@@ -228,7 +228,6 @@ pub struct RichTextBuilder<'t, 'w, 's, F: FontFetcher, B: Bundle + Clone = ()>{
     zip: Option<Vec<Entity>>,
     buffer: Vec<Entity>,
     pop_stack: Vec<RichTextScope>,
-    margin: Size2,
 }
 
 impl<'a, 'w, 's, F: FontFetcher> RichTextBuilder<'a, 'w, 's, F> {
@@ -246,7 +245,6 @@ impl<'a, 'w, 's, F: FontFetcher> RichTextBuilder<'a, 'w, 's, F> {
             zip: None,
             buffer: Vec::new(), 
             pop_stack: Vec::new(),
-            margin: Size2::ZERO,
         }
     }
 }
@@ -297,9 +295,9 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
 
     #[must_use]
     pub fn with_bundle<B2: Bundle + Clone>(self, bun: B2) -> RichTextBuilder<'a, 'w, 's, F, B2>{
-        let RichTextBuilder { bundle:_, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, zip, buffer, pop_stack, margin } = self;
+        let RichTextBuilder { bundle:_, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, zip, buffer, pop_stack } = self;
         let bundle = bun;
-        RichTextBuilder { bundle, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, zip, buffer, pop_stack, margin }
+        RichTextBuilder { bundle, line_gap, commands, font, style, color_stack, size_stack, font_stack, anchor_stack, zip, buffer, pop_stack }
     }
 
     #[must_use]
@@ -329,14 +327,6 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
     #[must_use]
     pub fn with_anchor(mut self, anchor: Anchor) -> Self{
         self.anchor_stack.push(anchor);
-        self
-    }
-
-    /// Set margin for zipped entities.
-    /// Usually not needed.
-    #[must_use]
-    pub fn with_margin(mut self, margin: impl Into<Size2>) -> Self{
-        self.margin = margin.into();
         self
     }
 
@@ -617,7 +607,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                                         layout: Box::new(CompactLayout {
                                             direction: FlexDir::LeftToRight
                                         }),
-                                        margin: self.margin,
+                                        margin: Size2::ZERO,
                                     }
                                 ))
                                 .insert(Transform2D::UNIT.with_anchor(anchor))

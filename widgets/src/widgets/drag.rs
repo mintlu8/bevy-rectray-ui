@@ -1,4 +1,4 @@
-use bevy::{math::Vec2, ecs::{system::{Query, Res}, component::Component}};
+use bevy::{math::Vec2, ecs::{system::{Query, Res}, component::Component, query::{Without, With}}, hierarchy::Parent};
 use bevy_aoui::{Size2, Transform2D};
 
 use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::{Interpolate, Offset}};
@@ -94,6 +94,11 @@ pub struct Constraint{
 #[derive(Debug, Default, Clone, Copy, Component)]
 pub struct DragFactor(f32);
 
+/// Allows this sprite to serve as a drag hitbox
+/// for its parent.
+#[derive(Debug, Default, Clone, Copy, Component)]
+pub struct DragParent;
+
 impl DragFactor {
     pub fn get(&self) -> f32 {
         self.0
@@ -106,12 +111,34 @@ impl DragFactor {
 
 #[allow(clippy::type_complexity)]
 pub fn drag_start(
-    mut query: Query<(&CursorAction, &Transform2D, &mut Draggable, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>)>
+    mut query: Query<(&CursorAction, &Transform2D, &mut Draggable, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>)>,
+    mut inactive: Query<(&Transform2D, &mut Draggable, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>), Without<CursorAction>>,
+    child: Query<(&Parent, &CursorAction), (With<DragParent>, Without<Draggable>)>,
 ) {
     for (action, transform, mut drag, mut snap, mut interpolate) in query.iter_mut() {
-        if !action.intersects(EventFlags::Down | EventFlags::MidDown | EventFlags:: RightDown) {
+        if !action.intersects(EventFlags::Down | EventFlags::MidDown | EventFlags:: RightDown)  {
             continue;
         }
+        match transform.offset.get_pixels() {
+            Some(pixels) => {
+                drag.set(pixels);
+                if let Some(snap) = &mut snap {
+                    if let Some(inter) = &mut interpolate {
+                        snap.set(inter.take_target());
+                    } else {
+                        snap.set(pixels);
+                    }
+                    
+                }
+            },
+            None => panic!("Draggable sprites must have pixel units."),
+        }
+    }
+    for (parent, action) in child.iter() {
+        if !action.intersects(EventFlags::Down | EventFlags::MidDown | EventFlags:: RightDown)  {
+            continue;
+        }
+        let Ok((transform, mut drag, mut snap, mut interpolate)) = inactive.get_mut(parent.get()) else {continue};
         match transform.offset.get_pixels() {
             Some(pixels) => {
                 drag.set(pixels);
@@ -131,13 +158,32 @@ pub fn drag_start(
 
 pub fn dragging(
     state: Res<CursorState>,
-    mut query: Query<(&CursorFocus, &Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>)>
+    mut query: Query<(&CursorFocus, &Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>)>,
+    mut inactive: Query<(&Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>), Without<CursorFocus>>,
+    child: Query<(&Parent, &CursorFocus), (With<DragParent>, Without<Draggable>)>,
 ) {
     let delta = state.cursor_position() - state.down_position();
-    for (action, drag, mut transform, interpolate) in query.iter_mut() {
-        if !action.intersects(EventFlags::Drag | EventFlags::MidDrag | EventFlags:: RightDrag) {
+    for (focus, drag, mut transform, interpolate) in query.iter_mut() {
+        if !focus.intersects(EventFlags::Drag | EventFlags::MidDrag | EventFlags:: RightDrag) {
             continue;
         }
+        let pos = drag.last_drag_start() + {
+            Vec2::new(
+                if drag.x {delta.x} else {0.0}, 
+                if drag.y {delta.y} else {0.0}, 
+            )
+        };
+        transform.offset.edit_raw(|x| *x = pos);
+        if let Some(mut interpolate) = interpolate {
+            interpolate.set(pos)
+        }
+    }
+
+    for (parent, focus) in child.iter() {
+        if !focus.intersects(EventFlags::Drag | EventFlags::MidDrag | EventFlags:: RightDrag)  {
+            continue;
+        }
+        let Ok((drag, mut transform, interpolate)) = inactive.get_mut(parent.get()) else {continue};
         let pos = drag.last_drag_start() + {
             Vec2::new(
                 if drag.x {delta.x} else {0.0}, 
@@ -153,12 +199,27 @@ pub fn dragging(
 
 
 pub fn drag_end(
-    mut query: Query<(&CursorAction, &mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>)>
+    mut query: Query<(&CursorAction, &mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>)>,
+    mut inactive: Query<(&mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>), Without<CursorAction>>,
+    child: Query<(&Parent, &CursorAction), (With<DragParent>, Without<Draggable>)>,
 ) {
     for (action, mut snap, mut transform, mut interpolate) in query.iter_mut() {
         if !action.is(EventFlags::DragEnd) {
             continue;
         }
+        if let Some(orig) = snap.drag_start.take() {
+            if let Some(inter) = &mut interpolate {
+                inter.interpolate_to(orig)
+            } else {
+                transform.offset.edit_raw(|x| *x = orig)
+            }
+        }
+    }
+    for (parent, action) in child.iter() {
+        if !action.is(EventFlags::DragEnd) {
+            continue;
+        }
+        let Ok((mut snap, mut transform, mut interpolate)) = inactive.get_mut(parent.get()) else {continue};
         if let Some(orig) = snap.drag_start.take() {
             if let Some(inter) = &mut interpolate {
                 inter.interpolate_to(orig)

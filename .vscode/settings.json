@@ -7,6 +7,7 @@
         "inputbox",
         "parentless",
         "stdvec",
-        "textbox"
+        "textbox",
+        "Tonemapping"
     ]
 }

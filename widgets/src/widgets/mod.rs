@@ -5,6 +5,7 @@ pub mod inputbox;
 pub mod drag;
 pub mod richtext;
 pub mod scroll;
+pub mod scrollframe;
 mod button;
 use bevy::{render::color::Color, ecs::component::Component};
 

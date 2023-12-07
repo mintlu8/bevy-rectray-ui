@@ -37,10 +37,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         (("roboto", FontStyle::Bold|FontStyle::Italic), assets.load("RobotoCondensed-BoldItalic.ttf")),
     ]))
         .configure_size(assets.load("ComicNeue-Regular.ttf"), 32.0)
-        //.with_size(32.0)
         .with_font("roboto")
         .with_color(Color::WHITE);
-        //.with_ignore_space(true);
 
     builder.push_str(r#"
 Hello, {orange:Rustaceans!}
@@ -58,7 +56,7 @@ left, {center:center,} {right:or right}
 
 We can make our font {*2:bigger} or {*0.5:smaller}.
 
-Let's permanantly change our font to {@comicneue} ComicNeue,
+Let's permanently change our font to {@comicneue} ComicNeue,
 and use the color {green} green,
 {right} and right align everything.
 

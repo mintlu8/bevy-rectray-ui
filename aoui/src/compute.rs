@@ -81,7 +81,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             transform.get_center(),
             transform.rotation,
             transform.scale,
-            if transform.z > 0.0 {
+            if transform.z != 0.0 {
                 parent.z + transform.z
             } else {
                 parent.z.next_after(f32::INFINITY)
@@ -107,7 +107,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         transform.get_center(),
         transform.rotation,
         transform.scale,
-        if transform.z > 0.0 {
+        if transform.z != 0.0 {
             parent.z + transform.z
         } else {
             parent.z.next_after(f32::INFINITY)
