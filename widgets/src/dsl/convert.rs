@@ -1,4 +1,4 @@
-use bevy::{prelude::{Vec2, UVec2, IVec2, Rect}, sprite::Anchor, render::view::{VisibilityBundle, Visibility}};
+use bevy::{prelude::{Vec2, UVec2, IVec2, Rect}, sprite::Anchor, render::view::{VisibilityBundle, Visibility, RenderLayers}};
 use bevy_aoui::{Size2, Opacity, SizeUnit};
 
 use super::OneOrTwo;
@@ -259,5 +259,41 @@ impl DslInto<VisibilityBundle> for Option<bool> {
             },
             ..Default::default()
         }
+    }
+}
+
+impl DslInto<RenderLayers> for u8 {
+    fn dinto(self) -> RenderLayers {
+        RenderLayers::from_layers(&[self])
+    }
+}
+
+impl<const N: usize> DslInto<RenderLayers> for [u8; N] {
+    fn dinto(self) -> RenderLayers {
+        RenderLayers::from_layers(&self)
+    }
+}
+
+impl DslInto<RenderLayers> for &[u8] {
+    fn dinto(self) -> RenderLayers {
+        RenderLayers::from_layers(self)
+    }
+}
+
+impl DslInto<Option<RenderLayers>> for u8 {
+    fn dinto(self) -> Option<RenderLayers> {
+        Some(RenderLayers::from_layers(&[self]))
+    }
+}
+
+impl<const N: usize> DslInto<Option<RenderLayers>> for [u8; N] {
+    fn dinto(self) -> Option<RenderLayers> {
+        Some(RenderLayers::from_layers(&self))
+    }
+}
+
+impl DslInto<Option<RenderLayers>> for &[u8] {
+    fn dinto(self) -> Option<RenderLayers> {
+        Some(RenderLayers::from_layers(self))
     }
 }

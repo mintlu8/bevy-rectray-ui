@@ -7,39 +7,39 @@ pub use bevy_aoui::bundles::LinebreakBundle as Linebreak;
 #[macro_export]
 macro_rules! linebreak {
     (($commands: expr $(, $tt:expr)*) $({})? $(,)?) => {
-        $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::default()).id()
+        $commands.spawn($crate::aoui::bundles::LinebreakBundle::default()).id()
     };
     (($commands: expr $(, $tt:expr)*), $size: expr $(,)?) => {
         {
             use $crate::dsl::DslInto;
             let OneOrTwo(size) = $size.dinto();
-            $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::new(size)).id()
+            $commands.spawn($crate::aoui::bundles::LinebreakBundle::new(size)).id()
         }
     };
     (($commands: expr $(, $tt:expr)*) {$size: expr}) => {
         {
             use $crate::dsl::DslInto;
-            let size: ::bevy_aoui::Size2;
+            let size: $crate::aoui::Size2;
             OneOrTwo(size) = $size.dinto();
-            $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::new(size)).id()
+            $commands.spawn($crate::aoui::bundles::LinebreakBundle::new(size)).id()
         }
     };
     ($commands: tt $({})? $(,)?) => {
-        $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::default()).id()
+        $commands.spawn($crate::aoui::bundles::LinebreakBundle::default()).id()
     };
     ($commands: tt $size: expr $(,)?) => {
         {
             use $crate::dsl::DslInto;
             let OneOrTwo(size) = $size.dinto();
-            $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::new(size)).id()
+            $commands.spawn($crate::aoui::bundles::LinebreakBundle::new(size)).id()
         }
     };
     ($commands: tt {$size: expr}) => {
         {
             use $crate::dsl::DslInto;
-            let size: ::bevy_aoui::Size2;
+            let size: $crate::aoui::Size2;
             OneOrTwo(size) = $size.dinto();
-            $commands.spawn(::bevy_aoui::bundles::LinebreakBundle::new(size)).id()
+            $commands.spawn($crate::aoui::bundles::LinebreakBundle::new(size)).id()
         }
     };
 }
@@ -55,7 +55,7 @@ widget_extension! {
         pub x: Option<bool>,
         pub y: Option<bool>,
     },
-    this, commands,
+    this, commands, assets,
     components: (
         Container {
             layout: Box::new(Padding { 
@@ -90,7 +90,7 @@ widget_extension! {
         pub stretch: bool,
         pub margin: OneOrTwo<Size2>,
     },
-    this, commands,
+    this, commands, assets,
     components: (
         Container {
             layout: match this.r#type {
@@ -129,7 +129,7 @@ widget_extension! {
         pub stretch: bool,
         pub margin: OneOrTwo<Size2>,
     },
-    this, commands,
+    this, commands, assets,
     components: (
         {
             let row_dir = this.row.unwrap_or(FlexDir::LeftToRight);
@@ -176,6 +176,17 @@ widget_extension! {
     ),
 }
 
+
+/// Construct a compact layout.
+#[macro_export]
+macro_rules! padding {
+    {$commands: tt {$($tt:tt)*}} => {
+        $crate::meta_dsl!($commands [$crate::dsl::builders::PaddingBuilder] {
+            $($tt)*
+        })
+    };
+}
+
 /// Construct a compact layout.
 #[macro_export]
 macro_rules! compact {
@@ -193,7 +204,7 @@ macro_rules! hbox {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::SpanContainerBuilder] {
             r#type: $crate::dsl::SpanContainerNames::Compact,
-            direction: ::bevy_aoui::layout::FlexDir::LeftToRight,
+            direction: $crate::aoui::layout::FlexDir::LeftToRight,
             $($tt)*
         })
     };
@@ -205,7 +216,7 @@ macro_rules! vbox {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::SpanContainerBuilder] {
             r#type: $crate::dsl::SpanContainerNames::Compact,
-            direction: ::bevy_aoui::layout::FlexDir::TopToBottom,
+            direction: $crate::aoui::layout::FlexDir::TopToBottom,
             $($tt)*
         })
     };
@@ -228,7 +239,7 @@ macro_rules! hspan {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::SpanContainerBuilder] {
             r#type: $crate::dsl::SpanContainerNames::Span,
-            direction: ::bevy_aoui::layout::FlexDir::LeftToRight,
+            direction: $crate::aoui::layout::FlexDir::LeftToRight,
             $($tt)*
         })
     };
@@ -240,7 +251,7 @@ macro_rules! vspan {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::SpanContainerBuilder] {
             r#type: $crate::dsl::SpanContainerNames::Span,
-            direction: ::bevy_aoui::layout::FlexDir::TopToBottom,
+            direction: $crate::aoui::layout::FlexDir::TopToBottom,
             $($tt)*
         })
     };

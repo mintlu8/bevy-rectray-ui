@@ -2,6 +2,8 @@ use bevy::{input::mouse::MouseWheel, math::Vec2, window::{Window, PrimaryWindow}
 use bevy::ecs::{system::{Query, Commands}, event::EventReader, query::{With, Without}, entity::Entity};
 use bevy_aoui::{RotatedRect, Hitbox};
 
+use crate::widgets::scrollframe::CameraClip;
+
 use super::{EventFlags, AoUICamera};
 
 
@@ -22,7 +24,7 @@ pub fn mousewheel_event(
     mut commands: Commands,
     windows: Query<&Window, With<PrimaryWindow>>,
     marked_camera: Query<(&Camera, &GlobalTransform), With<AoUICamera>>,
-    unmarked_camera: Query<(&Camera, &GlobalTransform), Without<AoUICamera>>,
+    unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<AoUICamera>, Without<CameraClip>)>,
     query: Query<(Entity, &RotatedRect, &Hitbox, &EventFlags)>,
     mut reader: EventReader<MouseWheel>,
 ) {
@@ -37,7 +39,6 @@ pub fn mousewheel_event(
     let Some(mouse_pos) = window.cursor_position()
         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
         .map(|ray| ray.origin.truncate()) else {return;};
-
     if let Some(entity) = query.iter().filter(|(.., flags)| flags.contains(crate::events::MouseWheel))
         .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
         .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))

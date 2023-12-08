@@ -1,6 +1,8 @@
 use bevy::{prelude::*, window::{Window, PrimaryWindow}};
 use bevy_aoui::{RotatedRect, Hitbox};
 
+use crate::widgets::scrollframe::CameraClip;
+
 use super::*;
 
 
@@ -36,7 +38,7 @@ pub fn mouse_button_input(
     buttons: Res<Input<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     marked_camera: Query<(&Camera, &GlobalTransform), With<AoUICamera>>,
-    unmarked_camera: Query<(&Camera, &GlobalTransform), Without<AoUICamera>>,
+    unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<AoUICamera>, Without<CameraClip>)>,
     query: Query<(Entity, &RotatedRect, &Hitbox, &EventFlags)>,
 ) {
     fn drop<T>(_: T) {}

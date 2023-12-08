@@ -13,7 +13,7 @@ pub use std::f32::consts::PI;
 pub const INFINITY: f32 = f32::INFINITY;
 pub const EPS: f32 = f32::EPSILON;
 pub use bevy::prelude::Color;
-pub use bevy_aoui::{Dimension, Opacity, SizeUnit};
+pub use bevy_aoui::{Dimension, Opacity, SizeUnit, Size2};
 pub use bevy_aoui::layout::LayoutControl::{Linebreak, IgnoreLayout};
 pub use crate::anim::{Interpolate, Offset, Rotation, Scale};
 pub use interpolation::EaseFunction;
@@ -52,7 +52,9 @@ pub const Inherit: Option<Anchor> = None;
 pub use crate::{frame, sprite, textbox};
 pub use crate::{oneshot, handler};
 pub use crate::{shape, rectangle, circle};
-pub use crate::{compact, paragraph, span, hbox, vbox, hspan, vspan};
+pub use crate::{padding, compact, paragraph, span, hbox, vbox, hspan, vspan};
 pub use crate::{table, flex_table, fixed_grid, sized_grid,};
-pub use crate::inputbox;
+pub use crate::{inputbox, button, clipping_frame};
 
+
+pub use crate::dsl::context::with_layer;

@@ -65,7 +65,7 @@ impl Dimension {
 
     /// Dimension inherited from parent.
     pub const INHERIT: Self = Self {
-        dim: DimensionSize::Owned(Size2::INHERIT),
+        dim: DimensionSize::Owned(Size2::FULL),
         set_em: SetEM::None,
         size: Vec2::ZERO,
         em: 0.0,

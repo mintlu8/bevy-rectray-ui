@@ -1,7 +1,7 @@
 use bevy::{render::view::Visibility, window::{Window, PrimaryWindow, CursorIcon}, hierarchy::Children};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
 
-use crate::events::{EventFlags, CursorFocus, CursorAction};
+use crate::{events::{EventFlags, CursorFocus, CursorAction}, dto::Dto};
 
 /// Set cursor if [`CursorFocus`] is some [`EventFlags`].
 ///
@@ -16,6 +16,10 @@ pub struct SetCursor {
 #[derive(Debug, Clone, Copy, Component)]
 pub struct DisplayIf(pub EventFlags);
 
+
+#[derive(Debug, Component)]
+#[component(storage="SparseSet")]
+pub struct Payload(Dto);
 
 pub fn conditional_visibility(mut query: Query<(&DisplayIf, Option<&CursorFocus>, &mut Visibility)>){
     query.par_iter_mut().for_each(|(display, focus, mut vis)| {

@@ -2,6 +2,8 @@ use bevy::{math::Vec2, ecs::{system::Query, query::{With, Without}, component::C
 use bevy::window::{CursorIcon, Window, PrimaryWindow};
 use bevy_aoui::Transform2D;
 
+use crate::widgets::scrollframe::CameraClip;
+
 use super::AoUICamera;
 
 
@@ -24,7 +26,7 @@ impl CustomCursor {
 pub fn custom_cursor_controller(
     windows: Query<&Window, With<PrimaryWindow>>,
     marked_camera: Query<(&Camera, &GlobalTransform), With<AoUICamera>>,
-    unmarked_camera: Query<(&Camera, &GlobalTransform), Without<AoUICamera>>,
+    unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<AoUICamera>, Without<CameraClip>)>,
     mut query: Query<(&CustomCursor, &mut Transform2D, &mut Visibility)>
 ) {
 

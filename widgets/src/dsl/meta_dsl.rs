@@ -87,7 +87,7 @@ macro_rules! meta_dsl {
         )
     };
 
-    (($commands: expr $(,$e:expr)*) [$($path: tt)*] {$(,)?}
+    (($commands: expr$(,)?) [$($path: tt)*] {$(,)?}
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*}
         {$($children: expr),*}
@@ -105,6 +105,29 @@ macro_rules! meta_dsl {
                 extras,
                 children,
             ))
+        }
+    };
+
+    (($commands: expr, $assets: expr) [$($path: tt)*] {$(,)?}
+        {$($field: ident: $expr: expr),*}
+        {$($extras: expr),*}
+        {$($children: expr),*}
+    ) => {
+        {
+            use $crate::dsl::DslInto;
+            let extras = ($($extras),*);
+            let children = [$($children),*];
+            let entity = $($path)* {
+                $($field: ($expr).dinto(),)*
+                ..Default::default()
+            };
+            $commands.spawn_aoui_with_assets(
+                &$assets, (
+                    entity,
+                    extras,
+                    children,
+                )
+            )
         }
     };
 
@@ -134,15 +157,15 @@ macro_rules! meta_dsl {
 #[macro_export]
 macro_rules! transform2d {
     ($this: expr) => {
-        ::bevy_aoui::Transform2D {
-            center: $this.center.unwrap_or(::bevy_aoui::Anchor::Inherit),
+        $crate::aoui::Transform2D {
+            center: $this.center.unwrap_or($crate::aoui::Anchor::Inherit),
             anchor: $this.anchor,
-            parent_anchor: $this.parent_anchor.unwrap_or(::bevy_aoui::Anchor::Inherit),
+            parent_anchor: $this.parent_anchor.unwrap_or($crate::aoui::Anchor::Inherit),
             offset: $this.offset,
             rotation: $this.rotation,
             scale: match $this.scale{
                 Some($crate::dsl::prelude::OneOrTwo(vec)) => vec,
-                None => ::bevy::math::Vec2::ONE,
+                None => $crate::bevy::math::Vec2::ONE,
             },
             z: $this.z
         }
@@ -154,8 +177,8 @@ macro_rules! transform2d {
 macro_rules! dimension {
     ($this: expr) => {
         match $this.dimension {
-            Some(size) => ::bevy_aoui::Dimension::owned(size).with_em($this.font_size),
-            None => ::bevy_aoui::Dimension::COPIED.with_em($this.font_size),
+            Some(size) => $crate::aoui::Dimension::owned(size).with_em($this.font_size),
+            None => $crate::aoui::Dimension::COPIED.with_em($this.font_size),
         }
     }
 }
@@ -165,10 +188,20 @@ macro_rules! dimension {
 macro_rules! widget_extension {
     (
         $(#[$($parent_attr:tt)*])*
+        $vis0: vis struct $name: ident { $($fields: tt)* }
+    ) => {
+        $crate::widget_extension2! {
+            $(#[$($parent_attr:tt)*])*
+            $vis0 struct $name { $($fields)* }
+        }
+    };
+    (
+        $(#[$($parent_attr:tt)*])*
         $vis0: vis struct $name: ident { $($fields: tt)* },
         // Due to macro_rules, this shadows self.
         $this: ident,
         $commands: ident,
+        $assets: ident,
         components: ($($input: tt)*)
         $(,spawn: (
             $($children: expr $(=> $comp4: expr)? ),* $(,)?
@@ -180,6 +213,7 @@ macro_rules! widget_extension {
             // Due to macro_rules, this shadows self.
             $this,
             $commands,
+            $assets,
             input: ($($input)*),
             components: (),
             dynamic: (),
@@ -192,6 +226,7 @@ macro_rules! widget_extension {
         $vis0: vis struct $name: ident: Sprite { $($fields: tt)* },
         $this: ident,
         $commands: ident,
+        $assets: ident,
         components: (  $($input: tt)* )
         $(,spawn: (
             $($children: expr $(=> $comp4: expr)? ),* $(,)?
@@ -201,21 +236,22 @@ macro_rules! widget_extension {
             $(#[$($parent_attr:tt)*])*
             $vis0 struct $name { 
                 /// Handle of the image asset.
-                pub sprite: ::bevy::prelude::Handle<bevy::prelude::Image>,
+                pub sprite: $crate::bevy::prelude::Handle<bevy::prelude::Image>,
                 /// Size of the image.
-                pub size: Option<::bevy::prelude::Vec2>,
+                pub size: Option<$crate::bevy::prelude::Vec2>,
                 /// Color of the image.
-                pub color: Option<::bevy::prelude::Color>,
+                pub color: Option<$crate::bevy::prelude::Color>,
                 /// Atlas rectangle of the image.
-                pub rect: Option<::bevy::prelude::Rect>,
+                pub rect: Option<$crate::bevy::prelude::Rect>,
                 /// Flips the image.
                 pub flip: [bool; 2],
                 $($fields)* 
             },
             $this,
             $commands,
+            $assets,
             input: (
-                ::bevy::prelude::Sprite {
+                $crate::bevy::prelude::Sprite {
                     custom_size: $this.size,
                     color: $this.color.unwrap_or(bevy::prelude::Color::WHITE),
                     rect: $this.rect,
@@ -224,7 +260,7 @@ macro_rules! widget_extension {
                     ..Default::default()
                 },
                 $this.sprite,
-                ::bevy_aoui::bundles::BuildGlobalBundle::default(),
+                $crate::aoui::bundles::BuildGlobalBundle::default(),
                 $($input)*
             ),
             components: (),
@@ -238,6 +274,7 @@ macro_rules! widget_extension {
         $vis0: vis struct $name: ident: Text { $($fields: tt)* },
         $this: ident,
         $commands: ident,
+        $assets: ident,
         components: ($($input: tt)*)
         $(,spawn: (
             $($children: expr $(=> $comp4: expr)? ),* $(,)?
@@ -264,32 +301,33 @@ macro_rules! widget_extension {
             },
             $this,
             $commands,
+            $assets,
             input: (
-                ::bevy::text::Text {
-                    sections: vec![::bevy::text::TextSection::new(
+                $crate::bevy::text::Text {
+                    sections: vec![$crate::bevy::text::TextSection::new(
                         $this.text,
-                        ::bevy::text::TextStyle {
+                        $crate::bevy::text::TextStyle {
                             font: $this.font,
-                            color: $this.color.unwrap_or(::bevy::prelude::Color::WHITE),
+                            color: $this.color.unwrap_or($crate::bevy::prelude::Color::WHITE),
                             ..Default::default()
                         }
                     )],
                     linebreak_behavior: if let Some(b) = $this.break_line_on {
                         b
                     } else if $this.wrap {
-                        ::bevy::text::BreakLineOn::WordBoundary
+                        $crate::bevy::text::BreakLineOn::WordBoundary
                     } else {
-                        ::bevy::text::BreakLineOn::NoWrap
+                        $crate::bevy::text::BreakLineOn::NoWrap
                     },
                     ..Default::default()
                 },
                 match $this.bounds {
-                    Some(size) => ::bevy::text::Text2dBounds { size },
-                    None => ::bevy::text::Text2dBounds::UNBOUNDED,
+                    Some(size) => $crate::bevy::text::Text2dBounds { size },
+                    None => $crate::bevy::text::Text2dBounds::UNBOUNDED,
                 },
-                ::bevy::text::TextLayoutInfo::default(),
+                $crate::bevy::text::TextLayoutInfo::default(),
                 Into::<bevy::sprite::Anchor>::into($this.anchor),
-                ::bevy_aoui::bundles::BuildGlobalBundle::default()
+                $crate::aoui::bundles::BuildGlobalBundle::default()
                 $($input)*
             ),
             components: (),
@@ -310,9 +348,61 @@ macro_rules! widget_extension2 {
                 $(#[$($attr:tt)*])*
                 $vis: vis $field: ident: $ty: ty
             ),* $(,)?
+        }
+    ) => {
+        #[derive(Debug, Default)]
+        $(#[$($parent_attr)*])*
+        $vis0 struct $name {
+            /// Anchor of the sprite.
+            pub anchor: $crate::aoui::Anchor,
+            /// Matched parent anchor of the sprite, default is `anchor`.
+            /// Usually should not be set in idiomatic use.
+            pub parent_anchor: Option<$crate::aoui::Anchor>,
+            /// Center of the sprite, default is `anchor`.
+            pub center: Option<$crate::aoui::Anchor>,
+            /// Propagated opacity.
+            pub opacity: $crate::aoui::Opacity,
+            /// Visible, default is inherited.
+            pub visible: Option<bool>,
+            /// Offset of the sprite from parent's anchor.
+            pub offset: $crate::aoui::Size2,
+            /// Rotation of the sprite from `center`.
+            pub rotation: f32,
+            /// Scale of the sprite.
+            pub scale: Option<$crate::dsl::OneOrTwo<$crate::bevy::math::Vec2>>,
+            /// Z depth of the sprite.
+            pub z: f32,
+            /// Owned dimension of the sprite.
+            /// 
+            /// If not set, size is fetched dynamically from various sources.
+            /// 
+            /// The `size` field, if exists, sets the size of the underlying sprite.
+            pub dimension: Option<$crate::aoui::Size2>,
+            /// Propagated font size.
+            pub font_size: $crate::aoui::SetEM,
+            /// Sets up which event this receives.
+            /// 
+            /// Due to this being a confusing footgun, 
+            /// setting event here automatically sets hitbox to `Rect(1)` if not set manually.
+            pub event: Option<$crate::events::EventFlags>,
+            /// The click detection area of the sprite.
+            pub hitbox: Option<$crate::aoui::Hitbox>,
+            /// The render layer of the sprite.
+            pub layer: Option<$crate::bevy::render::view::RenderLayers>,
+            $($(#[$($attr)*])* $vis $field: $ty),*
+        }
+    };
+    (
+        $(#[$($parent_attr:tt)*])*
+        $vis0: vis struct $name: ident {
+            $(
+                $(#[$($attr:tt)*])*
+                $vis: vis $field: ident: $ty: ty
+            ),* $(,)?
         },
         $this: ident,
         $commands: ident,
+        $assets: ident,
         input: (),
         components: ( $($comp: expr),* ),
         dynamic: ($($if: expr => $comp2: expr),*),
@@ -321,51 +411,22 @@ macro_rules! widget_extension2 {
             $($children: expr $(=> $comp4: expr)? ),*
         )
     ) => {
-        #[derive(Debug, Default)]
-        $(#[$($parent_attr)*])*
-        $vis0 struct $name {
-            /// Anchor of the sprite.
-            pub anchor: ::bevy_aoui::Anchor,
-            /// Matched parent anchor of the sprite, default is `anchor`.
-            /// Usually should not be set in idiomatic use.
-            pub parent_anchor: Option<::bevy_aoui::Anchor>,
-            /// Center of the sprite, default is `anchor`.
-            pub center: Option<::bevy_aoui::Anchor>,
-            /// Propagated opacity.
-            pub opacity: ::bevy_aoui::Opacity,
-            /// Visible, default is inherited.
-            pub visible: Option<bool>,
-            /// Offset of the sprite from parent's anchor.
-            pub offset: ::bevy_aoui::Size2,
-            /// Rotation of the sprite from `center`.
-            pub rotation: f32,
-            /// Scale of the sprite.
-            pub scale: Option<$crate::dsl::OneOrTwo<::bevy::math::Vec2>>,
-            /// Z depth of the sprite.
-            pub z: f32,
-            /// Owned dimension of the sprite.
-            /// 
-            /// If not set, size is fetched dynamically from various sources.
-            /// 
-            /// The `size` field, if exists, sets the size of the underlying sprite.
-            pub dimension: Option<::bevy_aoui::Size2>,
-            /// Propagated font size.
-            pub font_size: ::bevy_aoui::SetEM,
-            /// Sets up which event this receives.
-            /// 
-            /// Due to this being a confusing footgun, 
-            /// setting event here automatically sets hitbox to `Rect(1)` if not set manually.
-            pub event: Option<$crate::events::EventFlags>,
-            /// The click detection area of the sprite.
-            pub hitbox: Option<::bevy_aoui::Hitbox>,
-            $($(#[$($attr)*])* $vis $field: $ty),*
-        }
+        $crate::widget_extension2! (
+            $(#[$($parent_attr)*])*
+            $vis0 struct $name {
+                $(
+                    $(#[$($attr)*])*
+                    $vis $field: $ty
+                ),*
+            }
+        );
 
         const _: () = {
             use $crate::dsl::DslInto;
-            use ::bevy::prelude::BuildChildren;
+            use $crate::bevy::prelude::BuildChildren;
             impl $crate::dsl::AoUIWidget for $name {
-                fn spawn_with(self, $commands: &mut ::bevy::prelude::Commands) -> ::bevy::prelude::Entity {
+                #[allow(unused)]
+                fn spawn_with(self, $commands: &mut $crate::bevy::prelude::Commands, $assets: Option<&$crate::bevy::asset::AssetServer>) -> $crate::bevy::prelude::Entity {
                     let $this = self;
                     let mut base = $commands.spawn((
                         bevy_aoui::bundles::AoUIBundle {
@@ -383,7 +444,15 @@ macro_rules! widget_extension2 {
                     if let Some(hitbox) = $this.hitbox {
                         base.insert(hitbox);
                     } else if $this.event.is_some() {
-                        base.insert(::bevy_aoui::Hitbox::FULL);
+                        base.insert($crate::aoui::Hitbox::FULL);
+                    }
+                    if let Some(layer) = $this.layer {
+                        base.insert(layer);
+                    } else {
+                        let layer = $crate::dsl::get_layer();
+                        if layer != 0 {
+                            base.insert($crate::bevy::render::view::RenderLayers::layer(layer));
+                        }
                     }
                     $(if $if {
                         base.insert($comp2);
@@ -409,6 +478,7 @@ macro_rules! widget_extension2 {
         $vis0: vis struct $name: ident { $($fields: tt)* },
         $this: ident,
         $commands: ident,
+        $assets: ident,
         input: ($bundle: expr, $($rest: tt)*),
         components: ( $($comp: expr),* ),
         dynamic: ($($if: expr => $comp2: expr),*),
@@ -420,6 +490,7 @@ macro_rules! widget_extension2 {
             $vis0 struct $name { $($fields)* },
             $this,
             $commands,
+            $assets,
             input: ($($rest)*),
             components: ( $($comp,)* $bundle),
             dynamic: ($($if => $comp2),*),
@@ -432,6 +503,7 @@ macro_rules! widget_extension2 {
         $vis0: vis struct $name: ident { $($fields: tt)* },
         $this: ident,
         $commands: ident,
+        $assets: ident,
         input: ($bundle: expr),
         components: ( $($comp: expr),* ),
         dynamic: ($($if: expr => $comp2: expr),*),
@@ -443,6 +515,7 @@ macro_rules! widget_extension2 {
             $vis0 struct $name { $($fields)* },
             $this,
             $commands,
+            $assets,
             input: (),
             components: ( $($comp,)* $bundle),
             dynamic: ($($if => $comp2),*),
@@ -455,6 +528,7 @@ macro_rules! widget_extension2 {
         $vis0: vis struct $name: ident { $($fields: tt)* },
         $this: ident,
         $commands: ident,
+        $assets: ident,
         input: ($pat0: pat = $pat_field0: expr => $expr0: expr, $($rest: tt)*),
         components: ( $($comp: expr),* ),
         dynamic: ($($if: expr => $comp2: expr),*),
@@ -468,6 +542,7 @@ macro_rules! widget_extension2 {
             $vis0 struct $name { $($fields)* },
             $this,
             $commands,
+            $assets,
             input: ($($rest)*),
             components: ($($comp),*),
             dynamic: ($($if => $comp2),*),
@@ -482,6 +557,7 @@ macro_rules! widget_extension2 {
         $vis0: vis struct $name: ident { $($fields: tt)* },
         $this: ident,
         $commands: ident,
+        $assets: ident,
         input: ($pat0: pat = $pat_field0: expr => $expr0: expr),
         components: ( $($comp: expr),* ),
         dynamic: ($($if: expr => $comp2: expr),*),
@@ -495,6 +571,7 @@ macro_rules! widget_extension2 {
             $vis0 struct $name { $($fields)* },
             $this,
             $commands,
+            $assets,
             input: (),
             components: ($($comp),*),
             dynamic: ($($if => $comp2),*),
@@ -509,6 +586,7 @@ macro_rules! widget_extension2 {
         $vis0: vis struct $name: ident { $($fields: tt)* },
         $this: ident,
         $commands: ident,
+        $assets: ident,
         input: ($if0: expr => $expr0: expr, $($rest: tt)*),
         components: ( $($comp: expr),* ),
         dynamic: ($($if: expr => $comp2: expr),*),
@@ -522,6 +600,7 @@ macro_rules! widget_extension2 {
             $vis0 struct $name { $($fields)* },
             $this,
             $commands,
+            $assets,
             input: ($($rest)*),
             components: ($($comp),*),
             dynamic: ($($if => $comp2,)* $if0 => $expr0),
@@ -536,6 +615,7 @@ macro_rules! widget_extension2 {
         $vis0: vis struct $name: ident { $($fields: tt)* },
         $this: ident,
         $commands: ident,
+        $assets: ident,
         input: ($if0: expr => $expr0: expr),
         components: ( $($comp: expr),* ),
         dynamic: ($($if: expr => $comp2: expr),*),
@@ -549,6 +629,7 @@ macro_rules! widget_extension2 {
             $vis0 struct $name { $($fields)* },
             $this,
             $commands,
+            $assets,
             input: (),
             components: ($($comp),*),
             dynamic: ($($if => $comp2,)* $if0 => $expr0),

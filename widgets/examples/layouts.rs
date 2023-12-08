@@ -17,7 +17,6 @@ pub fn main() {
 macro_rules! anchor_circle {
     (($commands: expr, $server: expr $(, $ctx: expr)*) {$expr: expr}) => {
         bevy_aoui_widgets::meta_dsl!(($commands, $server $(, $ctx)*) [bevy_aoui_widgets::dsl::builders::ShapeBuilder] {
-            default_material: $server.add(::bevy::prelude::ColorMaterial::default()),
             shape: bevy_aoui_widgets::widgets::Shapes::Circle,
             fill: color!(white),
             stroke: (color!(black), 1),

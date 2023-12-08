@@ -82,6 +82,12 @@ pub use dto::{Submit, Change};
 pub use signals::{signal, Sender, Receiver};
 
 #[doc(hidden)]
+pub use bevy_aoui as aoui;
+#[doc(hidden)]
+pub use bevy;
+
+
+#[doc(hidden)]
 pub use generic_static::StaticTypeMap;
 
 /// Plugin for both widgets and events.

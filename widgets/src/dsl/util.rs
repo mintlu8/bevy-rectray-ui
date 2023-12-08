@@ -154,8 +154,8 @@ impl DslInto<Option<FlexDir>> for AoUISpacialConsts {
 #[macro_export]
 macro_rules! color {
     ($color: tt) => {
-        ::bevy_aoui_widgets::dsl::rgbaf!(
-            ::bevy::prelude::Color::RgbaLinear, 
+        $crate::dsl::rgbaf!(
+            $crate::bevy::prelude::Color::RgbaLinear, 
             $color => {red, green, blue, alpha}
         ).as_rgba()
     };
@@ -165,8 +165,8 @@ macro_rules! color {
 #[macro_export]
 macro_rules! colorv4 {
     ($color: tt) => {
-        ::bevy_aoui_widgets::dsl::rgbaf!(
-            ::bevy::prelude::Color::RgbaLinear, 
+        $crate::dsl::rgbaf!(
+            $crate::bevy::prelude::Color::RgbaLinear, 
             $color => {red, green, blue, alpha}
         ).as_rgba().into()
     };
@@ -312,52 +312,52 @@ impl_one_or_two!(Size2, x, y, Size2::pixels(x as f32, y as f32));
 #[macro_export]
 macro_rules! size {
     ($x: tt) => {
-        (::bevy_aoui::SizeUnit::Pixels, $x as f32)
+        ($crate::aoui::SizeUnit::Pixels, $x as f32)
     };
     (-$x: tt) => {
-        (::bevy_aoui::SizeUnit::Pixels, -($x as f32))
+        ($crate::aoui::SizeUnit::Pixels, -($x as f32))
     };
     ($x: tt px) => {
-        (::bevy_aoui::SizeUnit::Pixels, $x as f32)
+        ($crate::aoui::SizeUnit::Pixels, $x as f32)
     };
     (-$x: tt px) => {
-        (::bevy_aoui::SizeUnit::Pixels, -($x as f32))
+        ($crate::aoui::SizeUnit::Pixels, -($x as f32))
     };
     ($x: tt em) => {
-        (::bevy_aoui::SizeUnit::Em, $x as f32)
+        ($crate::aoui::SizeUnit::Em, $x as f32)
     };
     (-$x: tt em) => {
-        (::bevy_aoui::SizeUnit::Em, -($x as f32))
+        ($crate::aoui::SizeUnit::Em, -($x as f32))
     };
     ($x: tt rem) => {
-        (::bevy_aoui::SizeUnit::Rem, $x as f32)
+        ($crate::aoui::SizeUnit::Rem, $x as f32)
     };
     (-$x: tt rem) => {
-        (::bevy_aoui::SizeUnit::Rem, -($x as f32))
+        ($crate::aoui::SizeUnit::Rem, -($x as f32))
     };
     ($x: tt %) => {
-        (::bevy_aoui::SizeUnit::Percent, $x as f32 / 100.0)
+        ($crate::aoui::SizeUnit::Percent, $x as f32 / 100.0)
     };
     (-$x: tt %) => {
-        (::bevy_aoui::SizeUnit::Percent, -($x as f32) / 100.0)
+        ($crate::aoui::SizeUnit::Percent, -($x as f32) / 100.0)
     };
     (1 - $x: tt px) => {
-        (::bevy_aoui::SizeUnit::MarginPx, $x as f32)
+        ($crate::aoui::SizeUnit::MarginPx, $x as f32)
     };
     (1 + $x: tt px) => {
-        (::bevy_aoui::SizeUnit::MarginPx, -($x as f32))
+        ($crate::aoui::SizeUnit::MarginPx, -($x as f32))
     };
     (1 - $x: tt em) => {
-        (::bevy_aoui::SizeUnit::MarginEm, $x as f32)
+        ($crate::aoui::SizeUnit::MarginEm, $x as f32)
     };
     (1 + $x: tt em) => {
-        (::bevy_aoui::SizeUnit::MarginEm, -($x as f32))
+        ($crate::aoui::SizeUnit::MarginEm, -($x as f32))
     };
     (1 - $x: tt rem) => {
-        (::bevy_aoui::SizeUnit::MarginRem, $x as f32)
+        ($crate::aoui::SizeUnit::MarginRem, $x as f32)
     };
     (1 + $x: tt rem) => {
-        (::bevy_aoui::SizeUnit::MarginRem, -($x as f32))
+        ($crate::aoui::SizeUnit::MarginRem, -($x as f32))
     };
 }
 
@@ -392,6 +392,9 @@ macro_rules! size {
 /// * `1px` is not valid rust syntax, always use `1 px`.
 #[macro_export]
 macro_rules! size2 {
+    (full) => {
+        $crate::aoui::Size2::FULL
+    };
     ([$($tt:tt)*]) => {
         $crate::size2!(@accumulate [] [$($tt)*])
     };
@@ -399,7 +402,7 @@ macro_rules! size2 {
         compile_error!("Expected 2 expressions, found 1.")
     };
     (@accumulate [$($tt1:tt)*] [, $($tt2:tt)*]) => {
-        ::bevy_aoui::Size2::new($crate::size!($($tt1)*), $crate::size!($($tt2)*))
+        $crate::aoui::Size2::new($crate::size!($($tt1)*), $crate::size!($($tt2)*))
     };
     (@accumulate [$($tt1:tt)*] [$tt:tt $($tt2:tt)*]) => {
         $crate::size2!(@accumulate [$($tt1)* $tt] [$($tt2)*])

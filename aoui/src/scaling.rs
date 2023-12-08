@@ -92,8 +92,7 @@ impl Size2 {
         raw: Vec2::ZERO,
     };
 
-
-    pub const INHERIT: Self = Self {
+    pub const FULL: Self = Self {
         x: SizeUnit::Percent,
         y: SizeUnit::Percent,
         raw: Vec2::ONE,
