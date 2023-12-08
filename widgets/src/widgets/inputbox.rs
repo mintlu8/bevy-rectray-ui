@@ -281,7 +281,6 @@ pub fn text_on_mouse_double_click(
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn update_inputbox_cursor(
     mut commands: Commands,
     fonts: Res<Assets<Font>>,

@@ -80,7 +80,7 @@ impl<'w, 's> AoUICommands for Commands<'w, 's> {
 }
 
 pub trait AoUIWidget: Sized {
-    fn spawn_with<'w, 's>(self, commands: &mut Commands<'w, 's>, assets: Option<&AssetServer>) -> Entity;
+    fn spawn_with(self, commands: &mut Commands, assets: Option<&AssetServer>) -> Entity;
 }
 
 /// Construct marker components by name.

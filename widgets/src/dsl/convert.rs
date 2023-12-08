@@ -88,19 +88,19 @@ impl<const N: usize> DslInto<Vec<(SizeUnit, f32)>> for [i32; N] {
 
 impl<const N: usize> DslInto<Vec<(SizeUnit, f32)>> for [f32; N] {
     fn dinto(self) -> Vec<(SizeUnit, f32)> {
-        self.into_iter().map(|x| (SizeUnit::Pixels, x as f32)).collect()
+        self.into_iter().map(|x| (SizeUnit::Pixels, x)).collect()
     }
 }
 
 impl DslInto<Vec<(SizeUnit, f32)>> for &[i32] {
     fn dinto(self) -> Vec<(SizeUnit, f32)> {
-        self.into_iter().map(|x| (SizeUnit::Pixels, *x as f32)).collect()
+        self.iter().map(|x| (SizeUnit::Pixels, *x as f32)).collect()
     }
 }
 
 impl DslInto<Vec<(SizeUnit, f32)>> for &[f32] {
     fn dinto(self) -> Vec<(SizeUnit, f32)> {
-        self.into_iter().map(|x| (SizeUnit::Pixels, *x as f32)).collect()
+        self.iter().map(|x| (SizeUnit::Pixels, *x)).collect()
     }
 }
 

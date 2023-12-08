@@ -122,7 +122,7 @@ widget_extension!(
 );
 
 impl AoUIWidget for ClippingFrameBuilder {
-    fn spawn_with<'w, 's>(self, commands: &mut bevy::prelude::Commands<'w, 's>, assets: Option<&bevy::prelude::AssetServer>) -> Entity {
+    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> Entity {
         if self.buffer[0] == 0 || self.buffer[1] == 0 {
             panic!("Buffer size cannot be 0.")
         }
@@ -143,7 +143,7 @@ impl AoUIWidget for ClippingFrameBuilder {
             layer: self.original_layer,
         }.spawn_with(commands, assets);
         let (clip, image) = ClippingBundle::new(
-            &assets.expect("Please pass in the asset server."), 
+            assets.expect("Please pass in the asset server."), 
             self.buffer, 
             self.layer.expect("Please specify a render layer.")
         );

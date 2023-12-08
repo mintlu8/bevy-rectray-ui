@@ -69,6 +69,8 @@
 //! ```
 //! 
 //! Check our our book or examples for more info.
+#![allow(clippy::type_complexity)]
+
 pub mod dsl;
 pub mod widgets;
 pub mod events;

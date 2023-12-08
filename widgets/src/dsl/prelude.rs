@@ -34,7 +34,7 @@ pub use crate::signal;
 pub use crate::{Submit, Change, Sender, Receiver};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::{
-    PropagateFocus, DisplayIf, SetCursor
+    PropagateFocus, DisplayIf, SetCursor, drag::DragSignal
 };
 
 pub const FlipX: [bool; 2] = [true, false];

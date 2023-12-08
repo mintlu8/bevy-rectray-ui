@@ -1,7 +1,8 @@
-use bevy::{math::Vec2, ecs::{system::{Query, Res}, component::Component, query::{Without, With}}, hierarchy::Parent};
+use bevy::{math::Vec2, ecs::{system::{Query, Res}, component::Component, query::Without},};
 use bevy_aoui::{Size2, Transform2D};
+use serde::{Serialize, Deserialize};
 
-use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::{Interpolate, Offset}};
+use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::{Interpolate, Offset}, Receiver, Sender};
 
 
 /// A component that enables dragging and dropping. 
@@ -94,11 +95,6 @@ pub struct Constraint{
 #[derive(Debug, Default, Clone, Copy, Component)]
 pub struct DragFactor(f32);
 
-/// Allows this sprite to serve as a drag hitbox
-/// for its parent.
-#[derive(Debug, Default, Clone, Copy, Component)]
-pub struct DragParent;
-
 impl DragFactor {
     pub fn get(&self) -> f32 {
         self.0
@@ -109,11 +105,10 @@ impl DragFactor {
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn drag_start(
     mut query: Query<(&CursorAction, &Transform2D, &mut Draggable, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>)>,
-    mut inactive: Query<(&Transform2D, &mut Draggable, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>), Without<CursorAction>>,
-    child: Query<(&Parent, &CursorAction), (With<DragParent>, Without<Draggable>)>,
+    send: Query<(&CursorAction, &Sender<DragSignal>), Without<Draggable>>,
+    mut receive: Query<(&mut Draggable, &Transform2D, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>, &Receiver<DragSignal>), Without<CursorAction>>,
 ) {
     for (action, transform, mut drag, mut snap, mut interpolate) in query.iter_mut() {
         if !action.intersects(EventFlags::Down | EventFlags::MidDown | EventFlags:: RightDown)  {
@@ -134,11 +129,16 @@ pub fn drag_start(
             None => panic!("Draggable sprites must have pixel units."),
         }
     }
-    for (parent, action) in child.iter() {
-        if !action.intersects(EventFlags::Down | EventFlags::MidDown | EventFlags:: RightDown)  {
+
+    for (focus, send) in send.iter() {
+        if !focus.intersects(EventFlags::Down | EventFlags::MidDown | EventFlags:: RightDown)  {
             continue;
         }
-        let Ok((transform, mut drag, mut snap, mut interpolate)) = inactive.get_mut(parent.get()) else {continue};
+        let _ = send.send(&DragState::Start);
+    }
+    
+    for (mut drag, transform, mut snap, mut interpolate, recv) in receive.iter_mut() {
+        let Some(DragState::Start) = recv.poll () else { continue };
         match transform.offset.get_pixels() {
             Some(pixels) => {
                 drag.set(pixels);
@@ -156,11 +156,23 @@ pub fn drag_start(
     }
 }
 
+/// A signal marker that remotely triggers a `Draggable` component
+/// from another sprite's drag event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DragSignal {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+enum DragState {
+    Start,
+    Dragging,
+    End,
+}
+
 pub fn dragging(
     state: Res<CursorState>,
     mut query: Query<(&CursorFocus, &Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>)>,
-    mut inactive: Query<(&Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>), Without<CursorFocus>>,
-    child: Query<(&Parent, &CursorFocus), (With<DragParent>, Without<Draggable>)>,
+    send: Query<(&CursorFocus, &Sender<DragSignal>), Without<Draggable>>,
+    mut receive: Query<(&Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>, &Receiver<DragSignal>), Without<CursorFocus>>,
 ) {
     let delta = state.cursor_position() - state.down_position();
     for (focus, drag, mut transform, interpolate) in query.iter_mut() {
@@ -179,11 +191,15 @@ pub fn dragging(
         }
     }
 
-    for (parent, focus) in child.iter() {
+    for (focus, send) in send.iter() {
         if !focus.intersects(EventFlags::Drag | EventFlags::MidDrag | EventFlags:: RightDrag)  {
             continue;
         }
-        let Ok((drag, mut transform, interpolate)) = inactive.get_mut(parent.get()) else {continue};
+        let _ = send.send(&DragState::Dragging);
+    }
+    
+    for (drag, mut transform, interpolate, recv) in receive.iter_mut() {
+        let Some(DragState::Dragging) = recv.poll () else { continue };
         let pos = drag.last_drag_start() + {
             Vec2::new(
                 if drag.x {delta.x} else {0.0}, 
@@ -200,8 +216,8 @@ pub fn dragging(
 
 pub fn drag_end(
     mut query: Query<(&CursorAction, &mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>)>,
-    mut inactive: Query<(&mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>), Without<CursorAction>>,
-    child: Query<(&Parent, &CursorAction), (With<DragParent>, Without<Draggable>)>,
+    send: Query<(&CursorAction, &Sender<DragSignal>), Without<Draggable>>,
+    mut receive: Query<(&mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>, &Receiver<DragSignal>), Without<CursorAction>>,
 ) {
     for (action, mut snap, mut transform, mut interpolate) in query.iter_mut() {
         if !action.is(EventFlags::DragEnd) {
@@ -215,11 +231,16 @@ pub fn drag_end(
             }
         }
     }
-    for (parent, action) in child.iter() {
-        if !action.is(EventFlags::DragEnd) {
+
+    for (focus, send) in send.iter() {
+        if !focus.intersects(EventFlags::DragEnd)  {
             continue;
         }
-        let Ok((mut snap, mut transform, mut interpolate)) = inactive.get_mut(parent.get()) else {continue};
+        let _ = send.send(&DragState::End);
+    }
+    
+    for (mut snap, mut transform, mut interpolate, recv) in receive.iter_mut() {
+        let Some(DragState::End) = recv.poll () else { continue };
         if let Some(orig) = snap.drag_start.take() {
             if let Some(inter) = &mut interpolate {
                 inter.interpolate_to(orig)

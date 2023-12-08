@@ -82,12 +82,12 @@ impl Layout for ParagraphLayout {
 fn trim<T>(slice: &[T], mut f: impl FnMut(&T) -> bool) -> &[T]{
     let mut min = 0;
     let mut max = slice.len();
-    for i in 0..slice.len() {
+    for (i, v) in slice.iter().enumerate() {
         min = i;
-        if !f(&slice[i]) { break }
+        if !f(v) { break }
     }
-    for i in (min..slice.len()).rev() {
-        if !f(&slice[i]) { break }
+    for (i, v) in slice.iter().enumerate().skip(min).rev() {
+        if !f(v) { break }
         max = i;
     }
     &slice[min..max]

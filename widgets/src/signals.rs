@@ -1,8 +1,8 @@
-use std::{sync::{Arc, RwLock}, error::Error, marker::PhantomData};
+use std::{sync::{Arc, RwLock}, marker::PhantomData};
 use bevy::ecs::{system::Query, component::Component};
 use serde::{Serialize, de::DeserializeOwned};
 
-use crate::dto::Dto;
+use crate::dto::{Dto, DtoError};
 
 use self::sealed::SignalCreate;
 
@@ -17,11 +17,7 @@ unsafe impl<T> Sync for Sender<T> {}
 
 /// A signal receiver
 #[derive(Debug, Clone, Component)]
-pub struct Receiver<T=()>{ 
-    signal: Signal, 
-    single: bool,
-    p: PhantomData<T>
-}
+pub struct Receiver<T=()>(Signal, PhantomData<T>);
 
 
 // Safety: Save since T is just a marker
@@ -59,45 +55,39 @@ impl Sender {
 }
 
 impl<A> Sender<A> {
-    pub fn send<'t, T: Serialize>(&'t self, item: &T) -> Result<(), Box<dyn Error + 't>> {
-        let mut lock = self.0.0.write()?;
+    pub fn send<T: Serialize>(&self, item: &T) -> Result<(), DtoError> {
+        let mut lock = self.0.0.write().unwrap();
         match lock.as_mut() {
             Some(dto) => dto.set(item)?,
             None => *lock = Some(Dto::new(item)?),
         };
         Ok(())
     }
+
+    pub(crate) fn send_bytes(&self, item: &[u8]) {
+        let mut lock = self.0.0.write().unwrap();
+        match lock.as_mut() {
+            Some(dto) => dto.0 = item.to_vec(),
+            None => *lock = Some(Dto(item.to_vec())),
+        };
+    }
 }
 
 impl Receiver {
     pub fn mark<M>(self) -> Receiver<M> {
-        Receiver {
-            signal: self.signal,
-            single: self.single,
-            p: PhantomData,
-        }
+        Receiver(self.0, PhantomData)
     }
 }
 
 
 impl<A> Receiver<A> {
     pub fn poll<T: DeserializeOwned>(&self) -> Option<T> {
-        if self.single {
-            match self.signal.0.write() {
-                Ok(mut lock) => match lock.as_mut().take() {
-                    Some(dto) => dto.get().ok(),
-                    None => None,
-                }
-                Err(_) => None,
+        match self.0.0.read() {
+            Ok(lock) => match lock.as_ref() {
+                Some(dto) => dto.get().ok(),
+                None => None,
             }
-        } else {
-            match self.signal.0.read() {
-                Ok(lock) => match lock.as_ref() {
-                    Some(dto) => dto.get().ok(),
-                    None => None,
-                }
-                Err(_) => None,
-            }
+            Err(_) => None,
         }
     }
 }
@@ -118,11 +108,7 @@ mod sealed {
                     let signal = Signal::new();
                     (
                         $sender(signal.clone(), PhantomData), 
-                        $first{
-                            signal,
-                            single: true,
-                            p: PhantomData
-                        }
+                        $first(signal, PhantomData), 
                     )
                 }
             }
@@ -134,16 +120,8 @@ mod sealed {
                     let signal = Signal::new();
                     (
                         $sender(signal.clone(), PhantomData),
-                        $($receivers{
-                            signal: signal.clone(),
-                            single: false,
-                            p: PhantomData
-                        },)*
-                        $first{
-                            signal,
-                            single: false,
-                            p: PhantomData
-                        }
+                        $($receivers(signal.clone(), PhantomData),)*
+                        $first(signal, PhantomData), 
                     )
                 }
             }
@@ -183,16 +161,6 @@ mod sealed {
 /// app.register_aoui_signal::<ButtonClick>()
 /// # */
 /// ```
-/// 
-/// When using a single receiver
-/// ```
-/// # /*
-/// let (sender, receiver) = signal();
-/// # */
-/// ```
-/// 
-/// `poll()` will take the data sent,
-/// meaning you *might* not need the cleanup routine.
 pub fn signal<S: SignalCreate>() -> S {
     S::new()
 }
