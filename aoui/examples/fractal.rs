@@ -1,3 +1,5 @@
+//! A stress test for a large hierarchy.
+
 use std::f32::consts::PI;
 
 use bevy_aoui::{*, bundles::*};
@@ -78,14 +80,13 @@ pub fn egui_window(mut ctx: EguiContexts,
 ) {
     let sp = query.iter().next().unwrap();
     let mut rotation = sp.rotation;
-    let mut scale = sp.scale;
+    let mut scale = sp.scale.x;
     egui::Window::new("Console").show(ctx.ctx_mut(), |ui| {
         ui.add(Slider::new(&mut rotation, -PI * 2.0..=PI * 2.0).text("Rotation"));
-        ui.add(Slider::new(&mut scale.x, 0.0..=10.0).text("Scale Y"));
-        ui.add(Slider::new(&mut scale.y, 0.0..=10.0).text("Scale Y"));
+        ui.add(Slider::new(&mut scale, 0.0..=10.0).text("Scale"));
     });
     for mut sp in query.iter_mut() {
         sp.rotation = rotation;
-        sp.scale = scale;
+        sp.scale = Vec2::splat(scale);
     }
 }

@@ -1,3 +1,5 @@
+//! Showcases a simple skeletal system by chaining rectangles.
+
 use bevy_aoui::{*, bundles::*};
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{Slider, self}};

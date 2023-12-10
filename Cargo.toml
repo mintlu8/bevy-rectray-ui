@@ -1,7 +1,16 @@
 [workspace]
 members = [
     "aoui",
-    "widgets",
+    "shapes",
     "aoui_rive"
 ]
 resolver="2"
+
+
+[profile.dev]
+debug = 1
+opt-level = 3
+
+[profile.dev.package."*"]
+debug = false
+opt-level = 3

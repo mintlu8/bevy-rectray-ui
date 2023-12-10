@@ -1,3 +1,5 @@
+/// A simple example of rendering description using the paragraph layout.
+
 use bevy_aoui::{*, bundles::*, layout::*};
 use bevy::{prelude::*, text::Text2dBounds};
 

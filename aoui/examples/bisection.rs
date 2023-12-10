@@ -1,5 +1,8 @@
+//! A simple test case for percentage size.
+
 use bevy_aoui::{*, bundles::*};
 use bevy::prelude::*;
+
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)

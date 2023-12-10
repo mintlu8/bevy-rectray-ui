@@ -1,3 +1,11 @@
+//! A naive text render with the paragraph layout using margin.
+//! 
+//! This approach works for plain text but not universal across languages
+//! and might not work as well for styled rich text.
+//! 
+//! e.g
+//! `{red:word}.` will be rendered as `word .`
+
 use std::f32::consts::PI;
 
 use bevy_aoui::{*, bundles::*, layout::*};

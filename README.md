@@ -13,10 +13,10 @@ anchor-offset system and high level ergonomics through its layout system.
 
 ## Getting Started
 
-Before you start you should check out `bevy_aoui_widgets`'s examples if you like shapes or DSL.
+Before you start you should check out `bevy_aoui`'s examples if you like shapes or DSL.
 
-[![Widgets](https://img.shields.io/crates/v/bevy_aoui_widgets.svg)](https://crates.io/crates/bevy_aoui_widgets)
-[![Docs](https://docs.rs/bevy_aoui_widgets/badge.svg)](https://docs.rs/bevy_aoui_widgets/latest/bevy_aoui_widgets/)
+[![Widgets](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
+[![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
 
 First add the AoUI Plugin:
 
@@ -68,7 +68,7 @@ commands.spawn(AoUITextBundle {
 });
 ```
 
-If you don't like the verbosity, check out the DSL in `bevy_aoui_widgets`:
+If you don't like the verbosity, check out the DSL in `bevy_aoui`:
 
 ```rust
 button! ((commands, assets) {
@@ -162,9 +162,9 @@ You can mix and match anchoring and layouts to best suit your needs.
 
 `bevy_aoui` is a layout system, not a widget library.
 Implementations of most AoUI widgets
-will live outside of the main crate, like in `bevy_aoui_widgets`.
+will live outside of the main crate, like in `bevy_aoui`.
 
-`bevy_aoui_widgets` is a lot more experimental and subject to more
+`bevy_aoui` is a lot more experimental and subject to more
 changes than `bevy_aoui`. Checkout our examples for simple widget implementations.
 
 `AoUI` is commited to not have a standard look and not interacting with the
@@ -202,7 +202,7 @@ Performance related pull requests and suggestions are welcome.
 
 ### Bevy Versions
 
-| bevy | bevy_aoui | bevy_aoui_widgets |
+| bevy | bevy_aoui | bevy_aoui |
 | -- | -- | -- |
 | 0.12 | 0.1-latest | 0.1-latest |
 

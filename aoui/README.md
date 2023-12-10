@@ -13,7 +13,7 @@ anchor-offset system and high level ergonomics through its layout system.
 
 ## Getting Started
 
-Before you start you should check out `bevy_aoui_widgets`'s examples if you like shapes or DSL.
+Before you start you should check out `bevy_aoui`'s examples if you like shapes or DSL.
 
 First add the AoUI Plugin:
 
@@ -136,9 +136,9 @@ You can mix and match anchoring and layouts to best suit your needs.
 
 `bevy_aoui` is a layout system, not a widget library.
 Implementations of most AoUI widgets
-will live outside of the main crate, like in `bevy_aoui_widgets`.
+will live outside of the main crate, like in `bevy_aoui`.
 
-`bevy_aoui_widgets` is a lot more experimental and subject to more
+`bevy_aoui` is a lot more experimental and subject to more
 changes than `bevy_aoui`. Checkout our examples for simple widget implementations.
 
 `AoUI` is commited to not have a standard look and not interacting with the

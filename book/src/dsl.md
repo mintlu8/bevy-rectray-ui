@@ -1,6 +1,6 @@
 # DSL
 
-`bevy_aoui_widgets` provides a simple DSL syntax for UI generation.
+`bevy_aoui` provides a simple DSL syntax for UI generation.
 
 For every AoUI widget struct, there is a macro with a corresponding name
 `e.g.` `SpriteBuilder` has `sprite!`
@@ -38,7 +38,7 @@ When using our DSL, it is recommended to import the
 prelude for syntax consistancy.
 
 ```rust
-use bevy_aoui_widgets::dsl::prelude::*;
+use bevy_aoui::dsl::prelude::*;
 ```
 
 This provides constants, functions and macros that you

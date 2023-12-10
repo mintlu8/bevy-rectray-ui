@@ -1,7 +1,7 @@
 # Bevy AoUI Widgets
 
-[![Crates.io](https://img.shields.io/crates/v/bevy_aoui_widgets.svg)](https://crates.io/crates/bevy_aoui_widgets)
-[![Docs](https://docs.rs/bevy_aoui_widgets/badge.svg)](https://docs.rs/bevy_aoui_widgets/latest/bevy_aoui_widgets/)
+[![Crates.io](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
+[![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
 
 UI, events and dsl for the `bevy_aoui` crate.
 
@@ -31,7 +31,7 @@ We offer a DSL for streamlining widget construction.
 Before you start, always import the prelude for syntax consistancy.
 
 ```rust
-use bevy_aoui_widgets::dsl::prelude::*;
+use bevy_aoui::dsl::prelude::*;
 ```
 
 Each "widget" has a struct and its corresponding macro.

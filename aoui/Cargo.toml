@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/mintlu8/bevy-aoui"
 description = """
-A light-weight anchor-offset based 2D sprite layout system for the bevy engine.
+A rectangular anchor-offset based 2D and UI solution for the bevy engine.
 """
 keywords = ["bevy", "ui", "widgets"]
 
@@ -19,15 +19,32 @@ downcast-rs = "^1.2"
 float_next_after = "^1.0"
 itertools = "^0.11"
 serde = { version = "^1", optional = true }
+ab_glyph = "^0.2.23"
+arboard = { version = "^3.2", default-features = false }
+colorthis = {version = "^0.1.1", features=["compact"]}
+postcard = { version = "^1", default-features = false, features = ["use-std"] }
+substring = "^1.4"
+tlbf = "^0.2"
+interpolation = "^0.3"
+smallvec = { version = "^1.11", features = ["const_new"] }
+generic_static = "^0.2"
+parse-color = "^0.1.2"
+xi-unicode = "^0.3"
+thiserror = "^1"
 
 
 [features]
 default = ["bundles", "serde"]
 ## Enable alternative versions of bevy's sprite, spritesheet and text bundles.
 bundles = []
+## Enable alternative versions of bevy's sprite, spritesheet and text bundles.
+widgets = ["events"]
+## Enable alternative versions of bevy's sprite, spritesheet and text bundles.
+events = []
 
 [dev-dependencies]
 bevy_egui = "^0.23"
 rand = "^0.8.5"
+bevy_mod_debugdump = "^0.9"
 bevy = { version = "^0.12" }
 

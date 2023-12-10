@@ -1,4 +1,4 @@
-//! This is a demo of `Container::Span`
+//! This is a demo most layout types for `bevy_aoui`'s container.
 
 use std::f32::consts::PI;
 

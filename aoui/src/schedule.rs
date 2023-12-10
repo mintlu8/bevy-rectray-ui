@@ -1,3 +1,6 @@
+//! Schedules for the `core` and `layout` modules, 
+//! which are considered the core features of `aoui`.
+//! 
 
 use bevy::math::Affine3A;
 use bevy::sprite::{Sprite, TextureAtlasSprite, Anchor};
@@ -6,8 +9,9 @@ use bevy::transform::systems::{propagate_transforms, sync_simple_transforms};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::compute::*;
 use crate::{RotatedRect, BuildGlobal, BuildTransform, Dimension, AoUIREM, DimensionSize, Transform2D};
+
+use crate::core::compute::{compute_aoui_transforms, TRoot, TAll};
 
 /// Fetch info for the tree, happens before `AoUITreeUpdate`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
@@ -26,9 +30,9 @@ pub struct AoUIStoreOutput;
 pub struct AoUIFinalize;
 
 /// Core plugin for AoUI Rendering.
-pub struct AoUIPlugin;
+pub struct CorePlugin;
 
-impl bevy::prelude::Plugin for AoUIPlugin {
+impl bevy::prelude::Plugin for CorePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .init_resource::<AoUIREM>()

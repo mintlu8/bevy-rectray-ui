@@ -27,7 +27,7 @@
 //!
 //! # Getting Started
 //! 
-//! Before you start you should check out `bevy_aoui_widgets`'s examples if you like shapes or DSL.
+//! Before you start you should check out `bevy_aoui`'s examples if you like shapes or DSL.
 //! 
 //! First add the AoUI Plugin:
 //! 
@@ -163,20 +163,39 @@
 //! * High level abstractions with low level control.
 //! 
 //! You can mix and match anchoring and layouts to best suit your needs.
+#![allow(clippy::type_complexity)]
 #![allow(clippy::single_match)]
-
-mod rect;
-mod components;
-mod hitbox;
-mod compute;
-mod scaling;
-
 pub mod layout;
-pub use rect::*;
-pub use components::*;
-pub use schedule::AoUIPlugin;
-pub use hitbox::*;
-pub use scaling::*;
+pub(crate) mod core;
+pub mod dsl;
+pub mod widgets;
+pub mod events;
+pub mod anim;
+pub mod util;
 
-pub mod schedule;
-pub mod bundles;
+pub use util::WorldExtension;
+pub use core::*;
+
+#[doc(hidden)]
+pub use bevy;
+
+mod schedule;
+
+pub use schedule::CorePlugin;
+
+/// Plugin for both widgets and events.
+pub struct AoUIPlugin;
+
+impl bevy::prelude::Plugin for AoUIPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app
+            .add_plugins(schedule::CorePlugin)
+            .add_plugins(events::AoUICursorEventsPlugin)
+            .add_plugins(anim::AoUIAnimationPlugin)
+            .add_plugins(widgets::schedule::WidgetsPlugin)
+        ;
+    }
+}
+
+#[doc(hidden)]
+pub use generic_static::StaticTypeMap;

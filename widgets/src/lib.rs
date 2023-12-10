@@ -25,7 +25,7 @@
 //! 
 //! Before you start, always import the prelude for syntax consistency.
 //! ```
-//! use bevy_aoui_widgets::dsl::prelude::*;
+//! use bevy_aoui::dsl::prelude::*;
 //! ```
 //! 
 //! Each "widget" has a struct and its corresponding macro.
@@ -79,7 +79,7 @@ pub mod anim;
 mod dto;
 mod signals;
 
-use bevy::{ecs::world::World, app::{Last, App}};
+use bevy::{ecs::world::World, app::{Last, App}, window::CursorIcon};
 pub use dto::{Submit, Change};
 pub use signals::{signal, Sender, Receiver};
 
@@ -91,34 +91,4 @@ pub use bevy;
 
 #[doc(hidden)]
 pub use generic_static::StaticTypeMap;
-
-/// Plugin for both widgets and events.
-pub struct AoUIExtensionsPlugin;
-
-impl bevy::prelude::Plugin for AoUIExtensionsPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app
-            .add_plugins(events::AoUICursorEventsPlugin)
-            .add_plugins(anim::AoUIAnimationPlugin)
-            .add_plugins(widgets::schedule::FullWidgetsPlugin)
-        ;
-    }
-}
-
-pub trait AoUIWorldExtension {
-    fn register_aoui_signal<T: 'static>(&mut self);
-}
-
-impl AoUIWorldExtension for World {
-    fn register_aoui_signal<T: 'static>(&mut self) {
-        self.schedule_scope(Last, |_, s| {
-            s.add_systems(signals::signal_cleanup::<T>);
-        });
-    }
-}
-
-impl AoUIWorldExtension for App {
-    fn register_aoui_signal<T: 'static>(&mut self) {
-        self.add_systems(Last, signals::signal_cleanup::<T>);
-    }
-}
+use widgets::CursorDefault;
