@@ -39,42 +39,30 @@ pub fn main() {
 }
 
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
-
+    use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    let textbox = commands.spawn((AoUISpriteBundle {
-        transform: Transform2D::UNIT,
-        dimension: Dimension::pixels(Vec2::new(700.0, 700.0)).with_em(SetEM::Ems(1.0)),
-        sprite: Sprite { 
-            color: Color::DARK_GRAY,
-            ..Default::default()
-        },
-        texture: assets.load("square.png"),
-        ..Default::default()
-    }, Container {
-        layout: Box::new(ParagraphLayout { 
-            direction: FlexDir::LeftToRight, 
-            stack: FlexDir::TopToBottom,
-            stretch: false,
-        }),
-        margin: Size2::em(0.4, 0.0),
-    })).id();
+    let textbox = paragraph!((commands, assets) {
+        dimension: [700, 700],
+        margin: size2!([0.4 em, 0]),
+        font_size: em(1),
+        child: rectangle! {
+            color: color!(neutral800),
+            dimension: size2!([100%, 100%]),
+            extra: IgnoreLayout,
+        }
+    });
+
     let mut words = Vec::new();
 
     LOREM_IPSUM.split('\n').for_each(|x| {
         x.split([' ']).filter(|x| !x.is_empty()).for_each(|w| {
             words.push(
-                commands.spawn(AoUITextBundle {
-                    text: Text::from_section(w, TextStyle{
-                        color: Color::WHITE,
-                        ..Default::default()
-                    }),
-                    transform: Transform2D {
-                        anchor: Anchor::TopLeft,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }).id()
+                textbox!(commands {
+                    color: color!(white),
+                    anchor: TopLeft,
+                    text: w,
+                })
             );
         });
         words.push(commands.spawn(LinebreakBundle::new(Size2::em(1.0, 1.0))).id());

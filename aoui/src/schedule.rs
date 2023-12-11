@@ -1,33 +1,41 @@
 //! Schedules for the `core` and `layout` modules, 
 //! which are considered the core features of `aoui`.
-//! 
 
-use bevy::math::Affine3A;
-use bevy::sprite::{Sprite, TextureAtlasSprite, Anchor};
-use bevy::text::{TextLayoutInfo, Text2dBounds, update_text2d_layout};
+use bevy::input::InputSystem;
+use bevy::text::update_text2d_layout;
 use bevy::transform::systems::{propagate_transforms, sync_simple_transforms};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::{RotatedRect, BuildGlobal, BuildTransform, Dimension, AoUIREM, DimensionSize, Transform2D};
+use crate::AoUIREM;
 
 use crate::core::compute::{compute_aoui_transforms, TRoot, TAll};
+use crate::core::systems::*;
 
 /// Fetch info for the tree, happens before `AoUITreeUpdate`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
-pub struct AoUILoadInput;
+pub struct AoUILoadInputSet;
 
 /// Update the tree.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
-pub struct AoUITreeUpdate;
+pub struct AoUITreeUpdateSet;
 
 /// Update data with the tree, happens after `AoUITreeUpdate` and before bevy's `propagate_transform`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
-pub struct AoUIStoreOutput;
+pub struct AoUIStoreOutputSet;
 
 /// Write to `GlobalTransform`, after bevy's `propagate_transform`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
-pub struct AoUIFinalize;
+pub struct AoUIFinalizeSet;
+
+#[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
+pub struct AoUIEventSet;
+
+#[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
+pub struct AoUICleanupSet;
+
+#[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
+pub struct AoUIWidgetsEventSet;
 
 /// Core plugin for AoUI Rendering.
 pub struct CorePlugin;
@@ -36,16 +44,22 @@ impl bevy::prelude::Plugin for CorePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .init_resource::<AoUIREM>()
-            .configure_sets(PostUpdate, AoUILoadInput
-                .before(AoUITreeUpdate)
+            .configure_sets(PreUpdate, AoUIEventSet.after(InputSystem))
+            .add_systems(PreUpdate, bevy::ecs::prelude::apply_deferred
+                .after(AoUIEventSet)
+                .before(AoUIWidgetsEventSet))
+            .configure_sets(PreUpdate, AoUIWidgetsEventSet.after(AoUIEventSet))
+            .configure_sets(Last, AoUICleanupSet)
+            .configure_sets(PostUpdate, AoUILoadInputSet
+                .before(AoUITreeUpdateSet)
                 .after(update_text2d_layout))
-            .configure_sets(PostUpdate, AoUITreeUpdate
-                .before(AoUIStoreOutput))
-            .configure_sets(PostUpdate, AoUIStoreOutput
+            .configure_sets(PostUpdate, AoUITreeUpdateSet
+                .before(AoUIStoreOutputSet))
+            .configure_sets(PostUpdate, AoUIStoreOutputSet
                 .before(propagate_transforms)
                 .before(sync_simple_transforms)
             )
-            .configure_sets(PostUpdate, AoUIFinalize
+            .configure_sets(PostUpdate, AoUIFinalizeSet
                 .after(propagate_transforms)
                 .after(sync_simple_transforms)
             )
@@ -56,143 +70,25 @@ impl bevy::prelude::Plugin for CorePlugin {
                 copy_dimension_sprite,
                 copy_dimension_text,
                 copy_dimension_atlas,
-            ).in_set(AoUILoadInput))
+            ).in_set(AoUILoadInputSet))
             .add_systems(PostUpdate,
                 compute_aoui_transforms::<PrimaryWindow, TRoot, TAll>
-            .in_set(AoUITreeUpdate))
+            .in_set(AoUITreeUpdateSet))
             .add_systems(PostUpdate, (
-                    build_transform,
                 sync_dimension_atlas,
                 sync_dimension_sprite,
                 sync_dimension_text_bounds,
                 sync_em_text,
-            ).in_set(AoUIStoreOutput))
+                sync_opacity_sprite,
+                sync_opacity_atlas,
+                sync_opacity_text,
+                build_mesh_2d,
+            ).in_set(AoUIStoreOutputSet))
             .add_systems(PostUpdate, 
-                finalize.in_set(AoUIFinalize)
+                (
+                    build_mesh_2d_global_transform,
+                    build_global_transform
+                ).in_set(AoUIFinalizeSet)
             );
     }
-}
-
-/// Copy our `anchor` component's value to the `Anchor` component
-pub fn copy_anchor(mut query: Query<(&mut Anchor, &Transform2D)>) {
-    query.par_iter_mut().for_each(|(mut a, anc)| *a = anc.anchor.into())
-}
-
-/// Copy evaluated `TextLayoutInfo` value to our `Dimension::Copied` value
-pub fn copy_dimension_text(mut query: Query<(&TextLayoutInfo, &mut Dimension)>) {
-    //let scale_factor = window.get_single().map(|x| x.scale_factor() as f32).unwrap_or(1.0);
-    query.par_iter_mut().for_each(|(text, mut dim)| {
-        match dim.dim {
-            DimensionSize::Copied => dim.size = text.logical_size,
-            _ => (),
-        }
-    })
-}
-
-/// Copy our `Anchors` component's value to the `Sprite` component
-pub fn copy_anchor_sprite(mut query: Query<(&mut Sprite, &Transform2D)>) {
-    query.par_iter_mut().for_each(|(mut sp, anc)| {
-        sp.anchor = anc.anchor.into();
-    })
-}
-
-/// Synchonize size between `Sprite` and `Dimension`
-pub fn copy_dimension_sprite(mut query: Query<(&Sprite, &Handle<Image>, &mut Dimension)>, assets: Res<Assets<Image>>) {
-    query.par_iter_mut().for_each(|(sp, im, mut dimension)| {
-        dimension.update_copied(|| {
-            match sp.custom_size {
-                Some(x) => x,
-                None => match sp.rect {
-                    Some(rect) => rect.max - rect.min,
-                    None => assets.get(im).map(|x|x.size().as_vec2()).unwrap_or(Vec2::ZERO),
-                },
-            }
-        });
-    })
-}
-
-/// Copy anchor to the `TextureAtlasSprite` component
-pub fn copy_anchor_atlas(mut query: Query<(&mut TextureAtlasSprite, &Transform2D)>) {
-    query.par_iter_mut().for_each(|(mut sp, anc)| {
-        sp.anchor = anc.anchor.into();
-    })
-}
-
-/// copy size between `TextureAtlasSprite` to `Dimension`
-pub fn copy_dimension_atlas(mut query: Query<(&TextureAtlasSprite, &Handle<TextureAtlas>, &mut Dimension)>, assets: Res<Assets<TextureAtlas>>) {
-    query.par_iter_mut().for_each(|(sp, im, mut dimension)| {
-        dimension.update_copied(|| {
-            match sp.custom_size {
-                Some(size) => size,
-                None => (|| -> Option<_> {
-                   let rect = assets.get(im)?.textures.get(sp.index)?;
-                   Some(rect.max - rect.min)
-                })().unwrap_or(Vec2::ZERO)
-            }
-        });
-    })
-}
-
-/// Synchonize size from `Dimension` to `Sprite`
-pub fn sync_dimension_sprite(mut query: Query<(&mut Sprite, &Dimension)>) {
-    query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        dimension.run_if_owned(|size| sp.custom_size = Some(size))
-    })
-}
-
-/// Synchonize size from `Dimension` to `TextureAtlasSprite`
-pub fn sync_dimension_atlas(mut query: Query<(&mut TextureAtlasSprite, &Dimension)>) {
-    query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        dimension.run_if_owned(|size| sp.custom_size = Some(size))
-    })
-}
-
-/// Opts out of synchronizing text bounds.
-#[derive(Debug, Component)]
-pub struct OptOutTextBoundsSync;
-
-/// Opts out of synchronizing font size.
-#[derive(Debug, Component)]
-pub struct OptOutFontSizeSync;
-
-
-/// Copy owned dimension as text bounds. 
-pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimension), Without<OptOutTextBoundsSync>>) {
-    query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        if sp.as_ref().size != dimension.size {
-            dimension.run_if_owned(|size| sp.size = size)
-        }
-    })
-}
-
-
-/// Copy em as text size.
-pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFontSizeSync>>) {
-    query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        if sp.as_ref().sections.iter().any(|x| x.style.font_size != dimension.em) {
-            sp.sections.iter_mut().for_each(|x| x.style.font_size = dimension.em)
-        }
-    })
-}
-
-/// Build a transform using [`RotatedRect`].
-pub fn build_transform(mut query: Query<(&RotatedRect, &BuildTransform, &mut Transform)>) {
-    query.par_iter_mut().for_each(|(rect, BuildTransform(anchor), mut transform)| {
-        transform.translation = rect.anchor(*anchor).extend(rect.z);
-        transform.rotation = Quat::from_rotation_z(rect.rotation);
-        transform.scale = rect.scale.extend(1.0);
-    });
-}
-
-/// Generate [`GlobalTransform`] with  [`BuildGlobal`].
-pub fn finalize(
-    mut query: Query<(&BuildGlobal, &Transform2D, &RotatedRect, &mut GlobalTransform)>,
-) {
-    query.par_iter_mut().for_each(|(build, transform, rect, mut scene)| {
-        *scene = Affine3A::from_scale_rotation_translation(
-            rect.scale.extend(1.0), 
-            Quat::from_rotation_z(rect.rotation), 
-            rect.anchor(build.0.or(transform.anchor)).extend(rect.z)
-        ).into()
-    });
 }

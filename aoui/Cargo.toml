@@ -22,12 +22,10 @@ serde = { version = "^1", optional = true }
 ab_glyph = "^0.2.23"
 arboard = { version = "^3.2", default-features = false }
 colorthis = {version = "^0.1.1", features=["compact"]}
-postcard = { version = "^1", default-features = false, features = ["use-std"] }
 substring = "^1.4"
 tlbf = "^0.2"
 interpolation = "^0.3"
 smallvec = { version = "^1.11", features = ["const_new"] }
-generic_static = "^0.2"
 parse-color = "^0.1.2"
 xi-unicode = "^0.3"
 thiserror = "^1"

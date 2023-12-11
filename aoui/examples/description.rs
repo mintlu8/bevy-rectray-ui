@@ -1,7 +1,7 @@
 /// A simple example of rendering description using the paragraph layout.
 
-use bevy_aoui::{*, bundles::*, layout::*};
-use bevy::{prelude::*, text::Text2dBounds};
+use bevy::prelude::*;
+use bevy_aoui::AoUIPlugin;
 
 pub fn main() {
     App::new()
@@ -11,100 +11,53 @@ pub fn main() {
         .run();
 }
 
-pub fn style(color: Color) -> TextStyle{
-    TextStyle{
-        color,
-        ..Default::default()
-    }
-}
-
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
-
+    use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    let textbox = commands.spawn((AoUISpriteBundle {
-        transform: Transform2D::UNIT,
-        sprite: Sprite { 
-            anchor: Anchor::Center.into(),
-            color: Color::DARK_GRAY,
-            ..Default::default()
+    paragraph!((commands, assets) {
+        dimension: [400, 700],
+        child: rectangle! {
+            color: color!(neutral800),
+            dimension: Size2::FULL,
+            extra: IgnoreLayout,
         },
-        dimension: Dimension::pixels(Vec2::new(300.0, 700.0)),
-        texture: assets.load("square.png"),
-        ..Default::default()
-    }, Container {
-        layout: Box::new(ParagraphLayout { 
-            direction: FlexDir::LeftToRight, 
-            stack: FlexDir::TopToBottom,
-            stretch: false,
-        }),
-        margin: Size2::pixels(4.0, 0.0),
-    })).id();
-    let mut words = Vec::new();
-    words.push(commands.spawn(AoUITextBundle {
-        text: Text::from_section(
-            "Thunderbolt", 
-            style(Color::WHITE)
-        ),
-        transform: Transform2D::UNIT.with_anchor(Anchor::TopLeft),
-        ..Default::default()
-    }).id());
-
-    words.push(commands.spawn(AoUITextBundle {
-        text: Text::from_section(
-            "Special Attack", 
-            style(Color::WHITE)
-        ),
-        transform: Transform2D::UNIT.with_anchor(Anchor::TopRight),
-        ..Default::default()
-    }).id());
-
-    words.push(commands.spawn(LinebreakBundle::default()).id());
-
-    words.push(commands.spawn(AoUISpriteBundle {
-        texture: assets.load("electric_type.png"),
-        transform: Transform2D::UNIT.with_anchor(Anchor::TopLeft),
-        dimension: Dimension::owned(Size2::em(0.8, 0.8)),
-        ..Default::default()
-    }).id());
-
-    words.push(commands.spawn(AoUITextBundle {
-        
-        text: Text::from_section(
-            "Electric Type", 
-            style(Color::WHITE)
-        ),
-        transform: Transform2D::UNIT.with_anchor(Anchor::TopLeft),
-        dimension: Dimension::COPIED.with_em(SetEM::Ems(0.8)),
-        ..Default::default()
-    }).id());
-
-
-    words.push(commands.spawn(AoUITextBundle {
-        text: Text::from_section(
-            "90 bp", 
-            style(Color::WHITE)
-        ),
-        transform: Transform2D::UNIT.with_anchor(Anchor::TopRight),
-        dimension: Dimension::COPIED.with_em(SetEM::Ems(0.8)),
-        ..Default::default()
-    }).id());
-
-    words.push(commands.spawn(LinebreakBundle::default()).id());
-    words.push(commands.spawn(LinebreakBundle::ems(Vec2::ONE)).id());
-
-
-    words.push(commands.spawn(AoUITextBundle {
-        text: Text::from_section(
-            "The user attacks the target with a strong electric blast. This may also leave the target with paralysis.", 
-            style(Color::WHITE)
-        ),
-        text_bounds: Text2dBounds{
-            size: Vec2::new(300.0, 999999.0),
+        child: textbox! {
+            text: "Thunderbolt",
+            color: color!(white),
+            anchor: TopLeft,
         },
-        transform: Transform2D::UNIT.with_anchor(Anchor::TopLeft),
-        ..Default::default()
-    }).id());
-
-    commands.entity(textbox).push_children(&words);
+        child: textbox! {
+            text: "Special Attack",
+            color: color!(white),
+            anchor: TopRight,
+        },
+        child: linebreak! {},
+        child: sprite! {
+            sprite: "electric_type.png",
+            dimension: size2!([0.8 em, 0.8 em]),
+            color: color!(white),
+            anchor: TopLeft,
+        },
+        child: textbox! {
+            text: "Electric Type",
+            color: color!(white),
+            anchor: TopLeft,
+            font_size: em(0.8),
+        },
+        child: textbox! {
+            text: "90 bp",
+            color: color!(white),
+            anchor: TopRight,
+            font_size: em(0.8),
+        },
+        child: linebreak! {},
+        child: textbox! {
+            text: "The user attacks the target with a strong electric blast. This may also leave the target with paralysis.",
+            color: color!(white),
+            anchor: TopLeft,
+            bounds: [399, 9999],
+            wrap: true
+        },
+    });
 }

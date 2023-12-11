@@ -5,6 +5,7 @@
         "egui",
         "hitbox",
         "inputbox",
+        "oneshot",
         "parentless",
         "stdvec",
         "textbox",

@@ -1,5 +1,5 @@
 use bevy::{math::Vec2, sprite::{Mesh2dHandle, ColorMaterial}, prelude::Color};
-use crate::bundles::BuildGlobalBundle;
+use crate::bundles::BuildTransformBundle;
 use bevy_prototype_lyon::prelude::*;
 
 use crate::{dsl::prelude::*, widgets::shape::{Shapes, ShapeDimension}, widget_extension};
@@ -52,7 +52,7 @@ widget_extension! {
     },
     this, commands, assets,    
     components: (
-        BuildGlobalBundle::default(),
+        BuildTransformBundle::default(),
         this.shape.build_path(this.anchor, this.size.unwrap_or(Vec2::ONE)),
         this.shape,
         ShapeDimension { 

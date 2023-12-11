@@ -1,5 +1,5 @@
-use bevy::{prelude::*, render::render_resource::{AsBindGroup, PrimitiveTopology}, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AoUIPlugin, dsl::DslInto, Anchor, bundles::AoUIMaterialMesh2dBundle, Dimension, Transform2D};
+use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
+use bevy_aoui::{AoUIPlugin, dsl::DslInto, Anchor, material_rect};
 
 pub fn main() {
     App::new()
@@ -25,32 +25,15 @@ impl Material2d for Circle {
 }
 
 fn anchor_circle(commands: &mut Commands, assets: &Res<AssetServer>, anchor: impl DslInto<Anchor>) -> Entity{
-    let mesh = Mesh::new(PrimitiveTopology::TriangleList)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, 
-            vec![[-4.0, -4.0, 0.0], [4.0, -4.0, 0.0], [-4.0, 4.0, 0.0], [4.0, 4.0, 0.0]]
-        )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, 
-            vec![[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]
-        )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, 
-            vec![[0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0]]
-        )
-        .with_indices(Some(bevy::render::mesh::Indices::U32(vec![
-            0, 1, 2,
-            1, 2, 3
-        ])));
-    let mesh_handle = bevy::sprite::Mesh2dHandle(assets.add(mesh));
-    let material = assets.add(Circle {
-        fill: Color::WHITE,
-        stroke: Color::BLACK,
-    });
-    commands.spawn(AoUIMaterialMesh2dBundle {
-        transform: Transform2D::UNIT.with_anchor(anchor.dinto()),
-        dimension: Dimension::pixels(Vec2::new(4.0, 4.0)),
-        mesh: mesh_handle,
-        material,
-        ..Default::default()
-    }).id()
+    material_rect!((commands, assets) {
+        anchor: anchor,
+        dimension: [6, 6],
+        z: 10,
+        material: Circle {
+            fill: Color::WHITE,
+            stroke: Color::BLACK,
+        }
+    })
 }
 
 
@@ -116,7 +99,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             color: color!(red100),
             child: anchor_circle(&mut commands, &assets, TopLeft),
         },
-
         child: rectangle! {
             anchor: TopCenter,
             dimension: [40, 90],

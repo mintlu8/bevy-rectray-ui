@@ -4,7 +4,7 @@ use bevy::{
     text::{Text2dBounds, TextLayoutInfo}
 };
 
-use crate::{Transform2D, RotatedRect, BuildGlobal, Hitbox, AoUI, BuildTransform, layout::LayoutControl, Dimension, Size2, Opacity, Anchor};
+use crate::{Transform2D, RotatedRect, BuildTransform, Hitbox, AoUI, layout::LayoutControl, Dimension, Size2, Opacity, Anchor};
 
 
 /// The minimal bundle required for AoUI to function.
@@ -32,55 +32,19 @@ impl AoUIBundle {
 
 /// A bundle generating a [`GlobalTransform`] with AoUI.
 #[derive(Debug, Default, Bundle)]
-pub struct BuildGlobalBundle {
-    pub builder: BuildGlobal,
-    pub global: GlobalTransform,
-}
-
-impl BuildGlobalBundle {
-    pub fn new(anchor: Anchor) -> Self{
-        Self { 
-            builder: BuildGlobal(anchor),
-            ..Default::default() 
-        }
-    }
-}
-
-/// A bundle generating a [`Transform`] with AoUI.
-/// 
-/// Use [`BuildSpacialBundle`] if you need a [`GlobalTransform`].
-#[derive(Debug, Default, Bundle)]
 pub struct BuildTransformBundle {
     pub builder: BuildTransform,
-    pub transform: Transform,
+    pub global: GlobalTransform,
 }
 
 impl BuildTransformBundle {
-    pub fn at_anchor(anchor: Anchor) -> Self{
+    pub fn new(anchor: Anchor) -> Self{
         Self { 
             builder: BuildTransform(anchor),
             ..Default::default() 
         }
     }
 }
-
-/// A bundle generating a [`Transform`] and a [`GlobalTransform`] by proxy.
-#[derive(Debug, Default, Bundle)]
-pub struct BuildSpacialBundle {
-    pub builder: BuildTransform,
-    pub transform: Transform,
-    pub global: GlobalTransform,
-}
-
-impl BuildSpacialBundle {
-    pub fn at_anchor(anchor: Anchor) -> Self{
-        Self { 
-            builder: BuildTransform(anchor),
-            ..Default::default() 
-        }
-    }
-}
-
 
 /// A bundle that breaks a multiline [`Container`](crate::Container) 
 /// in place without taking up space.
@@ -133,7 +97,7 @@ pub struct AoUISpriteBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
-    pub build: BuildGlobal,
+    pub build: BuildTransform,
     pub sprite: Sprite,
     pub texture: Handle<Image>,
     pub opacity: Opacity,
@@ -149,7 +113,7 @@ pub struct AoUITextBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
-    pub build: BuildGlobal,
+    pub build: BuildTransform,
     pub hitbox: Hitbox,
     pub text: Text,
     pub text_anchor: bevy::sprite::Anchor,
@@ -170,7 +134,6 @@ pub struct AoUIMaterialMesh2dBundle<M: Material2d>{
     pub dimension: Dimension,
     pub rect: RotatedRect,
     pub build: BuildTransform,
-    pub screen: BuildGlobal,
     pub mesh: Mesh2dHandle,
     pub material: Handle<M>,
     pub opacity: Opacity,

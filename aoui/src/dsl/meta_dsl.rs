@@ -114,7 +114,7 @@ macro_rules! meta_dsl {
         {$($children: expr),*}
     ) => {
         {
-            use $crate::dsl::DslInto;
+            use $crate::dsl::{DslInto, AoUICommands};
             let extras = ($($extras),*);
             let children = [$($children),*];
             let entity = $($path)* {
@@ -137,7 +137,7 @@ macro_rules! meta_dsl {
         {$($children: expr),*}
     ) => {
         {
-            use $crate::dsl::DslInto;
+            use $crate::dsl::{DslInto, AoUICommands};
             let extras = ($($extras),*);
             let children = [$($children),*];
             let entity = $($path)* {
@@ -227,7 +227,7 @@ macro_rules! widget_extension {
             $(#[$($parent_attr:tt)*])*
             $vis0 struct $name { 
                 /// Handle of the image asset.
-                pub sprite: $crate::bevy::prelude::Handle<bevy::prelude::Image>,
+                pub sprite: $crate::dsl::HandleOrString<bevy::prelude::Image>,
                 /// Size of the image.
                 pub size: Option<$crate::bevy::prelude::Vec2>,
                 /// Color of the image.
@@ -250,8 +250,8 @@ macro_rules! widget_extension {
                     flip_y: $this.flip[1],
                     ..Default::default()
                 },
-                $this.sprite,
-                $crate::bundles::BuildGlobalBundle::default(),
+                $this.sprite.get($assets),
+                $crate::bundles::BuildTransformBundle::default(),
                 $($input)*
             ),
             components: (),
@@ -277,7 +277,7 @@ macro_rules! widget_extension {
                 /// The text string.
                 pub text: String,
                 /// Handle of the font asset.
-                pub font: bevy::prelude::Handle<bevy::prelude::Font>,
+                pub font: $crate::dsl::HandleOrString<bevy::prelude::Font>,
                 /// Bounds of the text, should not be set most of the time.
                 ///
                 /// If not specified this is `UNBOUNDED`.
@@ -298,7 +298,7 @@ macro_rules! widget_extension {
                     sections: vec![$crate::bevy::text::TextSection::new(
                         $this.text,
                         $crate::bevy::text::TextStyle {
-                            font: $this.font,
+                            font: $this.font.get($assets),
                             color: $this.color.unwrap_or($crate::bevy::prelude::Color::WHITE),
                             ..Default::default()
                         }
@@ -318,7 +318,7 @@ macro_rules! widget_extension {
                 },
                 $crate::bevy::text::TextLayoutInfo::default(),
                 Into::<bevy::sprite::Anchor>::into($this.anchor),
-                $crate::bundles::BuildGlobalBundle::default()
+                $crate::bundles::BuildTransformBundle::default()
                 $($input)*
             ),
             components: (),
@@ -370,7 +370,7 @@ macro_rules! widget_extension2 {
             /// The `size` field, if exists, sets the size of the underlying sprite.
             pub dimension: Option<$crate::Size2>,
             /// Propagated font size.
-            pub font_size: $crate::SetEM,
+            pub font_size: $crate::FontSize,
             /// Sets up which event this receives.
             /// 
             /// Due to this being a confusing footgun, 
@@ -635,12 +635,12 @@ macro_rules! widget_extension2 {
 macro_rules! map_builder {
     ($this: expr => $target: ident move (
         $($moved:ident),* $(,)?
-    ){
+    )$({
         $($added: ident: $expr: expr),* $(,)?
-    }) => {
+    })?) => {
         $target {
             $($moved: $this.$moved,)*
-            $($added: $expr,)*
+            $($($added: $expr,)*)?
         }
     };
 }

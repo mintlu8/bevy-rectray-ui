@@ -48,9 +48,10 @@ pub const DragSnapBack: crate::widgets::drag::DragSnapBack = crate::widgets::dra
 pub const Inherit: Option<Anchor> = None;
 
 pub use crate::{frame, sprite, textbox};
-pub use crate::{oneshot, handler};
+pub use crate::material_rect;
+pub use crate::{one_shot, handler};
 pub use crate::{padding, compact, paragraph, span, hbox, vbox, hspan, vspan};
-pub use crate::{table, flex_table, fixed_grid, sized_grid,};
+pub use crate::{linebreak, table, flex_table, fixed_grid, sized_grid,};
 pub use crate::{inputbox, button, clipping_frame};
 pub use crate::rectangle;
 

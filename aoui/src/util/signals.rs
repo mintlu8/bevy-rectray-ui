@@ -1,92 +1,134 @@
-use std::{sync::{Arc, RwLock}, marker::PhantomData};
+use std::{sync::{Arc, RwLock}, marker::PhantomData, fmt::Debug};
 use bevy::ecs::{system::Query, component::Component};
-use serde::{Serialize, de::DeserializeOwned};
 
-use super::dto::{Dto, DtoError};
+use super::{dto::Object, DataTransfer};
 
 use self::sealed::SignalCreate;
 
 /// A signal sender
-#[derive(Debug, Component)]
-pub struct Sender<T=()>(Signal, PhantomData<T>);
+#[derive(Component)]
+pub struct Sender<T=()> {
+    signal: Signal,
+    map: Option<Box<dyn Fn(&mut Object) + Send + Sync + 'static>>,
+    p: PhantomData<T>,
+}
 
-// Safety: Save since T is just a marker
-unsafe impl<T> Send for Sender<T> {}
-// Safety: Save since T is just a marker
-unsafe impl<T> Sync for Sender<T> {}
+impl<T> Debug for Sender<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Signal as Debug>::fmt(&self.signal, f)
+    }
+}
 
 /// A signal receiver
-#[derive(Debug, Clone, Component)]
-pub struct Receiver<T=()>(Signal, PhantomData<T>);
+#[derive(Component)]
+pub struct Receiver<T=()>{
+    signal: Signal,
+    map: Option<Box<dyn Fn(&mut Object) + Send + Sync + 'static>>,
+    p: PhantomData<T>,
+}
 
-// Safety: Save since T is just a marker
-unsafe impl<T> Send for Receiver<T> {}
-// Safety: Save since T is just a marker
-unsafe impl<T> Sync for Receiver<T> {}
-
+impl<T> Debug for Receiver<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Signal as Debug>::fmt(&self.signal, f)
+    }
+}
 
 #[derive(Debug, Clone)]
-struct Signal(pub(crate) Arc<RwLock<Option<Dto>>>);
+struct Signal(pub(crate) Arc<RwLock<Object>>);
 
 impl Signal {
     pub fn new() -> Self {
-        Self(Arc::new(RwLock::new(None)))
+        Self(Arc::new(RwLock::new(Object::NONE)))
     }
     pub fn is_empty(&self) -> bool {
-        match self.0.read() {
-            Ok(lock) => lock.is_none(),
-            Err(_) => true,
-        }
+        self.0.read().unwrap().is_none()
     }
 
     pub fn clean(&self)  {
-        let lock = self.0.write();
-        if let Ok(mut w) = lock {
-            *w = None
-        }
+        self.0.write().unwrap().clean();
     }
 }
 
 impl Sender {
     pub fn mark<M>(self) -> Sender<M> {
-        Sender(self.0, PhantomData)
+        Sender { signal: self.signal, map: self.map, p: PhantomData  }
     }
 }
 
-impl<A> Sender<A> {
-    pub fn send<T: Serialize>(&self, item: &T) -> Result<(), DtoError> {
-        let mut lock = self.0.0.write().unwrap();
-        match lock.as_mut() {
-            Some(dto) => dto.set(item)?,
-            None => *lock = Some(Dto::new(item)?),
-        };
-        Ok(())
+impl<M> Sender<M> {
+    pub fn map<D, S>(self, f: impl Fn(D) -> S + Send + Sync + 'static) -> Self
+        where M: Send + Sync+ 'static, D: DataTransfer, S: DataTransfer {
+        Sender { 
+            signal: self.signal,
+            map: Some(Box::new(move |obj: &mut Object| {
+                match obj.get::<D>() {
+                    Some(o) => *obj = Object::new(f(o)),
+                    None => (),
+                }
+            })),
+            p: PhantomData
+        }
     }
 
-    pub(crate) fn send_bytes(&self, item: &[u8]) {
-        let mut lock = self.0.0.write().unwrap();
-        match lock.as_mut() {
-            Some(dto) => dto.0 = item.to_vec(),
-            None => *lock = Some(Dto(item.to_vec())),
-        };
+    pub fn send<T: DataTransfer>(&self, item: T) {
+        let mut lock = self.signal.0.write().unwrap();
+        lock.set(item);
+    }
+
+    /// Sends `()`
+    pub(crate) fn send_empty(&self) {
+        let mut lock = self.signal.0.write().unwrap();
+        *lock = Object::unit();
     }
 }
 
 impl Receiver {
     pub fn mark<M>(self) -> Receiver<M> {
-        Receiver(self.0, PhantomData)
+        Receiver { signal: self.signal, map: self.map, p: PhantomData }
     }
 }
 
 
-impl<A> Receiver<A> {
-    pub fn poll<T: DeserializeOwned>(&self) -> Option<T> {
-        match self.0.0.read() {
-            Ok(lock) => match lock.as_ref() {
-                Some(dto) => dto.get().ok(),
-                None => None,
-            }
-            Err(_) => None,
+impl<M> Receiver<M> {
+    pub fn map<D, S>(self, f: impl Fn(D) -> S + Send + Sync + 'static) -> Self
+        where M: Send + Sync + 'static, D: DataTransfer + Clone, S: DataTransfer + Clone{
+        Receiver { 
+            signal: self.signal,
+            map: Some(Box::new(move |obj: &mut Object| {
+                match obj.get::<D>() {
+                    Some(o) => *obj = Object::new(f(o)),
+                    None => (),
+                }
+            })),
+            p: PhantomData
+        }
+    }
+    
+    /// Receives data from a signal.
+    pub fn poll<T: DataTransfer>(&self) -> Option<T> {
+        let read = self.signal.0.read().unwrap();
+        match &self.map {
+            Some(f) => {
+                let mut obj = read.clone();
+                f(&mut obj);
+                obj.get()
+            },
+            None => read.get(),
+        }
+    }
+
+    /// Receives a `()`, usually sent by buttons without payloads.
+    pub fn poll_empty(&self) -> bool {
+        let read = self.signal.0.read().unwrap();
+        read.get::<()>().is_some()
+    }
+
+    /// Clone, expect removes the mapping function.
+    pub fn fork(&self) -> Self {
+        Self { 
+            signal: self.signal.clone(), 
+            map: None, 
+            p: PhantomData 
         }
     }
 }
@@ -106,8 +148,16 @@ mod sealed {
                 fn new() -> Self {
                     let signal = Signal::new();
                     (
-                        $sender(signal.clone(), PhantomData), 
-                        $first(signal, PhantomData), 
+                        $sender{
+                            signal: signal.clone(), 
+                            map: None,
+                            p: PhantomData
+                        },
+                        $first{
+                            signal: signal, 
+                            map: None,
+                            p: PhantomData
+                        }, 
                     )
                 }
             }
@@ -118,9 +168,21 @@ mod sealed {
                 fn new() -> Self {
                     let signal = Signal::new();
                     (
-                        $sender(signal.clone(), PhantomData),
-                        $($receivers(signal.clone(), PhantomData),)*
-                        $first(signal, PhantomData), 
+                        $sender{
+                            signal: signal.clone(), 
+                            map: None,
+                            p: PhantomData
+                        }, 
+                        $($receivers{
+                            signal: signal.clone(), 
+                            map: None,
+                            p: PhantomData
+                        },)*
+                        $first{
+                            signal: signal, 
+                            map: None,
+                            p: PhantomData
+                        },
                     )
                 }
             }
@@ -164,7 +226,6 @@ pub fn signal<S: SignalCreate>() -> S {
     S::new()
 }
 
-pub fn signal_cleanup<T: 'static>(mut query: Query<&Sender<T>>) {
-    query.par_iter_mut().for_each(|x| x.0.clean())
+pub fn signal_cleanup<T: Send + Sync + 'static>(mut query: Query<&Sender<T>>) {
+    query.par_iter_mut().for_each(|x| x.signal.clean())
 }
-

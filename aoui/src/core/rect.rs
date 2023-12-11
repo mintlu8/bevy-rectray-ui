@@ -181,7 +181,6 @@ impl RotatedRect {
 
     /// Create an [`RotatedRect`] represeting the sprite's position on the screen space
     /// and an `Affine3A` that converts into the `GlobalTransform` suitable from the screen space
-    #[allow(clippy::too_many_arguments)]
     pub fn construct(parent: &ParentInfo, parent_anchor: Anchor, anchor: Anchor, offset: Vec2, dim: Vec2,
             center: Anchor, rotation: f32, scale: Vec2, z: f32) -> Self{
         let parent_anchor = match parent.position {

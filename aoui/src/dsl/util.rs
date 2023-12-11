@@ -1,6 +1,9 @@
+use std::borrow::Cow;
+
+use bevy::asset::{Handle, Asset, AssetServer};
 use bevy::math::Vec2;
-use crate::{Hitbox, HitboxShape, Anchor};
-use crate::{Size2, SetEM, layout::Alignment, layout::FlexDir};
+use crate::{Hitbox, HitboxShape, Anchor, SizeUnit};
+use crate::{Size2, FontSize, layout::Alignment, layout::FlexDir};
 
 use crate::util::{Sender, Receiver};
 
@@ -195,38 +198,50 @@ pub fn angle(f: impl DslInto<Vec2>) -> f32{
     f32::atan2(v.y, v.x)
 }
 
-impl DslInto<SetEM> for i32 {
-    fn dinto(self) -> SetEM {
-        SetEM::Pixels(self as f32)
+impl DslInto<FontSize> for i32 {
+    fn dinto(self) -> FontSize {
+        FontSize::Pixels(self as f32)
     }
 }
 
-impl DslInto<SetEM> for f32 {
-    fn dinto(self) -> SetEM {
-        SetEM::Pixels(self)
+impl DslInto<FontSize> for f32 {
+    fn dinto(self) -> FontSize {
+        FontSize::Pixels(self)
+    }
+}
+
+impl DslInto<FontSize> for (SizeUnit, f32) {
+    fn dinto(self) -> FontSize {
+        let (unit, value) = self;
+        match unit {
+            SizeUnit::Pixels => FontSize::Pixels(value),
+            SizeUnit::Em => FontSize::Ems(value),
+            SizeUnit::Rem => FontSize::Rems(value),
+            _ => panic!("Cannot set font size to parent dimension. Choose a different unit."),
+        }
     }
 }
 
 /// Set font size by `px`.
-pub fn px(f: impl DslInto<f32>) -> SetEM {
-    SetEM::Pixels(f.dinto())
+pub fn px(f: impl DslInto<f32>) -> (SizeUnit, f32) {
+    (SizeUnit::Pixels, f.dinto())
 }
 
 /// Set font size by `em`.
-pub fn em(f: impl DslInto<f32>) -> SetEM {
-    SetEM::Ems(f.dinto())
+pub fn em(f: impl DslInto<f32>) -> (SizeUnit, f32) {
+    (SizeUnit::Em, f.dinto())
 }
 
 /// Set font size by `rem`.
-pub fn rem(f: impl DslInto<f32>) -> SetEM {
-    SetEM::Rems(f.dinto())
+pub fn rem(f: impl DslInto<f32>) -> (SizeUnit, f32) {
+    (SizeUnit::Rem, f.dinto())
 }
 
 /// Set font size by `%`.
 /// 
 /// Provide values like `40`, not `0.4`.
-pub fn percent(f: impl DslInto<f32>) -> SetEM {
-    SetEM::Pixels(f.dinto() / 100.0)
+pub fn percent(f: impl DslInto<f32>) -> FontSize {
+    FontSize::Pixels(f.dinto() / 100.0)
 }
 
 /// Accepts 1 or 2 numbers for a `Vec2` or a `Size2`
@@ -440,5 +455,72 @@ impl<T> DslInto<OptionX<Sender<T>>> for Sender<()>{
 impl<T> DslInto<OptionX<Receiver<T>>> for Receiver<()>{
     fn dinto(self) -> OptionX<Receiver<T>> {
         OptionX::Some(self.mark::<T>())
+    }
+}
+
+#[doc(hidden)]
+#[derive(Debug)]
+pub enum HandleOrString<T: Asset>{
+    Handle(Handle<T>),
+    String(String),
+}
+
+impl<T: Asset> HandleOrString<T> {
+    pub fn get(self, assets: Option<&AssetServer>) -> Handle<T>{
+        match self {
+            HandleOrString::Handle(handle) => handle,
+            HandleOrString::String(string) => {
+                assets.expect("Please pass in the AssetServer.")
+                    .load(&string)
+            },
+        }
+    }
+}
+
+impl<T: Asset> Default for HandleOrString<T> {
+    fn default() -> Self {
+        Self::Handle(Default::default())
+    }
+}
+
+impl<T: Asset> DslInto<HandleOrString<T>> for Handle<T> {
+    fn dinto(self) -> HandleOrString<T> {
+        HandleOrString::Handle(self)
+    }
+}
+
+impl<T: Asset> DslInto<HandleOrString<T>> for &Handle<T> {
+    fn dinto(self) -> HandleOrString<T> {
+        HandleOrString::Handle(self.clone())
+    }
+}
+
+impl<T: Asset> DslInto<HandleOrString<T>> for &str {
+    fn dinto(self) -> HandleOrString<T> {
+        HandleOrString::String(self.to_owned())
+    }
+}
+
+impl<T: Asset> DslInto<HandleOrString<T>> for String {
+    fn dinto(self) -> HandleOrString<T> {
+        HandleOrString::String(self)
+    }
+}
+
+impl<T: Asset> DslInto<HandleOrString<T>> for &&str {
+    fn dinto(self) -> HandleOrString<T> {
+        HandleOrString::String((*self).to_owned())
+    }
+}
+
+impl<T: Asset> DslInto<HandleOrString<T>> for &String {
+    fn dinto(self) -> HandleOrString<T> {
+        HandleOrString::String(self.clone())
+    }
+}
+
+impl<'t, T: Asset> DslInto<HandleOrString<T>> for Cow<'t, str> {
+    fn dinto(self) -> HandleOrString<T> {
+        HandleOrString::String(self.into_owned())
     }
 }

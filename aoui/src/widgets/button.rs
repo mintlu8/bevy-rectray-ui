@@ -1,10 +1,10 @@
-use std::sync::{Mutex, Arc};
+use std::{sync::{Mutex, Arc}, ops::Deref};
 
 use bevy::{render::view::Visibility, window::{Window, PrimaryWindow, CursorIcon}, hierarchy::Children};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
-use crate::Opacity;
+use crate::{Opacity, dsl::prelude::Submit, util::Object};
 
-use crate::{events::{EventFlags, CursorFocus, CursorAction}, util::Dto, dsl::prelude::Interpolate, util::Sender};
+use crate::{events::{EventFlags, CursorFocus, CursorAction}, util::DataTransfer, dsl::prelude::Interpolate, util::Sender};
 
 /// Set cursor if [`CursorFocus`] is some [`EventFlags`].
 ///
@@ -45,6 +45,13 @@ pub fn event_conditional_visibility(mut query: Query<(&DisplayIf<EventFlags>, Op
     })
 }
 
+/// State of a `CheckButton`, when used in [`DisplayIf`], also checks
+/// state of a `RadioButton`
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component)]
+pub struct Button;
+
+/// State of a `CheckButton`, when used in [`DisplayIf`], also checks
+/// state of a `RadioButton`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component)]
 pub enum CheckButtonState{
     #[default]
@@ -52,11 +59,123 @@ pub enum CheckButtonState{
     Checked,
 }
 
-pub struct RadioButtonState(Arc<Dto>);
+impl CheckButtonState {
+    pub fn get(&self) -> bool {
+        match self {
+            CheckButtonState::Unchecked => false,
+            CheckButtonState::Checked => true,
+        }
+    }
 
-pub fn state_conditional_visibility(mut query: Query<(&DisplayIf<CheckButtonState>, &CheckButtonState, &mut Visibility, Option<&mut Interpolate<Opacity>>)>){
+    pub fn rev(&mut self) -> bool {
+        match self {
+            CheckButtonState::Unchecked => {
+                *self = CheckButtonState::Checked;
+                true
+            },
+            CheckButtonState::Checked => {
+                *self = CheckButtonState::Unchecked;
+                false
+            },
+        }
+    }
+}
+
+impl From<bool> for CheckButtonState {
+    fn from(value: bool) -> Self {
+        match value {
+            true => CheckButtonState::Checked,
+            false => CheckButtonState::Unchecked,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Component)]
+pub struct RadioButtonState(Arc<Mutex<Object>>);
+
+impl RadioButtonState {
+    pub fn set(&self, payload: &Payload) {
+        let mut lock = self.0.lock().unwrap();
+        *lock = payload.0.clone()
+    }
+}
+
+impl PartialEq<Payload> for RadioButtonState {
+    fn eq(&self, other: &Payload) -> bool {
+        let lock = self.0.lock().unwrap();
+        lock.deref() == &other.0
+    }
+}
+
+pub fn button_on_click(
+    query: Query<(&CursorAction, &Sender<Submit>, Option<&Payload>), With<Button>>
+) {
+    for (action, submit, payload) in query.iter() {
+        if !action.is(EventFlags::Click) { continue }
+        if let Some(payload) = payload {
+            payload.send_to(submit)
+        } else {
+            submit.send_empty()
+        }
+    }
+}
+
+pub fn check_button_on_click(
+    mut query: Query<(&CursorAction, &mut CheckButtonState, Option<&Sender<Submit>>, Option<&Payload>)>
+) {
+    for (action, mut state, submit, payload) in query.iter_mut() {
+        if !action.is(EventFlags::Click) { continue }
+        if !state.rev() {continue;}
+        if let Some(signal) = submit {
+            if let Some(payload) = payload {
+                payload.send_to(signal)
+            } else {
+                signal.send_empty()
+            }
+        }
+    }
+}
+
+pub fn radio_button_on_click(
+    mut query: Query<(&CursorAction, &RadioButtonState, &Payload, Option<&Sender<Submit>>)>
+) {
+    for (action, state, payload, submit) in query.iter_mut() {
+        if !action.is(EventFlags::Click) { continue }
+        state.set(payload);
+        if let Some(signal) = submit {
+            payload.send_to(signal);
+        }
+    }
+}
+
+pub fn check_conditional_visibility(mut query: Query<(&DisplayIf<CheckButtonState>, &CheckButtonState, &mut Visibility, Option<&mut Interpolate<Opacity>>)>){
     query.par_iter_mut().for_each(|(display_if, state, mut vis, mut opacity)| {
         if &display_if.0 == state {
+            if let Some(opacity) = opacity.as_mut() {
+                opacity.interpolate_to_or_reverse(1.0);
+            } else {
+                *vis = Visibility::Inherited;
+            }
+        } else {
+            if let Some(opacity) = opacity.as_mut() {
+                opacity.interpolate_to_or_reverse(0.0);
+            } else {
+                *vis = Visibility::Hidden;
+            }
+        }
+    })
+}
+
+pub fn radio_conditional_visibility(
+    mut query: Query<(&DisplayIf<CheckButtonState>, 
+    &RadioButtonState,
+    &Payload,
+    &mut Visibility, 
+    Option<&mut Interpolate<Opacity>>)>
+){
+    query.par_iter_mut().for_each(|(display_if, state, payload, mut vis, mut opacity)| {
+        let state = state == payload;
+        if display_if.0 == state.into() {
             if let Some(opacity) = opacity.as_mut() {
                 opacity.interpolate_to_or_reverse(1.0);
             } else {
@@ -128,7 +247,7 @@ pub fn propagate_focus(mut commands: Commands,
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component)]
 pub struct CheckBox;
 
-pub struct RadioButtonContext(Arc<Mutex<Dto>>);
+pub struct RadioButtonContext(Arc<Mutex<Object>>);
 
 /// When attached to a widget in the button family,
 /// the submit signal will send the containing data.
@@ -142,19 +261,19 @@ pub struct RadioButtonContext(Arc<Mutex<Dto>>);
 /// 
 /// For radio buttons, you need to make sure the binary
 /// serializations of each branch.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Component)] 
-pub struct Payload(Dto);
+#[derive(Debug, Clone, PartialEq, Component)] 
+pub struct Payload(Object);
 
 impl Payload {
     pub const fn empty() -> Self {
-        Self(Dto(Vec::new()))
+        Self(Object::NONE)
     }
 
-    pub fn new(value: &impl serde::Serialize) -> Result<Self, postcard::Error> {
-        Ok(Self(Dto::new(value)?))
+    pub fn new(value: impl DataTransfer + Clone) -> Self {
+        Self(Object::new(value))
     }
 
-    pub fn send<M>(&self, sender: &Sender<M>) {
-        sender.send_bytes(&self.0.0)
+    pub fn send_to<M>(&self, sender: &Sender<M>) {
+        sender.send(self.0.clone())
     }
 }

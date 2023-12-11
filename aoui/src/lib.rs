@@ -17,7 +17,7 @@
 //! while leveraging other parts of bevy's standard library and ecosystem whenever possible.
 //! 
 //! AoUI provides 2 rendering methods: 
-//! * [`BuildGlobal`] generates `GlobalTransform` directly.
+//! * [`BuildTransform`] generates `GlobalTransform` directly.
 //! * [`BuildTransform`] generates `Transform`.
 //! 
 //! AoUI propagates translation, rotation, scale and font size down its tree.
@@ -164,7 +164,9 @@
 //! 
 //! You can mix and match anchoring and layouts to best suit your needs.
 #![allow(clippy::type_complexity)]
+#![allow(clippy::too_many_arguments)]
 #![allow(clippy::single_match)]
+
 pub mod layout;
 pub(crate) mod core;
 pub mod dsl;
@@ -196,6 +198,3 @@ impl bevy::prelude::Plugin for AoUIPlugin {
         ;
     }
 }
-
-#[doc(hidden)]
-pub use generic_static::StaticTypeMap;

@@ -6,7 +6,7 @@ use bevy::render::render_resource::{Extent3d, TextureUsages, TextureDescriptor, 
 use bevy::render::view::{VisibleEntities, RenderLayers};
 use bevy::render::camera::{Camera, CameraRenderGraph, OrthographicProjection, RenderTarget, ScalingMode};
 use bevy::core_pipeline::{core_2d::Camera2d, tonemapping::{Tonemapping, DebandDither}, clear_color::ClearColorConfig};
-use crate::{Dimension, BuildGlobal, Anchor};
+use crate::{Dimension, BuildTransform, Anchor};
 
 use crate::dsl::DslInto;
 
@@ -56,7 +56,7 @@ pub struct ClippingBundle {
     pub tonemapping: Tonemapping,
     pub deband_dither: DebandDither,
     pub render_layer: RenderLayers,
-    pub build: BuildGlobal,
+    pub build: BuildTransform,
     pub global: GlobalTransform,
 }
 
@@ -104,7 +104,7 @@ impl ClippingBundle {
             tonemapping: bun.tonemapping,
             deband_dither: bun.deband_dither,
             render_layer: layer.dinto(),
-            build: BuildGlobal(Anchor::Center),
+            build: BuildTransform(Anchor::Center),
             global: GlobalTransform::default(),
         }, target)
     }

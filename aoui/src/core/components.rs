@@ -1,6 +1,6 @@
 use bevy::{prelude::*, reflect::Reflect};
 
-use crate::{Size2, SetEM, Anchor};
+use crate::{Size2, FontSize, Anchor};
 
 /// Marker component for the default schedules.
 #[derive(Debug, Clone, Component, Default, Reflect)]
@@ -29,7 +29,7 @@ pub struct Dimension {
     /// Input for dimension.
     pub dim: DimensionSize,
     /// Modifies font size `em`.
-    pub set_em: SetEM,
+    pub set_em: FontSize,
     /// Evaluated size in pixels.
     ///     
     /// This value is computed every frame. 
@@ -46,7 +46,7 @@ impl Default for Dimension {
     fn default() -> Self {
         Self {
             dim: DimensionSize::Copied,
-            set_em: SetEM::None,
+            set_em: FontSize::None,
             size: Vec2::ZERO,
             em: 16.0,
         }
@@ -58,7 +58,7 @@ impl Dimension {
     /// Dimension copied paired components.
     pub const COPIED: Self = Self {
         dim: DimensionSize::Copied,
-        set_em: SetEM::None,
+        set_em: FontSize::None,
         size: Vec2::ZERO,
         em: 16.0,
     };
@@ -66,7 +66,7 @@ impl Dimension {
     /// Dimension inherited from parent.
     pub const INHERIT: Self = Self {
         dim: DimensionSize::Owned(Size2::FULL),
-        set_em: SetEM::None,
+        set_em: FontSize::None,
         size: Vec2::ZERO,
         em: 0.0,
     };
@@ -76,7 +76,7 @@ impl Dimension {
     pub const fn pixels(size: Vec2) -> Self {
         Self {
             dim: DimensionSize::Owned(Size2::pixels(size.x, size.y)),
-            set_em: SetEM::None,
+            set_em: FontSize::None,
             size: Vec2::ZERO,
             em: 0.0,
         }
@@ -86,7 +86,7 @@ impl Dimension {
     pub const fn percentage(size: Vec2) -> Self {
         Self {
             dim: DimensionSize::Owned(Size2::percent(size.x, size.y)),
-            set_em: SetEM::None,
+            set_em: FontSize::None,
             size: Vec2::ZERO,
             em: 0.0,
         }
@@ -96,14 +96,14 @@ impl Dimension {
     pub const fn owned(size: Size2) -> Self {
         Self {
             dim: DimensionSize::Owned(size),
-            set_em: SetEM::None,
+            set_em: FontSize::None,
             size: Vec2::ZERO,
             em: 0.0,
         }
     }
 
     /// Add a em modifier.
-    pub const fn with_em(self, em: SetEM) -> Self {
+    pub const fn with_em(self, em: FontSize) -> Self {
         Self {
             dim: self.dim,
             set_em: em,
@@ -115,10 +115,10 @@ impl Dimension {
     /// Updates dimension and returns size and em
     pub fn update(&mut self, parent: Vec2, em: f32, rem: f32) -> (Vec2, f32) {
         self.em = match self.set_em{
-            SetEM::None => em,
-            SetEM::Pixels(v) => v,
-            SetEM::Ems(v) => em * v,
-            SetEM::Rems(v) => rem * v,
+            FontSize::None => em,
+            FontSize::Pixels(v) => v,
+            FontSize::Ems(v) => em * v,
+            FontSize::Rems(v) => rem * v,
         };
         match self.dim {
             DimensionSize::Copied => (self.size, self.em),
@@ -287,21 +287,6 @@ impl Default for Transform2D {
 
 /// Builds a `GlobalTransform` on a `Anchor`, by default `Transform2D::anchor`.
 #[derive(Debug, Clone, Component, Reflect)]
-pub struct BuildGlobal(pub Anchor);
-
-impl Default for BuildGlobal {
-    fn default() -> Self {
-        Self(Anchor::Inherit)
-    }
-}
-/// Builds a `Transform` on a `Anchor`, by default `center`.
-/// 
-/// If `GlobalTransform` is present and [`BuildGlobal`] is not,
-/// the output will be used for rendering.
-/// 
-/// If `BuildGlobal` is preset, this component 
-/// have no effect on rendering.
-#[derive(Debug, Clone, Component, Reflect)]
 pub struct BuildTransform(pub Anchor);
 
 impl Default for BuildTransform {
@@ -340,3 +325,16 @@ impl Default for Opacity {
         Self::FULL
     }
 }
+
+/// Writes opacity to the associated alpha value of sprite, text, etc.
+/// 
+/// This behavior is opt-in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
+pub struct OpacityWriter;
+
+/// Synchronize a rectangular 2D mesh to `RotatedRect`.
+/// 
+/// GlobalTransform should be set to identity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
+pub struct OwnedRectangleMesh;
+

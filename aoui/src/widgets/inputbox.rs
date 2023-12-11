@@ -466,9 +466,7 @@ pub fn inputbox_keyboard(
                     '\r'|'\n' => {
                         // Serde can't fail serializing a string, probably
                         if let Some(submit) = submit {
-                            if let Err(e) = submit.send(&inputbox.get()) {
-                                eprintln!("Serialization failed: {e}.");
-                            }
+                            submit.send(inputbox.get().to_owned())
                         }
                     },
                     '\x08'|'\x7f' => inputbox.backspace(),
@@ -480,9 +478,7 @@ pub fn inputbox_keyboard(
         if changed {
             // Serde can't fail serializing a string, probably
             if let Some(change) = change {
-                if let Err(e) = change.send(&inputbox.get()) {
-                    eprintln!("Serialization failed: {e}.");
-                }
+                change.send(inputbox.get().to_owned())
             }
         }
     }

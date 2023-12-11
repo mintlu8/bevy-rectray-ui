@@ -90,7 +90,9 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
 
         queue.extend(entity_anchors.into_iter()
             .map(|(e, anc)| (e, ParentInfo::from_anchor(Some(entity), &rect, anc, dimension, em, opacity))));
-        *orig = rect;
+        if orig.as_ref() != &rect {
+            *orig = rect
+        }
         let parent = ParentInfo::new(Some(entity), &rect, size, em, opacity);
         for (child, _) in other_entities {
             queue.push((child, parent))
@@ -121,7 +123,9 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         }
     }
 
-    *orig = rect;
+    if orig.as_ref() != &rect {
+        *orig = rect
+    }
 }
 
 /// Query for finding the root rectangle of a `compute_aoui_transforms` pass.

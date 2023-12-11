@@ -3,7 +3,6 @@ use bevy::hierarchy::BuildChildren;
 use bevy::render::color::Color;
 use bevy::render::view::RenderLayers;
 use bevy::text::Font;
-use bevy::asset::Handle;
 use bevy::window::CursorIcon;
 use crate::{Dimension, Anchor, Size2, Hitbox};
 use crate::bundles::{AoUIBundle, AoUISpriteBundle};
@@ -16,14 +15,14 @@ use crate::util::{Submit, Sender, Change};
 use crate::widgets::TextColor;
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea, InputBoxText};
 
-use super::{Widget, get_layer};
+use super::{Widget, get_layer, HandleOrString};
 use super::builders::FrameBuilder;
 use super::util::OptionX;
 
 widget_extension!(
     pub struct InputBoxBuilder {
         pub text: String,
-        pub font: Handle<Font>,
+        pub font: HandleOrString<Font>,
         pub color: Option<Color>,    
         pub cursor_bar: Option<Entity>,
         pub cursor_area: Option<Entity>,
@@ -36,7 +35,7 @@ widget_extension!(
         TextColor(this.color.expect("color is required.")),
         true => this.event.unwrap_or(EventFlags::Drag)
             |EventFlags::DoubleClick|EventFlags::Drag|EventFlags::ClickOutside,
-        this.font,
+        this.font.get(assets),
         OptionX::Some(signal) = this.change => signal,
         OptionX::Some(signal) = this.submit => signal,
     ),

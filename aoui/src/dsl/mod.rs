@@ -11,11 +11,12 @@ mod oneshot;
 mod meta_dsl;
 mod context;
 mod shapes;
+mod mesh2d;
 
 #[doc(hidden)]
 pub use layouts::{SpanContainerNames, GridContainerNames};
 #[doc(hidden)]
-pub use util::OneOrTwo;
+pub use util::{OneOrTwo, HandleOrString};
 
 pub mod prelude;
 pub use convert::DslInto;
@@ -31,6 +32,7 @@ pub mod builders {
     pub use super::layouts::{PaddingBuilder, SpanContainerBuilder, GridContainerBuilder};
     pub use super::widgets::{InputBoxBuilder, ButtonBuilder, ClippingFrameBuilder};
     pub use super::shapes::RectangleBuilder;
+    pub use super::mesh2d::MaterialRectangleBuilder;
 }
 
 /// Construct an empty sprite.

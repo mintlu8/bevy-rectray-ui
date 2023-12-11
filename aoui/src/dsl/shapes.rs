@@ -2,6 +2,8 @@ use bevy::{ecs::system::Commands, asset::AssetServer, render::{texture::{Image, 
 
 use crate::{widget_extension, dsl::{Widget, builders::SpriteBuilder}, map_builder};
 
+use super::HandleOrString;
+
 
 widget_extension!(
     pub struct RectangleBuilder: Sprite {
@@ -38,7 +40,7 @@ impl Widget for RectangleBuilder {
             rect,
             flip,
         ) {
-            sprite: texture,
+            sprite: HandleOrString::Handle(texture),
         }).spawn_with(commands, assets)
     }
 }

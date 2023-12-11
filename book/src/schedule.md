@@ -8,7 +8,7 @@ By default the AoUI Schedule has the following `SystemSets`:
 
 * AoUITreeUpdate: Propagate information through the `AoUI` tree.
   * Generate `RotatedRect` for general purpose.
-  * Generate `BuildGlobal` for `AoUI` widgets.
+  * Generate `BuildTransform` for `AoUI` widgets.
   * Generate `Transform` for integrating bevy children.
   * Update `dimension` and `em`
 

@@ -7,7 +7,7 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, bundles::*};
+use bevy_aoui::*;
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox, Ui}, EguiPlugin};
 
@@ -30,35 +30,16 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     commands.spawn(Camera2dBundle::default());
 
-    let b = commands.spawn((AoUISpriteBundle {
-        sprite: Sprite { 
-            color: Color::RED,
-            ..Default::default()
-        },
-        transform: Transform2D { 
-            center: Anchor::Center,
-            anchor: Anchor::Center,
-            ..Default::default()
-        },
-        dimension: Dimension::pixels(Vec2::new(50.0, 50.0)),
-        texture: assets.load("square.png"),
-        ..Default::default()
-    },B)).id();
-
-    commands.spawn((AoUISpriteBundle {
-        sprite: Sprite { 
-            color: Color::CYAN,
-            ..Default::default()
-        },
-        transform: Transform2D { 
-            center: Anchor::Center,
-            anchor: Anchor::Center,
-            ..Default::default()
-        },
-        dimension: Dimension::pixels(Vec2::new(200.0, 200.0)),
-        texture: assets.load("square.png"),
-        ..Default::default()
-    },A)).add_child(b);
+    rectangle!((commands, assets) {
+        color: color!(cyan),
+        dimension: [200, 200],
+        extra: A,
+        child: rectangle! {
+            color: color!(red),
+            dimension: [50, 50],
+            extra: B,
+        }
+    });
 }
 
 

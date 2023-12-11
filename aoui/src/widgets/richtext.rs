@@ -65,7 +65,7 @@ use std::{collections::HashMap, hash::{Hash, BuildHasher}, num::ParseFloatError}
 use bevy::render::view::RenderLayers;
 use bevy::{asset::{Handle, Assets}, text::Font, render::color::Color, math::Vec2, hierarchy::BuildChildren};
 use bevy::ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component, query::Changed};
-use crate::{Transform2D, Anchor, SetEM, Dimension, Size2};
+use crate::{Transform2D, Anchor, FontSize, Dimension, Size2};
 use crate::layout::{Container, CompactLayout, FlexDir};
 use crate::bundles::AoUIBundle;
 use crate::layout::LayoutControl;
@@ -217,12 +217,12 @@ pub struct RichTextBuilder<'t, 'w, 's, F: FontFetcher, B: Bundle + Clone = ()>{
     /// This will be bundled into every text children
     bundle: B,
     /// This determines the inserted `LinebreakBundle`'s height.
-    line_gap:(Handle<Font>, SetEM),
+    line_gap:(Handle<Font>, FontSize),
     commands: &'t mut Commands<'w, 's>,
     font: F,
     style: FontStyle,
     color_stack: Vec<Color>,
-    size_stack: Vec<SetEM>,
+    size_stack: Vec<FontSize>,
     font_stack: Vec<String>,
     anchor_stack: Vec<Anchor>,
     zip: Option<Vec<Entity>>,
@@ -235,7 +235,7 @@ impl<'a, 'w, 's, F: FontFetcher> RichTextBuilder<'a, 'w, 's, F> {
     pub fn new(commands: &'a mut Commands<'w, 's>, font: F) -> Self {
         Self { 
             bundle: (), 
-            line_gap: (font.default(), SetEM::None),
+            line_gap: (font.default(), FontSize::None),
             commands, 
             font, 
             style: FontStyle::None, 
@@ -303,7 +303,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
     }
 
     #[must_use]
-    pub fn configure_size(mut self, font: Handle<Font>, size: impl Into<SetEM>) -> Self{
+    pub fn configure_size(mut self, font: Handle<Font>, size: impl Into<FontSize>) -> Self{
         self.line_gap = (font, size.into());
         self
     }
@@ -322,7 +322,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
     }
 
     #[must_use]
-    pub fn with_size(mut self, size: impl Into<SetEM>) -> Self{
+    pub fn with_size(mut self, size: impl Into<FontSize>) -> Self{
         self.size_stack.push(size.into());
         self
     }
@@ -351,7 +351,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
         self.font_stack.last().map(|x| x.as_str()).unwrap_or("")
     }
 
-    fn push_size(&mut self, v: SetEM, scoped: bool) {
+    fn push_size(&mut self, v: FontSize, scoped: bool) {
         if !scoped {
             self.size_stack.pop();
         }
@@ -359,8 +359,8 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
         self.size_stack.push(v);
     }
 
-    fn size(&self) -> SetEM {
-        self.size_stack.last().copied().unwrap_or(SetEM::None)
+    fn size(&self) -> FontSize {
+        self.size_stack.last().copied().unwrap_or(FontSize::None)
     }
 
     fn push_color(&mut self, v: Color, scoped: bool) {
@@ -547,11 +547,11 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                             Some('@') => self.push_font(cc.to_owned(), scoped),
                             Some('+') => {
                                 let size = cc.parse()?;
-                                self.push_size(SetEM::Pixels(size), scoped);
+                                self.push_size(FontSize::Pixels(size), scoped);
                             },
                             Some('*') => {
                                 let size = cc.parse()?;
-                                self.push_size(SetEM::Ems(size), scoped);
+                                self.push_size(FontSize::Ems(size), scoped);
                             },
                             Some('#') => {
                                 let b = cc.as_bytes();

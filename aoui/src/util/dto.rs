@@ -1,25 +1,92 @@
-pub type DtoError = postcard::Error;
+use std::fmt::Debug;
+use downcast_rs::{impl_downcast, Downcast};
 
-/// A serde based data transfer object.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct Dto(pub(crate) Vec<u8>);
+const _: Option<Box<dyn DataTransfer>> = None;
 
-impl Dto {
-    pub(crate) fn new(value: &(impl serde::Serialize + ?Sized)) ->  Result<Self, DtoError>{
-        postcard::to_stdvec(value).map(Self)
+pub trait DataTransfer: Downcast + Debug + Send + Sync + 'static {
+    fn dyn_clone(&self) -> Box<dyn DataTransfer>;
+    fn dyn_eq(&self, other: &dyn DataTransfer) -> bool;
+}
+
+impl_downcast!(DataTransfer);
+impl<T> DataTransfer for T where T: Debug + Clone + PartialEq + Send + Sync + 'static{
+    fn dyn_clone(&self) -> Box<dyn DataTransfer> {
+        Box::new(self.clone())
     }
 
-    pub(crate) fn set(&mut self, value: &(impl serde::Serialize + ?Sized)) -> Result<(), DtoError>{
-        match postcard::to_stdvec(value) {
-            Ok(vec) => { 
-                self.0 = vec;
-                Ok(())
-            },
-            Err(e) => Err(e),
+    fn dyn_eq(&self, other: &dyn DataTransfer) -> bool {
+        match other.downcast_ref::<T>() {
+            Some(some) => some == self,
+            None => false,
         }
     }
+}
 
-    pub(crate) fn get<'de, T: serde::Deserialize<'de>>(&'de self) -> Result<T, DtoError>{
-        postcard::from_bytes(&self.0)
+/// A type safe dynamic object.
+#[derive(Debug)]
+pub struct Object(Option<Box<dyn DataTransfer>>);
+
+impl Clone for Object {
+    fn clone(&self) -> Self {
+        Self(self.0.as_ref().map(|x| x.dyn_clone()))
+    }
+}
+
+impl Default for Object {
+    fn default() -> Self {
+        Self(None)
+    }
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.0, &other.0) {
+            (None, None) => true,
+            (Some(a), Some(b)) => a.dyn_eq(b.as_ref()),
+            _ => false
+        }
+    }
+}
+
+impl Object {
+    pub const NONE: Self = Self(None);
+
+    pub fn unit() -> Self {
+        Self(Some(Box::new(())))
+    }
+
+    pub fn new<T: DataTransfer>(v: T) -> Self {
+        Self(Some(Box::new(v)))
+    }
+
+    pub fn is_some(&self) -> bool {
+        self.0.is_some()
+    }
+
+    pub fn is_none(&self) -> bool {
+        self.0.is_none()
+    }
+
+    pub fn get<T: DataTransfer>(&self) -> Option<T> {
+        self.0.as_ref().map(|x| x.dyn_clone().downcast().ok().map(|x| *x)).flatten()
+    }
+
+    pub fn clean(&mut self) {
+        self.0.take();
+    }
+
+
+    pub fn take<T: DataTransfer>(&mut self) -> Option<T> {
+        self.0.take().map(|x| x.downcast().ok().map(|x| *x)).flatten()
+    }
+
+    pub fn set<T: DataTransfer>(&mut self, v: T) {
+        self.0 = Some(Box::new(v))
+    }
+
+    pub fn swap<T: DataTransfer>(&mut self, v: T) -> Option<T>{
+        let result = self.take();
+        self.0 = Some(Box::new(v));
+        result
     }
 }

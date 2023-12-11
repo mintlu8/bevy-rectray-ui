@@ -1,8 +1,7 @@
 mod dto;
 mod signals;
 mod extension;
-pub(crate) use signals::signal_cleanup;
-pub(crate) use dto::Dto;
+pub use dto::{DataTransfer, Object};
 pub use extension::WorldExtension;
 pub use signals::{Sender, Receiver, signal};
 

@@ -2,7 +2,7 @@ use bevy::{prelude::{Vec2, Resource}, reflect::Reflect};
 
 /// The root font size of the window.
 /// 
-/// By default this is `[16, 16]`.
+/// By default this is `16 px`.
 #[derive(Debug, Resource)]
 pub struct AoUIREM(f32);
 
@@ -24,7 +24,7 @@ impl Default for AoUIREM {
 /// Set the font size of the widget.
 #[derive(Debug, Clone, Copy, Default, Reflect)]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum SetEM {
+pub enum FontSize {
     #[default]
     None,
     Pixels(f32),
@@ -32,7 +32,7 @@ pub enum SetEM {
     Rems(f32),
 }
 
-impl From<f32> for SetEM {
+impl From<f32> for FontSize {
     fn from(value: f32) -> Self {
         Self::Pixels(value)
     }
@@ -198,15 +198,15 @@ impl From<Vec2> for Size2 {
     }
 }
 
-impl SetEM {
+impl FontSize {
     #[doc(hidden)]
     /// For testing with egui only
     pub fn raw_mut(&mut self) -> &mut f32 {
         match self {
-            SetEM::None => panic!("Does not own a raw value."),
-            SetEM::Pixels(f) => f,
-            SetEM::Ems(f) => f,
-            SetEM::Rems(f) => f,
+            FontSize::None => panic!("Does not own a raw value."),
+            FontSize::Pixels(f) => f,
+            FontSize::Ems(f) => f,
+            FontSize::Rems(f) => f,
         }
     }
 }

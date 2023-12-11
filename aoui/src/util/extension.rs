@@ -1,32 +1,36 @@
-use bevy::{window::CursorIcon, app::{Last, App}, ecs::world::World};
-use crate::widgets::CursorDefault;
+use bevy::{window::CursorIcon, app::{Last, App}, ecs::{world::World, schedule::IntoSystemConfigs}};
+use crate::{widgets::CursorDefault, schedule::AoUICleanupSet};
 use super::signals;
 
 
 
 pub trait WorldExtension {
-    fn register_signal<T: 'static>(&mut self);
-    fn register_cursor_default(&mut self, cursor: CursorIcon);
+    fn register_signal<T: Send + Sync + 'static>(&mut self) -> &mut Self;
+    fn register_cursor_default(&mut self, cursor: CursorIcon) -> &mut Self;
 }
 
 impl WorldExtension for World {
-    fn register_signal<T: 'static>(&mut self) {
+    fn register_signal<T: Send + Sync + 'static>(&mut self) -> &mut Self {
         self.schedule_scope(Last, |_, s| {
-            s.add_systems(signals::signal_cleanup::<T>);
+            s.add_systems(signals::signal_cleanup::<T>.in_set(AoUICleanupSet));
         });
+        self
     }
 
-    fn register_cursor_default(&mut self, cursor: CursorIcon) {
+    fn register_cursor_default(&mut self, cursor: CursorIcon) -> &mut Self {
         self.insert_resource(CursorDefault(cursor));
+        self
     }
 }
 
 impl WorldExtension for App {
-    fn register_signal<T: 'static>(&mut self) {
-        self.add_systems(Last, signals::signal_cleanup::<T>);
+    fn register_signal<T: Send + Sync + 'static>(&mut self) -> &mut Self {
+        self.add_systems(Last, signals::signal_cleanup::<T>.in_set(AoUICleanupSet));
+        self
     }
 
-    fn register_cursor_default(&mut self, cursor: CursorIcon) {
+    fn register_cursor_default(&mut self, cursor: CursorIcon) -> &mut Self {
         self.insert_resource(CursorDefault(cursor));
+        self
     }
 }

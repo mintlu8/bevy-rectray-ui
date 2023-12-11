@@ -1,5 +1,5 @@
-use bevy::{prelude::*, input::InputSystem};
-use crate::util::{Submit, Change, signal_cleanup};
+use bevy::prelude::*;
+use crate::{util::{Submit, Change}, schedule::{AoUIEventSet, AoUICleanupSet}, WorldExtension};
 
 mod systems;
 mod state;
@@ -26,21 +26,13 @@ pub struct AoUICamera;
 /// Plugin for the event pipeline.
 pub struct AoUICursorEventsPlugin;
 
-#[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
-pub struct AoUIEventSet;
-
-#[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
-pub struct AoUIEventCleanupSet;
-
 impl bevy::prelude::Plugin for AoUICursorEventsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.init_resource::<CursorState>()
             .init_resource::<DoubleClickThreshold>()
-            .configure_sets(PreUpdate, AoUIEventSet.after(InputSystem))
-            .configure_sets(PostUpdate, AoUIEventCleanupSet)
             .add_systems(PreUpdate, mouse_button_input.in_set(AoUIEventSet))
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AoUIEventSet))
-            .add_systems(PostUpdate, remove_focus.in_set(AoUIEventCleanupSet))
+            .add_systems(Last, remove_focus.in_set(AoUICleanupSet))
             .add_systems(Update, cursor::custom_cursor_controller)
             .add_systems(Update, (
                 call_oneshot::<EventFlags>,
@@ -64,11 +56,9 @@ impl bevy::prelude::Plugin for AoUICursorEventsPlugin {
                 call_oneshot::<RightDrag>,
                 lose_focus_detection,
             ))
-            .add_systems(Last, (
-                signal_cleanup::<()>,
-                signal_cleanup::<Submit>,
-                signal_cleanup::<Change>,
-            ))
+            .register_signal::<()>()
+            .register_signal::<Submit>()
+            .register_signal::<Change>()
         ;
     }
 }

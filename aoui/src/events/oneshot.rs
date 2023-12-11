@@ -1,18 +1,18 @@
-use std::sync::OnceLock;
+use std::sync::{OnceLock, Arc};
 
 use bevy::ecs::{system::{SystemId, Query, Commands}, component::Component, removal_detection::RemovedComponents, query::Without};
 
 use crate::events::{EventFlags, CursorAction, CursorFocus, ClickOutside, CursorClickOutside};
 
-/// Event handler though a oneshot system.
+/// Event handler though a one-shot system.
 #[derive(Component)]
-pub struct OneShot<T> {
+pub struct Handler<T> {
     event: T,
-    cell: &'static OnceLock<SystemId>,
+    cell: Arc<OnceLock<SystemId>>,
 }
 
-impl<T> OneShot<T> {
-    pub fn new(event: T, cell: &'static OnceLock<SystemId>) -> Self{
+impl<T> Handler<T> {
+    pub fn new(event: T, cell: Arc<OnceLock<SystemId>>) -> Self{
         Self { event, cell }
     }
     pub fn get(&self) -> Option<SystemId>{
@@ -23,7 +23,7 @@ impl<T> OneShot<T> {
 /// Register a `type<T>` that can handle certain events.
 pub fn call_oneshot<T: EventQuery + Send + Sync + 'static> (
     mut commands: Commands,
-    query: Query<(&T::Component, &OneShot<T>)>,
+    query: Query<(&T::Component, &Handler<T>)>,
 ) {
     for (action, system) in query.iter() {
         if system.event.validate(action) {
@@ -96,7 +96,7 @@ pub struct LoseFocus;
 pub fn lose_focus_detection(
     mut commands: Commands,
     mut removed: RemovedComponents<CursorFocus>,
-    actions: Query<&OneShot<LoseFocus>, Without<CursorFocus>>,
+    actions: Query<&Handler<LoseFocus>, Without<CursorFocus>>,
 ) {
     for action in actions.iter_many(removed.read()) {
         if let Some(system) = action.cell.get() {
