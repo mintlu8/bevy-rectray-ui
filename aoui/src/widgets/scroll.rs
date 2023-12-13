@@ -1,5 +1,6 @@
-use bevy::{ecs::{system::{Query, Res, Resource}, component::Component}, hierarchy::Children, math::Vec2};
-use crate::{Dimension, Transform2D, Anchor, AoUIREM};
+
+use bevy::{ecs::{system::{Query, Res, Resource}, component::Component, query::Without}, hierarchy::Children, math::Vec2, log::warn};
+use crate::{Dimension, Transform2D, Anchor, AoUIREM, dsl::prelude::{Sender, Receiver, SigChange}, util::SigScroll};
 
 use crate::events::MouseWheelAction;
 
@@ -52,30 +53,42 @@ impl Default for Scrolling {
     }
 }
 
-pub fn scrolling(
+pub fn drag_and_scroll(
     rem: Option<Res<AoUIREM>>,
     direction: Option<Res<ScrollDirection>>,
-    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction)>,
+    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Sender<SigChange>>)>,
+    sender: Query<(&MouseWheelAction, &Sender<SigScroll>), Without<Scrolling>>,
+    receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Sender<SigChange>>), Without<MouseWheelAction>>,
     mut child_query: Query<(&Dimension, &mut Transform2D, Option<&Children>)>,
 ) {
     let rem = rem.map(|x|x.get()).unwrap_or(16.0);
     let direction = direction.map(|x|x.get()).unwrap_or(Vec2::ONE);
-    for (scroll, dimension, children, action) in scroll.iter() {
+    for (action, signal) in sender.iter() {
+        signal.send(action.get());
+    }
+    let iter = scroll.iter()
+        .map(|(scroll, dimension, children, action, change)| 
+            (scroll, dimension, children, action.get(), change))
+        .chain(receiver.iter().filter_map(|(scroll, dimension, children, receiver, change)| 
+            Some((scroll, dimension, children, receiver.poll()?, change)))
+        );
+    for (scroll, dimension, children, delta, change) in iter {
         let size = dimension.size;
-        let delta = action.get();
         let delta_scroll = match (scroll.x, scroll.y) {
             (true, true) => delta,
             (true, false) => Vec2::new(delta.x + delta.y, 0.0),
             (false, true) => Vec2::new(0.0, delta.x + delta.y),
-            (false, false) => Vec2::ZERO,
+            (false, false) => continue,
         } * direction;
         if children.len() != 1 {
-            panic!("Scrolling requires exactly one child.")
+            warn!("Component 'Scrolling' requires exactly one child as a buffer.");
+            continue;
         }
         let container = children[0];
         if let Ok((_, transform, Some(children))) = child_query.get(container){
             if transform.anchor != Anchor::Center {
-                panic!("Scrolling requires Anchor::Center.")
+                warn!("Component 'Scrolling' requires its child to have Anchor::Center.");
+                continue;
             }
             let offset = transform.offset.raw() + delta_scroll;
             let size_min = size * Anchor::BottomLeft;
@@ -94,7 +107,20 @@ pub fn scrolling(
             let clamp_min = (size_min - min).min(size_max - max).min(Vec2::ZERO);
             let clamp_max = (size_max - max).max(size_min - min).max(Vec2::ZERO);
             if let Ok((_, mut transform, _)) = child_query.get_mut(container) {
-                transform.offset = offset.clamp(clamp_min, clamp_max).into();
+                let offset = offset.clamp(clamp_min, clamp_max);
+                transform.offset = offset.into();
+                if let Some(signal) = change {
+                    let frac = (offset - clamp_min) / (clamp_max - clamp_min);
+                    let frac = match (scroll.x, scroll.y) {
+                        (true, false) => frac.x.clamp(0.0, 1.0),
+                        (false, true) => frac.y.clamp(0.0, 1.0),
+                        _ => {
+                            warn!("Failed sending 'Change<Scroll>', cannot compute fraction of 2D scrolling.");
+                            continue;
+                        },
+                    };
+                    signal.send(frac)
+                }
             }
         }            
     }

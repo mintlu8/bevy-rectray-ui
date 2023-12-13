@@ -2,7 +2,7 @@ use std::{sync::{Mutex, Arc}, ops::Deref};
 
 use bevy::{render::view::Visibility, window::{Window, PrimaryWindow, CursorIcon}, hierarchy::Children};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
-use crate::{Opacity, dsl::prelude::Submit, util::Object};
+use crate::{Opacity, util::{Object, SignalMarker}, dsl::prelude::SigSubmit};
 
 use crate::{events::{EventFlags, CursorFocus, CursorAction}, util::DataTransfer, dsl::prelude::Interpolate, util::Sender};
 
@@ -45,8 +45,7 @@ pub fn event_conditional_visibility(mut query: Query<(&DisplayIf<EventFlags>, Op
     })
 }
 
-/// State of a `CheckButton`, when used in [`DisplayIf`], also checks
-/// state of a `RadioButton`
+/// Marker for sending the `Submit` signal on click.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component)]
 pub struct Button;
 
@@ -108,7 +107,7 @@ impl PartialEq<Payload> for RadioButtonState {
 }
 
 pub fn button_on_click(
-    query: Query<(&CursorAction, &Sender<Submit>, Option<&Payload>), With<Button>>
+    query: Query<(&CursorAction, &Sender<SigSubmit>, Option<&Payload>), With<Button>>
 ) {
     for (action, submit, payload) in query.iter() {
         if !action.is(EventFlags::Click) { continue }
@@ -121,7 +120,7 @@ pub fn button_on_click(
 }
 
 pub fn check_button_on_click(
-    mut query: Query<(&CursorAction, &mut CheckButtonState, Option<&Sender<Submit>>, Option<&Payload>)>
+    mut query: Query<(&CursorAction, &mut CheckButtonState, Option<&Sender<SigSubmit>>, Option<&Payload>)>
 ) {
     for (action, mut state, submit, payload) in query.iter_mut() {
         if !action.is(EventFlags::Click) { continue }
@@ -137,7 +136,7 @@ pub fn check_button_on_click(
 }
 
 pub fn radio_button_on_click(
-    mut query: Query<(&CursorAction, &RadioButtonState, &Payload, Option<&Sender<Submit>>)>
+    mut query: Query<(&CursorAction, &RadioButtonState, &Payload, Option<&Sender<SigSubmit>>)>
 ) {
     for (action, state, payload, submit) in query.iter_mut() {
         if !action.is(EventFlags::Click) { continue }
@@ -254,10 +253,10 @@ pub struct RadioButtonContext(Arc<Mutex<Object>>);
 /// 
 /// # Submit signal behavior:
 /// 
-/// * Button OnClick: send `Payload` or `()`.
-/// * RadioButton OnClick: send `Payload` or `()`.
-/// * CheckButton OnClick: If `Payload` exists, send `Payload` or `()`, 
-/// If payload doesn't exist, send `true` or `false`.
+/// * Button OnClick: sends `Payload` or `()`.
+/// * RadioButton OnClick: sends `Payload` or `()`.
+/// * CheckButton OnClick: If `Payload` exists, sends `Payload` or `()`, 
+/// If payload doesn't exist, sends `true` or `false`.
 /// 
 /// For radio buttons, you need to make sure the binary
 /// serializations of each branch.
@@ -273,7 +272,8 @@ impl Payload {
         Self(Object::new(value))
     }
 
-    pub fn send_to<M>(&self, sender: &Sender<M>) {
+    pub fn send_to<M: SignalMarker>(&self, sender: &Sender<M>) {
         sender.send(self.0.clone())
     }
 }
+

@@ -5,15 +5,20 @@ use super::{dto::Object, DataTransfer};
 
 use self::sealed::SignalCreate;
 
+/// Provides some checking against our chaotic namespace.
+pub trait SignalMarker: Send + Sync + 'static {}
+
+impl SignalMarker for () {}
+
 /// A signal sender
 #[derive(Component)]
-pub struct Sender<T=()> {
+pub struct Sender<T: SignalMarker=()> {
     signal: Signal,
     map: Option<Box<dyn Fn(&mut Object) + Send + Sync + 'static>>,
     p: PhantomData<T>,
 }
 
-impl<T> Debug for Sender<T> {
+impl<T: SignalMarker> Debug for Sender<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Signal as Debug>::fmt(&self.signal, f)
     }
@@ -21,13 +26,13 @@ impl<T> Debug for Sender<T> {
 
 /// A signal receiver
 #[derive(Component)]
-pub struct Receiver<T=()>{
+pub struct Receiver<T: SignalMarker=()>{
     signal: Signal,
     map: Option<Box<dyn Fn(&mut Object) + Send + Sync + 'static>>,
     p: PhantomData<T>,
 }
 
-impl<T> Debug for Receiver<T> {
+impl<T: SignalMarker> Debug for Receiver<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Signal as Debug>::fmt(&self.signal, f)
     }
@@ -50,12 +55,12 @@ impl Signal {
 }
 
 impl Sender {
-    pub fn mark<M>(self) -> Sender<M> {
+    pub fn mark<M: SignalMarker>(self) -> Sender<M> {
         Sender { signal: self.signal, map: self.map, p: PhantomData  }
     }
 }
 
-impl<M> Sender<M> {
+impl<M: SignalMarker> Sender<M> {
     pub fn map<D, S>(self, f: impl Fn(D) -> S + Send + Sync + 'static) -> Self
         where M: Send + Sync+ 'static, D: DataTransfer, S: DataTransfer {
         Sender { 
@@ -83,13 +88,13 @@ impl<M> Sender<M> {
 }
 
 impl Receiver {
-    pub fn mark<M>(self) -> Receiver<M> {
+    pub fn mark<M: SignalMarker>(self) -> Receiver<M> {
         Receiver { signal: self.signal, map: self.map, p: PhantomData }
     }
 }
 
 
-impl<M> Receiver<M> {
+impl<M: SignalMarker> Receiver<M> {
     pub fn map<D, S>(self, f: impl Fn(D) -> S + Send + Sync + 'static) -> Self
         where M: Send + Sync + 'static, D: DataTransfer + Clone, S: DataTransfer + Clone{
         Receiver { 
@@ -117,10 +122,10 @@ impl<M> Receiver<M> {
         }
     }
 
-    /// Receives a `()`, usually sent by buttons without payloads.
-    pub fn poll_empty(&self) -> bool {
+    /// Receives anything regardless of type.
+    pub fn poll_any(&self) -> bool {
         let read = self.signal.0.read().unwrap();
-        read.get::<()>().is_some()
+        read.is_some()
     }
 
     /// Clone, expect removes the mapping function.
@@ -198,8 +203,23 @@ mod sealed {
     );   
 }
 
-/// Create a spmc signal that can be polled.
+/// Create a spmc signal that can be polled. 
 /// 
+/// # Writing
+/// 
+/// Signals are dynamic and type erased.
+/// All types meeting their requirement can be sent.
+/// They are usually written in `PreUpdate` and cleaned up in `Last`
+/// 
+/// # Reading
+/// 
+/// `poll()` returns `Some` only if type matches 
+/// and treats type mismatch as if no value exists.
+/// 
+/// `poll_any()` returns `true` as long as something exists.
+/// 
+/// # Usage
+///  
 /// ```
 /// # /*
 /// let (sender, recv_a, recv_b, ...) = signal();
@@ -215,6 +235,15 @@ mod sealed {
 /// # */
 /// ```
 /// 
+/// To map the value of a signal, supply a mapping function.
+/// 
+/// 
+/// ```
+/// # /*
+/// sender.map(|x: f32| format!("{:.2}", f))
+/// # */
+/// ```
+/// 
 /// If registered, this signal is cleared at the end of the frame.
 /// 
 /// ```
@@ -226,6 +255,6 @@ pub fn signal<S: SignalCreate>() -> S {
     S::new()
 }
 
-pub fn signal_cleanup<T: Send + Sync + 'static>(mut query: Query<&Sender<T>>) {
+pub fn signal_cleanup<M: SignalMarker>(mut query: Query<&Sender<M>>) {
     query.par_iter_mut().for_each(|x| x.signal.clean())
 }

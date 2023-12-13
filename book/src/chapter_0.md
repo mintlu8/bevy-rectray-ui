@@ -6,20 +6,27 @@
 
 * Concise, no boilerplate
 
-    `bevy_aoui` is probably the most concise 2D/UI framework currently available,
-    we make use `macro_rules` macros extensively to eliminate boilerplate wherever possible.
+    `bevy_aoui` is one of the most concise 2D/UI framework currently available,
+    depend on the use case.
+    we make use of `macro_rules` macros extensively to eliminate boilerplate wherever possible.
 
     Tired of writing `Vec2::new(1.0, 2.0)`? Try `[1, 2]` instead.
 
+* Syntax magic, no behavior magic.
+
+    `bevy_aoui` is built from the ground up with `bevy_ecs`.
+    All states are implemented using components in a way
+    that enables easy composition and low-risk refactoring.
+
 * No editor? No problem
 
-    The anchor-offset layout system is extremely intuitive in a no editor environment compared to css
-    based layouts or flexbox. This reduces the need for hot-reloading too. 
-    If an editor does exist, bevy_aoui can integrate perfectly as well.
+    The anchor-offset layout system is intuitive in a no editor environment.
+    If an editor does exist, bevy_aoui can integrate with it perfectly as well.
 
-* Editor friendly
+* IDE friendly
 
     `bevy_aoui` does not use proc_macros (aside from the `color_this` color parser),
+    macros used closely mimics rust syntax and
     everything you write is a rust expression that gets editor support.
 
 * Easy migration
@@ -27,8 +34,8 @@
     `bevy_aoui` takes care to make sure it will stay compatible with the latest version of bevy.
     We self impose the following feature restrictions:
 
-  * No shaders, no pbr, no render graph.
-  * Limited rendering features:
+  * No shaders, no render pipelines.
+  * Limited rendering features that can be opt-out:
     * `RenderLayers`, which is needed for clipping.
   * No third party bevy dependencies.
 
@@ -42,32 +49,36 @@
 * Versatile
 
     `bevy_aoui` works with anything that uses `GlobalTransform`,
-    any third party widget that does not depend on `UI`
+    any third party widget that not dependent on `UI`
     should work with `bevy_aoui` with minimal configuration.
 
 ## Non-goals
 
 * One-size-fit-all UIs
 
-    `bevy_aoui` does not have a full flexbox implementation, meaning you might
+    `bevy_aoui` is not a html engine, meaning you might
     work a bit harder porting your desktop UI to mobile.
+
+* Styling
+  
+    `bevy_aoui` is render agnostic, so there is little we can do to provide
+    a generalized implementation of things like `border` in CSS.
+
+* Style inheritance
+
+    `bevy_aoui` has a custom widget system you can use to group
+    widgets with similar properties. But there likely won't be support for
+    directly inheriting style attributes like color from parent to child.
 
 * Configuration files
 
-    Rust is the perfect language, why would you want to write anything else?
-    `bevy_aoui` encourages the use of rust directly for hierarchy and widget abstractions
-    A decent alternative to construct a scene is to use widget builders through
+    Rust is the perfect language, why would you want to write in anything else?
+
+    For a more serious answer,
+    `bevy_aoui` encourages the use of rust directly for hierarchy and widget abstractions.
+    A decent alternative is to use widget builders through
     serde implementations, however that is not directly supported.
 
 * Hot reloading
 
     Since most of the UI is rust code, we have no control over hot reloading.
-
-* Blazingly Fast
-
-    Our transform pipeline trades a small amount of performance for ergonomics,
-    which may or may not be a big deal.
-
-    Our implementation for `clipping` uses a camera and a render target,
-    which is great for universality, but might not be the best for performance.
-    Use an alternative implementation if needed.

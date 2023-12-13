@@ -1,13 +1,14 @@
 use bevy::math::Affine3A;
-use bevy::sprite::{Sprite, TextureAtlasSprite, Anchor, Mesh2dHandle};
+use bevy::sprite::{Sprite, TextureAtlasSprite};
 use bevy::text::{TextLayoutInfo, Text2dBounds};
 use bevy::prelude::*;
 
-use crate::{RotatedRect, BuildTransform, Dimension, DimensionSize, Transform2D, Opacity, OpacityWriter, OwnedRectangleMesh};
+use bevy::sprite::Anchor as BevyAnchor;
+use crate::{RotatedRect, BuildTransform, Dimension, DimensionSize, Transform2D, Opacity, OpacityWriter, BuildMeshTransform, Anchor};
 
 
 /// Copy our `anchor` component's value to the `Anchor` component
-pub fn copy_anchor(mut query: Query<(&mut Anchor, &Transform2D)>) {
+pub fn copy_anchor(mut query: Query<(&mut BevyAnchor, &Transform2D)>) {
     query.par_iter_mut().for_each(|(mut a, anc)| *a = anc.anchor.into())
 }
 
@@ -129,35 +130,15 @@ pub fn sync_opacity_atlas(mut query: Query<(&Opacity, &mut TextureAtlasSprite), 
     })
 }
 
-/// Build a rectangle using [`RotatedRect`].
-pub fn build_mesh_2d(
-    mut assets: ResMut<Assets<Mesh>>,
-    mut query: Query<(&RotatedRect, &Mesh2dHandle), (With<OwnedRectangleMesh>, Changed<RotatedRect>)>
-) {
-    type Anchor = crate::Anchor;
-    for (rect, handle) in query.iter_mut() {
-        if let Some(mesh) = assets.get_mut(&handle.0) {
-            let bl = rect.anchor(Anchor::BottomLeft);
-            let br = rect.anchor(Anchor::BottomRight);
-            let tl = rect.anchor(Anchor::TopLeft);
-            let tr = rect.anchor(Anchor::TopRight);
-            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, 
-                vec![
-                    bl.extend(0.0).to_array(), 
-                    br.extend(0.0).to_array(), 
-                    tl.extend(0.0).to_array(),
-                    tr.extend(0.0).to_array(),
-                ]
-            );
-        }
-    }
-}
-
 pub fn build_mesh_2d_global_transform(
-    mut query: Query<(&RotatedRect, &mut GlobalTransform), With<OwnedRectangleMesh>>
+    mut query: Query<(&RotatedRect, &Dimension, &mut GlobalTransform), With<BuildMeshTransform>>
 ) {
-    query.iter_mut().for_each(|(rect, mut transform)| 
-        *transform = Affine3A::from_translation(Vec3::new(0.0, 0.0, rect.z)).into()
+    query.iter_mut().for_each(|(rect, dim, mut transform)| 
+        *transform = Affine3A::from_scale_rotation_translation(
+            (rect.scale * dim.size).extend(1.0), 
+            Quat::from_rotation_z(rect.rotation), 
+            rect.anchor(Anchor::Center).extend(rect.z)
+        ).into()
     );
 }
 
@@ -165,8 +146,8 @@ pub fn build_mesh_2d_global_transform(
 pub fn build_global_transform(
     mut query: Query<(&BuildTransform, &Transform2D, &RotatedRect, &mut GlobalTransform)>,
 ) {
-    query.par_iter_mut().for_each(|(build, transform, rect, mut scene)| {
-        *scene = Affine3A::from_scale_rotation_translation(
+    query.par_iter_mut().for_each(|(build, transform, rect, mut global)| {
+        *global = Affine3A::from_scale_rotation_translation(
             rect.scale.extend(1.0), 
             Quat::from_rotation_z(rect.rotation), 
             rect.anchor(build.0.or(transform.anchor)).extend(rect.z)

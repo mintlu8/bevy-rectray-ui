@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::{util::{Submit, Change}, schedule::{AoUIEventSet, AoUICleanupSet}, WorldExtension};
+use crate::{util::{SigSubmit, SigChange, SigDrag, SigScroll}, schedule::{AoUIEventSet, AoUICleanupSet}, WorldExtension};
 
 mod systems;
 mod state;
@@ -57,8 +57,10 @@ impl bevy::prelude::Plugin for AoUICursorEventsPlugin {
                 lose_focus_detection,
             ))
             .register_signal::<()>()
-            .register_signal::<Submit>()
-            .register_signal::<Change>()
+            .register_signal::<SigSubmit>()
+            .register_signal::<SigChange>()
+            .register_signal::<SigDrag>()
+            .register_signal::<SigScroll>()
         ;
     }
 }

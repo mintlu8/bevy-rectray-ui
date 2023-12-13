@@ -1,9 +1,7 @@
 use bevy::{prelude::{Plugin, PostUpdate, IntoSystemConfigs, Update}, app::PreUpdate};
-use crate::{schedule::{AoUIStoreOutputSet, AoUILoadInputSet, AoUIWidgetsEventSet}, WorldExtension};
+use crate::schedule::{AoUIStoreOutputSet, AoUILoadInputSet, AoUIWidgetsEventSet};
 
-use crate::util::{Submit, Change};
-
-use super::{inputbox, button::{self, CursorDefault}, drag::{self, drag_start, DragSignal}, richtext, scroll, scrollframe};
+use super::{inputbox, button::{self, CursorDefault}, drag::{self, drag_start}, richtext, scroll, scrollframe};
 
 
 pub(crate) struct WidgetsPlugin;
@@ -24,8 +22,7 @@ impl Plugin for WidgetsPlugin {
             ).in_set(AoUIWidgetsEventSet))
             .add_systems(Update, (
                 inputbox::update_inputbox_cursor,
-                inputbox::format_signal::<Submit>,
-                inputbox::format_signal::<Change>,
+                inputbox::format_signal,
                 button::set_cursor,
                 button::event_conditional_visibility,
                 button::check_conditional_visibility,
@@ -33,13 +30,11 @@ impl Plugin for WidgetsPlugin {
                 drag::drag_start,
                 drag::drag_end,
                 drag::dragging.after(drag_start),
-                scroll::scrolling,
+                scroll::drag_and_scroll,
                 scrollframe::clipping_layer,
             ))
-            .add_systems(PostUpdate, drag::apply_constraints.in_set(AoUILoadInputSet))
             .add_systems(PostUpdate, richtext::synchronize_glyph_spaces.in_set(AoUILoadInputSet))
             .add_systems(PostUpdate, inputbox::sync_em_inputbox.in_set(AoUIStoreOutputSet))
-            .register_signal::<DragSignal>()
         ;
     }
 }

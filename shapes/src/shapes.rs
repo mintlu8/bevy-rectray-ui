@@ -1,21 +1,25 @@
 use bevy::{math::Vec2, sprite::{Mesh2dHandle, ColorMaterial}, prelude::Color};
-use crate::bundles::BuildTransformBundle;
+use bevy_aoui::{widget_extension, dsl::{prelude::OneOrTwo, DslFrom}, bundles::BuildTransformBundle};
 use bevy_prototype_lyon::prelude::*;
 
-use crate::{dsl::prelude::*, widgets::shape::{Shapes, ShapeDimension}, widget_extension};
+use crate::systems::{ShapeDimension, Shapes};
 
-use super::convert::DslInto;
+#[derive(Debug, Default)]
+pub enum OptionX<T> {
+    Some(T),
+    #[default]
+    None
+}
 
-impl DslInto<Option<Fill>> for Color{
-    fn dinto(self) -> Option<Fill> {
-        Some(Fill::color(self))
+impl DslFrom<Color> for OptionX<Fill>{
+    fn dfrom(value: Color) -> Self {
+        OptionX::Some(Fill::color(value))
     }
 }
 
-impl DslInto<Option<Stroke>> for (Color, i32){
-    fn dinto(self) -> Option<Stroke> {
-        let (color, size) = self;
-        Some(Stroke { 
+impl DslFrom<(Color, i32)> for OptionX<Stroke>{
+    fn dfrom((color, size): (Color, i32)) -> Self {
+        OptionX::Some(Stroke { 
             color, 
             options: StrokeOptions::DEFAULT
                 .with_line_width(size as f32)
@@ -25,10 +29,9 @@ impl DslInto<Option<Stroke>> for (Color, i32){
     }
 }
 
-impl DslInto<Option<Stroke>> for (Color, f32){
-    fn dinto(self) -> Option<Stroke> {
-        let (color, size) = self;
-        Some(Stroke { 
+impl DslFrom<(Color, f32)> for OptionX<Stroke>{
+    fn dfrom((color, size): (Color, f32)) -> Self {
+        OptionX::Some(Stroke { 
             color, 
             options: StrokeOptions::DEFAULT
                 .with_line_width(size)
@@ -38,12 +41,14 @@ impl DslInto<Option<Stroke>> for (Color, f32){
     }
 }
 
+
+
 widget_extension! {
     pub struct ShapeBuilder {
         pub size: Option<Vec2>,
         pub shape: Shapes,
-        pub fill: Option<Fill>,
-        pub stroke: Option<Stroke>,
+        pub fill: OptionX<Fill>,
+        pub stroke: OptionX<Stroke>,
         pub stroke_size: f32,
         /// Unlike the default behavior of `Lyon`,
         /// 
@@ -61,8 +66,8 @@ widget_extension! {
         },
         Mesh2dHandle::default(),
         assets.expect("Please pass in the AssetServer").add(ColorMaterial::default()),
-        Some(fill) = this.fill => fill,
-        Some(stroke) = this.stroke => {
+        OptionX::Some(fill) = this.fill => fill,
+        OptionX::Some(stroke) = this.stroke => {
             let mut stroke = stroke;
             if let Some(OneOrTwo([l ,r])) = this.caps.dinto() {
                 stroke.options = stroke.options.with_start_cap(l).with_end_cap(r)
@@ -77,29 +82,7 @@ widget_extension! {
 #[macro_export]
 macro_rules! shape {
     ($ctx: tt {$($tt:tt)*}) => {
-            $crate::meta_dsl!($ctx [$crate::dsl::builders::ShapeBuilder] {
-            $($tt)*
-        })
-    };
-}
-
-/// Construct a rectangle with `bevy_prototype_lyon`.
-#[macro_export]
-macro_rules! rectangle {
-    ($ctx: tt {$($tt:tt)*}) => {
-        $crate::meta_dsl!($ctx [$crate::dsl::builders::ShapeBuilder] {
-            shape: $crate::widgets::Shapes::Rectangle,
-            $($tt)*
-        })
-    };
-}
-
-/// Construct a circle with `bevy_prototype_lyon`.
-#[macro_export]
-macro_rules! circle {
-    ($ctx: tt {$($tt:tt)*}) => {
-        $crate::meta_dsl!($ctx [$crate::dsl::builders::ShapeBuilder] {
-            shape: $crate::widgets::Shapes::Circle,
+            bevy_aoui::meta_dsl!($ctx [$crate::ShapeBuilder] {
             $($tt)*
         })
     };

@@ -1,7 +1,7 @@
 // This tries to be egui
 
 use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
-use bevy_aoui::{AoUIPlugin, widgets::drag::Draggable};
+use bevy_aoui::{AoUIPlugin, widgets::drag::Draggable, util::SigDrag};
 
 pub fn main() {
     App::new()
@@ -28,7 +28,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         direction: TopToBottom,
         hitbox: Rect(1),
         extra: Draggable::BOTH,
-        extra: recv.mark::<DragSignal>(),
+        extra: recv.mark::<SigDrag>(),
         child: rectangle! {
             z: -1,
             color: color!(darkblue),
@@ -42,7 +42,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 flags: EventFlags::Hover|EventFlags::Drag, 
                 icon: CursorIcon::Hand,
             },
-            extra: send.mark::<DragSignal>(),
+            extra: send.mark::<SigDrag>(),
         },
         child: textbox! {
             text: "Checkbox",

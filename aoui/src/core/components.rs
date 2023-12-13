@@ -295,6 +295,13 @@ impl Default for BuildTransform {
     }
 }
 
+
+/// Builds a `GlobalTransform` for `Mesh2d`, 
+/// this always uses `Anchor::Center` and converts dimension to scale.
+#[derive(Debug, Clone, Component, Default, Reflect)]
+pub struct BuildMeshTransform;
+
+
 /// Stores opacity of the widget, not used by default but
 /// can be used by implementors.
 #[derive(Debug, Clone, Component, Reflect)]
@@ -332,9 +339,4 @@ impl Default for Opacity {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
 pub struct OpacityWriter;
 
-/// Synchronize a rectangular 2D mesh to `RotatedRect`.
-/// 
-/// GlobalTransform should be set to identity.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
-pub struct OwnedRectangleMesh;
 

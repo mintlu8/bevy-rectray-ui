@@ -22,7 +22,7 @@ impl<T> DataTransfer for T where T: Debug + Clone + PartialEq + Send + Sync + 's
     }
 }
 
-/// A type safe dynamic object.
+/// A type erased dynamic object.
 #[derive(Debug)]
 pub struct Object(Option<Box<dyn DataTransfer>>);
 

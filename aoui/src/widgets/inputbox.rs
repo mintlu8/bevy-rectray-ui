@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use bevy::hierarchy::Children;
 use bevy::asset::{Handle, Assets};
 use bevy::input::{keyboard::KeyCode, Input};
@@ -8,7 +6,7 @@ use bevy::window::{Window, PrimaryWindow, ReceivedCharacter};
 use bevy::text::{Text, Font};
 use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
 use crate::{RotatedRect, Transform2D, Dimension, bundles::AoUITextBundle};
-use crate::util::{Sender, Receiver, Change, Submit};
+use crate::util::{Sender, Receiver, SigChange, SigSubmit, SigText};
 use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction};
 use ab_glyph::Font as FontTrait;
 
@@ -418,7 +416,7 @@ pub fn text_on_click_outside(
     }
 }
 pub fn inputbox_keyboard(
-    mut query: Query<(&mut InputBox, Option<&Sender<Change>>, Option<&Sender<Submit>>)>,
+    mut query: Query<(&mut InputBox, Option<&Sender<SigChange>>, Option<&Sender<SigSubmit>>)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {
@@ -494,41 +492,21 @@ pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &Dimension)>) {
     })
 }
 
-/// Component that sets text to strings polled from a signal.
-#[derive(Debug, Clone, Component)]
-pub struct SignalFormat<M>{
-    /// the formatting keyword is `{%}`
-    format_string: String,
-    p: PhantomData<M>,
-}
 
-
-impl<M> SignalFormat<M> {
-
-    /// Set text to strings polled from a signal.
-    pub const COPY: Self = Self {
-        format_string: String::new(),
-        p: PhantomData,
-    };
-    
-    /// Format with strings polled from a signal.
-    /// 
-    /// The format characters is `{%}`.
-    pub fn format(s: impl Into<String>) -> Self {
-        Self { 
-            format_string: s.into(), 
-            p: PhantomData 
-        }
+impl Receiver<SigText> {
+    /// Format, replace "{%}" with the incoming string signal.
+    pub fn format(self, string: impl Into<String>) -> Self {
+        let format_string = string.into();
+        self.map(move |s: String| format_string.replace("{%}", &s))
     }
 }
 
-pub fn format_signal<M: Send + Sync + 'static>(mut query: Query<(&SignalFormat<M>, &Receiver<M>, &mut Text)>) {
-    query.par_iter_mut().for_each(|(fmt, sig, mut text)| {
-        let Some(mut string) = sig.poll::<String>() else { return };
-        if !fmt.format_string.is_empty() {
-            string = fmt.format_string.replace("{%}", string.as_str());
-        }
-        let Some(section) = text.sections.first_mut() else {return}; 
+
+
+pub fn format_signal(mut query: Query<(&Receiver<SigText>, &mut Text)>) {
+    query.par_iter_mut().for_each(|(sig, mut text)| {
+        let Some(string) = sig.poll::<String>() else { return };
+        let Some(section) = text.sections.first_mut() else { return }; 
         section.value = string;
     })
 }

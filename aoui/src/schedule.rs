@@ -82,7 +82,6 @@ impl bevy::prelude::Plugin for CorePlugin {
                 sync_opacity_sprite,
                 sync_opacity_atlas,
                 sync_opacity_text,
-                build_mesh_2d,
             ).in_set(AoUIStoreOutputSet))
             .add_systems(PostUpdate, 
                 (

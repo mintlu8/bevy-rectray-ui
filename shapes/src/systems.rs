@@ -1,5 +1,5 @@
 use bevy::{prelude::{Component, Vec2}, reflect::Reflect, ecs::{query::Changed, system::Query}};
-use crate::{Transform2D, Dimension, Anchor};
+use bevy_aoui::{Transform2D, Dimension, Anchor};
 use bevy_prototype_lyon::prelude::{GeometryBuilder, Path};
 use bevy_prototype_lyon::shapes::*;
 
@@ -19,7 +19,7 @@ pub enum Shapes {
 
 /// AoUI controlled aspects of Shape.
 /// 
-/// Provides intemediate change detection.
+/// Provides intermediate change detection.
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct ShapeDimension {
     pub size: Vec2,

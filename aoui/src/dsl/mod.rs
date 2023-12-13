@@ -12,6 +12,7 @@ mod meta_dsl;
 mod context;
 mod shapes;
 mod mesh2d;
+mod atlas;
 
 #[doc(hidden)]
 pub use layouts::{SpanContainerNames, GridContainerNames};
@@ -19,7 +20,7 @@ pub use layouts::{SpanContainerNames, GridContainerNames};
 pub use util::{OneOrTwo, HandleOrString};
 
 pub mod prelude;
-pub use convert::DslInto;
+pub use convert::{DslFrom, DslInto};
 pub use context::get_layer;
 
 pub mod builders {
@@ -28,6 +29,7 @@ pub mod builders {
     widget_extension!(pub struct FrameBuilder {}, this, commands, assets, components: ());
     widget_extension!(pub struct SpriteBuilder: Sprite {}, this, commands, assets, components: ());
     widget_extension!(pub struct TextBoxBuilder: Text {}, this, commands, assets, components: ());
+    pub use super::atlas::AtlasBuilder;
 
     pub use super::layouts::{PaddingBuilder, SpanContainerBuilder, GridContainerBuilder};
     pub use super::widgets::{InputBoxBuilder, ButtonBuilder, ClippingFrameBuilder};

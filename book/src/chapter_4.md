@@ -96,8 +96,8 @@ pub fn system(mut commands: Commands) {
 ## Child and Extra
 
 The fields `child` and `extra` are special. They are both repeatable.
-`extra` inserts a bundle into the entity.
-`child` inserts an entity as child.
+`extra` inserts an `impl Bundle` into the entity.
+`child` inserts an `Entity` as child.
 
 Evaluation order between normal fields and `child`/`extra` is not guaranteed.
 

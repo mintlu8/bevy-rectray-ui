@@ -181,7 +181,7 @@ pub use core::*;
 #[doc(hidden)]
 pub use bevy;
 
-mod schedule;
+pub mod schedule;
 
 pub use schedule::CorePlugin;
 

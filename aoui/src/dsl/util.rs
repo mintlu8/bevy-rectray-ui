@@ -5,8 +5,9 @@ use bevy::math::Vec2;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit};
 use crate::{Size2, FontSize, layout::Alignment, layout::FlexDir};
 
-use crate::util::{Sender, Receiver};
+use crate::util::{Sender, Receiver, SignalMarker};
 
+use super::DslFrom;
 use super::convert::DslInto;
 
 /// Syntax for constructing a hitbox.
@@ -198,30 +199,6 @@ pub fn angle(f: impl DslInto<Vec2>) -> f32{
     f32::atan2(v.y, v.x)
 }
 
-impl DslInto<FontSize> for i32 {
-    fn dinto(self) -> FontSize {
-        FontSize::Pixels(self as f32)
-    }
-}
-
-impl DslInto<FontSize> for f32 {
-    fn dinto(self) -> FontSize {
-        FontSize::Pixels(self)
-    }
-}
-
-impl DslInto<FontSize> for (SizeUnit, f32) {
-    fn dinto(self) -> FontSize {
-        let (unit, value) = self;
-        match unit {
-            SizeUnit::Pixels => FontSize::Pixels(value),
-            SizeUnit::Em => FontSize::Ems(value),
-            SizeUnit::Rem => FontSize::Rems(value),
-            _ => panic!("Cannot set font size to parent dimension. Choose a different unit."),
-        }
-    }
-}
-
 /// Set font size by `px`.
 pub fn px(f: impl DslInto<f32>) -> (SizeUnit, f32) {
     (SizeUnit::Pixels, f.dinto())
@@ -248,15 +225,15 @@ pub fn percent(f: impl DslInto<f32>) -> FontSize {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct OneOrTwo<T>(pub T);
 
-impl<T> DslInto<OneOrTwo<T>> for T {
-    fn dinto(self) -> OneOrTwo<T> {
-        OneOrTwo(self)
+impl<T> DslFrom<T> for OneOrTwo<T> {
+    fn dfrom(value: T) -> Self {
+        OneOrTwo(value)
     }
 }
 
-impl<T> DslInto<OneOrTwo<[T; 2]>> for T where T : Clone {
-    fn dinto(self) -> OneOrTwo<[T; 2]> {
-        OneOrTwo([self.clone(), self])
+impl<T> DslFrom<T> for OneOrTwo<[T; 2]> where T: Clone {
+    fn dfrom(value: T) -> Self {
+        OneOrTwo([value.clone(), value])
     }
 }
 
@@ -446,13 +423,13 @@ pub enum OptionX<T> {
     None,
 }
 
-impl<T> DslInto<OptionX<Sender<T>>> for Sender<()>{
+impl<T: SignalMarker> DslInto<OptionX<Sender<T>>> for Sender<()>{
     fn dinto(self) -> OptionX<Sender<T>> {
         OptionX::Some(self.mark::<T>())
     }
 }
 
-impl<T> DslInto<OptionX<Receiver<T>>> for Receiver<()>{
+impl<T: SignalMarker> DslInto<OptionX<Receiver<T>>> for Receiver<()>{
     fn dinto(self) -> OptionX<Receiver<T>> {
         OptionX::Some(self.mark::<T>())
     }
@@ -522,5 +499,48 @@ impl<T: Asset> DslInto<HandleOrString<T>> for &String {
 impl<'t, T: Asset> DslInto<HandleOrString<T>> for Cow<'t, str> {
     fn dinto(self) -> HandleOrString<T> {
         HandleOrString::String(self.into_owned())
+    }
+}
+
+#[doc(hidden)]
+#[derive(Debug)]
+pub enum HandleOrAsset<T: Asset>{
+    Handle(Handle<T>),
+    Asset(T),
+}
+
+impl<T: Asset> HandleOrAsset<T> {
+    pub fn get(self, assets: Option<&AssetServer>) -> Handle<T>{
+        match self {
+            HandleOrAsset::Handle(handle) => handle,
+            HandleOrAsset::Asset(asset) => {
+                assets.expect("Please pass in the AssetServer.")
+                    .add(asset)
+            },
+        }
+    }
+}
+
+impl<T: Asset> DslFrom<Handle<T>> for Option<HandleOrAsset<T>>{
+    fn dfrom(value: Handle<T>) -> Self {
+        Some(HandleOrAsset::Handle(value))
+    }
+}
+
+impl<T: Asset> DslFrom<&Handle<T>> for Option<HandleOrAsset<T>>{
+    fn dfrom(value: &Handle<T>) -> Self {
+        Some(HandleOrAsset::Handle(value.clone()))
+    }
+}
+
+impl<T: Asset> DslFrom<T> for Option<HandleOrAsset<T>>{
+    fn dfrom(value: T) -> Self {
+        Some(HandleOrAsset::Asset(value))
+    }
+}
+
+impl<T: Asset> DslFrom<&T> for Option<HandleOrAsset<T>> where T: Clone{
+    fn dfrom(value: &T) -> Self {
+        Some(HandleOrAsset::Asset(value.clone()))
     }
 }

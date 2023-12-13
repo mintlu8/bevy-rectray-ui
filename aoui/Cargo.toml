@@ -14,7 +14,7 @@ A rectangular anchor-offset based 2D and UI solution for the bevy engine.
 keywords = ["bevy", "ui", "widgets"]
 
 [dependencies]
-bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite", "bevy_text"] }
+bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite", "bevy_text", "trace"] }
 downcast-rs = "^1.2"
 float_next_after = "^1.0"
 itertools = "^0.11"

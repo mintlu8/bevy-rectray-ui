@@ -11,7 +11,7 @@ use crate::events::EventFlags;
 use crate::widgets::scroll::Scrolling;
 use crate::widgets::scrollframe::ClippingBundle;
 use crate::widget_extension;
-use crate::util::{Submit, Sender, Change};
+use crate::util::{SigSubmit, Sender, SigChange};
 use crate::widgets::TextColor;
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea, InputBoxText};
 
@@ -26,8 +26,8 @@ widget_extension!(
         pub color: Option<Color>,    
         pub cursor_bar: Option<Entity>,
         pub cursor_area: Option<Entity>,
-        pub change: OptionX<Sender<Change>>,
-        pub submit: OptionX<Sender<Submit>>,
+        pub change: OptionX<Sender<SigChange>>,
+        pub submit: OptionX<Sender<SigSubmit>>,
     },
     this, commands, assets,
     components: (
@@ -62,7 +62,7 @@ macro_rules! inputbox {
 widget_extension!(
     pub struct ButtonBuilder {
         pub cursor: Option<CursorIcon>,
-        pub signal: OptionX<Sender<Submit>>,
+        pub signal: OptionX<Sender<SigSubmit>>,
     },
     this, commands, assets,
     components: (

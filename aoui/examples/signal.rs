@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_aoui::{AoUIPlugin, widgets::{CursorDefault, inputbox::SignalFormat}};
+use bevy_aoui::{AoUIPlugin, widgets::CursorDefault, util::SigText};
 
 
 pub fn main() {
@@ -49,31 +49,27 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         text: "This is a receiver.",
         offset: [-200, 0],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: SignalFormat::<Submit>::COPY,
-        extra: recv_s1.mark::<Submit>(),
+        extra: recv_s1.mark::<SigText>(),
     });
 
     textbox!(commands {
         text: "This is a formatter.",
         offset: [-200, -200],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: SignalFormat::<Submit>::format("Received string \"{%}\"!"),
-        extra: recv_s2.mark::<Submit>(),
+        extra: recv_s2.mark::<SigText>().format("Received string \"{%}\"!"),
     });
 
     textbox!(commands {
         text: "This is a change detector.",
         offset: [200, 0],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: SignalFormat::<Change>::COPY,
-        extra: recv_c1.mark::<Change>(),
+        extra: recv_c1.mark::<SigText>(),
     });
 
     textbox!(commands {
         text: "This is a change detecting formatter.",
         offset: [200, -200],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: SignalFormat::<Change>::format("\"{%}\"!"),
-        extra: recv_c2.mark::<Change>(),
+        extra: recv_c2.mark::<SigText>().format("Received string \"{%}\"!"),
     });
 }
