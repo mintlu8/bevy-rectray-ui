@@ -119,7 +119,7 @@ pub fn sync_opacity_text(mut query: Query<(&Opacity, &mut Text), With<OpacityWri
 /// Copy opacity as sprite alpha.
 pub fn sync_opacity_sprite(mut query: Query<(&Opacity, &mut Sprite), With<OpacityWriter>>) {
     query.par_iter_mut().for_each(|(opacity, mut sprite)| {
-        sprite.color.set_a(opacity.computed);
+        sprite.color.set_a(dbg!(opacity.computed));
     })
 }
 

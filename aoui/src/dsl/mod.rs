@@ -21,7 +21,7 @@ pub use util::{OneOrTwo, HandleOrString};
 
 pub mod prelude;
 pub use convert::{DslFrom, DslInto};
-pub use context::get_layer;
+pub use context::{get_layer, is_using_opacity};
 
 pub mod builders {
     use crate::widget_extension;

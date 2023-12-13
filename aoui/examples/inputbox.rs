@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use bevy_aoui::AoUIPlugin;
-use bevy_aoui::widgets::CursorDefault;
+use bevy_aoui::{AoUIPlugin, WorldExtension};
 
 pub fn main() {
     App::new()
@@ -12,7 +11,7 @@ pub fn main() {
             ..Default::default()
         }))
         .add_systems(Startup, init)
-        .init_resource::<CursorDefault>()
+        .register_cursor_default(CursorIcon::Arrow)
         .add_plugins(AoUIPlugin)
         .run();
 }

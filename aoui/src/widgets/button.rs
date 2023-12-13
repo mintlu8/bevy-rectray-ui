@@ -2,9 +2,9 @@ use std::{sync::{Mutex, Arc}, ops::Deref};
 
 use bevy::{render::view::Visibility, window::{Window, PrimaryWindow, CursorIcon}, hierarchy::Children};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
-use crate::{Opacity, util::{Object, SignalMarker}, dsl::prelude::SigSubmit};
+use crate::{Opacity, signals::{Object, SignalMarker}, dsl::prelude::{SigSubmit, SigChange}};
 
-use crate::{events::{EventFlags, CursorFocus, CursorAction}, util::DataTransfer, dsl::prelude::Interpolate, util::Sender};
+use crate::{events::{EventFlags, CursorFocus, CursorAction}, signals::DataTransfer, dsl::prelude::Interpolate, signals::Sender};
 
 /// Set cursor if [`CursorFocus`] is some [`EventFlags`].
 ///
@@ -49,57 +49,79 @@ pub fn event_conditional_visibility(mut query: Query<(&DisplayIf<EventFlags>, Op
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component)]
 pub struct Button;
 
-/// State of a `CheckButton`, when used in [`DisplayIf`], also checks
-/// state of a `RadioButton`
+/// Component for `CheckButton`, stores its state.
+/// 
+/// For signals, sends `true` or `false` on `SigChange`, 
+/// `Payload` or `()` on `SigSubmit`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component)]
-pub enum CheckButtonState{
+pub enum CheckButton{
     #[default]
     Unchecked,
     Checked,
 }
 
-impl CheckButtonState {
+/// State of a CheckButton or a RadioButton, 
+/// propagated to children and can be used in `DisplayIf`
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
+pub enum CheckButtonState{
+    Unchecked,
+    Checked,
+}
+
+impl From<bool> for CheckButtonState{
+    fn from(value: bool) -> Self {
+        match value {
+            true => Self::Checked,
+            false => Self::Unchecked,
+        }
+    }
+}
+
+impl CheckButton {
     pub fn get(&self) -> bool {
         match self {
-            CheckButtonState::Unchecked => false,
-            CheckButtonState::Checked => true,
+            CheckButton::Unchecked => false,
+            CheckButton::Checked => true,
         }
     }
 
     pub fn rev(&mut self) -> bool {
         match self {
-            CheckButtonState::Unchecked => {
-                *self = CheckButtonState::Checked;
+            CheckButton::Unchecked => {
+                *self = CheckButton::Checked;
                 true
             },
-            CheckButtonState::Checked => {
-                *self = CheckButtonState::Unchecked;
+            CheckButton::Checked => {
+                *self = CheckButton::Unchecked;
                 false
             },
         }
     }
 }
 
-impl From<bool> for CheckButtonState {
+impl From<bool> for CheckButton {
     fn from(value: bool) -> Self {
         match value {
-            true => CheckButtonState::Checked,
-            false => CheckButtonState::Unchecked,
+            true => CheckButton::Checked,
+            false => CheckButton::Unchecked,
         }
     }
 }
-
+/// Component for `CheckButton`, contains the shared state.
+/// 
+/// Individual value is set with the `Payload` component.
+/// `Payload` is sent through the `Submit` event.
 #[derive(Debug, Clone, Component)]
-pub struct RadioButtonState(Arc<Mutex<Object>>);
+pub struct RadioButton(Arc<Mutex<Object>>);
 
-impl RadioButtonState {
+impl RadioButton {
     pub fn set(&self, payload: &Payload) {
         let mut lock = self.0.lock().unwrap();
         *lock = payload.0.clone()
     }
 }
 
-impl PartialEq<Payload> for RadioButtonState {
+impl PartialEq<Payload> for RadioButton {
     fn eq(&self, other: &Payload) -> bool {
         let lock = self.0.lock().unwrap();
         lock.deref() == &other.0
@@ -120,11 +142,15 @@ pub fn button_on_click(
 }
 
 pub fn check_button_on_click(
-    mut query: Query<(&CursorAction, &mut CheckButtonState, Option<&Sender<SigSubmit>>, Option<&Payload>)>
+    mut query: Query<(&CursorAction, &mut CheckButton, Option<&Sender<SigChange>>, Option<&Sender<SigSubmit>>, Option<&Payload>)>
 ) {
-    for (action, mut state, submit, payload) in query.iter_mut() {
+    for (action, mut state, change, submit, payload) in query.iter_mut() {
         if !action.is(EventFlags::Click) { continue }
-        if !state.rev() {continue;}
+        let state = state.rev();
+        if let Some(signal) = change {
+            signal.send(state)
+        }
+        if state {continue;}
         if let Some(signal) = submit {
             if let Some(payload) = payload {
                 payload.send_to(signal)
@@ -136,7 +162,7 @@ pub fn check_button_on_click(
 }
 
 pub fn radio_button_on_click(
-    mut query: Query<(&CursorAction, &RadioButtonState, &Payload, Option<&Sender<SigSubmit>>)>
+    mut query: Query<(&CursorAction, &RadioButton, &Payload, Option<&Sender<SigSubmit>>)>
 ) {
     for (action, state, payload, submit) in query.iter_mut() {
         if !action.is(EventFlags::Click) { continue }
@@ -150,31 +176,6 @@ pub fn radio_button_on_click(
 pub fn check_conditional_visibility(mut query: Query<(&DisplayIf<CheckButtonState>, &CheckButtonState, &mut Visibility, Option<&mut Interpolate<Opacity>>)>){
     query.par_iter_mut().for_each(|(display_if, state, mut vis, mut opacity)| {
         if &display_if.0 == state {
-            if let Some(opacity) = opacity.as_mut() {
-                opacity.interpolate_to_or_reverse(1.0);
-            } else {
-                *vis = Visibility::Inherited;
-            }
-        } else {
-            if let Some(opacity) = opacity.as_mut() {
-                opacity.interpolate_to_or_reverse(0.0);
-            } else {
-                *vis = Visibility::Hidden;
-            }
-        }
-    })
-}
-
-pub fn radio_conditional_visibility(
-    mut query: Query<(&DisplayIf<CheckButtonState>, 
-    &RadioButtonState,
-    &Payload,
-    &mut Visibility, 
-    Option<&mut Interpolate<Opacity>>)>
-){
-    query.par_iter_mut().for_each(|(display_if, state, payload, mut vis, mut opacity)| {
-        let state = state == payload;
-        if display_if.0 == state.into() {
             if let Some(opacity) = opacity.as_mut() {
                 opacity.interpolate_to_or_reverse(1.0);
             } else {
@@ -230,6 +231,7 @@ pub struct PropagateFocus;
 pub fn propagate_focus(mut commands: Commands, 
     query1: Query<(&CursorFocus, &Children), With<PropagateFocus>>, 
     query2: Query<(&CursorAction, &Children), With<PropagateFocus>>,
+    query3: Query<(&CheckButton, &Children), With<PropagateFocus>>,
 ) {
     for (focus, children) in query1.iter() {
         for child in children {
@@ -237,6 +239,11 @@ pub fn propagate_focus(mut commands: Commands,
         }
     }
     for (focus, children) in query2.iter() {
+        for child in children {
+            commands.entity(*child).insert(*focus);
+        }
+    }
+    for (focus, children) in query3.iter() {
         for child in children {
             commands.entity(*child).insert(*focus);
         }

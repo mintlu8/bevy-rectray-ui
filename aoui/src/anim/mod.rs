@@ -9,9 +9,9 @@ pub struct InterpolationUpdateSet;
 
 pub use interpolation::{Interpolate, Offset, Rotation, Scale};
 
-pub(crate) struct AoUIAnimationPlugin;
+pub(crate) struct AnimationPlugin;
 
-impl Plugin for AoUIAnimationPlugin {
+impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .configure_sets(Update, InterpolationSet)

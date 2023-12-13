@@ -5,10 +5,8 @@ pub mod drag;
 pub mod richtext;
 pub mod scroll;
 pub mod scrollframe;
-mod button;
+pub mod button;
 use bevy::{render::color::Color, ecs::component::Component};
-
-pub use button::{CursorDefault, PropagateFocus, DisplayIf, SetCursor};
 
 #[derive(Debug, Clone, Copy, Component)]
 pub struct TextColor(pub Color);

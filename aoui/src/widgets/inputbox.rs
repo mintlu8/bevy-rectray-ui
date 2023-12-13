@@ -6,7 +6,7 @@ use bevy::window::{Window, PrimaryWindow, ReceivedCharacter};
 use bevy::text::{Text, Font};
 use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
 use crate::{RotatedRect, Transform2D, Dimension, bundles::AoUITextBundle};
-use crate::util::{Sender, Receiver, SigChange, SigSubmit, SigText};
+use crate::signals::{Sender, Receiver, types::{SigChange, SigSubmit, SigText}};
 use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction};
 use ab_glyph::Font as FontTrait;
 
@@ -499,14 +499,4 @@ impl Receiver<SigText> {
         let format_string = string.into();
         self.map(move |s: String| format_string.replace("{%}", &s))
     }
-}
-
-
-
-pub fn format_signal(mut query: Query<(&Receiver<SigText>, &mut Text)>) {
-    query.par_iter_mut().for_each(|(sig, mut text)| {
-        let Some(string) = sig.poll::<String>() else { return };
-        let Some(section) = text.sections.first_mut() else { return }; 
-        section.value = string;
-    })
 }

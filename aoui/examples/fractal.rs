@@ -3,7 +3,7 @@
 use std::f32::consts::PI;
 
 use bevy_aoui::{*, bundles::*};
-use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
+use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_egui::{EguiContexts, egui::{self, Slider}, EguiPlugin};
 pub fn main() {
     App::new()
@@ -14,7 +14,6 @@ pub fn main() {
             }),
             ..Default::default()
         }))
-        .add_plugins(LogDiagnosticsPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
         .add_systems(Update, egui_window)
@@ -56,8 +55,17 @@ pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, enitity: 
 }
 
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+    use bevy_aoui::dsl::prelude::*;
     let texture = assets.load::<Image>("square.png");
     commands.spawn(Camera2dBundle::default());
+
+    textbox!(commands {
+        anchor: TopRight,
+        text: "FPS: 0.00",
+        color: color!(gold),
+        z: 100,
+        extra: sig_fps().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x)),
+    });
 
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
@@ -76,7 +84,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 }
 
 pub fn egui_window(mut ctx: EguiContexts, 
-    mut query: Query<&mut Transform2D>,
+    mut query: Query<&mut Transform2D, Without<Text>>,
 ) {
     let sp = query.iter().next().unwrap();
     let mut rotation = sp.rotation;

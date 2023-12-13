@@ -173,15 +173,15 @@ pub mod dsl;
 pub mod widgets;
 pub mod events;
 pub mod anim;
-pub mod util;
-
-pub use util::WorldExtension;
+pub mod signals;
 pub use core::*;
 
 #[doc(hidden)]
 pub use bevy;
 
 pub mod schedule;
+mod extension;
+pub use extension::WorldExtension;
 
 pub use schedule::CorePlugin;
 
@@ -192,8 +192,9 @@ impl bevy::prelude::Plugin for AoUIPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .add_plugins(schedule::CorePlugin)
-            .add_plugins(events::AoUICursorEventsPlugin)
-            .add_plugins(anim::AoUIAnimationPlugin)
+            .add_plugins(signals::SignalsPlugin)
+            .add_plugins(events::CursorEventsPlugin)
+            .add_plugins(anim::AnimationPlugin)
             .add_plugins(widgets::schedule::WidgetsPlugin)
         ;
     }

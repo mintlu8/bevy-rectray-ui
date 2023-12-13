@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::{AoUIPlugin, widgets::scroll::{Scrolling, ScrollDirection}};
 
 pub fn main() {
@@ -10,6 +10,7 @@ pub fn main() {
             }),
             ..Default::default()
         }))
+        .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
         .add_plugins(AoUIPlugin)
         // classic macos stuff
@@ -21,6 +22,23 @@ pub fn main() {
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
+
+    textbox!(commands {
+        anchor: TopRight,
+        text: "FPS: 0.00",
+        color: color!(gold),
+        extra: sig_fps().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
+    });
+
+    let (send1, recv1) = signal();
+
+    textbox! (commands {
+        offset: [-400, 200],
+        color: color!(gold),
+        text: "Scroll this! =>",
+        extra: recv1.mark::<SigText>().map(|x: f32| format!("This has value {:.2}! =>", x))
+    });
+    
     sprite! (commands {
         dimension: [200, 60],
         offset: [-200, 200],
@@ -28,6 +46,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         sprite: assets.load("square.png"),
         extra: EventFlags::MouseWheel,
         extra: Scrolling::X,
+        extra: send1.mark::<SigChange>(),
         child: frame! {
             dimension: size2!([100%, 100%]),
             child: sprite! {
@@ -131,6 +150,15 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
 
+    let (send2, recv2) = signal();
+
+    textbox! (commands {
+        offset: [-400, -200],
+        color: color!(gold),
+        text: "Scroll this! =>",
+        extra: recv2.mark::<SigText>().map(|x: f32| format!("This has value {:.2}! =>", x))
+    });
+
     sprite! (commands {
         dimension: [60, 200],
         offset: [-200, -200],
@@ -138,6 +166,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         sprite: assets.load("square.png"),
         extra: EventFlags::MouseWheel,
         extra: Scrolling::Y,
+        extra: send2.mark::<SigChange>(),
         child: frame! {
             dimension: size2!([100%, 100%]),
             child: sprite! {
@@ -147,6 +176,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             }
         }
     });
+
     sprite! (commands {
         dimension: [100, 100],
         offset: [0, -200],
@@ -163,6 +193,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             }
         }
     });
+
     sprite! (commands {
         dimension: [100, 60],
         offset: [200, -200],

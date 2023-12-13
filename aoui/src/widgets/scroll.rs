@@ -1,6 +1,6 @@
 
 use bevy::{ecs::{system::{Query, Res, Resource}, component::Component, query::Without}, hierarchy::Children, math::Vec2, log::warn};
-use crate::{Dimension, Transform2D, Anchor, AoUIREM, dsl::prelude::{Sender, Receiver, SigChange}, util::SigScroll};
+use crate::{Dimension, Transform2D, Anchor, AoUIREM, dsl::prelude::{Sender, Receiver, SigChange}, signals::types::SigScroll};
 
 use crate::events::MouseWheelAction;
 

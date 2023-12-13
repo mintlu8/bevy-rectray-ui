@@ -1,8 +1,5 @@
 use bevy::{window::CursorIcon, app::{Last, App}, ecs::{world::World, schedule::IntoSystemConfigs}};
-use crate::{widgets::CursorDefault, schedule::AoUICleanupSet};
-use super::{signals, SignalMarker};
-
-
+use crate::{widgets::button::CursorDefault, schedule::AoUICleanupSet, signals::{SignalMarker, signal_cleanup}};
 
 pub trait WorldExtension {
     fn register_signal<T: SignalMarker>(&mut self) -> &mut Self;
@@ -12,7 +9,7 @@ pub trait WorldExtension {
 impl WorldExtension for World {
     fn register_signal<T: SignalMarker>(&mut self) -> &mut Self {
         self.schedule_scope(Last, |_, s| {
-            s.add_systems(signals::signal_cleanup::<T>.in_set(AoUICleanupSet));
+            s.add_systems(signal_cleanup::<T>.in_set(AoUICleanupSet));
         });
         self
     }
@@ -25,7 +22,7 @@ impl WorldExtension for World {
 
 impl WorldExtension for App {
     fn register_signal<T: SignalMarker>(&mut self) -> &mut Self {
-        self.add_systems(Last, signals::signal_cleanup::<T>.in_set(AoUICleanupSet));
+        self.add_systems(Last, signal_cleanup::<T>.in_set(AoUICleanupSet));
         self
     }
 

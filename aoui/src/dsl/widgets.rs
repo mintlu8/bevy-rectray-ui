@@ -11,7 +11,8 @@ use crate::events::EventFlags;
 use crate::widgets::scroll::Scrolling;
 use crate::widgets::scrollframe::ClippingBundle;
 use crate::widget_extension;
-use crate::util::{SigSubmit, Sender, SigChange};
+use crate::signals::Sender;
+use crate::signals::types::{SigSubmit, SigChange};
 use crate::widgets::TextColor;
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea, InputBoxText};
 
@@ -73,6 +74,7 @@ widget_extension!(
         },
         OptionX::Some(signal) = this.signal => signal,
         true => this.event.unwrap_or(EventFlags::Click) | EventFlags::Click | EventFlags::Hover,
+        None = this.hitbox => Hitbox::FULL, 
         Some(cursor) = this.cursor => SetCursor {
             flags: EventFlags::Hover|EventFlags::Pressed,
             icon: cursor,
@@ -117,6 +119,8 @@ widget_extension!(
         /// # */
         /// ```
         pub container: Option<Entity>,
+        /// Sets the viewport of the camera, note default is `Inherit`, which is dynamic.
+        pub camera_dimension: Option<Size2>,
     }
 );
 
@@ -147,29 +151,34 @@ impl Widget for ClippingFrameBuilder {
             self.layer.expect("Please specify a render layer.")
         );
         let camera = commands.spawn((
-            AoUIBundle::empty(Anchor::Center, Size2::FULL),
+            AoUIBundle::empty(Anchor::Center, self.camera_dimension.unwrap_or(Size2::FULL)),
             clip
         )).id();
-        let mut render_target = commands.spawn((
-            AoUISpriteBundle {
-                dimension: Dimension::INHERIT,
-                texture: image,
-                ..Default::default()
-            },
-        ));
-        if let Some(scroll) = self.scroll {
-            render_target.insert(EventFlags::MouseWheel|self.event.unwrap_or(EventFlags::MouseWheel));
-            render_target.insert(scroll);
-            render_target.insert(self.hitbox.unwrap_or(Hitbox::FULL));
-            render_target.add_child(self.container.expect("Scrolling requires `container` to be set."));
-        };
+        let mut render_target = commands.spawn(AoUISpriteBundle {
+            dimension: Dimension::INHERIT,
+            texture: image,
+            ..Default::default()
+        });
         if let Some(layer) = self.original_layer {
             render_target.insert(layer);
         } else if let Some(layer) = get_layer(){
             render_target.insert(RenderLayers::layer(layer.get()));
         }
+        let container = self.container.expect("Scrolling requires `container` to be set.");
         let render_target = render_target.id();
-        commands.entity(entity).push_children(&[camera, render_target]);
+        if let Some(scroll) = self.scroll {
+            let frame = commands.spawn((AoUIBundle {
+                    dimension: Dimension::INHERIT,
+                    ..Default::default()
+                },
+                EventFlags::MouseWheel,
+                scroll,
+                Hitbox::FULL,
+            )).add_child(container).id();
+            commands.entity(entity).push_children(&[camera, render_target, frame]);
+        } else {
+            commands.entity(entity).push_children(&[camera, render_target, container]);
+        }
         entity
     }
 }

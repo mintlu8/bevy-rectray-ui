@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::{util::{SigSubmit, SigChange, SigDrag, SigScroll}, schedule::{AoUIEventSet, AoUICleanupSet}, WorldExtension};
+use crate::schedule::{AoUIEventSet, AoUICleanupSet};
 
 mod systems;
 mod state;
@@ -24,9 +24,9 @@ pub struct AoUICamera;
 
 
 /// Plugin for the event pipeline.
-pub struct AoUICursorEventsPlugin;
+pub struct CursorEventsPlugin;
 
-impl bevy::prelude::Plugin for AoUICursorEventsPlugin {
+impl bevy::prelude::Plugin for CursorEventsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.init_resource::<CursorState>()
             .init_resource::<DoubleClickThreshold>()
@@ -56,11 +56,6 @@ impl bevy::prelude::Plugin for AoUICursorEventsPlugin {
                 call_oneshot::<RightDrag>,
                 lose_focus_detection,
             ))
-            .register_signal::<()>()
-            .register_signal::<SigSubmit>()
-            .register_signal::<SigChange>()
-            .register_signal::<SigDrag>()
-            .register_signal::<SigScroll>()
         ;
     }
 }

@@ -444,6 +444,9 @@ macro_rules! widget_extension2 {
                             base.insert($crate::bevy::render::view::RenderLayers::layer(layer.get()));
                         }
                     }
+                    if $crate::dsl::is_using_opacity() {
+                        base.insert($crate::OpacityWriter);
+                    }
                     $(if $if {
                         base.insert($comp2);
                     })*

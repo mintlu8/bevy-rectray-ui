@@ -5,7 +5,7 @@ use bevy::math::Vec2;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit};
 use crate::{Size2, FontSize, layout::Alignment, layout::FlexDir};
 
-use crate::util::{Sender, Receiver, SignalMarker};
+use crate::signals::{Sender, Receiver, SignalMarker};
 
 use super::DslFrom;
 use super::convert::DslInto;
