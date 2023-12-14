@@ -8,6 +8,7 @@ pub mod scrollframe;
 pub mod button;
 use bevy::{render::color::Color, ecs::component::Component};
 
+
 #[derive(Debug, Clone, Copy, Component)]
 pub struct TextColor(pub Color);
 

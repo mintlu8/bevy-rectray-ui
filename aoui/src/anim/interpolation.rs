@@ -2,8 +2,10 @@ use std::ops::{Add, Mul};
 
 use bevy::{math::{Vec2, Vec4}, render::color::Color, ecs::{component::Component, system::{Query, Res}}, time::Time, sprite::Sprite, text::Text};
 use crate::{Transform2D, Dimension, Opacity};
-use interpolation::{EaseFunction, Ease};
+use interpolation::EaseFunction;
 use smallvec::SmallVec;
+
+use super::{Easing, Playback};
 
 #[derive(Debug, Clone, Component)]
 #[component(storage="SparseSet")]
@@ -11,7 +13,7 @@ use smallvec::SmallVec;
 /// A smart tweener that manages an external value.
 pub struct Interpolate<T: Interpolation>{
     /// Easing function of the tweener.
-    curve: Option<EaseFunction>,
+    curve: Easing,
     /// Interpolates through these keyframes.
     /// 
     /// Invariant: this field must have at least 1 value.
@@ -20,7 +22,7 @@ pub struct Interpolate<T: Interpolation>{
     current: f32,
     time: f32,
     default_time: f32,
-    repeat: bool,
+    playback: Playback,
 }
 
 pub trait IntoInterpolate<T: Interpolation> {
@@ -52,56 +54,66 @@ impl<T: Interpolation> IntoInterpolate<T> for SmallVec<[(T::Data, f32); 1]> {
 
 impl<T: Interpolation> Interpolate<T> {
 
-    pub const fn linear(position: T::Data, time: f32) -> Self {
+    pub const fn new(curve: Easing, position: T::Data, time: f32) -> Self {
         Interpolate {
-            curve: None,
+            curve,
             time: 0.0,
             default_time: time,
             range: SmallVec::from_const([(position, 0.0)]),
             current: 0.0,
-            repeat: false,
+            playback: Playback::Once,
         }
     }
 
     pub const fn ease(curve: EaseFunction, position: T::Data, time: f32) -> Self {
         Interpolate {
-            curve: Some(curve),
+            curve: Easing::Ease(curve),
             time: 0.0,
             default_time: time,
             range: SmallVec::from_const([(position, 0.0)]),
             current: 0.0,
-            repeat: false,
+            playback: Playback::Once,
         }
     }
 
-    pub fn repeat(curve: Option<EaseFunction>, positions: impl IntoInterpolate<T>, time: f32) -> Self {
+    pub fn looping(curve: Easing, positions: impl IntoInterpolate<T>, time: f32) -> Self {
         Interpolate {
             curve,
             time,
             default_time: time,
             range: positions.into_interpolate(),
             current: 0.0,
-            repeat: true,
+            playback: Playback::Loop,
+        }
+    }
+
+    pub fn repeat(curve: Easing, positions: impl IntoInterpolate<T>, time: f32) -> Self {
+        Interpolate {
+            curve,
+            time,
+            default_time: time,
+            range: positions.into_interpolate(),
+            current: 0.0,
+            playback: Playback::Repeat,
         }
     }
 
     pub fn get(&self) -> T::Data {
-        if self.range.len() == 1 || self.time <= 0.0 || (!self.repeat && self.current >= self.time) {
+        if self.range.len() == 1 || self.time <= 0.0 || (self.playback.is_once() && self.current >= self.time) {
             return self.range.last().expect("Interpolate has no value, this is a bug.").0;
         }
         if self.current <= 0.0 {
             return self.range.first().unwrap().0;
         }
-        let p = if self.repeat {
-            let v = (self.current / self.time).rem_euclid(2.0);
-            1.0 - (1.0 - v).abs()
-        } else {
-            (self.current / self.time).clamp(0.0, 1.0)
+        let t = match self.playback {
+            Playback::Once => (self.current / self.time).clamp(0.0, 1.0),
+            Playback::Loop => {
+                let v = (self.current / self.time).rem_euclid(2.0);
+                1.0 - (1.0 - v).abs()
+            },
+            Playback::Repeat => (self.current / self.time).rem_euclid(1.0),
         };
-        let p = match self.curve {
-            Some(curve) => p.calc(curve),
-            None => p,
-        };
+        let p = self.curve.get(t);
         let (mut i0, mut f0) = self.range[0];
         for (i1, f1) in self.range.iter().skip(1).copied() {
             if p < f1 {

@@ -32,7 +32,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         extra: sig_fps().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
     });
     
-    let (send1, recv1, recv2, recv3) = signal();
+    let (send1, recv11, recv12, recv13) = signal();
     let (send2, recv21, recv22, recv23) = signal();
 
     clipping_frame!((commands, assets) {
@@ -56,8 +56,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     extra: send1.mark::<SigChange>(),
                     child: textbox! {
                         text: "v",
-                        extra: recv3.mark::<SigRotation>().map(|x: bool| if x {PI} else {0.0}),
-                        extra: Interpolate::<Rotation>::ease(EaseFunction::CubicInOut, 0.0, 0.5),
+                        extra: recv13.mark::<SigRotation>().map(|x: bool| if x {PI} else {0.0}),
+                        extra: interpolate! (Rotation CubicInOut 0.5 default 0.0)
                     },
                 }
             },
@@ -67,12 +67,12 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 buffer: [800, 800],
                 scroll: Scrolling::Y,
                 layer: 2,
-                extra: recv1.mark::<SigDimensionY>().map(|x: bool| if x {400.0f32} else {0.0f32}),
-                extra: Interpolate::<Dimension>::ease(EaseFunction::CubicInOut, Vec2::new(400.0, 400.0), 0.5),
+                extra: recv11.mark::<SigDimensionY>().map(|x: bool| if x {400.0f32} else {0.0f32}),
+                extra: interpolate! (Dimension CubicInOut 0.5 default [400, 400]),
                 container: with_layer(2, ||frame!( commands{
                     dimension: [400, 400],
-                    extra: recv2.mark::<SigOpacity>().map(|x: bool| if x {1.0f32} else {0.0f32}),
-                    extra: Interpolate::<Opacity>::ease(EaseFunction::CubicInOut, 1.0, 0.5),
+                    extra: recv12.mark::<SigOpacity>().map(|x: bool| if x {1.0f32} else {0.0f32}),
+                    extra: interpolate! (Opacity CubicInOut 0.5 default 1.0),
                     child: textbox! {
                         anchor: TopLeft,
                         bounds: [390, 999999],
@@ -101,7 +101,7 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
                     child: textbox! {
                         text: "v",
                         extra: recv23.mark::<SigRotation>().map(|x: bool| if x {PI} else {0.0}),
-                        extra: Interpolate::<Rotation>::ease(EaseFunction::CubicInOut, 0.0, 0.5),
+                        extra: interpolate! (Rotation CubicInOut 0.5 default 0.0),
                     },
                 }
             },

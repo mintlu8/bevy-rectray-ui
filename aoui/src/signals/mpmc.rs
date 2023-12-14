@@ -78,6 +78,20 @@ impl<M: SignalMarker> Sender<M> {
         lock.set(item);
     }
 
+    pub fn send_object(&self, item: Object) {
+        let mut lock = self.signal.0.write().unwrap();
+        *lock = item;
+    }
+
+    /// Clone, expect removes the mapping function.
+    pub fn fork(&self) -> Self {
+        Self { 
+            signal: self.signal.clone(), 
+            map: None, 
+            p: PhantomData 
+        }
+    }
+
     /// Sends `()`
     pub(crate) fn send_empty(&self) {
         let mut lock = self.signal.0.write().unwrap();

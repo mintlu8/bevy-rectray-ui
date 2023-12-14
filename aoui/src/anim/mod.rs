@@ -1,6 +1,41 @@
 use bevy::{ecs::schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, app::{Update, Plugin}};
 
+use ::interpolation::Ease;
+pub use ::interpolation::EaseFunction;
 mod interpolation;
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub enum Easing {
+    #[default]
+    Linear,
+    Ease(EaseFunction),
+    Bezier([f32; 4]),
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub enum Playback {
+    #[default]
+    Once,
+    Loop,
+    Repeat,
+}
+
+impl Playback {
+    pub fn is_once(&self) -> bool {
+        self == &Playback::Once
+    }
+}
+
+impl Easing {
+    pub fn get(&self, t: f32) -> f32 {
+        let t = t.clamp(0.0, 1.0);
+        match self {
+            Easing::Linear => t,
+            Easing::Ease(f) => t.calc(*f),
+            Easing::Bezier([a,b,c,d]) => ::interpolation::cub_bez(a, b, c, d, &t),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, SystemSet)]
 pub struct InterpolationSet;

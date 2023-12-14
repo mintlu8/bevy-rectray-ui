@@ -18,6 +18,13 @@
     All states are implemented using components in a way
     that enables easy composition and low-risk refactoring.
 
+* Designed for the CSS haters
+
+    `bevy_aoui` does not fully reject the ideas from CSS, in fact we have CSS inspired systems
+    like `em` and percentage size. However our `Transform2D` is much simpler than a `Style` node,
+    and our `Container` is much simpler than `FlexBox`. A lot of weird CSS attributes can be emulated
+    by adding more rectangles, using `Container` or abstracting with a custom widget.
+
 * No editor? No problem
 
     The anchor-offset layout system is intuitive in a no editor environment.
@@ -49,7 +56,7 @@
 * Versatile
 
     `bevy_aoui` works with anything that uses `GlobalTransform`,
-    any third party widget that not dependent on `UI`
+    any third party widget not dependent on `UI`
     should work with `bevy_aoui` with minimal configuration.
 
 ## Non-goals
@@ -77,7 +84,7 @@
     For a more serious answer,
     `bevy_aoui` encourages the use of rust directly for hierarchy and widget abstractions.
     A decent alternative is to use widget builders through
-    serde implementations, however that is not directly supported.
+    serde implementations, however that is currently not directly supported.
 
 * Hot reloading
 

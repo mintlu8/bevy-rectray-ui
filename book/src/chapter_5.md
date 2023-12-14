@@ -1,7 +1,7 @@
 # Primitives
 
-There are a the primitive widgets for `AoUI`, they display something and has no additional behaviors.
-Some of them corresponds to the bundles in `bevy_sprite` and `bevy_text`.
+There are the primitive widgets for `AoUI`, they display something and has no additional behaviors.
+Some of them corresponds to bundles in `bevy_sprite` and `bevy_text`.
 
 | name | bundle | widget | macro |
 | ---- | ------ | ------ | ----- |

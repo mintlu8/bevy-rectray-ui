@@ -33,7 +33,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         color: color!(red),
         cursor_bar: rectangle! {
             color: color!(gold),
-            z: -0.1,
+            z: 0.1,
             dimension: size2!([2, 1 em]),
         },
         cursor_area: rectangle! {
@@ -56,7 +56,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         text: "This is a formatter.",
         offset: [-200, -200],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_s2.mark::<SigText>().format("Received string \"{%}\"!"),
+        extra: recv_s2.mark::<SigText>().map(|s: String| format!("Received string \"{}\"!", s)),
     });
 
     textbox!(commands {
@@ -70,6 +70,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         text: "This is a change detecting formatter.",
         offset: [200, -200],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_c2.mark::<SigText>().format("Received string \"{%}\"!"),
+        extra: recv_c2.mark::<SigText>().map(|s: String| format!("Received string \"{}\"!", s)),
     });
 }

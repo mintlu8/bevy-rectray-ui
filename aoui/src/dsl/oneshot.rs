@@ -43,24 +43,71 @@ macro_rules! one_shot {
     };
 }
 
-/// Create a handler for a certain event.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! complex_handler {
+    ($commands: expr, $flag: ty => {$($tt: tt)*}) => {
+        $crate::complex_handler!($commands, $flag => {} {$($tt)*})
+    };
+    ($commands: expr, $flag: ty => {$($exprs: expr),*} {fn $($name: ident)?$(<$($generic: ident$(: $ty: ident)?),*>)? ($($arg:tt)*){$($tt:tt)*} $(,$($rest: tt)*)?}) => {
+        $crate::complex_handler!($commands, $flag => 
+            {
+                $($exprs,)* 
+                $crate::events::Handler::OneShotSystem($crate::one_shot!($commands => fn $(<$($generic$(: $ty)?),*>)? ($($arg)*){$($tt)*}))
+            } {$($($rest)*)?}
+        )
+    };
+    ($commands: expr, $flag: ty => {$($exprs: expr),*} {$signal: expr $(,$($rest: tt)*)?}) => {
+        $crate::complex_handler!($commands, $flag => 
+            {
+                $($exprs,)* 
+                $crate::events::Handler::Signal($signal)
+            } {$($($rest)*)?}
+        )
+    };
+    ($commands: expr, $flag: ty => {$($exprs: expr),*} {}) => {
+        $crate::events::Handlers::<$flag>::from_multi(
+            [$($exprs),*]
+        )
+    }
+}
+/// Construct a one-shot system dynamically for an event.
 /// 
-/// This macro cannot capture context and only generates a new `SystemId` on the first call.
-/// 
-/// Do not use this macro with multiple worlds.
+/// See also [`one_shot`].
 #[macro_export]
 macro_rules! handler {
-    (($commands: expr $(, $($_tt:tt)*)?) {$flag: expr => fn $($name: ident)?$(<$($generic: ident$(: $ty: ident)?),*>)? ($($arg:tt)*){$($tt:tt)*}})  => {
-        $crate::events::Handler::new(
+    (($commands: expr $(, $($_tt:tt)*)?) {$flag: ty => fn $($name: ident)?$(<$($generic: ident$(: $ty: ident)?),*>)? ($($arg:tt)*){$($tt:tt)*}})  => {
+        $crate::events::Handlers::<$flag>::oneshot(
+            $crate::one_shot!($commands => fn $(<$($generic$(: $ty)?),*>)? ($($arg)*){$($tt)*})
+        )
+    };
+
+    ($commands: tt {$flag: ty => fn $($name: ident)?$(<$($generic: ident$(: $ty: ident)?),*>)? ($($arg:tt)*){$($tt:tt)*}})  => {
+        $crate::events::Handlers::<$flag>::oneshot(
             $flag,
             $crate::one_shot!($commands => fn $(<$($generic$(: $ty)?),*>)? ($($arg)*){$($tt)*})
         )
     };
 
-    ($commands: tt {$flag: expr => fn $($name: ident)?$(<$($generic: ident$(: $ty: ident)?),*>)? ($($arg:tt)*){$($tt:tt)*}})  => {
-        $crate::events::Handler::new(
+    (($commands: expr $(, $($_tt:tt)*)?) {$flag: ty => {$($tt:tt)*}})  => {
+        $crate::complex_handler!($commands, $flag => {$($tt)*})
+    };
+
+    ($commands: tt {$flag: ty => {$($tt:tt)*}}) => {
+        $crate::complex_handler!($commands, $flag => {$($tt)*})
+    };
+
+    (($commands: expr $(, $($_tt:tt)*)?) {$flag: ty => $signal: expr})  => {
+        $crate::events::Handlers::<$flag>::signal(
             $flag,
-            $crate::one_shot!($commands => fn $(<$($generic$(: $ty)?),*>)? ($($arg)*){$($tt)*})
+            $signal
+        )
+    };
+
+    ($commands: tt {$flag: ty => $signal: expr})  => {
+        $crate::events::Handlers::<$flag>::signal(
+            $flag,
+            $signal
         )
     };
 }

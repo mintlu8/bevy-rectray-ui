@@ -1,5 +1,5 @@
-use bevy::{prelude::{Plugin, PostUpdate, IntoSystemConfigs, Update}, app::PreUpdate};
-use crate::schedule::{AoUIStoreOutputSet, AoUILoadInputSet, AoUIWidgetsEventSet};
+use bevy::{prelude::{Plugin, PostUpdate, IntoSystemConfigs, Update}, app::{PreUpdate, Last}};
+use crate::schedule::{AoUIStoreOutputSet, AoUILoadInputSet, AoUIWidgetsEventSet, AoUICleanupSet};
 
 use super::{inputbox, button, drag::{self, drag_start}, richtext, scroll, scrollframe};
 
@@ -18,20 +18,21 @@ impl Plugin for WidgetsPlugin {
                 button::button_on_click,
                 button::check_button_on_click,
                 button::radio_button_on_click,
+                drag::drag_start,
+                drag::drag_end,
+                drag::dragging.after(drag_start),
+                scroll::drag_and_scroll,
+                scrollframe::clipping_layer,
             ).in_set(AoUIWidgetsEventSet))
             .add_systems(Update, (
                 inputbox::update_inputbox_cursor,
                 button::set_cursor,
                 button::event_conditional_visibility,
                 button::check_conditional_visibility,
-                drag::drag_start,
-                drag::drag_end,
-                drag::dragging.after(drag_start),
-                scroll::drag_and_scroll,
-                scrollframe::clipping_layer,
             ))
             .add_systems(PostUpdate, richtext::synchronize_glyph_spaces.in_set(AoUILoadInputSet))
             .add_systems(PostUpdate, inputbox::sync_em_inputbox.in_set(AoUIStoreOutputSet))
+            .add_systems(Last, button::remove_check_button_state.in_set(AoUICleanupSet))
         ;
     }
 }

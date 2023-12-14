@@ -13,6 +13,7 @@ mod context;
 mod shapes;
 mod mesh2d;
 mod atlas;
+mod interpolate;
 
 #[doc(hidden)]
 pub use layouts::{SpanContainerNames, GridContainerNames};

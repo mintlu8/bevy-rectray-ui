@@ -70,9 +70,9 @@ which is useful for chaining children.
 ## Auto Conversion
 
 In the previous example,
-`.dinto()` uses our `DslInto` trait to provide some much needed
+`.dinto()` uses our `DslFrom` and `DslInto` trait to provide some much needed
 syntax conversions, like `[i32; 2]` to `Vec2`, for ergonomics.
-We have a dedicated chapter documenting its behavior.
+See the docs for a full list of implementors.
 
 ## Syntax
 
@@ -119,7 +119,7 @@ sprite! (commands {
 Example: Hierarchy
 
 ```rust
-inputbox! ((commands, assets) {
+sprite! ((commands, assets) {
     dimension: size2!([400, 32]),
     color: color!(red),
     child: sprite! {
@@ -130,9 +130,10 @@ inputbox! ((commands, assets) {
             dimension: size2!([100%, 100%]),
         }
     },
-    child: shape! {
+    child: textbox! {
         color: color!(green) * 0.5,
         dimension: size2!([12, 1 em]),
+        text: "Hello, World!"
     },
 });
 ```

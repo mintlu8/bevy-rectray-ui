@@ -1,36 +1,93 @@
+/// this maps `macro! {}` into `macro! (ctx {})`
+/// 
+/// and `child: #macro!{}` into `children: child_repeat! (ctx macro! {})`
 #[doc(hidden)]
 #[macro_export]
 macro_rules! inline_context {
-    ($commands: tt [$($path: tt)*] [$($fields: tt)*]) => {
-        $crate::meta_dsl!($commands [$($path)*] {$($fields)*} {} {} {})
+    ($ctx: tt [$($path: tt)*] [$($fields: tt)*]) => {
+        $crate::meta_dsl!($ctx [$($path)*] {$($fields)*} {} {} {})
     };
-
-    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*}) => {
-        $crate::inline_context!($commands [$($path)*] [
+    ($ctx: tt [$($path: tt)*] [$($out: tt)*] child: #$macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
+        $crate::inline_context!($ctx [$($path)*] [
+            $($out)*
+            children: $crate::child_repeat!($ctx $macro { $($expr)* }),
+        ] $($($rest)*)?)
+    };
+    ($ctx: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
+        $crate::inline_context!($ctx [$($path)*] [
             $($out)*
             $field: $macro! (
-                $commands {
-                    $($expr)*
-                }
-            )
-        ])
-    };
-    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*} ,$($rest: tt)*) => {
-        $crate::inline_context!($commands [$($path)*] [
-            $($out)*
-            $field: $macro! (
-                $commands {
+                $ctx {
                     $($expr)*
                 }
             ),
-        ] $($rest)*)
+        ] $($($rest)*)?)
     };
-    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $head: expr, $($rest: tt)*) => {
-        $crate::inline_context!($commands [$($path)*] [$($out)* $field: $head,] $($rest)*)
+    ($ctx: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $head: expr $(,$($rest: tt)*)?) => {
+        $crate::inline_context!($ctx [$($path)*] [$($out)* $field: $head,] $($($rest)*)?)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! zip_all {
+    ($first: ident) => {
+        $first.into_iter() 
+    };
+    ($first: ident, $($rest: ident),*) => {
+        $first.into_iter().zip($crate::zip_all!($($rest),*))
+    };
+}
+
+/// Original syntax is `child: #macro! {color: #colors}`
+///
+/// Turns into `vec.extend(this)`
+#[doc(hidden)]
+#[macro_export]
+macro_rules! child_repeat {
+    ($ctx: tt $macro:ident { $($tt: tt)* }) => {
+        $crate::child_repeat!($ctx $macro () { $($tt)* } {})
     };
 
-    ($commands: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $head: expr) => {
-        $crate::inline_context!($commands [$($path)*] [$($out)* $field: $head])
+    ($ctx: tt $macro:ident ($($vars: ident),*) {} { $($tt: tt)* }) => {
+        $crate::zip_all!($($vars),*).map(|($($vars),*)|
+            $macro! ($ctx {
+                $($tt)*
+            })
+        )
+    };
+
+    ($ctx: tt $macro:ident ($($vars: ident),*) {#$var: ident $($rest: tt)* } { $($tt: tt)* }) => {
+        $crate::child_repeat!($ctx $macro ($($vars,)* $var) { $($rest)* } {$($tt)* $var})
+    };
+    
+    // bypass the #var check on nested macro invocations
+    ($ctx: tt $macro:ident ($($vars: ident),*) {:#$var: ident! $($rest: tt)* } { $($tt: tt)* }) => {
+        $crate::child_repeat!($ctx $macro ($($vars),*) { $($rest)* } {$($tt)* :#$var!})
+    };
+
+
+    ($ctx: tt $macro:ident ($($vars: ident),*) {$first: tt $($rest: tt)* } { $($tt: tt)* }) => {
+        $crate::child_repeat!($ctx $macro ($($vars),*) { $($rest)* } {$($tt)* $first})
+    };
+}
+
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! parse_children {
+    ($ctx: tt $ident: ident {} {$($stmt: stmt;)*}) => {
+        {
+            let mut $ident = ::std::vec::Vec::new();
+            $($stmt;)*
+            $ident
+        }
+    };
+    ($ctx: tt $ident: ident {child: $expr: expr $(,$($rest:tt)*)?} {$($stmt: stmt;)*}) => {
+        $crate::parse_children!($ctx $ident {$($($rest)*)?} {$($stmt;)* $ident.push($expr);} )
+    };
+    ($ctx: tt $ident: ident {children: $expr: expr $(,$($rest:tt)*)?} {$($stmt: stmt;)*}) => {
+        $crate::parse_children!($ctx $ident {$($($rest)*)?} {$($stmt;)* $ident.extend($expr.into_iter().map(|x| x.clone()));} )
     };
 }
 
@@ -46,14 +103,14 @@ macro_rules! meta_dsl {
         {extra: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
-        {$($children: expr),*}
+        {$($child_type: ident: $children: expr),*}
     ) => {
         $crate::meta_dsl!($commands
             [$($path)*]
             {$($f: $e),*}
             {$($f2: $e2),*}
             {$($extras,)* $expr}
-            {$($children),*}
+            {$($child_type: $children),*}
         )
     };
 
@@ -61,14 +118,29 @@ macro_rules! meta_dsl {
         {child: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
-        {$($children: expr),*}
+        {$($child_type: ident: $children: expr),*}
     ) => {
         $crate::meta_dsl!($commands
             [$($path)*]
             {$($f: $e),*}
             {$($f2: $e2),*}
             {$($extras),*}
-            {$($children,)* $expr}
+            {$($child_type: $children,)* child: $expr}
+        )
+    };
+
+    ($commands: tt [$($path: tt)*]
+        {children: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
+        {$($f2: ident: $e2: expr),*}
+        {$($extras: expr),*}
+        {$($child_type: ident: $children: expr),*}
+    ) => {
+        $crate::meta_dsl!($commands
+            [$($path)*]
+            {$($f: $e),*}
+            {$($f2: $e2),*}
+            {$($extras),*}
+            {$($child_type: $children,)* children: $expr}
         )
     };
 
@@ -76,26 +148,26 @@ macro_rules! meta_dsl {
         {$field: ident: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
-        {$($children: expr),*}
+        {$($child_type: ident: $children: expr),*}
     ) => {
         $crate::meta_dsl!($commands
             [$($path)*]
             {$($f: $e),*}
             {$($f2: $e2,)* $field: $expr}
             {$($extras),*}
-            {$($children),*}
+            {$($child_type: $children),*}
         )
     };
 
     (($commands: expr$(,)?) [$($path: tt)*] {$(,)?}
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*}
-        {$($children: expr),*}
+        {$($child_type: ident: $children: expr),*}
     ) => {
         {
             use $crate::dsl::{DslInto, AoUICommands};
             let extras = ($($extras),*);
-            let children = [$($children),*];
+            let children = $crate::parse_children!(($commands) _children {$($child_type: $children),*} {});
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()
@@ -111,12 +183,12 @@ macro_rules! meta_dsl {
     (($commands: expr, $assets: expr) [$($path: tt)*] {$(,)?}
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*}
-        {$($children: expr),*}
+        {$($child_type: ident: $children: expr),*}
     ) => {
         {
             use $crate::dsl::{DslInto, AoUICommands};
             let extras = ($($extras),*);
-            let children = [$($children),*];
+            let children = $crate::parse_children!(($commands, $assets) _children {$($child_type: $children),*} {});
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()
@@ -134,12 +206,12 @@ macro_rules! meta_dsl {
     ($commands: ident [$($path: tt)*] {$(,)?}
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*}
-        {$($children: expr),*}
+        {$($child_type: ident: $children: expr),*}
     ) => {
         {
             use $crate::dsl::{DslInto, AoUICommands};
             let extras = ($($extras),*);
-            let children = [$($children),*];
+            let children = $crate::parse_children!($commands _children {$($child_type: $children),*} {});
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()

@@ -168,6 +168,14 @@ macro_rules! color {
     };
 }
 
+/// Create an array of colors.
+#[macro_export]
+macro_rules! colors {
+    [$($color: tt),*] => {
+        [$($crate::color!($color)),*]
+    };
+}
+
 /// Color construction macro, see [`colorthis`]. This constructs a vector4.
 #[macro_export]
 macro_rules! colorv4 {

@@ -1,5 +1,7 @@
 use bevy::ecs::component::Component;
 
+use crate::dsl::prelude::Sender;
+
 
 
 /// Represents hovering, clicking or dragging.
@@ -94,5 +96,16 @@ tlbf::tlbf!(
 impl EventFlags {
     pub const fn const_or(self, other: EventFlags) -> Self{
         Self(self.0 | other.0)
+    }
+}
+
+pub struct EventSignal{
+    pub event: EventFlags,
+    pub signal: Sender,
+}
+
+impl EventSignal {
+    pub fn new(event: EventFlags, signal: Sender) -> Self {
+        EventSignal { event, signal }
     }
 }

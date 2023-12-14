@@ -58,7 +58,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             icon: CursorIcon::Hand,
         },
         extra: DragSnapBack,
-        extra: Interpolate::<Offset>::ease(EaseFunction::BounceOut, Vec2::ZERO, 4.0),
+        extra: interpolate!(Offset BounceOut 4.0 default Vec2::ZERO),
     });
 
     let (send1, recv1) = signal();

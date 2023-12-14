@@ -491,12 +491,3 @@ pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &Dimension)>) {
         }
     })
 }
-
-
-impl Receiver<SigText> {
-    /// Format, replace "{%}" with the incoming string signal.
-    pub fn format(self, string: impl Into<String>) -> Self {
-        let format_string = string.into();
-        self.map(move |s: String| format_string.replace("{%}", &s))
-    }
-}

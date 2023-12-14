@@ -1,10 +1,11 @@
 use std::{sync::{Mutex, Arc}, ops::Deref};
 
-use bevy::{render::view::Visibility, window::{Window, PrimaryWindow, CursorIcon}, hierarchy::Children};
+use bevy::{render::view::Visibility, window::{Window, PrimaryWindow, CursorIcon}, hierarchy::Children, ecs::entity::Entity};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
-use crate::{Opacity, signals::{Object, SignalMarker}, dsl::prelude::{SigSubmit, SigChange}};
+use crate::{Opacity, signals::Object, dsl::prelude::{SigSubmit, SigChange, signal, Receiver}};
 
 use crate::{events::{EventFlags, CursorFocus, CursorAction}, signals::DataTransfer, dsl::prelude::Interpolate, signals::Sender};
+
 
 /// Set cursor if [`CursorFocus`] is some [`EventFlags`].
 ///
@@ -20,7 +21,7 @@ pub struct SetCursor {
 /// Supported conditions are:
 /// 
 /// * `EventFlags`: For `CursorFocus`
-/// * `CheckButtonState`: For `CheckButton`
+/// * `CheckButtonState`: For `CheckButton` and `RadioButton`'s status
 /// 
 /// This uses `Interpolate<Opacity>` if exists, if not, uses `Visibility`.
 #[derive(Debug, Clone, Copy, Component)]
@@ -111,13 +112,28 @@ impl From<bool> for CheckButton {
 /// 
 /// Individual value is set with the `Payload` component.
 /// `Payload` is sent through the `Submit` event.
-#[derive(Debug, Clone, Component)]
-pub struct RadioButton(Arc<Mutex<Object>>);
+#[derive(Debug, Component)]
+pub struct RadioButton(Arc<Mutex<Object>>, Sender);
+
+impl Clone for RadioButton {
+    fn clone(&self) -> Self {
+        Self(self.0.clone(), self.1.fork())
+    }
+}
 
 impl RadioButton {
+    pub fn new(default: impl DataTransfer) -> (Self, Receiver) {
+        let (send, recv) = signal();
+        (
+            RadioButton(Arc::new(Mutex::new(Object::new(default))), send),
+            recv
+        )
+    }
+
     pub fn set(&self, payload: &Payload) {
         let mut lock = self.0.lock().unwrap();
-        *lock = payload.0.clone()
+        *lock = payload.0.clone();
+        self.1.send_object(payload.0.clone())
     }
 }
 
@@ -134,7 +150,7 @@ pub fn button_on_click(
     for (action, submit, payload) in query.iter() {
         if !action.is(EventFlags::Click) { continue }
         if let Some(payload) = payload {
-            payload.send_to(submit)
+            submit.send_object(payload.0.clone());
         } else {
             submit.send_empty()
         }
@@ -153,7 +169,7 @@ pub fn check_button_on_click(
         if state {continue;}
         if let Some(signal) = submit {
             if let Some(payload) = payload {
-                payload.send_to(signal)
+                signal.send_object(payload.0.clone());
             } else {
                 signal.send_empty()
             }
@@ -168,12 +184,14 @@ pub fn radio_button_on_click(
         if !action.is(EventFlags::Click) { continue }
         state.set(payload);
         if let Some(signal) = submit {
-            payload.send_to(signal);
+            signal.send_object(payload.0.clone());
         }
     }
 }
 
-pub fn check_conditional_visibility(mut query: Query<(&DisplayIf<CheckButtonState>, &CheckButtonState, &mut Visibility, Option<&mut Interpolate<Opacity>>)>){
+pub fn check_conditional_visibility(
+    mut query: Query<(&DisplayIf<CheckButtonState>, &CheckButtonState, &mut Visibility, Option<&mut Interpolate<Opacity>>)>
+) {
     query.par_iter_mut().for_each(|(display_if, state, mut vis, mut opacity)| {
         if &display_if.0 == state {
             if let Some(opacity) = opacity.as_mut() {
@@ -232,6 +250,7 @@ pub fn propagate_focus(mut commands: Commands,
     query1: Query<(&CursorFocus, &Children), With<PropagateFocus>>, 
     query2: Query<(&CursorAction, &Children), With<PropagateFocus>>,
     query3: Query<(&CheckButton, &Children), With<PropagateFocus>>,
+    query4: Query<(&RadioButton, &Payload, &Children), With<PropagateFocus>>,
 ) {
     for (focus, children) in query1.iter() {
         for child in children {
@@ -245,15 +264,27 @@ pub fn propagate_focus(mut commands: Commands,
     }
     for (focus, children) in query3.iter() {
         for child in children {
-            commands.entity(*child).insert(*focus);
+            let check: CheckButtonState = focus.get().into();
+            commands.entity(*child).insert(check);
+        }
+    }
+    for (radio, payload, children) in query4.iter() {
+        for child in children {
+            let check: CheckButtonState = (radio == payload).into();
+            commands.entity(*child).insert(check);
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component)]
-pub struct CheckBox;
+/// Remove [`CursorFocus`], [`CursorAction`], [`CursorClickOutside`] and [`Submit`];
+pub fn remove_check_button_state(mut commands: Commands, 
+    query: Query<Entity, With<CheckButtonState>>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).remove::<CheckButtonState>();
+    }
+}
 
-pub struct RadioButtonContext(Arc<Mutex<Object>>);
 
 /// When attached to a widget in the button family,
 /// the submit signal will send the containing data.
@@ -278,9 +309,55 @@ impl Payload {
     pub fn new(value: impl DataTransfer + Clone) -> Self {
         Self(Object::new(value))
     }
+}
 
-    pub fn send_to<M: SignalMarker>(&self, sender: &Sender<M>) {
-        sender.send(self.0.clone())
+mod sealed {
+    use super::RadioButton;
+
+    use crate::signals::{DataTransfer, Receiver};
+
+    pub trait ConstructRadioButton: Sized {
+        fn construct(default: impl DataTransfer) -> (Self, Receiver);
     }
+
+    macro_rules! impl_radio {
+        ($first: ident) => {};
+        ($first: ident, $($rest: ident),*) => {
+            impl ConstructRadioButton for ($first, $($rest),*) {
+                fn construct(default: impl DataTransfer) -> (Self, Receiver) {
+                    let (first, recv) = $first::new(default);
+                    (($({ let v: $rest = first.clone(); v },)* first,), recv)
+                }
+            }
+            impl_radio!($($rest),*);
+        }
+    }
+    impl_radio!(
+        RadioButton, RadioButton, RadioButton, RadioButton,
+        RadioButton, RadioButton, RadioButton, RadioButton,
+        RadioButton, RadioButton, RadioButton, RadioButton
+    );
+    pub trait ConstructRadioButtonSignal: Sized {
+        fn construct(default: impl DataTransfer) -> Self;
+    }
+
+    impl<T: ConstructRadioButton> ConstructRadioButtonSignal for (T, Receiver) {
+        fn construct(default: impl DataTransfer) -> Self {
+            T::construct(default)
+        }
+    }
+
+    impl<T: ConstructRadioButton> ConstructRadioButtonSignal for T {
+        fn construct(default: impl DataTransfer) -> Self {
+            let (result, _) = T::construct(default);
+            result
+        }
+    }
+}
+
+use sealed::ConstructRadioButtonSignal;    
+
+pub fn radio_button_group<T: ConstructRadioButtonSignal>(default: impl DataTransfer) -> T {
+    T::construct(default)
 }
 

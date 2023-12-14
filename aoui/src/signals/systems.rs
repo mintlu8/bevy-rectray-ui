@@ -6,9 +6,15 @@ use super::{Receiver, types::*};
 
 pub fn signal_receive_text(mut query: Query<(&Receiver<SigText>, &mut Text)>) {
     query.par_iter_mut().for_each(|(sig, mut text)| {
-        let Some(string) = sig.poll::<String>() else { return };
-        // Since we don't have a style, writing it makes no sense.
+        let string = match sig.poll::<String>() {
+            Some(string) => string,
+            None => { 
+                let Some(str) = sig.poll::<&str>() else {return};
+                str.to_owned()
+            },
+        };
         let Some(section) = text.sections.first_mut() else { 
+            // Since we don't have a style, writing it makes no sense.
             warn!("'SigText' received by a 'Text' component with no sections. Requires at least an empty section for styling.");
             return;
         }; 
