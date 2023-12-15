@@ -30,6 +30,9 @@ signals!(
     /// Sent if being scrolled on, `Scroll` sprite will be scrolled if receiving this signal.
     SigScroll,
 
+    /// Triggers some behavior when sent to another widget.
+    SigInvoke,
+
     /// Modifies the recipient's text.
     SigText,
     /// Modifies the recipient's raw offset.

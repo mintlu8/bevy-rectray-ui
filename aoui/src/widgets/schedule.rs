@@ -1,5 +1,5 @@
 use bevy::{prelude::{Plugin, PostUpdate, IntoSystemConfigs, Update}, app::{PreUpdate, Last}};
-use crate::schedule::{AoUIStoreOutputSet, AoUILoadInputSet, AoUIWidgetsEventSet, AoUICleanupSet};
+use crate::schedule::{AoUIStoreOutputSet, AoUILoadInputSet, AoUIWidgetsEventSet, AoUICleanupSet, AoUIButtonEventSet};
 
 use super::{inputbox, button, drag::{self, drag_start}, richtext, scroll, scrollframe};
 
@@ -10,14 +10,16 @@ impl Plugin for WidgetsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .add_systems(PreUpdate, (
+                button::button_on_click,
+                button::check_button_on_click,
+                button::radio_button_on_click,
+            ).in_set(AoUIButtonEventSet))
+            .add_systems(PreUpdate, (
                 inputbox::text_on_mouse_down,
                 inputbox::text_on_click_outside,
                 inputbox::text_on_mouse_double_click,
                 inputbox::inputbox_keyboard,
                 button::propagate_focus,
-                button::button_on_click,
-                button::check_button_on_click,
-                button::radio_button_on_click,
                 drag::drag_start,
                 drag::drag_end,
                 drag::dragging.after(drag_start),

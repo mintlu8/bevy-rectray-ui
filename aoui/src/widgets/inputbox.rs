@@ -6,7 +6,7 @@ use bevy::window::{Window, PrimaryWindow, ReceivedCharacter};
 use bevy::text::{Text, Font};
 use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
 use crate::{RotatedRect, Transform2D, Dimension, bundles::AoUITextBundle};
-use crate::signals::{Sender, Receiver, types::{SigChange, SigSubmit, SigText}};
+use crate::signals::{Sender, Receiver, types::{SigChange, SigSubmit, SigInvoke}};
 use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction};
 use ab_glyph::Font as FontTrait;
 
@@ -416,11 +416,11 @@ pub fn text_on_click_outside(
     }
 }
 pub fn inputbox_keyboard(
-    mut query: Query<(&mut InputBox, Option<&Sender<SigChange>>, Option<&Sender<SigSubmit>>)>,
+    mut query: Query<(&mut InputBox, Option<&Sender<SigChange>>, Option<&Sender<SigSubmit>>, Option<&Receiver<SigInvoke>>)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {
-    for (mut inputbox, change, submit) in query.iter_mut().filter(|(input, ..)| input.has_focus()) {
+    for (mut inputbox, change, submit, invoke) in query.iter_mut().filter(|(input, ..)| input.has_focus()) {
         let mut changed = false;
         if keys.any_pressed(CONTROL) {
             if keys.just_pressed(KeyCode::C) {
@@ -462,7 +462,6 @@ pub fn inputbox_keyboard(
                 match char.char {
                     '\t' => (),
                     '\r'|'\n' => {
-                        // Serde can't fail serializing a string, probably
                         if let Some(submit) = submit {
                             submit.send(inputbox.get().to_owned())
                         }
@@ -473,8 +472,14 @@ pub fn inputbox_keyboard(
                 changed = true;
             }
         }
+        if let Some(invoke) = invoke {
+            if invoke.poll_any() {
+                if let Some(submit) = submit {
+                    submit.send(inputbox.get().to_owned())
+                }
+            }
+        }
         if changed {
-            // Serde can't fail serializing a string, probably
             if let Some(change) = change {
                 change.send(inputbox.get().to_owned())
             }

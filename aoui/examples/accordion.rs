@@ -57,7 +57,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     child: textbox! {
                         text: "v",
                         extra: recv13.mark::<SigRotation>().map(|x: bool| if x {PI} else {0.0}),
-                        extra: interpolate! (Rotation CubicInOut 0.5 default 0.0)
+                        extra: interpolate! (Rotation CubicInOut 0.5 default PI)
                     },
                 }
             },
@@ -101,7 +101,7 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
                     child: textbox! {
                         text: "v",
                         extra: recv23.mark::<SigRotation>().map(|x: bool| if x {PI} else {0.0}),
-                        extra: interpolate! (Rotation CubicInOut 0.5 default 0.0),
+                        extra: interpolate! (Rotation CubicInOut 0.5 default PI)
                     },
                 }
             },

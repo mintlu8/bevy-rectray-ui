@@ -34,6 +34,10 @@ pub struct AoUIEventSet;
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct AoUICleanupSet;
 
+/// This runs before `AoUIWidgetsEventSet` for signal piping.
+#[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
+pub struct AoUIButtonEventSet;
+
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct AoUIWidgetsEventSet;
 
@@ -47,8 +51,9 @@ impl bevy::prelude::Plugin for CorePlugin {
             .configure_sets(PreUpdate, AoUIEventSet.after(InputSystem))
             .add_systems(PreUpdate, bevy::ecs::prelude::apply_deferred
                 .after(AoUIEventSet)
-                .before(AoUIWidgetsEventSet))
-            .configure_sets(PreUpdate, AoUIWidgetsEventSet.after(AoUIEventSet))
+                .before(AoUIButtonEventSet))
+            .configure_sets(PreUpdate, AoUIButtonEventSet.after(AoUIEventSet))
+            .configure_sets(PreUpdate, AoUIWidgetsEventSet.after(AoUIButtonEventSet))
             .configure_sets(Last, AoUICleanupSet)
             .configure_sets(PostUpdate, AoUILoadInputSet
                 .before(AoUITreeUpdateSet)
