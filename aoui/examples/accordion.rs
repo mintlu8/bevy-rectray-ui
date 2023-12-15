@@ -57,7 +57,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     child: textbox! {
                         text: "v",
                         extra: recv13.mark::<SigRotation>().map(|x: bool| if x {PI} else {0.0}),
-                        extra: interpolate! (Rotation CubicInOut 0.5 default PI)
+                        extra: transition! (Rotation 0.5 CubicInOut default PI)
                     },
                 }
             },
@@ -68,11 +68,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 scroll: Scrolling::Y,
                 layer: 2,
                 extra: recv11.mark::<SigDimensionY>().map(|x: bool| if x {400.0f32} else {0.0f32}),
-                extra: interpolate! (Dimension CubicInOut 0.5 default [400, 400]),
+                extra: transition! (Dimension 0.5 CubicInOut default [400, 400]),
                 container: with_layer(2, ||frame!( commands{
                     dimension: [400, 400],
                     extra: recv12.mark::<SigOpacity>().map(|x: bool| if x {1.0f32} else {0.0f32}),
-                    extra: interpolate! (Opacity CubicInOut 0.5 default 1.0),
+                    extra: transition! (Opacity 0.5 CubicInOut default 1.0),
                     child: textbox! {
                         anchor: TopLeft,
                         bounds: [390, 999999],
@@ -101,7 +101,7 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
                     child: textbox! {
                         text: "v",
                         extra: recv23.mark::<SigRotation>().map(|x: bool| if x {PI} else {0.0}),
-                        extra: interpolate! (Rotation CubicInOut 0.5 default PI)
+                        extra: transition! (Rotation 0.5 CubicInOut default PI)
                     },
                 }
             },

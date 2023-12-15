@@ -31,7 +31,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             color: color!(gold),
             z: 0.1,
             dimension: size2!([2, 1 em]),
-            extra: interpolate!(Color QuadraticInOut 0.5 looping [(transparent, 0.0), (gold, 1.0)] ),
+            extra: transition!(Color 0.5 QuadraticInOut looping [(transparent, 0.0), (gold, 1.0)] ),
         },
         cursor_area: rectangle! {
             color: color!(green) * 0.5,
@@ -52,7 +52,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             color: color!(gold),
             z: 0.1,
             dimension: size2!([2, 1 em]),
-            extra: interpolate!(Color QuadraticInOut 0.5 looping [(transparent, 0.0), (gold, 1.0)]),
+            extra: transition!(Color 0.5 QuadraticInOut looping [(transparent, 0.0), (gold, 1.0)]),
         },
         cursor_area: rectangle! {
             color: color!(green) * 0.5,

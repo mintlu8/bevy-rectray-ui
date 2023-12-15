@@ -157,8 +157,8 @@ impl<'t> RootQuery<'t> for PrimaryWindow {
     }
 }
 
-pub(crate) type TRoot = (With<AoUI>, Without<Parent>);
-pub(crate) type TAll = With<AoUI>;
+pub(crate) type TRoot = Without<Parent>;
+pub(crate) type TAll = ();
 
 /// The main computation step.
 /// 

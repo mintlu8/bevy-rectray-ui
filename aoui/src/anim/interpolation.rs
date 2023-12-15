@@ -28,9 +28,11 @@ pub struct Interpolate<T: Interpolation>{
 pub trait IntoInterpolate<T: Interpolation> {
     fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]>;
 }
+
 impl<T: Interpolation> IntoInterpolate<T> for (T::Data, T::Data) {
     fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]> {
-        [(self.0, 0.0), (self.1, 1.0)].into_iter().collect()
+        let (start, end) = self;
+        [(start, 0.0), (end, 1.0)].into_iter().collect()
     }
 }
 

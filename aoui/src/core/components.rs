@@ -2,10 +2,6 @@ use bevy::{prelude::*, reflect::Reflect};
 
 use crate::{Size2, FontSize, Anchor};
 
-/// Marker component for the default schedules.
-#[derive(Debug, Clone, Component, Default, Reflect)]
-pub struct AoUI;
-
 /// Size of the sprite.
 ///
 /// If `Copied` and paired with a component that has a dimension like [`Sprite`],

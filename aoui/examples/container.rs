@@ -93,7 +93,7 @@ pub struct ChildSize(Vec2);
 pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts, 
     mut root: Query<(&mut Transform2D, &mut Dimension), With<Root>>, 
     mut container: Query<(Entity, &mut Container, &mut Transform2D), (With<RootFlex>, Without<Root>)>,
-    spawned: Query<Entity, (With<AoUI>,  Without<Root>, Without<RootFlex>)>, 
+    spawned: Query<Entity, (With<Transform2D>,  Without<Root>, Without<RootFlex>)>, 
     assets: Res<AssetServer>,
     mut child_size: ResMut<ChildSize>,
 ) {

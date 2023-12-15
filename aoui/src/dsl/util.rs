@@ -193,6 +193,9 @@ macro_rules! gradient {
     [$(($color: tt, $frac: expr)),* $(,)?] => {
         [$(($crate::colorv4!($color), $frac)),*]
     };
+    [$first: tt, $second: tt $(,)?] => {
+        [($crate::colorv4!($first), 0.0), ($crate::colorv4!($second), 1.0)]
+    };
 }
 
 
