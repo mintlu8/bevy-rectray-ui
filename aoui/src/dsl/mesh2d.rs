@@ -4,9 +4,9 @@ use crate::{Anchor, Opacity, Size2, FontSize, events::EventFlags, Hitbox, map_bu
 
 use super::{OneOrTwo, Widget, util::HandleOrAsset};
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 /// A `MaterialMesh2d` with a rectangle mesh.
-pub struct MaterialRectangleBuilder<M: Material2d> {
+pub struct MaterialSpriteBuilder<M: Material2d> {
     pub anchor: Anchor,
     pub parent_anchor: Option<Anchor>,
     pub center: Option<Anchor>,
@@ -24,7 +24,7 @@ pub struct MaterialRectangleBuilder<M: Material2d> {
     pub material: Option<HandleOrAsset<M>>,
 }
 
-impl<M: Material2d> Widget for MaterialRectangleBuilder<M> {
+impl<M: Material2d> Widget for MaterialSpriteBuilder<M> {
     fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> bevy::prelude::Entity {
         let entity = map_builder!(self => FrameBuilder move (
             anchor, parent_anchor, center, opacity, visible,
@@ -58,16 +58,16 @@ impl<M: Material2d> Widget for MaterialRectangleBuilder<M> {
 
 /// Construct a compact layout.
 #[macro_export]
-macro_rules! material_rect {
+macro_rules! material_sprite {
     {$commands: tt {$($tt:tt)*}} => {
-        $crate::meta_dsl!($commands [$crate::dsl::builders::MaterialRectangleBuilder] {
+        $crate::meta_dsl!($commands [$crate::dsl::builders::MaterialSpriteBuilder] {
             $($tt)*
         })
     };
 }
 
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 /// A `MaterialMesh2d` with a managed rectangle mesh.
 pub struct MaterialMeshBuilder<M: Material2d> {
     pub anchor: Anchor,

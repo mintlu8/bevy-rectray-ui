@@ -1,5 +1,5 @@
 //! Showcases the features of a button widget.
-
+#![recursion_limit = "256"]
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use bevy_aoui::AoUIPlugin;
@@ -96,11 +96,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         text: "<= false!",
         extra: recv2.mark::<SigText>().map(|x: bool| format!("<= {}!", x))
     });
-
-
     
-    let ((fire, water, earth, air), sig) = radio_button_group("Fire");
-
+    let (ctx, sig) = radio_button_group::<_, 4>("Fire");
+    let elements = ["Fire", "Water", "Earth", "Wind"];
 
     textbox! (commands {
         offset: [300, -100],
@@ -111,10 +109,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     vbox!((commands, assets) {
         offset: [0, -150],
-        child: radio_button! {
+        child: #radio_button! {
             dimension: size2!([14 em, 2 em]),
-            context: fire,
-            value: "Fire",
+            context: #ctx,
+            value: #elements,
             child: sprite!{
                 anchor: Left,
                 dimension: size2!([2 em, 2 em]),
@@ -130,75 +128,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             child: textbox!{
                 anchor: Left,
                 offset: size2!([2.5 em, 0]),
-                text: "Fire",
-            },
-        },
-        child: radio_button! {
-            dimension: size2!([14 em, 2 em]),
-            context: water,
-            value: "Water",
-            child: sprite!{
-                anchor: Left,
-                dimension: size2!([2 em, 2 em]),
-                sprite: "radio.png",
-                extra: DisplayIf(CheckButtonState::Checked)
-            },
-            child: sprite!{
-                anchor: Left,
-                dimension: size2!([2 em, 2 em]),
-                sprite: "unchecked.png",
-                extra: DisplayIf(CheckButtonState::Unchecked)
-            },
-            child: textbox!{
-                anchor: Left,
-                offset: size2!([2.5 em, 0]),
-                text: "Water",
-            },
-        },
-        child: radio_button! {
-            dimension: size2!([14 em, 2 em]),
-            context: earth,
-            value: "Earth",
-            cursor: CursorIcon::Hand,
-            child: sprite!{
-                anchor: Left,
-                dimension: size2!([2 em, 2 em]),
-                sprite: "radio.png",
-                extra: DisplayIf(CheckButtonState::Checked)
-            },
-            child: sprite!{
-                anchor: Left,
-                dimension: size2!([2 em, 2 em]),
-                sprite: "unchecked.png",
-                extra: DisplayIf(CheckButtonState::Unchecked)
-            },
-            child: textbox!{
-                anchor: Left,
-                offset: size2!([2.5 em, 0]),
-                text: "Earth",
-            },
-        },
-        child: radio_button! {
-            dimension: size2!([14 em, 2 em]),
-            context: air,
-            value: "Air",
-            cursor: CursorIcon::Hand,
-            child: sprite!{
-                anchor: Left,
-                dimension: size2!([2 em, 2 em]),
-                sprite: "radio.png",
-                extra: DisplayIf(CheckButtonState::Checked)
-            },
-            child: sprite!{
-                anchor: Left,
-                dimension: size2!([2 em, 2 em]),
-                sprite: "unchecked.png",
-                extra: DisplayIf(CheckButtonState::Unchecked)
-            },
-            child: textbox!{
-                anchor: Left,
-                offset: size2!([2.5 em, 0]),
-                text: "Air",
+                text: #elements,
             },
         },
     });
@@ -208,7 +138,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     textbox! (commands {
         offset: [300, 0],
         color: color!(gold),
-        text: "<= Click that button.",
+        text: "<= Click this button.",
         extra: recv.mark::<SigText>().map(|_: ()| format!("<= You clicked it!"))
     });
 

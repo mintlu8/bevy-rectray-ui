@@ -13,6 +13,7 @@ pub struct Container {
 }
 
 /// Info for layout
+#[derive(Debug)]
 pub struct LayoutInfo {
     pub dimension: Vec2,
     pub em: f32,

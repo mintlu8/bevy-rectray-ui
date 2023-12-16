@@ -6,6 +6,8 @@ pub mod richtext;
 pub mod scroll;
 pub mod scrollframe;
 pub mod button;
+mod atlas;
+pub use atlas::DeferredAtlasBuilder;
 use bevy::{render::color::Color, ecs::component::Component};
 
 

@@ -1,27 +1,10 @@
-use bevy::{asset::Handle, sprite::{TextureAtlas, TextureAtlasSprite}, ecs::component::Component};
-use bevy::math::{Vec2, Rect, UVec2};
+use bevy::{asset::Handle, sprite::{TextureAtlas, TextureAtlasSprite}, math::UVec2};
+use bevy::math::{Vec2, Rect};
 use bevy::render::{texture::Image, color::Color};
 
-use crate::{widget_extension, map_builder, dsl::builders::FrameBuilder};
+use crate::{widget_extension, map_builder, dsl::builders::FrameBuilder, widgets::DeferredAtlasBuilder, bundles::BuildTransformBundle};
 
 use super::{Widget, DslFrom};
-
-#[derive(Debug, Component)]
-pub enum DeferredAtlasBuilder {
-    Subdivide{
-        image: Handle<Image>,
-        slices: UVec2,
-        padding: Option<Vec2>,
-    },
-    Grid {
-        image: Handle<Image>,
-        size: Vec2,
-        count: UVec2,
-        padding: Option<Vec2>,
-        offset: Option<Vec2>,
-    },
-    Images(Vec<Handle<Image>>)
-}
 
 pub struct AtlasLoader;
 
@@ -40,26 +23,50 @@ pub enum AtlasRectangles {
     #[default]
     None,
     AtlasFile(String),
-    AtlasAsset(Handle<TextureAtlas>),
+    AtlasHandle(Handle<TextureAtlas>),
+    AtlasStruct(TextureAtlas),
     Rectangles(Vec<Rect>),
-    Subdivide(UVec2),
+    Subdivide([usize; 2]),
     Grid {
+        offset: Vec2,
         size: Vec2,
-        count: UVec2,
+        count: [usize; 2],
     },
 }
 
 widget_extension!(pub struct AtlasBuilder {
+    /// Either the atlas or the rectangle of the atlas.
+    /// 
+    /// # Accepts
+    /// 
+    /// * File name: `String` or `&str` 
+    /// (requires an importer for `TextureAtlas`)
+    /// * Handle: `Handle<TextureAtlas>`
+    /// * Struct: `TextureAtlas`
+    /// * Rectangles: `Vec<Rect>`, `[Rect; N]`
+    /// * Subdivision: `UVec2`, `[u32; 2]`
+    /// * Grid: `AtlasGrid { .. }`
+    /// * Unspecified: Builds a atlas with `sprites`
     pub atlas: AtlasRectangles,
+    /// Sprites supporting the atlas
+    /// 
+    /// # Accepts
+    /// 
+    /// * File name: `String`
+    /// * Handle: `Handle<Image>`
+    /// * File names: `Vec<String>`
+    /// * File handles: `Vec<Handle<Image>>`
     pub sprites: AtlasSprites,
+    /// Size of the sprite
     pub size: Option<Vec2>,
+    /// Color of the sprite
     pub color: Option<Color>,
-    pub rect: Option<Rect>,
+    /// Flips the sprite.
     pub flip: [bool; 2],
+    /// Index of the atlas.
     pub index: usize,
+    /// Padding of the atlas.
     pub padding: Option<Vec2>,
-    pub atlas_offset: Option<Vec2>,
-    pub atlas_size: Option<Vec2>,
 });
 
 impl Widget for AtlasBuilder {
@@ -69,6 +76,7 @@ impl Widget for AtlasBuilder {
             offset, rotation, scale, z, dimension, hitbox,
             layer, font_size, event
         )).spawn_with(commands, assets);
+        commands.entity(entity).insert(BuildTransformBundle::default());
         let assets = ||assets.expect("Please pass in the AssetServer.");
         let [x, y] = self.flip;
         let sprite = TextureAtlasSprite{
@@ -87,7 +95,14 @@ impl Widget for AtlasBuilder {
                     sprite
                 ));
             },
-            AtlasRectangles::AtlasAsset(asset) => {
+            AtlasRectangles::AtlasStruct(atlas) => {
+                let asset: Handle<TextureAtlas> = assets().add(atlas);
+                commands.entity(entity).insert((
+                    asset,
+                    sprite
+                ));
+            },
+            AtlasRectangles::AtlasHandle(asset) => {
                 commands.entity(entity).insert((
                     asset,
                     sprite
@@ -110,32 +125,25 @@ impl Widget for AtlasBuilder {
                     AtlasSprites::ImageHandle(handle) => handle,
                     _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
                 };
-                let mut atlas = TextureAtlas::new_empty(texture, self.atlas_size
-                    .expect("Must specify the size of the atlas image, since image loading is deferred."));
-                for rect in rectangles {
-                    atlas.add_texture(rect);
-                }
-                let atlas = assets().add(atlas);
                 commands.entity(entity).insert((
                     sprite,
-                    atlas,
+                    DeferredAtlasBuilder::Rectangles{
+                        image: texture,
+                        rectangles,
+                    },
                 ));
             },
-            AtlasRectangles::Grid { size, count } => {
+            AtlasRectangles::Grid { size, count, offset } => {
                 let image = match self.sprites {
                     AtlasSprites::ImageName(name) => assets().load(name),
                     AtlasSprites::ImageHandle(handle) => handle,
                     _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
                 };
+                let [x, y] = count;
+                let atlas = TextureAtlas::from_grid(image, size, y, x, self.padding, Some(offset));
                 commands.entity(entity).insert((
                     sprite,
-                    DeferredAtlasBuilder::Grid { 
-                        image, 
-                        size, 
-                        count, 
-                        padding: self.padding, 
-                        offset: self.atlas_offset, 
-                    },
+                    assets().add(atlas),
                 ));
             },
             AtlasRectangles::Subdivide(slices) => {
@@ -149,7 +157,7 @@ impl Widget for AtlasBuilder {
                     DeferredAtlasBuilder::Subdivide { 
                         image,
                         padding: self.padding,
-                        slices, 
+                        count: slices, 
                     },
                 ));
             }
@@ -157,6 +165,17 @@ impl Widget for AtlasBuilder {
         entity
     }
 }
+
+/// Construct a texture atlas sprite.
+#[macro_export]
+macro_rules! atlas {
+    {$commands: tt {$($tt:tt)*}} => {
+        $crate::meta_dsl!($commands [$crate::dsl::builders::AtlasBuilder] {
+            $($tt)*
+        })
+    };
+}
+
 
 impl DslFrom<String> for AtlasSprites {
     fn dfrom(value: String) -> Self {
@@ -233,5 +252,84 @@ impl DslFrom<&[Handle<Image>]> for AtlasSprites {
 impl DslFrom<Vec<Handle<Image>>> for AtlasSprites {
     fn dfrom(value: Vec<Handle<Image>>) -> Self {
         Self::ImageHandles(value)
+    }
+}
+
+impl DslFrom<String> for AtlasRectangles {
+    fn dfrom(value: String) -> Self {
+        AtlasRectangles::AtlasFile(value)
+    }
+}
+
+impl DslFrom<&str> for AtlasRectangles {
+    fn dfrom(value: &str) -> Self {
+        AtlasRectangles::AtlasFile(value.to_owned())
+    }
+}
+
+impl DslFrom<TextureAtlas> for AtlasRectangles {
+    fn dfrom(value: TextureAtlas) -> Self {
+        AtlasRectangles::AtlasStruct(value)
+    }
+}
+
+impl DslFrom<Handle<TextureAtlas>> for AtlasRectangles {
+    fn dfrom(value: Handle<TextureAtlas>) -> Self {
+        AtlasRectangles::AtlasHandle(value)
+    }
+}
+
+impl DslFrom<Vec<Rect>> for AtlasRectangles {
+    fn dfrom(value: Vec<Rect>) -> Self {
+        AtlasRectangles::Rectangles(value)
+    }
+}
+
+impl DslFrom<&[Rect]> for AtlasRectangles {
+    fn dfrom(value: &[Rect]) -> Self {
+        AtlasRectangles::Rectangles(value.to_vec())
+    }
+}
+
+impl<const N: usize> DslFrom<[Rect; N]> for AtlasRectangles {
+    fn dfrom(value: [Rect; N]) -> Self {
+        AtlasRectangles::Rectangles(value.into())
+    }
+}
+
+impl DslFrom<[usize; 2]> for AtlasRectangles {
+    fn dfrom(value: [usize; 2]) -> Self {
+        AtlasRectangles::Subdivide(value)
+    }
+}
+
+impl DslFrom<UVec2> for AtlasRectangles {
+    fn dfrom(value: UVec2) -> Self {
+        AtlasRectangles::Subdivide([value.x as usize, value.y as usize])
+    }
+}
+
+
+impl<const N: usize> DslFrom<[[i32; 4]; N]> for AtlasRectangles {
+    fn dfrom(value: [[i32; 4]; N]) -> Self {
+        AtlasRectangles::Rectangles(value.into_iter()
+            .map(|[x, y, w, h]| Rect { 
+                min: Vec2::new(x as f32, y as f32),
+                max: Vec2::new((x + w) as f32, (y + h) as f32),
+            })
+            .collect()
+        )
+    }
+}
+
+impl<const N: usize> DslFrom<[[f32; 4]; N]> for AtlasRectangles {
+    fn dfrom(value: [[f32; 4]; N]) -> Self {
+        AtlasRectangles::Rectangles(value.into_iter()
+            .map(|[x, y, w, h]| Rect { 
+                min: Vec2::new(x, y), 
+                max: Vec2::new(x + w, y + h),
+            })
+            .collect()
+        )
     }
 }

@@ -186,6 +186,7 @@ pub use extension::WorldExtension;
 pub use schedule::CorePlugin;
 
 /// Plugin for both widgets and events.
+#[derive(Debug)]
 pub struct AoUIPlugin;
 
 impl bevy::prelude::Plugin for AoUIPlugin {

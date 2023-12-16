@@ -1,7 +1,8 @@
-# Primitives
+# Primitive Widgets
 
-There are the primitive widgets for `AoUI`, they display something and has no additional behaviors.
-Some of them corresponds to bundles in `bevy_sprite` and `bevy_text`.
+`bevy_aoui` has a few primitive widgets for `AoUI`
+corresponding to bevy2d's primitives.
+They only display something and have no additional behaviors.
 
 | name | bundle | widget | macro |
 | ---- | ------ | ------ | ----- |
@@ -9,9 +10,13 @@ Some of them corresponds to bundles in `bevy_sprite` and `bevy_text`.
 | Sprite | `AoUISpriteBundle` | `SpriteBuilder` | `sprite!` |
 | Rectangle | -- | `RectangleBuilder` | `rectangle!` |
 | Text | `AoUIText2dBundle` | `TextBoxBuilder` | `textbox!` |
-| TextureAtlasSprite | `AoUIAtlasSpriteBundle` | `AtlasSpriteBuilder` | `atlas!` |
-| MaterialRectangle | -- | `MaterialRectangleBuilder` | `material_rect!` |
+| Atlas | `AoUIAtlasSpriteBundle` | `AtlasSpriteBuilder` | `atlas!` |
+| MaterialSprite | -- | `MaterialSpriteBuilder` | `material_sprite!` |
 | MaterialMesh | `AoUIMaterialMesh2dBundle` | `MaterialMeshBuilder` | `material_mesh!` |
+
+When using macros it might be difficult to find documents for it from your editor.
+The easiest way is to look for its corresponding builder struct in
+[bevy_aoui::dsl::builders].
 
 ## Frame
 
@@ -33,12 +38,12 @@ A 2d text.
 
 A texture atlas sprite.
 
-## MaterialRectangle
+## MaterialSprite
 
 A rectangle using a custom material
 
 ## MaterialMesh
 
 A 2d mesh using a custom material,
-the mesh should be in range `-0.5..=0.5`
-and let `bevy_aoui` handle scaling.
+bevy_aoui assumes the mesh is in range `-0.5..=0.5`
+and scales accordingly.

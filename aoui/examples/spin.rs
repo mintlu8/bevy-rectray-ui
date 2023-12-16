@@ -35,10 +35,12 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         text: "I'm Spinning!",
         font: "ComicNeue-Bold.ttf",
         color: color!(cyan),
+        extra: OpacityWriter,
         extra: transition!(
-            Offset 2 Linear looping (Vec2::new(-200.0, 0.0), Vec2::new(200.0, 0.0));
+            Opacity 5 CubicOut init (0.0, 1.0);
+            Offset 2 Linear loop (Vec2::new(-200.0, 0.0), Vec2::new(200.0, 0.0));
             Rotation 2 Linear repeat (0.0, 2.0 * PI);
-            Color 2 Linear looping [cyan, blue];
+            Color 2 Linear loop [cyan, blue];
         )
     });
 }

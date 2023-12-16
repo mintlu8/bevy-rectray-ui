@@ -8,12 +8,13 @@ use crate::{events::{EventFlags, CursorAction, CursorFocus, ClickOutside, Cursor
 use self::sealed::EventQuery;
 
 /// Event handlers.
-#[derive(Component)]
+#[derive(Debug, Component)]
 pub struct Handlers<T: EventHandling> {
     pub context: T::Context,
     pub handlers: SmallVec<[Handler;1]>,
 }
 
+#[derive(Debug)]
 pub enum Handler {
     OneShotSystem(Arc<OnceLock<SystemId>>),
     Signal(Sender),
@@ -140,6 +141,7 @@ impl_entity_query_for_mouse_state! (
 );
 
 /// Check if widget has lost focus (drag, hover, pressed).
+#[derive(Debug)]
 pub enum LoseFocus{}
 
 impl EventHandling for LoseFocus {
@@ -150,6 +152,7 @@ impl EventHandling for LoseFocus {
 }
 
 /// Check if widget has obtained focus (drag, hover, pressed).
+#[derive(Debug)]
 pub enum ObtainFocus{}
 
 impl EventHandling for ObtainFocus {

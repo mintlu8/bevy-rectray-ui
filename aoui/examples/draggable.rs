@@ -43,7 +43,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         color: color!(gold),
         extra: sig_fps().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
     });
-    material_rect! ((commands, assets) {
+    material_sprite! ((commands, assets) {
         dimension: [100, 100],
         hitbox: Rect(1),
         z: 10,
@@ -105,7 +105,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
 
-    material_rect! ((commands, assets) {
+    material_sprite! ((commands, assets) {
         dimension: [100, 100],
         offset: [-300, -100],
         hitbox: Rect(1),

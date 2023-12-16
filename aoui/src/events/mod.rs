@@ -24,6 +24,7 @@ pub struct AoUICamera;
 
 
 /// Plugin for the event pipeline.
+#[derive(Debug)]
 pub struct CursorEventsPlugin;
 
 impl bevy::prelude::Plugin for CursorEventsPlugin {

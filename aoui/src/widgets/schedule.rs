@@ -1,7 +1,7 @@
 use bevy::{prelude::{Plugin, PostUpdate, IntoSystemConfigs, Update}, app::{PreUpdate, Last}};
 use crate::schedule::{AoUIStoreOutputSet, AoUILoadInputSet, AoUIWidgetsEventSet, AoUICleanupSet, AoUIButtonEventSet};
 
-use super::{inputbox, button, drag::{self, drag_start}, richtext, scroll, scrollframe};
+use super::{inputbox, button, drag::{self, drag_start}, richtext, scroll, scrollframe, atlas};
 
 
 pub(crate) struct WidgetsPlugin;
@@ -31,6 +31,7 @@ impl Plugin for WidgetsPlugin {
                 button::set_cursor,
                 button::event_conditional_visibility,
                 button::check_conditional_visibility,
+                atlas::build_deferred_atlas,
             ))
             .add_systems(PostUpdate, richtext::synchronize_glyph_spaces.in_set(AoUILoadInputSet))
             .add_systems(PostUpdate, inputbox::sync_em_inputbox.in_set(AoUIStoreOutputSet))

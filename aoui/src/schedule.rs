@@ -24,24 +24,29 @@ pub struct AoUITreeUpdateSet;
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
 pub struct AoUIStoreOutputSet;
 
-/// Write to `GlobalTransform`, after bevy's `propagate_transform`.
+/// SystemSet for writing to `GlobalTransform`, after bevy's `propagate_transform`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
 pub struct AoUIFinalizeSet;
 
+/// SystemSet for generating events in `PreUpdate`.
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct AoUIEventSet;
 
+/// SystemSet for cleaning up events and signal in `Last`.
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct AoUICleanupSet;
 
-/// This runs before `AoUIWidgetsEventSet` for signal piping.
+/// SystemSet for handling button clicks in `PreUpdate`, 
+/// has elevated precedence for signal piping.
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct AoUIButtonEventSet;
 
+/// SystemSet for handling widget events in `PreUpdate`.
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct AoUIWidgetsEventSet;
 
 /// Core plugin for AoUI Rendering.
+#[derive(Debug)]
 pub struct CorePlugin;
 
 impl bevy::prelude::Plugin for CorePlugin {

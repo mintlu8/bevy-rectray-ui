@@ -21,18 +21,21 @@
 /// the default value here is needed 
 /// and will overwrite the corresponded field.
 /// 
-/// * Repeat/Looping
+/// * Init, Repeat and Looping
 /// 
-/// Repeat and looping will automatically run the animation.
+/// Init, repeat and looping will automatically run the animation.
 /// 
 /// ```
 /// # /*
 /// transition!(
+///     Opacity 3.0 CubicInOut init (0.0, 1.0);
 ///     Rotation 3.0 CubicInOut repeat (0.0, PI);
-///     Color 3.0 CubicInOut looping [red, blue];
+///     Color 3.0 CubicInOut loop [red, blue];
 /// )
 /// # */
 /// ```
+/// 
+/// Init runs an animation once `0->1`,
 /// 
 /// Repeat's time value goes from `0->1, 0->1, ...`
 /// 
@@ -86,7 +89,30 @@ macro_rules! transition_impl {
         $($($rest)*)?)
     };
 
-    ({$($out: expr),*} Color $time: tt $ease:tt looping [$($range: tt)*] $(;$($rest:tt)*)?) => {
+    ({$($out: expr),*} Color $time: tt $ease:tt init [$($range: tt)*] $(;$($rest:tt)*)?) => {
+        $crate::transition_impl!({   
+            $($out,)*
+            $crate::anim::Interpolate::<$crate::bevy::prelude::Color>::init(
+                $crate::easing!($ease), 
+                $crate::gradient!($($range)*),
+                $time as f32
+            )
+        }
+        $($($rest)*)?)
+    };
+    ({$($out: expr),*} $name:ident $time: tt $ease:tt init $range: expr $(;$($rest:tt)*)?) => {
+        $crate::transition_impl!({   
+            $($out,)*
+            $crate::anim::Interpolate::<$name>::init(
+                $crate::easing!($ease),
+                $range,
+                $time as f32
+            )
+        }
+        $($($rest)*)?)
+    };
+
+    ({$($out: expr),*} Color $time: tt $ease:tt loop [$($range: tt)*] $(;$($rest:tt)*)?) => {
         $crate::transition_impl!({   
             $($out,)*
             $crate::anim::Interpolate::<$crate::bevy::prelude::Color>::looping(
@@ -97,7 +123,7 @@ macro_rules! transition_impl {
         }
         $($($rest)*)?)
     };
-    ({$($out: expr),*} $name:ident $time: tt $ease:tt looping $range: expr $(;$($rest:tt)*)?) => {
+    ({$($out: expr),*} $name:ident $time: tt $ease:tt loop $range: expr $(;$($rest:tt)*)?) => {
         $crate::transition_impl!({   
             $($out,)*
             $crate::anim::Interpolate::<$name>::looping(

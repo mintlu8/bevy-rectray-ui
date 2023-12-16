@@ -288,7 +288,7 @@ impl Widget for ClippingFrameBuilder {
 }
 
 #[macro_export]
-macro_rules! clipping_frame {
+macro_rules! clipping_layer {
     {$commands: tt {$($tt:tt)*}} => 
         {$crate::meta_dsl!($commands [$crate::dsl::builders::ClippingFrameBuilder] {$($tt)*})};
 }

@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use bevy::{
     prelude::*, 
     sprite::{Sprite, Mesh2dHandle, Material2d}, 

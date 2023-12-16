@@ -3,6 +3,7 @@ use bevy::{ecs::schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, 
 use ::interpolation::Ease;
 pub use ::interpolation::EaseFunction;
 mod interpolation;
+pub use interpolation::{Interpolate, Offset, Rotation, Scale, Index};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum Easing {
@@ -42,8 +43,6 @@ pub struct InterpolationSet;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, SystemSet)]
 pub struct InterpolationUpdateSet;
 
-pub use interpolation::{Interpolate, Offset, Rotation, Scale};
-
 pub(crate) struct AnimationPlugin;
 
 impl Plugin for AnimationPlugin {
@@ -56,6 +55,7 @@ impl Plugin for AnimationPlugin {
                 interpolation::interpolate_rotation,
                 interpolation::interpolate_scale,
                 interpolation::interpolate_dimension,
+                interpolation::interpolate_index,
                 interpolation::interpolate_color,
                 interpolation::interpolate_opacity,
             ).in_set(InterpolationSet))

@@ -37,7 +37,7 @@ pub mod builders {
     pub use super::layouts::{PaddingBuilder, SpanContainerBuilder, GridContainerBuilder};
     pub use super::widgets::{InputBoxBuilder, CheckButtonBuilder, RadioButtonBuilder, ButtonBuilder, ClippingFrameBuilder};
     pub use super::shapes::RectangleBuilder;
-    pub use super::mesh2d::{MaterialRectangleBuilder, MaterialMeshBuilder};
+    pub use super::mesh2d::{MaterialSpriteBuilder, MaterialMeshBuilder};
 }
 
 /// Construct an empty sprite.

@@ -12,7 +12,7 @@
 
     Tired of writing `Vec2::new(1.0, 2.0)`? Try `[1, 2]` instead.
 
-* Syntax magic, no behavior magic.
+* Syntax magic, no behavior magic
 
     `bevy_aoui` is built from the ground up with `bevy_ecs`.
     All states are implemented using components in a way
@@ -20,15 +20,21 @@
 
 * Designed for the CSS haters
 
-    `bevy_aoui` does not fully reject the ideas from CSS, in fact we have CSS inspired systems
-    like `em` and percentage size. However our `Transform2D` is much simpler than a `Style` node,
-    and our `Container` is much simpler than `FlexBox`. A lot of weird CSS attributes can be emulated
-    by adding more rectangles, using `Container` or abstracting with a custom widget.
+    `bevy_aoui` uses some CSS features like size units and transition,
+    while using a drastically simpler layout system that favors expressing
+    style through a hierarchy rather than a single node. This produces
+    fine grained nodes that enables the `MarkedSignal` reactive system.
+
+* Fully reactive
+
+    Create a signal, mark the sender with what you wants to send,
+    mark the receiver with what you want to change, that's it!
 
 * No editor? No problem
 
-    The anchor-offset layout system is intuitive in a no editor environment.
-    If an editor does exist, bevy_aoui can integrate with it perfectly as well.
+    The anchor-offset layout system is designed to be
+    intuitive in a no editor environment, while also being easy to use
+    in an editor environment.
 
 * IDE friendly
 
@@ -48,6 +54,13 @@
 
     Features violating one of these rules might live in a separate crate.
 
+* Bevy2D as a backend
+
+    `bevy_aoui` exclusively uses bevy's 2D primitives like `Sprite`, `Text2D`,
+    `TextureAtlas`, `MaterialMesh` etc to render its contents.
+    Meaning we get all the cool features Bevy2D provides
+    both now and in the future.
+
 * Bridging the gap between 2D and UI
 
     `bevy_aoui` is a UI framework with full rotation and scaling support,
@@ -59,30 +72,42 @@
     any third party widget not dependent on `UI`
     should work with `bevy_aoui` with minimal configuration.
 
-## Non-goals
+## Limitations
 
-* One-size-fit-all UIs
+* UI Features
 
-    `bevy_aoui` is not a html engine, meaning you might
-    work a bit harder porting your desktop UI to mobile.
+    `bevy_aoui` does not use `bevy_ui`, therefore features available only in
+    `bevy_ui` might not be present in `bevy_aoui`.
 
-* Styling
+* No styling
   
-    `bevy_aoui` is render agnostic, so there is little we can do to provide
+    `bevy_ui` and most other UI crate have some kind of styling system,
+    but since `bevy_aoui` is render agnostic, there is little we can do to provide
     a generalized implementation of things like `border` in CSS.
+    However custom styling can be easily implemented using our widget
+    abstraction system.
 
-* Style inheritance
+* Clipping requires a new render target
 
-    `bevy_aoui` has a custom widget system you can use to group
-    widgets with similar properties. But there likely won't be support for
-    directly inheriting style attributes like color from parent to child.
+    All features using clipping, like `ScrollLayer`, `DropDown`, `ComboBox`
+    require spawning a new camera and using a new `RenderLayer`.
+    This approach has the benefit of being truly render agnostic, while
+    supporting almost **all** features available in this crate, including rotation
+    and scaling.
+    However this will incur a performance cost and might not be the ideal solution
+    for every use case.
+
+* No support for drastically different aspect ratios
+
+    `bevy_aoui` is not a html engine, and our Layout systems is
+    not suited to handle both desktop and mobile.
 
 * Configuration files
 
     Rust is the perfect language, why would you want to write in anything else?
 
     For a more serious answer,
-    `bevy_aoui` encourages the use of rust directly for hierarchy and widget abstractions.
+    `bevy_aoui` encourages the use of Rust directly for hierarchy and widget abstractions.
     A decent alternative is to use widget builders through
     serde implementations, however that is currently not directly supported.
 

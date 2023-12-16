@@ -1,6 +1,6 @@
 use std::ops::{Add, Mul};
 
-use bevy::{math::{Vec2, Vec4}, render::color::Color, ecs::{component::Component, system::{Query, Res}}, time::Time, sprite::Sprite, text::Text};
+use bevy::{math::{Vec2, Vec4}, render::color::Color, ecs::{component::Component, system::{Query, Res}}, time::Time, sprite::{Sprite, TextureAtlasSprite}, text::Text};
 use crate::{Transform2D, Dimension, Opacity};
 use interpolation::EaseFunction;
 use smallvec::SmallVec;
@@ -29,22 +29,22 @@ pub trait IntoInterpolate<T: Interpolation> {
     fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]>;
 }
 
-impl<T: Interpolation> IntoInterpolate<T> for (T::Data, T::Data) {
+impl<T: Interpolation> IntoInterpolate<T> for (T::FrontEnd, T::FrontEnd) {
     fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]> {
         let (start, end) = self;
-        [(start, 0.0), (end, 1.0)].into_iter().collect()
+        [(T::into_data(start), 0.0), (T::into_data(end), 1.0)].into_iter().collect()
     }
 }
 
-impl<T: Interpolation, const N: usize> IntoInterpolate<T> for [(T::Data, f32); N] {
+impl<T: Interpolation, const N: usize> IntoInterpolate<T> for [(T::FrontEnd, f32); N] {
     fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]> {
-        self.into_iter().collect()
+        self.into_iter().map(|(a, b)| (T::into_data(a), b)).collect()
     }
 }
 
-impl<T: Interpolation> IntoInterpolate<T> for &[(T::Data, f32)] {
+impl<T: Interpolation> IntoInterpolate<T> for &[(T::FrontEnd, f32)] {
     fn into_interpolate(self) -> SmallVec<[(T::Data, f32); 1]> {
-        self.iter().copied().collect()
+        self.iter().map(|(a, b)| (T::into_data(*a), *b)).collect()
     }
 }
 
@@ -56,7 +56,7 @@ impl<T: Interpolation> IntoInterpolate<T> for SmallVec<[(T::Data, f32); 1]> {
 
 impl<T: Interpolation> Interpolate<T> {
 
-    pub const fn new(curve: Easing, position: T::Data, time: f32) -> Self {
+    pub const fn const_new(curve: Easing, position: T::Data, time: f32) -> Self {
         Interpolate {
             curve,
             time: 0.0,
@@ -67,12 +67,35 @@ impl<T: Interpolation> Interpolate<T> {
         }
     }
 
-    pub const fn ease(curve: EaseFunction, position: T::Data, time: f32) -> Self {
+
+    pub fn new(curve: Easing, position: T::FrontEnd, time: f32) -> Self {
+        Interpolate {
+            curve,
+            time: 0.0,
+            default_time: time,
+            range: SmallVec::from_const([(T::into_data(position), 0.0)]),
+            current: 0.0,
+            playback: Playback::Once,
+        }
+    }
+
+    pub fn ease(curve: EaseFunction, position: T::FrontEnd, time: f32) -> Self {
         Interpolate {
             curve: Easing::Ease(curve),
             time: 0.0,
             default_time: time,
-            range: SmallVec::from_const([(position, 0.0)]),
+            range: SmallVec::from_const([(T::into_data(position), 0.0)]),
+            current: 0.0,
+            playback: Playback::Once,
+        }
+    }
+
+    pub fn init(curve: Easing, positions: impl IntoInterpolate<T>, time: f32) -> Self {
+        Interpolate {
+            curve,
+            time,
+            default_time: time,
+            range: positions.into_interpolate(),
             current: 0.0,
             playback: Playback::Once,
         }
@@ -100,7 +123,7 @@ impl<T: Interpolation> Interpolate<T> {
         }
     }
 
-    pub fn get(&self) -> T::Data {
+    fn get_data(&self) -> T::Data {
         if self.range.len() == 1 || self.time <= 0.0 || (self.playback.is_once() && self.current >= self.time) {
             return self.range.last().expect("Interpolate has no value, this is a bug.").0;
         }
@@ -128,19 +151,23 @@ impl<T: Interpolation> Interpolate<T> {
         self.range.last().unwrap().0
     }
 
+    pub fn get(&self) -> T::FrontEnd {
+        T::into_front_end(self.get_data())
+    }
+
     /// Get source of this interpolation
     pub fn source(&self) -> T::Data {
         self.range.first().expect("Interpolate has no value, this is a bug.").0
     }
 
     /// Get target of this interpolation
-    pub fn target(&self) -> T::Data {
-        self.range.last().expect("Interpolate has no value, this is a bug.").0
+    pub fn target(&self) -> T::FrontEnd {
+        T::into_front_end(self.range.last().expect("Interpolate has no value, this is a bug.").0)
     }
 
     /// End animation and obtain the target.
-    pub fn take_target(&mut self) -> T::Data {
-        let pos = self.get();
+    pub fn take_target(&mut self) -> T::FrontEnd {
+        let pos = self.get_data();
         let result = self.target();
         self.range = SmallVec::from_const([(pos, 0.0)]);
         result
@@ -152,8 +179,8 @@ impl<T: Interpolation> Interpolate<T> {
     }
 
     /// Set position and stop interpolation.
-    pub fn set(&mut self, pos: T::Data) {
-        self.range = SmallVec::from_const([(pos, 0.0)]);
+    pub fn set(&mut self, pos: T::FrontEnd) {
+        self.range = SmallVec::from_const([(T::into_data(pos), 0.0)]);
         self.current = 0.0;
         self.time = self.default_time;
     }
@@ -161,9 +188,9 @@ impl<T: Interpolation> Interpolate<T> {
     /// Rules: if range is the same, ignore
     /// 
     /// If is already moving, use current position as `from`
-    pub fn interpolate_to(&mut self, to: T::Data) {
+    pub fn interpolate_to(&mut self, to: T::FrontEnd) {
         if self.target() != to {
-            self.range = [(self.get(), 0.0), (to, 1.0)].into_iter().collect();
+            self.range = [(self.get_data(), 0.0), (T::into_data(to), 1.0)].into_iter().collect();
             self.current = 0.0;
             self.time = self.default_time;
         }
@@ -171,8 +198,8 @@ impl<T: Interpolation> Interpolate<T> {
 
     /// Call `reverse` if interpolating to current animation's source, 
     /// otherwise call `interpolate_to`.
-    pub fn interpolate_to_or_reverse(&mut self, to: T::Data) {
-        if self.range.len() > 1 && self.range[0].0 == to {
+    pub fn interpolate_to_or_reverse(&mut self, to: T::FrontEnd) {
+        if self.range.len() > 1 && T::into_front_end(self.range[0].0) == to {
             self.reverse()
         } else {
             self.interpolate_to(to)
@@ -192,8 +219,8 @@ impl<T: Interpolation> Interpolate<T> {
     /// If not, always replaces the first value with the current position.
     pub fn interpolate(&mut self, range: impl IntoInterpolate<T>) {
         let mut range = range.into_interpolate();
-        if self.range.last() != range.last() {
-            let pos = self.get();
+        if !opt_eq::<T>(self.range.last(), range.last()) {
+            let pos = self.get_data();
             range[0] = (pos, 0.0);
             self.range = range;
             self.current = 0.0;
@@ -205,7 +232,7 @@ impl<T: Interpolation> Interpolate<T> {
     /// otherwise call `interpolate_to`.
     pub fn interpolate_or_reverse(&mut self, range: impl IntoInterpolate<T>) {
         let range = range.into_interpolate();
-        if self.range.len() > 1 && range.last() == self.range.first() {
+        if self.range.len() > 1 && opt_eq::<T>(range.last(), self.range.first()) {
             self.reverse()
         } else {
             self.interpolate(range)
@@ -217,8 +244,8 @@ impl<T: Interpolation> Interpolate<T> {
     /// If not, always replaces the first value with the current position.
     pub fn interpolate_with_time(&mut self, range: impl IntoInterpolate<T>, time: f32) {
         let mut range = range.into_interpolate();
-        if self.range.last() != range.last() {
-            let pos = self.get();
+        if !opt_eq::<T>(self.range.last(), range.last()) {
+            let pos = self.get_data();
             range[0] = (pos, 0.0);
             self.range = range;
             self.current = 0.0;
@@ -227,35 +254,83 @@ impl<T: Interpolation> Interpolate<T> {
     }
 }
 
+fn opt_eq<T: Interpolation>(left: Option<&(T::Data, f32)>, right: Option<&(T::Data, f32)>) -> bool {
+    match (left, right) {
+        (None, None) => true,
+        (None, Some(_)) => false,
+        (Some(_), None) => false,
+        (Some(a), Some(b)) => T::into_front_end(a.0) == T::into_front_end(b.0),
+    }
+}
+
 /// Trait for a marker type representing a target of interpolation.
 pub trait Interpolation {
-    type Data: Add<Self::Data, Output = Self::Data> + Mul<f32, Output = Self::Data> + Copy + PartialEq;
+    type FrontEnd: PartialEq + Copy;
+    // We don't compare data.
+    type Data: Add<Self::Data, Output = Self::Data> + Mul<f32, Output = Self::Data> + Copy;
+
+    fn into_data(data: Self::FrontEnd) -> Self::Data;
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd;
 }
 
-macro_rules! impl_interpolation {
-    ($($name: ident: $ty: ty);* $(;)?) => {
-        $(pub struct $name;
+#[derive(Debug)]
+pub enum Offset{}
+#[derive(Debug)]
+pub enum Rotation{}
+#[derive(Debug)]
+pub enum Scale{}
+#[derive(Debug)]
+pub enum Index{}
 
-        impl Interpolation for $name {
-            type Data = $ty;
-        })*
-    };
+
+
+impl Interpolation for Offset {
+    type FrontEnd = Vec2;
+    type Data = Vec2;
+    fn into_data(data: Self::FrontEnd) -> Self::Data { data }
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
 }
 
-impl_interpolation!(
-    Offset: Vec2; Rotation: f32; Scale: Vec2;
-);
+impl Interpolation for Rotation {
+    type FrontEnd = f32;
+    type Data = f32;
+    fn into_data(data: Self::FrontEnd) -> Self::Data { data }
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
+}
+
+impl Interpolation for Scale {
+    type FrontEnd = Vec2;
+    type Data = Vec2;
+    fn into_data(data: Self::FrontEnd) -> Self::Data { data }
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
+}
+
+impl Interpolation for Index {
+    type FrontEnd = usize;
+    type Data = f32;
+    fn into_data(data: Self::FrontEnd) -> Self::Data { data as f32 }
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd { data.round() as usize }
+}
 
 impl Interpolation for Dimension {
+    type FrontEnd = Vec2;
     type Data = Vec2;
+    fn into_data(data: Self::FrontEnd) -> Self::Data { data }
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
 }
 
 impl Interpolation for Color {
+    type FrontEnd = Color;
     type Data = Vec4;
+    fn into_data(data: Self::FrontEnd) -> Self::Data { data.into() }
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd { data.into() }
 }
 
 impl Interpolation for Opacity {
+    type FrontEnd = f32;
     type Data = f32;
+    fn into_data(data: Self::FrontEnd) -> Self::Data { data }
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
 }
 
 pub fn interpolate_offset(
@@ -292,6 +367,14 @@ pub fn interpolate_dimension(
     }
 }
 
+pub fn interpolate_index(
+    mut query: Query<(&mut TextureAtlasSprite, &Interpolate<Index>)>
+) {
+    for (mut atlas, interpolate) in query.iter_mut() {
+        atlas.index = interpolate.get()
+    }
+}
+
 pub fn interpolate_color(
     mut sp_query: Query<(&mut Sprite, &Interpolate<Color>)>,
     mut text_query: Query<(&mut Text, &Interpolate<Color>)>
@@ -321,8 +404,9 @@ pub fn update_interpolate(
     mut query1: Query<&mut Interpolate<Rotation>>,
     mut query2: Query<&mut Interpolate<Scale>>,
     mut query3: Query<&mut Interpolate<Dimension>>,
-    mut query4: Query<&mut Interpolate<Color>>,
-    mut query5: Query<&mut Interpolate<Opacity>>,
+    mut query4: Query<&mut Interpolate<Index>>,
+    mut query5: Query<&mut Interpolate<Color>>,
+    mut query6: Query<&mut Interpolate<Opacity>>,
 ) {
     let time = time.delta_seconds();
     for mut item in query0.iter_mut() {
@@ -341,6 +425,9 @@ pub fn update_interpolate(
         item.update(time);
     }
     for mut item in query5.iter_mut() {
+        item.update(time);
+    }
+    for mut item in query6.iter_mut() {
         item.update(time);
     }
 }

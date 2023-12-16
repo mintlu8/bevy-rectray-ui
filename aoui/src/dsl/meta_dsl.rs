@@ -628,7 +628,7 @@ macro_rules! widget_extension2 {
             /// 
             /// If not set, size is fetched dynamically from various sources.
             /// 
-            /// The `size` field, if exists, sets the size of the underlying sprite.
+            /// The `size` field from `SpriteBuilder` sets the size of the underlying sprite instead.
             pub dimension: Option<$crate::Size2>,
             /// Propagated font size.
             pub font_size: $crate::FontSize,

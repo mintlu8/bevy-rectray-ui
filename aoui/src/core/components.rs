@@ -302,19 +302,24 @@ pub struct BuildMeshTransform;
 /// can be used by implementors.
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct Opacity {
+    /// User specified opacity of the widget.
     pub opacity: f32,
+    /// Computed opacity of the widget.
     pub computed: f32
 }
 
 impl Opacity {
-    pub const FULL: Self = Self {
+    /// Fully opaque.
+    pub const OPAQUE: Self = Self {
         opacity: 1.0,
         computed: 1.0,
     };
+    /// Fully transparent.
     pub const TRANSPARENT: Self = Self {
         opacity: 0.0,
         computed: 0.0,
     };
+    /// Create opacity from a value.
     pub const fn new(v: f32) -> Self {
         Self {
             opacity: v,
@@ -325,7 +330,7 @@ impl Opacity {
 
 impl Default for Opacity {
     fn default() -> Self {
-        Self::FULL
+        Self::OPAQUE
     }
 }
 

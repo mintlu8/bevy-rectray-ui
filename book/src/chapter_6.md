@@ -1,7 +1,7 @@
 # Layouts
 
 For simplicity we assume the items are laid out horizontally, (i.e. `LeftToRight`),
-and rows are placed vertially (i.e. `TopToBottom`), when referring to
+and rows are placed vertically (i.e. `TopToBottom`), when referring to
 "row", "column", "width" or "height".
 
 ## Single
@@ -20,7 +20,7 @@ sum of the widths of children, plus margin.
 
 Span is an alignment based fixed sized row layout.
 
-Row alignements of sprites is used to sort items into buckets.
+Row alignments of sprites is used to sort items into buckets.
 
 When given a child with custom anchor, the layout panics.
 

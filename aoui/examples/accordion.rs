@@ -1,7 +1,7 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::WorldExtension;
 use bevy_aoui::AoUIPlugin;
-use bevy_aoui::widgets::scroll::{Scrolling, ScrollDirection};
+use bevy_aoui::widgets::scroll::ScrollDirection;
 
 pub fn main() {
     App::new()
@@ -38,7 +38,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let (scroll_send1, scroll_recv) = signal();
     let scroll_send2 = scroll_send1.fork();
 
-    clipping_frame!((commands, assets) {
+    clipping_layer!((commands, assets) {
         dimension: [400, 400],
         buffer: [800, 800],
         scroll: Scrolling::Y,
@@ -64,7 +64,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     },
                 }
             },
-            child: clipping_frame! {
+            child: clipping_layer! {
                 anchor: Top,
                 dimension: [400, 400],
                 buffer: [800, 800],
@@ -108,7 +108,7 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
                     },
                 }
             },
-            child: clipping_frame! {
+            child: clipping_layer! {
                 anchor: Top,
                 dimension: [400, 400],
                 buffer: [800, 800],

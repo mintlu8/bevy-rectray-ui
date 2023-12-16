@@ -1,18 +1,51 @@
+use bevy::math::Vec2;
+use bevy::render::color::Color;
+
+use crate::widgets::drag::DragState;
+
 
 #[macro_export]
-macro_rules! signals {
+macro_rules! signal_senders {
     ($($(#[$($attr:tt)*])* $name: ident),* $(,)?) => {
         $(
             $(#[$($attr)*])*
             #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)] 
             pub enum $name {}
-            impl $crate::signals::SignalMarker for $name {}
+            impl $crate::signals::SignalSender for $name {}
         )*
     };
 }
 
-// Note `SigSubmit`, `SigChange`, `Sent`, `SigScroll` are the only valid senders.
-signals!(
+#[macro_export]
+macro_rules! signal_receivers {
+    ($($(#[$($attr:tt)*])* $name: ident: $ty: ty),* $(,)?) => {
+        $(
+            $(#[$($attr)*])*
+            #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)] 
+            pub enum $name {}
+            impl $crate::signals::SignalReceiver for $name {
+                type Type = $ty;
+            }
+        )*
+    };
+}
+
+#[macro_export]
+macro_rules! signal_both {
+    ($($(#[$($attr:tt)*])* $name: ident: $ty: ty),* $(,)?) => {
+        $(
+            $(#[$($attr)*])*
+            #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)] 
+            pub enum $name {}
+            impl $crate::signals::SignalSender for $name {}
+            impl $crate::signals::SignalReceiver for $name {
+                type Type = $ty;
+            }
+        )*
+    };
+}
+
+signal_senders!(
     /// The canonical output of the widget, including `Button` press,
     /// `enter` press on `InputBox`, etc. 
     /// 
@@ -22,46 +55,51 @@ signals!(
     SigSubmit, 
     /// Send a signal whenever the output of a widget is changed.
     SigChange, 
+);
+
+signal_both!(
     /// Sent if a non-draggable sprite is being dragged, 
     /// `Draggable` sprite will be dragged if receiving this signal.
     /// 
     /// This is useful for creating a draggable banner for a non-draggable parent sprite.
-    SigDrag,
+    SigDrag: DragState,
     /// Sent if being scrolled on, `Scroll` sprite will be scrolled if receiving this signal.
-    SigScroll,
+    SigScroll: Vec2,
+);
 
+signal_receivers!(
     /// Triggers some behavior when sent to another widget.
-    SigInvoke,
+    SigInvoke: (),
 
     /// Modifies the recipient's text.
-    SigText,
+    SigText: String,
     /// Modifies the recipient's raw offset.
-    SigOffset,
+    SigOffset: Vec2,
     /// Modifies the recipient's raw dimension.
-    SigDimension,
+    SigDimension: Vec2,
     /// Modifies the recipient's rotation.
-    SigRotation,
+    SigRotation: f32,
     /// Modifies the recipient's scale.
-    SigScale,
+    SigScale: Vec2,
 
     /// Modifies the recipient's raw offset x.
-    SigOffsetX,
+    SigOffsetX: f32,
     /// Modifies the recipient's raw offset y.
-    SigOffsetY,
+    SigOffsetY: f32,
     /// Modifies the recipient's scale x.
-    SigScaleX,
+    SigScaleX: f32,
     /// Modifies the recipient's scale y.
-    SigScaleY,
+    SigScaleY: f32,
     /// Modifies the recipient's raw dimension X.
-    SigDimensionX,
+    SigDimensionX: f32,
     /// Modifies the recipient's raw dimension y.
-    SigDimensionY,
+    SigDimensionY: f32,
 
     /// Modifies the recipient's color.
-    SigColor,
+    SigColor: Color,
     /// Modifies the recipient's opacity.
-    SigOpacity,
+    SigOpacity: f32,
 
     /// Modifies the recipient layout's margin.
-    SigMargin,
+    SigMargin: Vec2,
 );

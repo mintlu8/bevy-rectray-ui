@@ -6,7 +6,7 @@ use crate::widgets::button::Payload;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit};
 use crate::{Size2, FontSize, layout::Alignment, layout::FlexDir};
 
-use crate::signals::{Sender, Receiver, SignalMarker, DataTransfer};
+use crate::signals::{Sender, Receiver, SignalSender, DataTransfer, SignalReceiver};
 
 use super::DslFrom;
 use super::convert::DslInto;
@@ -444,13 +444,13 @@ impl<T> OptionX<T> {
     }
 }
 
-impl<T: SignalMarker, A: SignalMarker> DslFrom<Sender<A>> for OptionX<Sender<T>>{
+impl<T: SignalSender, A: SignalSender> DslFrom<Sender<A>> for OptionX<Sender<T>>{
     fn dfrom(value: Sender<A>) -> OptionX<Sender<T>> {
         OptionX::Some(value.mark::<T>())
     }
 }
 
-impl<T: SignalMarker,  A: SignalMarker> DslFrom<Receiver<A>> for OptionX<Receiver<T>>{
+impl<T: SignalReceiver,  A: SignalReceiver> DslFrom<Receiver<A>> for OptionX<Receiver<T>>{
     fn dfrom(value: Receiver<A>) -> OptionX<Receiver<T>> {
         OptionX::Some(value.mark::<T>())
     }

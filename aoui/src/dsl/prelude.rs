@@ -15,7 +15,7 @@ pub const EPS: f32 = f32::EPSILON;
 pub use bevy::prelude::Color;
 pub use crate::{Dimension, Opacity, SizeUnit, Size2};
 pub use crate::layout::LayoutControl::{Linebreak, IgnoreLayout};
-pub use crate::anim::{Interpolate, Offset, Rotation, Scale};
+pub use crate::anim::{Interpolate, Offset, Rotation, Scale, Index};
 pub use interpolation::EaseFunction;
 pub use crate::events::{
     EventFlags,
@@ -51,12 +51,14 @@ pub const DragSnapBack: crate::widgets::drag::DragSnapBack = crate::widgets::dra
 
 pub const Inherit: Anchor = Anchor::Inherit;
 
-pub use crate::{frame, sprite, textbox};
-pub use crate::material_rect;
+pub use super::atlas::AtlasRectangles::Grid as AtlasGrid;
+
+pub use crate::{frame, sprite, textbox, atlas};
+pub use crate::{material_sprite, material_mesh};
 pub use crate::{one_shot, handler};
 pub use crate::{padding, compact, paragraph, span, hbox, vbox, hspan, vspan};
 pub use crate::{linebreak, table, flex_table, fixed_grid, sized_grid,};
-pub use crate::{inputbox, button, check_button, radio_button, clipping_frame};
+pub use crate::{inputbox, button, check_button, radio_button, clipping_layer};
 pub use crate::rectangle;
 
 pub use crate::dsl::context::with_layer;

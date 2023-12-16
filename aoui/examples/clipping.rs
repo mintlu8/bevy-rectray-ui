@@ -1,6 +1,6 @@
 use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
 use bevy_aoui::{AoUIPlugin, widgets::richtext::RichTextBuilder};
-use bevy_aoui::widgets::scroll::{Scrolling, ScrollDirection};
+use bevy_aoui::widgets::scroll::ScrollDirection;
 
 pub fn main() {
     App::new()
@@ -23,7 +23,7 @@ pub fn main() {
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    clipping_frame!((commands, assets) {
+    clipping_layer!((commands, assets) {
         dimension: [400, 400],
         offset: [-200, 0],
         buffer: [800, 800],
@@ -70,7 +70,7 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
         });
         commands.entity(para).push_children(&children).id()
     });
-    clipping_frame!((commands, assets) {
+    clipping_layer!((commands, assets) {
         dimension: [400, 400],
         offset: [200, 0],
         buffer: [800, 800],

@@ -1,8 +1,8 @@
-# Core Concepts
+# Layout System
 
 ## Rectangles
 
-All AoUI entities are in fact rectangles. You can expect
+All `aoui` entities are rectangles. You can expect
 an entity and its descendants to remain consistent in the rectangle's local space
 through translation, rotation and scaling. This even applies
 to functionalities of widgets like `InputBox` or `Dropdown`

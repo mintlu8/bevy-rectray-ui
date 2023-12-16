@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AoUIPlugin, dsl::DslInto, Anchor, material_rect};
+use bevy_aoui::{AoUIPlugin, dsl::DslInto, Anchor, material_sprite};
 
 pub fn main() {
     App::new()
@@ -25,7 +25,7 @@ impl Material2d for Circle {
 }
 
 fn anchor_circle(commands: &mut Commands, assets: &Res<AssetServer>, anchor: impl DslInto<Anchor>) -> Entity{
-    material_rect!((commands, assets) {
+    material_sprite!((commands, assets) {
         anchor: anchor,
         dimension: [6, 6],
         z: 10,

@@ -1,7 +1,7 @@
 //! Demo for the span based layouts.
 
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AoUIPlugin, material_rect};
+use bevy_aoui::{AoUIPlugin, material_sprite};
 
 pub fn main() {
     App::new()
@@ -106,7 +106,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             anchor: #anchors,
             dimension: #dimensions,
             color: #reds,
-            child: material_rect! {
+            child: material_sprite! {
                 anchor: #anchors,
                 dimension: [6, 6],
                 material: Circle {
@@ -133,7 +133,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             anchor: #anchors,
             dimension: #dimensions,
             color: #yellows,
-            child: material_rect! {
+            child: material_sprite! {
                 anchor: #anchors,
                 dimension: [6, 6],
                 material: Circle {
@@ -160,7 +160,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             anchor: #anchors,
             dimension: #dimensions,
             color: #greens,
-            child: material_rect! {
+            child: material_sprite! {
                 anchor: #anchors,
                 dimension: [6, 6],
                 material: Circle {
@@ -187,7 +187,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             anchor: #anchors,
             dimension: #dimensions,
             color: #blues,
-            child: material_rect! {
+            child: material_sprite! {
                 anchor: #anchors,
                 dimension: [6, 6],
                 material: Circle {

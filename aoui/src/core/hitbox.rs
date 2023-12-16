@@ -29,13 +29,9 @@ impl Default for Hitbox {
 }
 
 impl Hitbox {
+    /// The entire rectangular area of the sprite.
     pub const FULL: Self = Self {
         shape: HitboxShape::Rect,
-        scale: Vec2::ONE,
-    };
-
-    pub const ELLIPSE: Self = Self {
-        shape: HitboxShape::Ellipse,
         scale: Vec2::ONE,
     };
 }

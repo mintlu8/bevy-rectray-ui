@@ -315,47 +315,30 @@ impl Payload {
 }
 
 mod sealed {
+    use std::usize;
+
     use super::RadioButton;
 
     use crate::signals::{DataTransfer, Receiver};
 
-    pub trait ConstructRadioButton: Sized {
-        fn construct(default: impl DataTransfer) -> (Self, Receiver);
-    }
-
-    macro_rules! impl_radio {
-        ($first: ident) => {};
-        ($first: ident, $($rest: ident),*) => {
-            impl ConstructRadioButton for ($first, $($rest),*) {
-                fn construct(default: impl DataTransfer) -> (Self, Receiver) {
-                    let (first, recv) = $first::new(default);
-                    (($({ let v: $rest = first.clone(); v },)* first,), recv)
-                }
-            }
-            impl_radio!($($rest),*);
-        }
-    }
-    impl_radio!(
-        RadioButton, RadioButton, RadioButton, RadioButton,
-        RadioButton, RadioButton, RadioButton, RadioButton,
-        RadioButton, RadioButton, RadioButton, RadioButton
-    );
-    pub trait ConstructRadioButtonSignal: Sized {
+    pub trait ConstructRadioButtonSignal<const N: usize>: Sized {
         fn construct(default: impl DataTransfer) -> Self;
     }
 
-    impl<T: ConstructRadioButton> ConstructRadioButtonSignal for (T, Receiver) {
+    impl<const N: usize> ConstructRadioButtonSignal<N> for [RadioButton; N] {
         fn construct(default: impl DataTransfer) -> Self {
-            T::construct(default)
+            let (result, _) = RadioButton::new(default);
+            array_init::array_init(|_|result.clone())
         }
     }
 
-    impl<T: ConstructRadioButton> ConstructRadioButtonSignal for T {
+    impl<const N: usize> ConstructRadioButtonSignal<N> for ([RadioButton; N], Receiver) {
         fn construct(default: impl DataTransfer) -> Self {
-            let (result, _) = T::construct(default);
-            result
+            let (result, recv) = RadioButton::new(default);
+            (array_init::array_init(|_|result.clone()), recv)
         }
     }
+    
 }
 
 use sealed::ConstructRadioButtonSignal;    
@@ -366,7 +349,7 @@ use sealed::ConstructRadioButtonSignal;
 /// ```
 /// let (he_him, she_her, they_them) = radio_button_group();
 /// ```
-pub fn radio_button_group<T: ConstructRadioButtonSignal>(default: impl DataTransfer) -> T {
+pub fn radio_button_group<T: ConstructRadioButtonSignal<N>, const N: usize>(default: impl DataTransfer) -> T {
     T::construct(default)
 }
 

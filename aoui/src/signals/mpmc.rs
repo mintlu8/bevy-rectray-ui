@@ -4,19 +4,26 @@ use bevy::ecs::{system::Query, component::Component};
 use super::{dto::Object, DataTransfer};
 
 /// Provides some checking against our chaotic namespace.
-pub trait SignalMarker: Send + Sync + 'static {}
+pub trait SignalSender: Send + Sync + 'static {}
 
-impl SignalMarker for () {}
+pub trait SignalReceiver: Send + Sync + 'static {
+    type Type: DataTransfer;
+}
+
+impl SignalSender for () {}
+impl SignalReceiver for () {
+    type Type = ();
+}
 
 /// A signal sender
 #[derive(Component)]
-pub struct Sender<T: SignalMarker=()> {
+pub struct Sender<T: SignalSender=()> {
     pub(super) signal: Signal,
     pub(super) map: Option<Box<dyn Fn(&mut Object) + Send + Sync + 'static>>,
     pub(super) p: PhantomData<T>,
 }
 
-impl<T: SignalMarker> Debug for Sender<T> {
+impl<T: SignalSender> Debug for Sender<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Signal as Debug>::fmt(&self.signal, f)
     }
@@ -24,13 +31,13 @@ impl<T: SignalMarker> Debug for Sender<T> {
 
 /// A signal receiver
 #[derive(Component)]
-pub struct Receiver<T: SignalMarker=()>{
+pub struct Receiver<T: SignalReceiver=()>{
     pub(super) signal: Signal,
     pub(super) map: Option<Box<dyn Fn(&mut Object) + Send + Sync + 'static>>,
     pub(super) p: PhantomData<T>,
 }
 
-impl<T: SignalMarker> Debug for Receiver<T> {
+impl<T: SignalReceiver> Debug for Receiver<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Signal as Debug>::fmt(&self.signal, f)
     }
@@ -51,8 +58,9 @@ impl Signal {
         self.0.write().unwrap().clean();
     }
 }
-impl<M: SignalMarker> Sender<M> {
-    pub fn mark<A: SignalMarker>(self) -> Sender<A> {
+
+impl<M: SignalSender> Sender<M> {
+    pub fn mark<A: SignalSender>(self) -> Sender<A> {
         Sender { signal: self.signal, map: self.map, p: PhantomData  }
     }
 
@@ -105,13 +113,13 @@ impl<M: SignalMarker> Sender<M> {
     }
 }
 
-impl<M: SignalMarker> Receiver<M> {
-    pub fn mark<A: SignalMarker>(self) -> Receiver<A> {
+impl<M: SignalReceiver> Receiver<M> {
+    pub fn mark<A: SignalReceiver>(self) -> Receiver<A> {
         Receiver { signal: self.signal, map: self.map, p: PhantomData }
     }
     
-    pub fn map<D, S>(self, f: impl Fn(D) -> S + Send + Sync + 'static) -> Self
-        where M: Send + Sync + 'static, D: DataTransfer + Clone, S: DataTransfer + Clone{
+    pub fn map<D>(self, f: impl Fn(D) -> M::Type + Send + Sync + 'static) -> Self
+        where M: Send + Sync + 'static, D: DataTransfer + Clone {
         Receiver { 
             signal: self.signal,
             map: Some(Box::new(move |obj: &mut Object| {
@@ -125,7 +133,7 @@ impl<M: SignalMarker> Receiver<M> {
     }
     
     /// Receives data from a signal.
-    pub fn poll<T: DataTransfer>(&self) -> Option<T> {
+    pub fn poll(&self) -> Option<M::Type> {
         let read = self.signal.0.read().unwrap();
         match &self.map {
             Some(f) => {
@@ -153,7 +161,7 @@ impl<M: SignalMarker> Receiver<M> {
     }
 }
 
-pub fn signal_cleanup<M: SignalMarker>(mut query: Query<&Sender<M>>) {
+pub fn signal_cleanup<M: SignalSender>(mut query: Query<&Sender<M>>) {
     query.par_iter_mut().for_each(|x| x.signal.clean())
 }
 

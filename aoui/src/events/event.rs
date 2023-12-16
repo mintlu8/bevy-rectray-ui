@@ -99,6 +99,7 @@ impl EventFlags {
     }
 }
 
+#[derive(Debug)]
 pub struct EventSignal{
     pub event: EventFlags,
     pub signal: Sender,

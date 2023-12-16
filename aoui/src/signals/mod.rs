@@ -8,7 +8,7 @@ use bevy::{app::{Plugin, Update, PreUpdate}, ecs::schedule::IntoSystemConfigs};
 pub use create::signal;
 pub use globals::*;
 pub use dto::{DataTransfer, Object};
-pub use mpmc::{Sender, Receiver, SignalMarker, signal_cleanup};
+pub use mpmc::{Sender, Receiver, SignalSender, SignalReceiver, signal_cleanup};
 
 use crate::{WorldExtension, schedule::AoUIEventSet};
 

@@ -136,7 +136,7 @@ pub fn drag_start(
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-enum DragState {
+pub enum DragState {
     Start,
     Dragging,
     End,
