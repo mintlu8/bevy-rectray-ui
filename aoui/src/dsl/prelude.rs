@@ -61,7 +61,7 @@ pub use crate::{linebreak, table, flex_table, fixed_grid, sized_grid,};
 pub use crate::{inputbox, button, check_button, radio_button, clipping_layer};
 pub use crate::rectangle;
 
-pub use crate::dsl::context::with_layer;
+pub use crate::dsl::context::{with_layer, use_opacity};
 
 use bevy::ecs::bundle::Bundle;
 use bevy::transform::components::GlobalTransform;

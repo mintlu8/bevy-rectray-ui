@@ -50,9 +50,6 @@ impl Signal {
     pub fn new() -> Self {
         Self(Arc::new(RwLock::new(Object::NONE)))
     }
-    pub fn is_empty(&self) -> bool {
-        self.0.read().unwrap().is_none()
-    }
 
     pub fn clean(&self)  {
         self.0.write().unwrap().clean();

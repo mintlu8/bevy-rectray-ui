@@ -6,8 +6,6 @@ use crate::{widget_extension, map_builder, dsl::builders::FrameBuilder, widgets:
 
 use super::{Widget, DslFrom};
 
-pub struct AtlasLoader;
-
 #[derive(Debug, Default)]
 pub enum AtlasSprites {
     #[default]
