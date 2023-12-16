@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AoUIPlugin, widgets::scroll::{Scrolling, ScrollDirection}};
+use bevy_aoui::{AoUIPlugin, widgets::scroll::ScrollDirection};
 
 pub fn main() {
     App::new()

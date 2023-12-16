@@ -19,6 +19,8 @@ mod interpolate;
 pub use layouts::{SpanContainerNames, GridContainerNames};
 #[doc(hidden)]
 pub use util::{OneOrTwo, HandleOrString};
+#[doc(hidden)]
+pub use itertools::izip;
 
 pub mod prelude;
 pub use convert::{DslFrom, DslInto};
@@ -33,9 +35,9 @@ pub mod builders {
     pub use super::atlas::AtlasBuilder;
 
     pub use super::layouts::{PaddingBuilder, SpanContainerBuilder, GridContainerBuilder};
-    pub use super::widgets::{InputBoxBuilder, ButtonBuilder, ClippingFrameBuilder};
+    pub use super::widgets::{InputBoxBuilder, CheckButtonBuilder, RadioButtonBuilder, ButtonBuilder, ClippingFrameBuilder};
     pub use super::shapes::RectangleBuilder;
-    pub use super::mesh2d::MaterialRectangleBuilder;
+    pub use super::mesh2d::{MaterialRectangleBuilder, MaterialMeshBuilder};
 }
 
 /// Construct an empty sprite.

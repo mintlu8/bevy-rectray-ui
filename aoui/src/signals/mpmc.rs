@@ -51,14 +51,11 @@ impl Signal {
         self.0.write().unwrap().clean();
     }
 }
-
-impl Sender {
-    pub fn mark<M: SignalMarker>(self) -> Sender<M> {
+impl<M: SignalMarker> Sender<M> {
+    pub fn mark<A: SignalMarker>(self) -> Sender<A> {
         Sender { signal: self.signal, map: self.map, p: PhantomData  }
     }
-}
 
-impl<M: SignalMarker> Sender<M> {
     pub fn map<D, S>(self, f: impl Fn(D) -> S + Send + Sync + 'static) -> Self
         where M: Send + Sync+ 'static, D: DataTransfer, S: DataTransfer {
         Sender { 
@@ -83,9 +80,18 @@ impl<M: SignalMarker> Sender<M> {
         *lock = item;
     }
 
-    /// Clone, expect removes the mapping function.
+    /// Clone a signal without the its mapping function.
     pub fn fork(&self) -> Self {
         Self { 
+            signal: self.signal.clone(), 
+            map: None, 
+            p: PhantomData 
+        }
+    }
+
+    /// Gets a receiver of the underlying signal.
+    pub fn get_receiver(&self) -> Receiver {
+        Receiver { 
             signal: self.signal.clone(), 
             map: None, 
             p: PhantomData 
@@ -99,14 +105,11 @@ impl<M: SignalMarker> Sender<M> {
     }
 }
 
-impl Receiver {
-    pub fn mark<M: SignalMarker>(self) -> Receiver<M> {
+impl<M: SignalMarker> Receiver<M> {
+    pub fn mark<A: SignalMarker>(self) -> Receiver<A> {
         Receiver { signal: self.signal, map: self.map, p: PhantomData }
     }
-}
-
-
-impl<M: SignalMarker> Receiver<M> {
+    
     pub fn map<D, S>(self, f: impl Fn(D) -> S + Send + Sync + 'static) -> Self
         where M: Send + Sync + 'static, D: DataTransfer + Clone, S: DataTransfer + Clone{
         Receiver { 

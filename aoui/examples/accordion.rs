@@ -1,6 +1,6 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::WorldExtension;
-use bevy_aoui::{AoUIPlugin, widgets::button::CheckButton};
+use bevy_aoui::AoUIPlugin;
 use bevy_aoui::widgets::scroll::{Scrolling, ScrollDirection};
 
 pub fn main() {
@@ -35,10 +35,14 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let (send1, recv11, recv12, recv13) = signal();
     let (send2, recv21, recv22, recv23) = signal();
 
+    let (scroll_send1, scroll_recv) = signal();
+    let scroll_send2 = scroll_send1.fork();
+
     clipping_frame!((commands, assets) {
         dimension: [400, 400],
         buffer: [800, 800],
         scroll: Scrolling::Y,
+        scroll_recv: scroll_recv,
         layer: 1,
         container: with_layer(1, ||vbox!((commands, assets) {
             anchor: Top,
@@ -48,12 +52,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     anchor: Left,
                     text: "Accordion 1",
                 },
-                child: button! {
+                child: check_button! {
                     anchor: Right,
                     dimension: size2!([2 em, 2 em]),
-                    extra: CheckButton::Checked,
-                    cursor: CursorIcon::Hand,
-                    extra: send1.mark::<SigChange>(),
+                    checked: true,
+                    change: send1,
                     child: textbox! {
                         text: "v",
                         extra: recv13.mark::<SigRotation>().map(|x: bool| if x {PI} else {0.0}),
@@ -66,6 +69,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 dimension: [400, 400],
                 buffer: [800, 800],
                 scroll: Scrolling::Y,
+                scroll_send: scroll_send1,
                 layer: 2,
                 extra: recv11.mark::<SigDimensionY>().map(|x: bool| if x {400.0f32} else {0.0f32}),
                 extra: transition! (Dimension 0.5 CubicInOut default [400, 400]),
@@ -92,12 +96,11 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
                     anchor: Left,
                     text: "Accordion 2",
                 },
-                child: button! {
+                child: check_button! {
                     anchor: Right,
                     dimension: size2!([2 em, 2 em]),
-                    extra: CheckButton::Checked,
-                    cursor: CursorIcon::Hand,
-                    extra: send2.mark::<SigChange>(),
+                    checked: true,
+                    change: send2,
                     child: textbox! {
                         text: "v",
                         extra: recv23.mark::<SigRotation>().map(|x: bool| if x {PI} else {0.0}),
@@ -110,6 +113,7 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
                 dimension: [400, 400],
                 buffer: [800, 800],
                 scroll: Scrolling::Y,
+                scroll_send: scroll_send2,
                 layer: 3,
                 extra: recv21.mark::<SigDimensionY>().map(|x: bool| if x {400.0f32} else {0.0f32}),
                 extra: Interpolate::<Dimension>::ease(EaseFunction::CubicInOut, Vec2::new(400.0, 400.0), 0.5),

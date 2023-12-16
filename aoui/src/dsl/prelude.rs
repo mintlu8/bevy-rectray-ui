@@ -34,7 +34,10 @@ pub use crate::OpacityWriter;
 pub use crate::signals::{signal, sig_fps, Sender, Receiver, types::*};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::button::{
-    PropagateFocus, DisplayIf, SetCursor,
+    PropagateFocus, DisplayIf, SetCursor, CheckButtonState, radio_button_group
+};
+pub use crate::widgets::scroll::{
+    Scrolling, ScrollDirection
 };
 
 pub const FlipX: [bool; 2] = [true, false];
@@ -53,7 +56,7 @@ pub use crate::material_rect;
 pub use crate::{one_shot, handler};
 pub use crate::{padding, compact, paragraph, span, hbox, vbox, hspan, vspan};
 pub use crate::{linebreak, table, flex_table, fixed_grid, sized_grid,};
-pub use crate::{inputbox, button, clipping_frame};
+pub use crate::{inputbox, button, check_button, radio_button, clipping_frame};
 pub use crate::rectangle;
 
 pub use crate::dsl::context::with_layer;

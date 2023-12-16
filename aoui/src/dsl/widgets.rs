@@ -4,6 +4,7 @@ use bevy::render::color::Color;
 use bevy::render::view::RenderLayers;
 use bevy::text::Font;
 use bevy::window::CursorIcon;
+use crate::widgets::button::{CheckButton, Payload, RadioButton, Button};
 use crate::{Dimension, Anchor, Size2, Hitbox};
 use crate::bundles::{AoUIBundle, AoUISpriteBundle};
 use crate::dsl::prelude::{PropagateFocus, SetCursor};
@@ -11,11 +12,12 @@ use crate::events::EventFlags;
 use crate::widgets::scroll::Scrolling;
 use crate::widgets::scrollframe::ClippingBundle;
 use crate::widget_extension;
-use crate::signals::Sender;
+use crate::signals::{Sender, Receiver};
 use crate::signals::types::{SigSubmit, SigChange};
 use crate::widgets::TextColor;
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea, InputBoxText};
 
+use super::prelude::SigScroll;
 use super::{Widget, get_layer, HandleOrString};
 use super::builders::FrameBuilder;
 use super::util::OptionX;
@@ -62,23 +64,94 @@ macro_rules! inputbox {
 
 widget_extension!(
     pub struct ButtonBuilder {
+        /// Sets the CursorIcon when hovering this button, default is `Hand`
         pub cursor: Option<CursorIcon>,
-        pub signal: OptionX<Sender<SigSubmit>>,
+        /// Sends a signal whenever the button is clicked.
+        pub submit: OptionX<Sender<SigSubmit>>,
+        /// If set, `submit` sends its contents.
+        pub payload: OptionX<Payload>,
     },
     this, commands, assets,
     components: (
         PropagateFocus,
+        Button,
         SetCursor {
             flags: EventFlags::Hover|EventFlags::Pressed,
-            icon: CursorIcon::Hand,
+            icon: this.cursor.unwrap_or(CursorIcon::Hand),
         },
-        OptionX::Some(signal) = this.signal => signal,
         true => this.event.unwrap_or(EventFlags::Click) | EventFlags::Click | EventFlags::Hover,
         None = this.hitbox => Hitbox::FULL, 
         Some(cursor) = this.cursor => SetCursor {
             flags: EventFlags::Hover|EventFlags::Pressed,
             icon: cursor,
         },
+        OptionX::Some(submit) = this.submit => submit,
+        OptionX::Some(payload) = this.payload => payload,
+    )
+);
+
+widget_extension!(
+    pub struct CheckButtonBuilder {
+        /// Sets the CursorIcon when hovering this button, default is `Hand`
+        pub cursor: Option<CursorIcon>,
+        /// If set, `submit` sends its contents.
+        pub payload: OptionX<Payload>,
+        /// Sends a signal whenever the button is clicked and its value is `true`.
+        /// 
+        /// Like button, this sends either `()` or `Payload`.
+        pub submit: OptionX<Sender<SigSubmit>>,
+        /// Sends a `bool` signal whenever the button is clicked.
+        pub change: OptionX<Sender<SigChange>>,
+        /// Sets whether the default value is checked or not.
+        pub checked: bool,
+    },
+    this, commands, assets,
+    components: (
+        PropagateFocus,
+        SetCursor {
+            flags: EventFlags::Hover|EventFlags::Pressed,
+            icon: this.cursor.unwrap_or(CursorIcon::Hand),
+        },
+        CheckButton::from(this.checked),
+        true => this.event.unwrap_or(EventFlags::Click) | EventFlags::Click | EventFlags::Hover,
+        None = this.hitbox => Hitbox::FULL, 
+        Some(cursor) = this.cursor => SetCursor {
+            flags: EventFlags::Hover|EventFlags::Pressed,
+            icon: cursor,
+        },
+        OptionX::Some(submit) = this.submit => submit,
+        OptionX::Some(change) = this.change => change,
+        OptionX::Some(payload) = this.payload => payload,
+    )
+);
+
+widget_extension!(
+    pub struct RadioButtonBuilder {
+        /// Sets the CursorIcon when hovering this button, default is `Hand`
+        pub cursor: Option<CursorIcon>,
+        /// The context for the radio button's value.
+        pub context: Option<RadioButton>,
+        /// Discriminant for this button's value, must be comparable.
+        pub value: OptionX<Payload>,
+        /// Sends a signal whenever the button is clicked.
+        pub submit: OptionX<Sender<SigSubmit>>,
+    },
+    this, commands, assets,
+    components: (
+        PropagateFocus,
+        SetCursor {
+            flags: EventFlags::Hover|EventFlags::Pressed,
+            icon: this.cursor.unwrap_or(CursorIcon::Hand),
+        },
+        this.context.expect("Expected RadioButton context."),
+        this.value.expect("Expected RadioButton value."),
+        true => this.event.unwrap_or(EventFlags::Click) | EventFlags::Click | EventFlags::Hover,
+        None = this.hitbox => Hitbox::FULL, 
+        Some(cursor) = this.cursor => SetCursor {
+            flags: EventFlags::Hover|EventFlags::Pressed,
+            icon: cursor,
+        },
+        OptionX::Some(submit) = this.submit => submit,
     )
 );
 
@@ -99,10 +172,30 @@ macro_rules! button {
         {$crate::meta_dsl!($commands [$crate::dsl::builders::ButtonBuilder] {$($tt)*})};
 }
 
+
+#[macro_export]
+macro_rules! check_button {
+    {$commands: tt {$($tt:tt)*}} => 
+        {$crate::meta_dsl!($commands [$crate::dsl::builders::CheckButtonBuilder] {$($tt)*})};
+}
+
+
+#[macro_export]
+macro_rules! radio_button {
+    {$commands: tt {$($tt:tt)*}} => 
+        {$crate::meta_dsl!($commands [$crate::dsl::builders::RadioButtonBuilder] {$($tt)*})};
+}
+
 widget_extension!(
     pub struct ClippingFrameBuilder {
         /// If set, configure scrolling for this widget.
         pub scroll: Option<Scrolling>,
+        /// If set, send the scrolling input to another widget if scrolled to the end.
+        pub scroll_send: OptionX<Sender<SigScroll>>,
+        /// If set, receive the scrolling input from a signal.
+        pub scroll_recv: OptionX<Receiver<SigScroll>>,
+        /// If set, set the scrolling position to another widget.
+        pub scroll_change: OptionX<Sender<SigChange>>,
         /// Set the size of the buffer this is rendered to, won't be resized dynamically.
         pub buffer: [u32; 2],
         /// Layer of the render target, uses scoped layer if not specified. 
@@ -167,14 +260,25 @@ impl Widget for ClippingFrameBuilder {
         let container = self.container.expect("Scrolling requires `container` to be set.");
         let render_target = render_target.id();
         if let Some(scroll) = self.scroll {
-            let frame = commands.spawn((AoUIBundle {
+            let mut frame = commands.spawn((AoUIBundle {
                     dimension: Dimension::INHERIT,
                     ..Default::default()
                 },
                 EventFlags::MouseWheel,
                 scroll,
                 Hitbox::FULL,
-            )).add_child(container).id();
+            ));
+            frame.add_child(container);
+            if let OptionX::Some(signal) = self.scroll_send {
+                frame.insert(signal);
+            }
+            if let OptionX::Some(signal) = self.scroll_recv {
+                frame.insert(signal);
+            }
+            if let OptionX::Some(signal) = self.scroll_change {
+                frame.insert(signal);
+            }
+            let frame = frame.id();
             commands.entity(entity).push_children(&[camera, render_target, frame]);
         } else {
             commands.entity(entity).push_children(&[camera, render_target, container]);

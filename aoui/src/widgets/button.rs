@@ -9,7 +9,7 @@ use crate::{events::{EventFlags, CursorFocus, CursorAction}, signals::DataTransf
 
 /// Set cursor if [`CursorFocus`] is some [`EventFlags`].
 ///
-/// Insert resource [`CursorDefault`] if your cursor does not revert.
+/// Call `register_cursor_default` on the `App` if your cursor does not revert.
 #[derive(Debug, Clone, Copy, Component)]
 pub struct SetCursor {
     pub flags: EventFlags,
@@ -23,7 +23,7 @@ pub struct SetCursor {
 /// * `EventFlags`: For `CursorFocus`
 /// * `CheckButtonState`: For `CheckButton` and `RadioButton`'s status
 /// 
-/// This uses `Interpolate<Opacity>` if exists, if not, uses `Visibility`.
+/// This component uses `Interpolate<Opacity>` if exists, if not, uses `Visibility`.
 #[derive(Debug, Clone, Copy, Component)]
 pub struct DisplayIf<T>(pub T);
 
@@ -50,10 +50,7 @@ pub fn event_conditional_visibility(mut query: Query<(&DisplayIf<EventFlags>, Op
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component)]
 pub struct Button;
 
-/// Component for `CheckButton`, stores its state.
-/// 
-/// For signals, sends `true` or `false` on `SigChange`, 
-/// `Payload` or `()` on `SigSubmit`.
+/// This component stores the state of `CheckButton`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component)]
 pub enum CheckButton{
     #[default]
@@ -62,7 +59,7 @@ pub enum CheckButton{
 }
 
 /// State of a CheckButton or a RadioButton, 
-/// propagated to children and can be used in `DisplayIf`
+/// this propagates to children and can be used in `DisplayIf`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
 pub enum CheckButtonState{
     Unchecked,
@@ -108,10 +105,9 @@ impl From<bool> for CheckButton {
         }
     }
 }
-/// Component for `CheckButton`, contains the shared state.
+/// Component for `RadioButton`, contains the shared state.
 /// 
-/// Individual value is set with the `Payload` component.
-/// `Payload` is sent through the `Submit` event.
+/// Discriminant is the `Payload` component.
 #[derive(Debug, Component)]
 pub struct RadioButton(Arc<Mutex<Object>>, Sender);
 
@@ -134,6 +130,14 @@ impl RadioButton {
         let mut lock = self.0.lock().unwrap();
         *lock = payload.0.clone();
         self.1.send_object(payload.0.clone())
+    }
+
+    pub fn get<T: DataTransfer>(&self) -> Option<T> {
+        self.0.lock().unwrap().get()
+    }
+
+    pub fn fork_signal<T: DataTransfer>(&self) -> Receiver {
+        self.1.get_receiver()
     }
 }
 
@@ -166,7 +170,7 @@ pub fn check_button_on_click(
         if let Some(signal) = change {
             signal.send(state)
         }
-        if state {continue;}
+        if !state {continue;}
         if let Some(signal) = submit {
             if let Some(payload) = payload {
                 signal.send_object(payload.0.clone());
@@ -239,7 +243,8 @@ pub fn set_cursor(
 }
 
 
-/// Marker component for passing `CursorFocus`/`CursorAction` to their children.
+/// Marker component for passing `CursorFocus`, 
+/// `CursorAction` and `CheckButtonState` to their children.
 /// 
 /// Does **not** propagate through hierarchy if chained.
 #[derive(Debug, Clone, Copy, Component, Default)]
@@ -276,7 +281,7 @@ pub fn propagate_focus(mut commands: Commands,
     }
 }
 
-/// Remove [`CursorFocus`], [`CursorAction`], [`CursorClickOutside`] and [`Submit`];
+/// Remove [`CheckButtonState`].
 pub fn remove_check_button_state(mut commands: Commands, 
     query: Query<Entity, With<CheckButtonState>>,
 ) {
@@ -293,11 +298,9 @@ pub fn remove_check_button_state(mut commands: Commands,
 /// 
 /// * Button OnClick: sends `Payload` or `()`.
 /// * RadioButton OnClick: sends `Payload` or `()`.
-/// * CheckButton OnClick: If `Payload` exists, sends `Payload` or `()`, 
-/// If payload doesn't exist, sends `true` or `false`.
+/// * CheckButton OnClick: If `true`, sends `Payload` or `()`.
 /// 
-/// For radio buttons, you need to make sure the binary
-/// serializations of each branch.
+/// Also serves as the `RadioButton`'s discriminant.
 #[derive(Debug, Clone, PartialEq, Component)] 
 pub struct Payload(Object);
 
@@ -357,6 +360,12 @@ mod sealed {
 
 use sealed::ConstructRadioButtonSignal;    
 
+/// Construct a tuple of shared `RadioButton` contexts. 
+/// 
+/// # Example
+/// ```
+/// let (he_him, she_her, they_them) = radio_button_group();
+/// ```
 pub fn radio_button_group<T: ConstructRadioButtonSignal>(default: impl DataTransfer) -> T {
     T::construct(default)
 }

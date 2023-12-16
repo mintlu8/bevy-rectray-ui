@@ -14,7 +14,7 @@ pub fn main() {
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    let directions = [PI, 0.0, PI, 0.0, PI];
+    let directions = [PI, 0.0, PI, 0.0, PI, 0.0];
     let colors = colors!(blue100, blue200, blue300, blue400, blue500, blue600, blue700, blue800, blue900);
     let rotations = [-0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4];
 
@@ -26,6 +26,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 color: #colors,
                 rotation: #rotations,
                 z: -1,
+                child: textbox! {
+                    text: format!("{:.2}", #rotations),
+                    color: color!(black),
+                }
             },
         },
     });

@@ -23,7 +23,7 @@ impl Plugin for WidgetsPlugin {
                 drag::drag_start,
                 drag::drag_end,
                 drag::dragging.after(drag_start),
-                scroll::drag_and_scroll,
+                scroll::scrolling_system,
                 scrollframe::clipping_layer,
             ).in_set(AoUIWidgetsEventSet))
             .add_systems(Update, (

@@ -1,7 +1,7 @@
 //! Demo for the span based layouts.
 
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AoUIPlugin,Anchor, dsl::DslInto, material_rect};
+use bevy_aoui::{AoUIPlugin, material_rect};
 
 pub fn main() {
     App::new()
@@ -26,57 +26,70 @@ impl Material2d for Circle {
     }
 }
 
-fn anchor_circle(commands: &mut Commands, assets: &Res<AssetServer>, anchor: impl DslInto<Anchor>) -> Entity {
-    material_rect!((commands, assets) {
-        anchor: anchor,
-        dimension: [6, 6],
-        z: 10,
-        material: Circle {
-            fill: Color::WHITE,
-            stroke: Color::BLACK,
-        }
-    })
-}
-
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
+
+    let text = [ 
+        "Layout Demo",
+        "Insertion Order: light to dark.",
+        "Anchor: circle.",
+        "Red: Compact HBox",
+        "Yellow: HSpan",
+        "Green: Compact VBox",
+        "Blue: VSpan",
+    ];
+    let colors = colors![
+        white, white, white,
+        red, yellow, green, blue,
+    ];
+
     vbox! (commands {
         anchor: Top,
         margin: 4,
-        child: textbox! { 
+        child: #textbox! { 
             anchor: Top,
-            text: "Layout Demo",
-        },
-        child: textbox! { 
-            anchor: Top,
-            text: "Insertion Order: light to dark." 
-        },
-        child: textbox! { 
-            anchor: Top,
-            text: "Anchor: circle." 
-        },
-        child: textbox! { 
-            anchor: Top,
-            color: color!(red),
-            text: "Red: Compact HBox" 
-        },
-        child: textbox! { 
-            anchor: Top,
-            color: color!(yellow),
-            text: "Yellow: HSpan" 
-        },
-        child: textbox! { 
-            anchor: Top,
-            color: color!(green),
-            text: "green: Compact VBox" 
-        },
-        child: textbox! { 
-            anchor: Top,
-            color: color!(blue),
-            text: "blue: VSpan" 
+            text: #text,
+            color: #colors,
         },
     });
+
+    let anchors = [
+        TopLeft, TopCenter, TopRight,
+        CenterLeft, Center, CenterRight,
+        BottomLeft, BottomCenter, BottomRight,
+    ];
+
+    let dimensions = [
+        [80, 50], [40, 90], [60, 30],
+        [70, 50], [50, 60], [40, 90],
+        [20, 20], [30, 70], [90, 30],
+    ];
+
+    let reds = colors! [
+        red100, red200, red300,
+        red400, red500, red600,
+        red700, red800, red900
+    ];
+
+    let yellows = colors! [
+        yellow100, yellow200, yellow300,
+        yellow400, yellow500, yellow600,
+        yellow700, yellow800, yellow900
+    ];
+
+    let greens = colors! [
+        green100, green200, green300,
+        green400, green500, green600,
+        green700, green800, green900
+    ];
+
+    let blues = colors! [
+        blue100, blue200, blue300,
+        blue400, blue500, blue600,
+        blue700, blue800, blue900
+    ];
+
     hbox! ((commands, assets) {
         anchor: Left,
         dimension: [400, 100],
@@ -89,60 +102,18 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             extra: IgnoreLayout,
             z: -1,
         },
-        child: rectangle! {
-            anchor: TopLeft,
-            dimension: [80, 50],
-            color: color!(red100),
-            child: anchor_circle(&mut commands, &assets, TopLeft),
-        },
-
-        child: rectangle! {
-            anchor: TopCenter,
-            dimension: [40, 90],
-            color: color!(red200),
-            child: anchor_circle(&mut commands, &assets, TopCenter)
-        },
-        child: rectangle! {
-            anchor: TopRight,
-            dimension: [60, 30],
-            color: color!(red300),
-            child: anchor_circle(&mut commands, &assets, TopRight)
-        },
-        child: rectangle! {
-            anchor: CenterLeft,
-            dimension: [70, 50],
-            color: color!(red400),
-            child: anchor_circle(&mut commands, &assets, CenterLeft)
-        },
-        child: rectangle! {
-            anchor: Center,
-            dimension: [50, 60],
-            color: color!(red500),
-            child: anchor_circle(&mut commands, &assets, Center)
-        },
-        child: rectangle! {
-            anchor: CenterRight,
-            dimension: [40, 90],
-            color: color!(red600),
-            child: anchor_circle(&mut commands, &assets, CenterRight)
-        },
-        child: rectangle! {
-            anchor: BottomLeft,
-            dimension: [10, 10],
-            color: color!(red700),
-            child: anchor_circle(&mut commands, &assets, BottomLeft)
-        },
-        child: rectangle! {
-            anchor: BottomCenter,
-            dimension: [30, 70],
-            color: color!(red800),
-            child: anchor_circle(&mut commands, &assets, BottomCenter)
-        },
-        child: rectangle! {
-            anchor: BottomRight,
-            dimension: [90, 30],
-            color: color!(red900),
-            child: anchor_circle(&mut commands, &assets, BottomRight)
+        child: #rectangle! {
+            anchor: #anchors,
+            dimension: #dimensions,
+            color: #reds,
+            child: material_rect! {
+                anchor: #anchors,
+                dimension: [6, 6],
+                material: Circle {
+                    fill: Color::WHITE,
+                    stroke: Color::BLACK,
+                }
+            }
         },
     });
 
@@ -158,60 +129,18 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             extra: IgnoreLayout,
             z: -1,
         },
-        child: rectangle! {
-            anchor: TopLeft,
-            dimension: [80, 50],
-            color: color!(yellow100),            
-            child: anchor_circle(&mut commands, &assets, TopLeft),
-        },
-
-        child: rectangle! {
-            anchor: TopCenter,
-            dimension: [40, 90],
-            color: color!(yellow200),
-            child: anchor_circle(&mut commands, &assets, TopCenter),
-        },
-        child: rectangle! {
-            anchor: TopRight,
-            dimension: [60, 30],
-            color: color!(yellow300),
-            child: anchor_circle(&mut commands, &assets, TopRight),
-        },
-        child: rectangle! {
-            anchor: CenterLeft,
-            dimension: [70, 50],
-            color: color!(yellow400),
-            child: anchor_circle(&mut commands, &assets, CenterLeft),
-        },
-        child: rectangle! {
-            anchor: Center,
-            dimension: [50, 60],
-            color: color!(yellow500),
-            child: anchor_circle(&mut commands, &assets, Center),
-        },
-        child: rectangle! {
-            anchor: CenterRight,
-            dimension: [40, 90],
-            color: color!(yellow600),
-            child: anchor_circle(&mut commands, &assets, CenterRight),
-        },
-        child: rectangle! {
-            anchor: BottomLeft,
-            dimension: [10, 10],
-            color: color!(yellow700),
-            child: anchor_circle(&mut commands, &assets, BottomLeft),
-        },
-        child: rectangle! {
-            anchor: BottomCenter,
-            dimension: [30, 70],
-            color: color!(yellow800),
-            child: anchor_circle(&mut commands, &assets, BottomCenter),
-        },
-        child: rectangle! {
-            anchor: BottomRight,
-            dimension: [90, 30],
-            color: color!(yellow900),
-            child: anchor_circle(&mut commands, &assets, BottomRight),
+        child: #rectangle! {
+            anchor: #anchors,
+            dimension: #dimensions,
+            color: #yellows,
+            child: material_rect! {
+                anchor: #anchors,
+                dimension: [6, 6],
+                material: Circle {
+                    fill: Color::WHITE,
+                    stroke: Color::BLACK,
+                }
+            }
         },
     });
 
@@ -227,60 +156,18 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             extra: IgnoreLayout,
             z: -1,
         },
-        child: rectangle! {
-            anchor: TopLeft,
-            dimension: [80, 50],
-            color: color!(green100),
-            child: anchor_circle(&mut commands, &assets, TopLeft),
-        },
-
-        child: rectangle! {
-            anchor: TopCenter,
-            dimension: [40, 90],
-            color: color!(green200),
-            child: anchor_circle(&mut commands, &assets, TopCenter),
-        },
-        child: rectangle! {
-            anchor: TopRight,
-            dimension: [60, 30],
-            color: color!(green300),
-            child: anchor_circle(&mut commands, &assets, TopRight),
-        },
-        child: rectangle! {
-            anchor: CenterLeft,
-            dimension: [70, 50],
-            color: color!(green400),
-            child: anchor_circle(&mut commands, &assets, CenterLeft),
-        },
-        child: rectangle! {
-            anchor: Center,
-            dimension: [50, 60],
-            color: color!(green500),
-            child: anchor_circle(&mut commands, &assets, Center),
-        },
-        child: rectangle! {
-            anchor: CenterRight,
-            dimension: [40, 90],
-            color: color!(green600),
-            child: anchor_circle(&mut commands, &assets, CenterRight),
-        },
-        child: rectangle! {
-            anchor: BottomLeft,
-            dimension: [10, 10],
-            color: color!(green700),
-            child: anchor_circle(&mut commands, &assets, BottomLeft),
-        },
-        child: rectangle! {
-            anchor: BottomCenter,
-            dimension: [30, 70],
-            color: color!(green800),
-            child: anchor_circle(&mut commands, &assets, Bottom),
-        },
-        child: rectangle! {
-            anchor: BottomRight,
-            dimension: [90, 30],
-            color: color!(green900),
-            child: anchor_circle(&mut commands, &assets, BottomRight),
+        child: #rectangle! {
+            anchor: #anchors,
+            dimension: #dimensions,
+            color: #greens,
+            child: material_rect! {
+                anchor: #anchors,
+                dimension: [6, 6],
+                material: Circle {
+                    fill: Color::WHITE,
+                    stroke: Color::BLACK,
+                }
+            }
         },
     });
 
@@ -296,60 +183,18 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             extra: IgnoreLayout,
             z: -1,
         },
-        child: rectangle! {
-            anchor: TopLeft,
-            dimension: [80, 50],
-            color: color!(blue100),
-            child: anchor_circle(&mut commands, &assets, TopLeft),
-        },
-
-        child: rectangle! {
-            anchor: TopCenter,
-            dimension: [40, 90],
-            color: color!(blue200),
-            child: anchor_circle(&mut commands, &assets, TopCenter),
-        },
-        child: rectangle! {
-            anchor: TopRight,
-            dimension: [60, 30],
-            color: color!(blue300),
-            child: anchor_circle(&mut commands, &assets, TopRight),
-        },
-        child: rectangle! {
-            anchor: CenterLeft,
-            dimension: [70, 50],
-            color: color!(blue400),
-            child: anchor_circle(&mut commands, &assets, CenterLeft),
-        },
-        child: rectangle! {
-            anchor: Center,
-            dimension: [50, 60],
-            color: color!(blue500),
-            child: anchor_circle(&mut commands, &assets, Center),
-        },
-        child: rectangle! {
-            anchor: CenterRight,
-            dimension: [40, 90],
-            color: color!(blue600),
-            child: anchor_circle(&mut commands, &assets, CenterRight),
-        },
-        child: rectangle! {
-            anchor: BottomLeft,
-            dimension: [10, 10],
-            color: color!(blue700),
-            child: anchor_circle(&mut commands, &assets, BottomLeft),
-        },
-        child: rectangle! {
-            anchor: BottomCenter,
-            dimension: [30, 70],
-            color: color!(blue800),
-            child: anchor_circle(&mut commands, &assets, BottomCenter),
-        },
-        child: rectangle! {
-            anchor: BottomRight,
-            dimension: [90, 30],
-            color: color!(blue900),
-            child: anchor_circle(&mut commands, &assets, BottomRight),
+        child: #rectangle! {
+            anchor: #anchors,
+            dimension: #dimensions,
+            color: #blues,
+            child: material_rect! {
+                anchor: #anchors,
+                dimension: [6, 6],
+                material: Circle {
+                    fill: Color::WHITE,
+                    stroke: Color::BLACK,
+                }
+            }
         },
     });
 }

@@ -36,7 +36,7 @@ pub fn use_opacity<T>(f: impl FnOnce() -> T) -> T{
     })
 }
 
-/// Obtain the current default layer, by default None (or 0).
+/// Obtain if we insert `OpacityWriter` or not.
 pub fn is_using_opacity() -> bool {
     USE_OPACITY.with(|x| x.load(Ordering::Relaxed))
 }

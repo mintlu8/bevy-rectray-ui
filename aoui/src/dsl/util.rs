@@ -2,10 +2,11 @@ use std::borrow::Cow;
 
 use bevy::asset::{Handle, Asset, AssetServer};
 use bevy::math::Vec2;
+use crate::widgets::button::Payload;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit};
 use crate::{Size2, FontSize, layout::Alignment, layout::FlexDir};
 
-use crate::signals::{Sender, Receiver, SignalMarker};
+use crate::signals::{Sender, Receiver, SignalMarker, DataTransfer};
 
 use super::DslFrom;
 use super::convert::DslInto;
@@ -171,7 +172,7 @@ macro_rules! color {
 /// Create an array of colors.
 #[macro_export]
 macro_rules! colors {
-    [$($color: tt),*] => {
+    [$($color: tt),* $(,)?] => {
         [$($crate::color!($color)),*]
     };
 }
@@ -434,15 +435,30 @@ pub enum OptionX<T> {
     None,
 }
 
-impl<T: SignalMarker> DslInto<OptionX<Sender<T>>> for Sender<()>{
-    fn dinto(self) -> OptionX<Sender<T>> {
-        OptionX::Some(self.mark::<T>())
+impl<T> OptionX<T> {
+    pub fn expect(self, s: &str) -> T {
+        match self {
+            OptionX::Some(v) => v,
+            OptionX::None => panic!("{}", s),
+        }
     }
 }
 
-impl<T: SignalMarker> DslInto<OptionX<Receiver<T>>> for Receiver<()>{
-    fn dinto(self) -> OptionX<Receiver<T>> {
-        OptionX::Some(self.mark::<T>())
+impl<T: SignalMarker, A: SignalMarker> DslFrom<Sender<A>> for OptionX<Sender<T>>{
+    fn dfrom(value: Sender<A>) -> OptionX<Sender<T>> {
+        OptionX::Some(value.mark::<T>())
+    }
+}
+
+impl<T: SignalMarker,  A: SignalMarker> DslFrom<Receiver<A>> for OptionX<Receiver<T>>{
+    fn dfrom(value: Receiver<A>) -> OptionX<Receiver<T>> {
+        OptionX::Some(value.mark::<T>())
+    }
+}
+
+impl<T: DataTransfer + Clone> DslFrom<T> for OptionX<Payload> {
+    fn dfrom(value: T) -> Self {
+        OptionX::Some(Payload::new(value))
     }
 }
 

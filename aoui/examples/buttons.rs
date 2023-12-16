@@ -4,11 +4,6 @@ use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use bevy_aoui::AoUIPlugin;
 use bevy_aoui::WorldExtension;
-use bevy_aoui::button;
-use bevy_aoui::widgets::button::CheckButton;
-use bevy_aoui::widgets::button::CheckButtonState;
-use bevy_aoui::widgets::button::Payload;
-use bevy_aoui::widgets::button::radio_button_group;
 
 pub fn main() {
     App::new()
@@ -44,11 +39,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     vbox!((commands, assets) {
         offset: [0, 100],
-        child: button! {
+        child: check_button! {
             dimension: size2!([14 em, 2 em]),
-            extra: CheckButton::Unchecked,
-            cursor: CursorIcon::Hand,
-            extra: send1.mark::<SigChange>(),
+            checked: true,
+            change: send1,
             child: sprite!{
                 anchor: Left,
                 dimension: size2!([2 em, 2 em]),
@@ -67,11 +61,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 text: "This is a checkbox",
             },
         },
-        child: button! {
+        child: check_button! {
             dimension: size2!([14 em, 2 em]),
-            extra: CheckButton::Checked,
-            cursor: CursorIcon::Hand,
-            extra: send2.mark::<SigChange>(),
+            change: send2,
             child: sprite!{
                 anchor: Left,
                 dimension: size2!([2 em, 2 em]),
@@ -95,13 +87,13 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     textbox! (commands {
         offset: [300, 120],
         color: color!(gold),
-        text: "<= false.",
+        text: "<= true!",
         extra: recv1.mark::<SigText>().map(|x: bool| format!("<= {}!", x))
     });
     textbox! (commands {
         offset: [300, 80],
         color: color!(gold),
-        text: "<= true.",
+        text: "<= false!",
         extra: recv2.mark::<SigText>().map(|x: bool| format!("<= {}!", x))
     });
 
@@ -119,11 +111,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     vbox!((commands, assets) {
         offset: [0, -150],
-        child: button! {
+        child: radio_button! {
             dimension: size2!([14 em, 2 em]),
-            extra: Payload::new("Fire"),
-            extra: fire,
-            cursor: CursorIcon::Hand,
+            context: fire,
+            value: "Fire",
             child: sprite!{
                 anchor: Left,
                 dimension: size2!([2 em, 2 em]),
@@ -142,11 +133,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 text: "Fire",
             },
         },
-        child: button! {
+        child: radio_button! {
             dimension: size2!([14 em, 2 em]),
-            extra: Payload::new("Water"),
-            extra: water,
-            cursor: CursorIcon::Hand,
+            context: water,
+            value: "Water",
             child: sprite!{
                 anchor: Left,
                 dimension: size2!([2 em, 2 em]),
@@ -165,10 +155,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 text: "Water",
             },
         },
-        child: button! {
+        child: radio_button! {
             dimension: size2!([14 em, 2 em]),
-            extra: Payload::new("Earth"),
-            extra: earth,
+            context: earth,
+            value: "Earth",
             cursor: CursorIcon::Hand,
             child: sprite!{
                 anchor: Left,
@@ -188,10 +178,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 text: "Earth",
             },
         },
-        child: button! {
+        child: radio_button! {
             dimension: size2!([14 em, 2 em]),
-            extra: Payload::new("Air"),
-            extra: air,
+            context: air,
+            value: "Air",
             cursor: CursorIcon::Hand,
             child: sprite!{
                 anchor: Left,

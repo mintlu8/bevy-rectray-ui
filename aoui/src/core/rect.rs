@@ -3,7 +3,9 @@ use std::ops::Mul;
 
 use bevy::{math::{Vec2, Affine2}, reflect::Reflect, prelude::Component, ecs::entity::Entity, };
 
-
+/// Anchor of a sprite, this is a more concise implementation than bevy's.
+/// 
+/// If a field is `Inherit` it will use `anchor` if possible.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Reflect)]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Anchor(Vec2);

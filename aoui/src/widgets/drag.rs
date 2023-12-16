@@ -15,11 +15,15 @@ use crate::signals::{Receiver, Sender};
 /// # Supporting components
 /// 
 /// * [`EventFlags`]: Requires `Drag` to be set.
-/// * [`Constraint`]: This stops dragging outside of a bound and provides a linear value if applicable.
+/// * [`DragConstraint`]: If specified, the sprite cannot go over bounds of its parent.
 /// * [`DragSnapBack`]: Move the sprite back to its original position if dropped. 
 /// Uses `Transition` if applicable.
-/// * [`DragFactor`]: Yields a value when dragged.
-/// * [`Sender<Changed>`](crate::Sender): A signal that sends the [`DragFactor`] when changed.
+/// * [`Sender<Changed>`](crate::signals::Sender): A signal that sends a value in `0..=1` in its constraints when being dragged.
+/// * [`SigDrag`](crate::signals::types::SigDrag): 
+/// Sent by a non-draggable sprite with a drag event handler, 
+/// and received by a draggable sprite without an event handler.
+/// This is useful for creating a small draggable area, like a banner.
+
 /// 
 /// # Panics
 /// 

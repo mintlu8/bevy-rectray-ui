@@ -31,9 +31,21 @@ impl ScrollDirection {
 /// 
 /// # Setup Requirements
 /// 
-/// * add a single child with the same dimension and
-/// `Anchor::Center` to this widget.
+/// * add a single child with the `Size2::FULL` and
+/// `Anchor::Center`, which acts as a container.
 /// * add children to that child.
+/// 
+/// # Signals
+/// 
+/// * `SigChange`: Sends a value between `0..=1` corresponding to the entity's location.
+/// * `SigScroll`: If scrolling has no effect on the sprite's position, send it to another recipient.
+/// When received, act if this entity is being scrolled upon.
+/// 
+/// # Limitations
+/// 
+/// * Does not detect rotation, will always use local space orientation.
+/// * Does not support `Interpolate`.
+/// * Piping `SigScroll` from `SigScroll` recipient is unspecified behavior.
 #[derive(Debug, Clone, Copy, Component)]
 pub struct Scrolling {
     x: bool,
@@ -53,12 +65,12 @@ impl Default for Scrolling {
     }
 }
 
-pub fn drag_and_scroll(
+pub fn scrolling_system(
     rem: Option<Res<AoUIREM>>,
     direction: Option<Res<ScrollDirection>>,
-    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Sender<SigChange>>)>,
+    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Sender<SigScroll>>, Option<&Sender<SigChange>>)>,
     sender: Query<(&MouseWheelAction, &Sender<SigScroll>), Without<Scrolling>>,
-    receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Sender<SigChange>>), Without<MouseWheelAction>>,
+    receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Sender<SigScroll>>, Option<&Sender<SigChange>>), Without<MouseWheelAction>>,
     mut child_query: Query<(&Dimension, &mut Transform2D, Option<&Children>)>,
 ) {
     let rem = rem.map(|x|x.get()).unwrap_or(16.0);
@@ -67,12 +79,12 @@ pub fn drag_and_scroll(
         signal.send(action.get());
     }
     let iter = scroll.iter()
-        .map(|(scroll, dimension, children, action, change)| 
-            (scroll, dimension, children, action.get(), change))
-        .chain(receiver.iter().filter_map(|(scroll, dimension, children, receiver, change)| 
-            Some((scroll, dimension, children, receiver.poll()?, change)))
+        .map(|(scroll, dimension, children, action, send, change)| 
+            (scroll, dimension, children, action.get(), send, change))
+        .chain(receiver.iter().filter_map(|(scroll, dimension, children, receiver, send, change)| 
+            Some((scroll, dimension, children, receiver.poll()?, send, change)))
         );
-    for (scroll, dimension, children, delta, change) in iter {
+    for (scroll, dimension, children, delta, send, change) in iter {
         let size = dimension.size;
         let delta_scroll = match (scroll.x, scroll.y) {
             (true, true) => delta,
@@ -108,6 +120,12 @@ pub fn drag_and_scroll(
             let clamp_max = (size_max - max).max(size_min - min).max(Vec2::ZERO);
             if let Ok((_, mut transform, _)) = child_query.get_mut(container) {
                 let offset = offset.clamp(clamp_min, clamp_max);
+                // If scrolled to the end pipe the scroll event to the parent.
+                if transform.offset == offset.into() {
+                    if let Some(send) = send {
+                        send.send(delta)
+                    }
+                }
                 transform.offset = offset.into();
                 if let Some(signal) = change {
                     let frac = (offset - clamp_min) / (clamp_max - clamp_min);
