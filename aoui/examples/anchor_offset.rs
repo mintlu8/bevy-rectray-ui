@@ -4,6 +4,7 @@
 //! the child sprite is parented to the parent.
 //! 
 //! You can experiment on how each parameter affects this simple system.
+#![allow(clippy::type_complexity)]
 
 use std::f32::consts::PI;
 

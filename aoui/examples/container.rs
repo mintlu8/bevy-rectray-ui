@@ -1,5 +1,5 @@
 //! This is a demo most layout types for `bevy_aoui`'s container.
-
+#![allow(clippy::type_complexity)]
 use std::f32::consts::PI;
 
 use bevy_aoui::{*, bundles::*, layout::*};

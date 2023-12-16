@@ -339,11 +339,14 @@ mod sealed {
 
 use sealed::ConstructRadioButtonSignal;    
 
-/// Construct a tuple of shared `RadioButton` contexts. 
+/// Construct an array of shared `RadioButton` contexts. 
 /// 
 /// # Example
 /// ```
-/// let (he_him, she_her, they_them) = radio_button_group();
+/// use bevy_aoui::widgets::button::radio_button_group;
+/// let ([he_him, she_her, they_them], gender_sender) = radio_button_group("He/Him");
+/// // Construct 4 items as an array.
+/// let (colors, gender_sender) = radio_button_group::<_, 4>("Red");
 /// ```
 pub fn radio_button_group<T: ConstructRadioButtonSignal<N>, const N: usize>(default: impl DataTransfer) -> T {
     T::construct(default)
