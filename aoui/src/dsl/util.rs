@@ -162,10 +162,13 @@ impl DslInto<Option<FlexDir>> for AoUISpacialConsts {
 #[macro_export]
 macro_rules! color {
     ($color: tt) => {
-        $crate::dsl::rgbaf!(
-            $crate::bevy::prelude::Color::RgbaLinear, 
-            $color => {red, green, blue, alpha}
-        ).as_rgba()
+        {
+            #[allow(clippy::excessive_precision)]
+            $crate::dsl::rgbaf!(
+                $crate::bevy::prelude::Color::RgbaLinear, 
+                $color => {red, green, blue, alpha}
+            ).as_rgba()
+        }
     };
 }
 
@@ -179,23 +182,12 @@ macro_rules! colors {
 
 /// Color construction macro, see [`colorthis`]. This constructs a vector4.
 #[macro_export]
-macro_rules! colorv4 {
-    ($color: tt) => {
-        $crate::dsl::rgbaf!(
-            $crate::bevy::prelude::Color::RgbaLinear, 
-            $color => {red, green, blue, alpha}
-        ).as_rgba().into()
-    };
-}
-
-/// Color construction macro, see [`colorthis`]. This constructs a vector4.
-#[macro_export]
 macro_rules! gradient {
     [$(($color: tt, $frac: expr)),* $(,)?] => {
-        [$(($crate::colorv4!($color), $frac)),*]
+        [$(($crate::color!($color), $frac)),*]
     };
     [$first: tt, $second: tt $(,)?] => {
-        [($crate::colorv4!($first), 0.0), ($crate::colorv4!($second), 1.0)]
+        [($crate::color!($first), 0.0), ($crate::color!($second), 1.0)]
     };
 }
 
@@ -475,7 +467,7 @@ impl<T: Asset> HandleOrString<T> {
             HandleOrString::Handle(handle) => handle,
             HandleOrString::String(string) => {
                 assets.expect("Please pass in the AssetServer.")
-                    .load(&string)
+                    .load(string)
             },
         }
     }

@@ -166,7 +166,6 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::single_match)]
-
 pub mod layout;
 pub(crate) mod core;
 pub mod dsl;

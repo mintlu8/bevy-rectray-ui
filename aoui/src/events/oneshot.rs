@@ -37,7 +37,7 @@ impl<T: EventHandling> Handlers<T> {
             match handler {
                 Handler::OneShotSystem(system) => {
                     if let Some(system) = system.get() {
-                        commands.run_system(system.clone())
+                        commands.run_system(*system)
                     }
                 },
                 Handler::Signal(signal) => {
@@ -81,7 +81,7 @@ mod sealed {
             $(impl EventHandling for $crate::events::$ident {
                 type Context = ();
                 fn new_context() -> Self::Context {
-                    ()
+                    
                 }
             }
             
@@ -105,7 +105,7 @@ mod sealed {
 impl EventHandling for ClickOutside {
     type Context = ();
     fn new_context() -> Self::Context {
-        ()
+        
     }
 }
 
@@ -122,7 +122,7 @@ macro_rules! impl_entity_query_for_mouse_state {
         $(impl EventHandling for $crate::events::$ident {
             type Context = ();
             fn new_context() -> Self::Context {
-                ()
+                
             }
         }
         impl EventQuery for $crate::events::$ident {
@@ -147,7 +147,7 @@ pub enum LoseFocus{}
 impl EventHandling for LoseFocus {
     type Context = ();
     fn new_context() -> Self::Context {
-        ()
+        
     }
 }
 
@@ -168,7 +168,7 @@ pub fn obtain_focus_detection(
     mut unfocused: Query<&mut Handlers<ObtainFocus>, Without<CursorFocus>>,
 ) {
     for mut handlers in focused.iter_mut() {
-        if handlers.context == true { continue; }
+        if handlers.context { continue; }
         handlers.context = true;
         handlers.handle(&mut commands);
     }

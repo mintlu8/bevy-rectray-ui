@@ -2,7 +2,7 @@
 
 use crate::Anchor;
 use crate::BuildTransform;
-pub use crate::{color, colors, colorv4, gradient, transition, size2, markers};
+pub use crate::{color, colors, gradient, transition, size2, markers};
 pub use super::DslInto;
 pub use super::util::*;
 pub use super::util::DslHitbox::*;

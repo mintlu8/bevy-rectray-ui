@@ -156,7 +156,7 @@ pub fn dragging(
         if !focus.intersects(EventFlags::Drag | EventFlags::MidDrag | EventFlags:: RightDrag)  {
             continue;
         }
-        let _ = send.send(DragState::Dragging);
+        send.send(DragState::Dragging);
     }
 
     let iter = query.iter_mut()
@@ -176,7 +176,7 @@ pub fn dragging(
         }));
 
     for (entity, drag, mut transform, interpolate) in iter {
-        if (drag.x || drag.y) == false { continue; }
+        if !(drag.x || drag.y) { continue; }
         let mut pos = drag.last_drag_start() + {
             Vec2::new(
                 if drag.x {delta.x} else {0.0}, 
@@ -230,7 +230,7 @@ pub fn drag_end(
         if !focus.intersects(EventFlags::DragEnd)  {
             continue;
         }
-        let _ = send.send(DragState::End);
+        send.send(DragState::End);
     }
     
     let iter = query.iter_mut()

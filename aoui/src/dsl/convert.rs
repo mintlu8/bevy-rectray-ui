@@ -3,10 +3,12 @@ use crate::{Size2, Opacity, SizeUnit, FontSize};
 
 use super::OneOrTwo;
 
+/// The `From` trait for `bevy_aoui`'s DSL.
 pub trait DslFrom<T> {
     fn dfrom(value: T) -> Self;
 }
 
+/// The `Into` trait for `bevy_aoui`'s DSL.
 pub trait DslInto<T> {
     fn dinto(self) -> T;
 }
@@ -97,7 +99,7 @@ impl<const N: usize> DslFrom<[i32; N]> for Vec<f32> {
 
 impl DslFrom<&[i32]> for Vec<f32> {
     fn dfrom(value: &[i32]) -> Self {
-        value.into_iter().map(|x| *x as f32).collect()
+        value.iter().map(|x| *x as f32).collect()
     }
 }
 
@@ -121,7 +123,7 @@ impl DslFrom<&[i32]> for Vec<(SizeUnit, f32)> {
 
 impl DslFrom<&[f32]> for Vec<(SizeUnit, f32)> {
     fn dfrom(value: &[f32]) -> Self {
-        value.iter().map(|x| (SizeUnit::Pixels, *x as f32)).collect()
+        value.iter().map(|x| (SizeUnit::Pixels, *x)).collect()
     }
 }
 

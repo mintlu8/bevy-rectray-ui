@@ -46,7 +46,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 fn anchor_ui(ui: &mut Ui, anchor: &mut Anchor, name: &str) {
     let mut anc = anchor.str_name();
     ComboBox::from_label(name)
-        .selected_text(format!("{}", anc))
+        .selected_text(anc.to_string())
         .show_ui(ui, |ui| {
             ui.selectable_value(&mut anc, "BottomLeft", "BottomLeft");
             ui.selectable_value(&mut anc, "BottomCenter", "BottomCenter");

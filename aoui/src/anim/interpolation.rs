@@ -380,12 +380,12 @@ pub fn interpolate_color(
     mut text_query: Query<(&mut Text, &Interpolate<Color>)>
 ) {
     for (mut sprite, interpolate) in sp_query.iter_mut() {
-        sprite.color = interpolate.get().into();
+        sprite.color = interpolate.get();
     }
     for (mut text, interpolate) in text_query.iter_mut() {
         let color = interpolate.get();
         for section in text.sections.iter_mut() {
-            section.style.color = color.into();
+            section.style.color = color;
         }
     }
 }

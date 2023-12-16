@@ -175,6 +175,6 @@ pub fn signal_receive_color_interpolate(
 ) {
     texts.par_iter_mut().for_each(|(sig, mut inter)| {
         let Some(color) = sig.poll() else {return};
-        inter.interpolate_to(color.into())
+        inter.interpolate_to(color)
     })
 }

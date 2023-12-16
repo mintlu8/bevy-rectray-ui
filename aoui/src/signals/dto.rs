@@ -24,6 +24,7 @@ impl<T> DataTransfer for T where T: Debug + Clone + PartialEq + Send + Sync + 's
 
 /// A type erased dynamic object.
 #[derive(Debug)]
+#[derive(Default)]
 pub struct Object(Option<Box<dyn DataTransfer>>);
 
 impl Clone for Object {
@@ -32,11 +33,7 @@ impl Clone for Object {
     }
 }
 
-impl Default for Object {
-    fn default() -> Self {
-        Self(None)
-    }
-}
+
 
 impl PartialEq for Object {
     fn eq(&self, other: &Self) -> bool {
@@ -68,7 +65,7 @@ impl Object {
     }
 
     pub fn get<T: DataTransfer>(&self) -> Option<T> {
-        self.0.as_ref().map(|x| x.dyn_clone().downcast().ok().map(|x| *x)).flatten()
+        self.0.as_ref().and_then(|x| x.dyn_clone().downcast().ok().map(|x| *x))
     }
 
     pub fn clean(&mut self) {
@@ -77,7 +74,7 @@ impl Object {
 
 
     pub fn take<T: DataTransfer>(&mut self) -> Option<T> {
-        self.0.take().map(|x| x.downcast().ok().map(|x| *x)).flatten()
+        self.0.take().and_then(|x| x.downcast().ok().map(|x| *x))
     }
 
     pub fn set<T: DataTransfer>(&mut self, v: T) {

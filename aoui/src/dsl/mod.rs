@@ -69,6 +69,7 @@ pub trait AoUICommands {
 }
 
 impl<'w, 's> AoUICommands for Commands<'w, 's> {
+    /// Spawn a `Widget` without passing in an `AssetServer`, this may panic.
     fn spawn_aoui(&mut self, (widget, extras, children): (impl Widget, impl Bundle, impl AsRef<[Entity]>)) -> Entity {
         let id = widget.spawn_with(self, None);
         self.entity(id)
@@ -77,6 +78,7 @@ impl<'w, 's> AoUICommands for Commands<'w, 's> {
         id
     }
 
+    /// Spawn a `Widget` with an `AssetServer`.
     fn spawn_aoui_with_assets(&mut self, assets: &AssetServer, (widget, extras, children): (impl Widget, impl Bundle, impl AsRef<[Entity]>)) -> Entity {
         let id = widget.spawn_with(self, Some(assets));
         self.entity(id)
@@ -86,7 +88,11 @@ impl<'w, 's> AoUICommands for Commands<'w, 's> {
     }
 }
 
+/// A widget for `bevy_aoui`.
+/// 
+/// You can construct it with the [`widget_extension`](crate::widget_extension) macro.
 pub trait Widget: Sized {
+    /// This function should panic if assets is needed but is `None`.
     fn spawn_with(self, commands: &mut Commands, assets: Option<&AssetServer>) -> Entity;
 }
 

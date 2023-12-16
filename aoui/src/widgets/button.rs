@@ -36,12 +36,10 @@ pub fn event_conditional_visibility(mut query: Query<(&DisplayIf<EventFlags>, Op
             } else {
                 *vis = Visibility::Inherited;
             }
+        } else if let Some(opacity) = opacity.as_mut() {
+            opacity.interpolate_to_or_reverse(0.0);
         } else {
-            if let Some(opacity) = opacity.as_mut() {
-                opacity.interpolate_to_or_reverse(0.0);
-            } else {
-                *vis = Visibility::Hidden;
-            }
+            *vis = Visibility::Hidden;
         }
     })
 }
@@ -203,12 +201,10 @@ pub fn check_conditional_visibility(
             } else {
                 *vis = Visibility::Inherited;
             }
+        } else if let Some(opacity) = opacity.as_mut() {
+            opacity.interpolate_to_or_reverse(0.0);
         } else {
-            if let Some(opacity) = opacity.as_mut() {
-                opacity.interpolate_to_or_reverse(0.0);
-            } else {
-                *vis = Visibility::Hidden;
-            }
+            *vis = Visibility::Hidden;
         }
     })
 }

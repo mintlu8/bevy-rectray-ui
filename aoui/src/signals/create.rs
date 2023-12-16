@@ -19,7 +19,7 @@ macro_rules! signal_create {
                         p: PhantomData
                     },
                     $first{
-                        signal: signal, 
+                        signal, 
                         map: None,
                         p: PhantomData
                     }, 
@@ -44,7 +44,7 @@ macro_rules! signal_create {
                         p: PhantomData
                     },)*
                     $first{
-                        signal: signal, 
+                        signal, 
                         map: None,
                         p: PhantomData
                     },
