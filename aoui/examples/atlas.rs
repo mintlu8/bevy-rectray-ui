@@ -73,10 +73,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
     });
     
-    vbox!(commands  {
+    vbox!((commands, assets)  {
         child: atlas! {
             dimension: [128, 128],
             atlas: "ducky.json",

@@ -1,9 +1,5 @@
 use bevy::ecs::component::Component;
 
-use crate::dsl::prelude::Sender;
-
-
-
 /// Represents hovering, clicking or dragging.
 #[derive(Debug, Component, Clone, Copy)]
 #[component(storage="SparseSet")]
@@ -99,36 +95,36 @@ impl EventFlags {
 
 /// Check if widget has lost focus (drag, hover, pressed).
 #[derive(Debug)]
-pub enum MouseDrag{}
+pub enum EvMouseDrag{}
 
 /// Check if widget has lost focus (drag, hover, pressed).
 #[derive(Debug)]
-pub enum LoseFocus{}
+pub enum EvLoseFocus{}
 
 /// Check if widget has obtained focus (drag, hover, pressed).
 #[derive(Debug)]
-pub enum ObtainFocus{}
+pub enum EvObtainFocus{}
 
 /// Check if widget has obtained focus (drag, hover, pressed).
 #[derive(Debug)]
-pub enum OnChange{}
+pub enum EvOnChange{}
 
 /// Check if widget has obtained focus (drag, hover, pressed).
 #[derive(Debug)]
-pub enum ButtonClick{}
+pub enum EvButtonClick{}
 
 /// Check if widget has obtained focus (drag, hover, pressed).
 #[derive(Debug)]
-pub enum ToggleChange{}
+pub enum EvToggleChange{}
 
 /// Check if widget has obtained focus (drag, hover, pressed).
 #[derive(Debug)]
-pub enum TextChange{}
+pub enum EvTextChange{}
 
 /// Check if widget has obtained focus (drag, hover, pressed).
 #[derive(Debug)]
-pub enum TextSubmit{}
+pub enum EvTextSubmit{}
 
 /// Check if widget has obtained focus (drag, hover, pressed).
 #[derive(Debug)]
-pub enum PositionFactor{}
+pub enum EvPositionFactor{}

@@ -1,7 +1,7 @@
 // This tries to be egui
 
 use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
-use bevy_aoui::{AouiPlugin, widgets::drag::Draggable};
+use bevy_aoui::{AouiPlugin, widgets::drag::Draggable, events::EvMouseDrag, WorldExtension};
 
 pub fn main() {
     App::new()
@@ -16,6 +16,7 @@ pub fn main() {
         .add_plugins(LogDiagnosticsPlugin::default())
         .add_systems(Startup, init)
         .add_plugins(AouiPlugin)
+        .register_cursor_default(CursorIcon::Hand)
         .run();
 }
 
@@ -23,12 +24,20 @@ pub fn main() {
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
+
+    text!((commands, assets) {
+        anchor: TopRight,
+        text: "FPS: 0.00",
+        color: color!(gold),
+        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+    });
+
     let (send, recv) = signal();
-    compact!(commands {
+    compact!((commands, assets) {
         direction: TopToBottom,
         hitbox: Rect(1),
         extra: Draggable::BOTH,
-        extra: recv.mark::<SigDrag>(),
+        extra: recv.build::<SigDrag>(),
         child: rectangle! {
             z: -1,
             color: color!(darkblue),
@@ -42,7 +51,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 flags: EventFlags::Hover|EventFlags::LeftDrag, 
                 icon: CursorIcon::Hand,
             },
-            extra: send.mark::<SigDrag>(),
+            extra: handler!{EvMouseDrag => {send}},
         },
         child: text! {
             text: "Checkbox",

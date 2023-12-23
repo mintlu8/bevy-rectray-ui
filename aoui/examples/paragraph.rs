@@ -42,7 +42,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    let textbox = paragraph!(commands {
+    let textbox = paragraph!((commands, assets) {
         dimension: [700, 700],
         margin: size2!(0.4 em, 0),
         font_size: em(1),

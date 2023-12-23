@@ -27,7 +27,7 @@ pub use crate::events::{
     LeftPressed, LeftDrag,
     MidPressed, MidDrag,
     RightPressed, RightDrag,
-    LoseFocus,
+    EvLoseFocus,
     CustomCursor,
 };
 pub use crate::OpacityWriter;

@@ -20,7 +20,7 @@ pub fn main() {
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    inputbox! (commands {
+    inputbox! ((commands, assets) {
         dimension: size2!(400, 1 em),
         font_size: em(4),
         hitbox: Rect(1),
@@ -39,7 +39,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             dimension: size2!(12, 1 em),
         },
     });
-    inputbox! (commands {
+    inputbox! ((commands, assets) {
         dimension: size2!(400, 1 em),
         offset: [-400, 0],
         rotation: degrees(45),

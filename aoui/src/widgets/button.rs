@@ -5,7 +5,7 @@ use bevy::window::{Window, PrimaryWindow, CursorIcon};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
 use crate::{Opacity, dsl::prelude::signal, signals::KeyStorage};
 use crate::signals::{Object, DynamicSender, SignalReceiver, ReceiverBuilder};
-use crate::events::{Handlers, ButtonClick, ToggleChange};
+use crate::events::{Handlers, EvButtonClick, EvToggleChange};
 use crate::{signals::DataTransfer, dsl::prelude::Interpolate};
 use crate::events::{EventFlags, CursorFocus, CursorAction};
 
@@ -146,7 +146,7 @@ impl PartialEq<Payload> for RadioButton {
 pub fn button_on_click(
     mut commands: Commands,
     mut key_storage: ResMut<KeyStorage>,
-    query: Query<(&CursorAction, &Handlers<ButtonClick>, Option<&Payload>), With<Button>>
+    query: Query<(&CursorAction, &Handlers<EvButtonClick>, Option<&Payload>), With<Button>>
 ) {
     for (action, submit, payload) in query.iter() {
         if !action.is(EventFlags::LeftClick) { continue }
@@ -161,7 +161,7 @@ pub fn button_on_click(
 pub fn check_button_on_click(
     mut commands: Commands,
     mut key_storage: ResMut<KeyStorage>,
-    mut query: Query<(&CursorAction, &mut CheckButton, Option<&Handlers<ToggleChange>>, Option<&Handlers<ButtonClick>>, Option<&Payload>)>
+    mut query: Query<(&CursorAction, &mut CheckButton, Option<&Handlers<EvToggleChange>>, Option<&Handlers<EvButtonClick>>, Option<&Payload>)>
 ) {
     for (action, mut state, change, submit, payload) in query.iter_mut() {
         if !action.is(EventFlags::LeftClick) { continue }
@@ -183,7 +183,7 @@ pub fn check_button_on_click(
 pub fn radio_button_on_click(
     mut commands: Commands,
     mut key_storage: ResMut<KeyStorage>,
-    mut query: Query<(&CursorAction, &RadioButton, &Payload, Option<&Handlers<ButtonClick>>)>
+    mut query: Query<(&CursorAction, &RadioButton, &Payload, Option<&Handlers<EvButtonClick>>)>
 ) {
     for (action, state, payload, submit) in query.iter_mut() {
         if !action.is(EventFlags::LeftClick) { continue }
@@ -318,7 +318,7 @@ mod sealed {
 
     use super::RadioButton;
 
-    use crate::signals::{DataTransfer, Receiver, DynamicSender};
+    use crate::signals::{DataTransfer, DynamicSender};
 
     pub trait ConstructRadioButtonSignal<const N: usize>: Sized {
         fn construct(default: impl DataTransfer) -> Self;

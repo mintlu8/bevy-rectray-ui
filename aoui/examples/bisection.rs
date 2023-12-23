@@ -14,7 +14,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    rectangle!(commands {
+    rectangle!((commands, assets) {
         anchor: CenterLeft,
         dimension: size2!(50%, 100%),
         color: color!(red),
@@ -29,7 +29,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             color: color!(purple),
         }
     });
-    rectangle!(commands {
+    rectangle!((commands, assets) {
         anchor: CenterRight,
         dimension: size2!(50%, 100%),
         color: color!(blue)

@@ -1,6 +1,6 @@
 
 use bevy::{ecs::{system::{Query, Res, Resource, Commands, ResMut}, component::Component, query::Without}, hierarchy::Children, math::Vec2, log::warn};
-use crate::{Dimension, Transform2D, Anchor, AouiREM, signals::{Receiver, KeyStorage}, signals::types::SigScroll, events::{MouseWheel, Handlers, PositionFactor}};
+use crate::{Dimension, Transform2D, Anchor, AouiREM, signals::{Receiver, KeyStorage}, signals::types::SigScroll, events::{MouseWheel, Handlers, EvPositionFactor}};
 
 use crate::events::MouseWheelAction;
 
@@ -70,9 +70,9 @@ pub fn scrolling_system(
     mut key_storage: ResMut<KeyStorage>,
     rem: Option<Res<AouiREM>>,
     direction: Option<Res<ScrollDirection>>,
-    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Handlers<MouseWheel>>, Option<&Handlers<PositionFactor>>)>,
+    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Handlers<MouseWheel>>, Option<&Handlers<EvPositionFactor>>)>,
     sender: Query<(&MouseWheelAction, &Handlers<MouseWheel>), Without<Scrolling>>,
-    receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Handlers<MouseWheel>>, Option<&Handlers<PositionFactor>>), Without<MouseWheelAction>>,
+    receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Handlers<MouseWheel>>, Option<&Handlers<EvPositionFactor>>), Without<MouseWheelAction>>,
     mut child_query: Query<(&Dimension, &mut Transform2D, Option<&Children>)>,
 ) {
     let rem = rem.map(|x|x.get()).unwrap_or(16.0);

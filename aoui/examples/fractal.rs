@@ -64,7 +64,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         text: "FPS: 0.00",
         color: color!(gold),
         z: 100,
-        extra: fps_signal().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x)),
+        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
     });
 
     use rand::prelude::*;

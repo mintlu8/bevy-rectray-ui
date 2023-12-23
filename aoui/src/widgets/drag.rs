@@ -1,5 +1,5 @@
 use bevy::{math::Vec2, ecs::{system::{Query, Res, ResMut, Commands}, component::Component, query::{Without, With}, entity::Entity}, hierarchy::Parent, log::warn};
-use crate::{Transform2D, signals::{types::SigDrag, KeyStorage}, Dimension, Anchor, events::{Handlers, MouseDrag, PositionFactor}};
+use crate::{Transform2D, signals::{types::SigDrag, KeyStorage}, Dimension, Anchor, events::{Handlers, EvMouseDrag, EvPositionFactor}};
 use serde::{Serialize, Deserialize};
 
 use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::{Interpolate, Offset}};
@@ -92,7 +92,7 @@ pub struct DragConstraint;
 pub fn drag_start(
     mut commands: Commands,
     mut storage: ResMut<KeyStorage>,
-    send: Query<(&CursorAction, &Handlers<MouseDrag>), Without<Draggable>>,
+    send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Draggable>>,
     mut receive: Query<(&Receiver<SigDrag>, &mut Draggable, &Transform2D, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut Draggable, &Transform2D, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>)>,
     ) {
@@ -149,11 +149,11 @@ pub fn dragging(
     mut commands: Commands,
     mut storage: ResMut<KeyStorage>,
     state: Res<CursorState>,
-    send: Query<(&CursorFocus, &Handlers<MouseDrag>), Without<Draggable>>,
+    send: Query<(&CursorFocus, &Handlers<EvMouseDrag>), Without<Draggable>>,
     mut receive: Query<(Entity, &Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>, &Receiver<SigDrag>), Without<CursorFocus>>,
     mut query: Query<(Entity, &CursorFocus, &Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>)>,
     parent_query: Query<&Dimension, (Without<Draggable>, Without<DragConstraint>)>,
-    constraint_query: Query<(&Parent, &Dimension, Option<&Handlers<PositionFactor>>), With<DragConstraint>>
+    constraint_query: Query<(&Parent, &Dimension, Option<&Handlers<EvPositionFactor>>), With<DragConstraint>>
 ) {
     let delta = state.cursor_position() - state.down_position();
 
@@ -229,7 +229,7 @@ pub fn dragging(
 pub fn drag_end(
     mut commands: Commands,
     mut storage: ResMut<KeyStorage>,
-    send: Query<(&CursorAction, &Handlers<MouseDrag>), Without<Draggable>>,
+    send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Draggable>>,
     mut receive: Query<(&mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>, &Receiver<SigDrag>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>)>
 ) {

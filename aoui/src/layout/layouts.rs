@@ -40,7 +40,7 @@ impl LayoutOutput {
     }
 }
 
-/// Dynamic layout perfectly cotaining its child, best used with padding.
+/// Dynamic layout perfectly containing its child, best used with padding.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct FitLayout {
     pub x: bool,
@@ -56,7 +56,7 @@ impl Default for FitLayout {
 impl Layout for FitLayout {
     fn place(&self, info: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
         let mut max = Vec2::ZERO;
-        let mut entity_anchors: Vec<_> = entities.into_iter().map(|x| {
+        let entity_anchors: Vec<_> = entities.into_iter().map(|x| {
             max = max.max(x.dimension);
             (x.entity, x.anchor.as_vec())
         }).collect();

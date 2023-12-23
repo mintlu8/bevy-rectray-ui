@@ -30,14 +30,14 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
     });
     
 
     let (send1, recv1) = signal();
     let (send2, recv2) = signal();
 
-    vbox!(commands {
+    vbox!((commands, assets) {
         offset: [0, 100],
         child: check_button! {
             dimension: size2!(14 em, 2 em),
@@ -84,30 +84,30 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
 
-    text! (commands {
+    text! ((commands, assets) {
         offset: [300, 120],
         color: color!(gold),
         text: "<= true!",
-        extra: recv1.mark::<SigText>().map(|x: bool| format!("<= {}!", x))
+        extra: recv1.map::<SigText>(|x: bool| format!("<= {}!", x))
     });
-    text! (commands {
+    text! ((commands, assets) {
         offset: [300, 80],
         color: color!(gold),
         text: "<= false!",
-        extra: recv2.mark::<SigText>().map(|x: bool| format!("<= {}!", x))
+        extra: recv2.map::<SigText>(|x: bool| format!("<= {}!", x))
     });
     
     let (ctx, sig) = radio_button_group::<_, 4>("Fire");
     let elements = ["Fire", "Water", "Earth", "Wind"];
 
-    text! (commands {
+    text! ((commands, assets) {
         offset: [300, -100],
         color: color!(gold),
         text: "<= This reflects the value of the radio button.",
-        extra: sig.mark::<SigText>().map(|x: &str| format!("<= has value {}!", x))
+        extra: sig.new_receiver().map::<SigText>(|x: &str| format!("<= has value {}!", x))
     });
 
-    vbox!(commands {
+    vbox!((commands, assets) {
         offset: [0, -150],
         child: #radio_button! {
             dimension: size2!(14 em, 2 em),
@@ -135,15 +135,15 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     
     let (send, recv) = signal();
 
-    text! (commands {
+    text! ((commands, assets) {
         offset: [300, 0],
         color: color!(gold),
         text: "<= Click this button.",
-        extra: recv.mark::<SigText>().map(|_: ()| format!("<= You clicked it!"))
+        extra: recv.map::<SigText>(|_: ()| format!("<= You clicked it!"))
     });
 
 
-    button! (commands {
+    button! ((commands, assets) {
         dimension: size2!(12 em, 2 em),
         font_size: em(2),
         cursor: CursorIcon::Hand,

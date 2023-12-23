@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, widgets::scroll::ScrollDirection, events::PositionFactor};
+use bevy_aoui::{AouiPlugin, widgets::scroll::ScrollDirection, events::EvPositionFactor};
 
 pub fn main() {
     App::new()
@@ -46,7 +46,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         sprite: assets.load("square.png"),
         extra: EventFlags::MouseWheel,
         extra: Scrolling::X,
-        extra: handler! { PositionFactor => { send1 }},
+        extra: handler! { EvPositionFactor => { send1 }},
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {
@@ -166,7 +166,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         sprite: assets.load("square.png"),
         extra: EventFlags::MouseWheel,
         extra: Scrolling::Y,
-        extra: handler! { PositionFactor => { send2 }},
+        extra: handler! { EvPositionFactor => { send2 }},
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {

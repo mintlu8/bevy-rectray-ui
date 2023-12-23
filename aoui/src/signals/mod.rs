@@ -59,7 +59,7 @@ mod globals;
 mod systems;
 mod storage;
 mod sig;
-use bevy::{app::{Plugin, Update, PreUpdate}, ecs::{schedule::IntoSystemConfigs, component::Component, system::Query}};
+use bevy::{app::{Plugin, Update, PreUpdate}, ecs::schedule::IntoSystemConfigs};
 pub use create::signal;
 pub use globals::*;
 pub use dto::{DataTransfer, Object};
@@ -67,7 +67,7 @@ pub use mpmc::*;
 pub use storage::KeyStorage;
 use sig::Signal;
 
-use crate::{WorldExtension, schedule::{AouiEventSet, AouiWidgetEventSet}};
+use crate::schedule::AouiEventSet;
 
 //use self::types::{SigSubmit, SigChange, SigDrag, SigScroll};
 

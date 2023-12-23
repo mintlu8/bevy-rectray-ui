@@ -13,7 +13,7 @@ use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;
 
-use super::{LoseFocus, ObtainFocus, ButtonClick, TextSubmit, TextChange, ToggleChange, MouseWheel, MouseDrag, PositionFactor};
+use super::{EvLoseFocus, EvObtainFocus, EvButtonClick, EvTextSubmit, EvTextChange, EvToggleChange, MouseWheel, EvMouseDrag, EvPositionFactor};
 
 /// Event handlers.
 #[derive(Debug, Component)]
@@ -227,7 +227,7 @@ impl EventHandling for MouseWheel {
     fn new_context() -> Self::Context {}
 }
 
-impl EventHandling for MouseDrag {
+impl EventHandling for EvMouseDrag {
     type Data = DragState;
     type Context = DragState;
     fn new_context() -> Self::Context {
@@ -277,14 +277,14 @@ impl_entity_query_for_mouse_state! (
     LeftDrag MidDrag RightDrag
 );
 
-impl EventHandling for LoseFocus {
+impl EventHandling for EvLoseFocus {
     type Data = ();
     type Context = ();
     fn new_context() -> Self::Context {}
 }
 
 
-impl EventHandling for ObtainFocus {
+impl EventHandling for EvObtainFocus {
     type Data = ();
     type Context = bool;
     fn new_context() -> Self::Context { false }
@@ -294,31 +294,31 @@ impl EventHandling for ObtainFocus {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DynamicData {}
 
-impl EventHandling for ButtonClick {
+impl EventHandling for EvButtonClick {
     type Data = DynamicData;
     type Context = ();
     fn new_context() -> Self::Context {}
 }
 
-impl EventHandling for ToggleChange {
+impl EventHandling for EvToggleChange {
     type Data = bool;
     type Context = ();
     fn new_context() -> Self::Context {}
 }
 
-impl EventHandling for TextChange {
+impl EventHandling for EvTextChange {
     type Data = String;
     type Context = ();
     fn new_context() -> Self::Context {}
 }
 
-impl EventHandling for TextSubmit {
+impl EventHandling for EvTextSubmit {
     type Data = String;
     type Context = ();
     fn new_context() -> Self::Context {}
 }
 
-impl EventHandling for PositionFactor {
+impl EventHandling for EvPositionFactor {
     type Data = f32;
     type Context = ();
     fn new_context() -> Self::Context {}
@@ -327,8 +327,8 @@ impl EventHandling for PositionFactor {
 pub fn obtain_focus_detection(
     mut commands: Commands,
     mut keys: ResMut<KeyStorage>,
-    mut focused: Query<&mut Handlers<ObtainFocus>, With<CursorFocus>>,
-    mut unfocused: Query<&mut Handlers<ObtainFocus>, Without<CursorFocus>>,
+    mut focused: Query<&mut Handlers<EvObtainFocus>, With<CursorFocus>>,
+    mut unfocused: Query<&mut Handlers<EvObtainFocus>, Without<CursorFocus>>,
 ) {
     for mut handlers in focused.iter_mut() {
         if handlers.context { continue; }
@@ -344,7 +344,7 @@ pub fn lose_focus_detection(
     mut commands: Commands,
     mut keys: ResMut<KeyStorage>,
     mut removed: RemovedComponents<CursorFocus>,
-    actions: Query<&Handlers<LoseFocus>, Without<CursorFocus>>,
+    actions: Query<&Handlers<EvLoseFocus>, Without<CursorFocus>>,
 ) {
     for handlers in actions.iter_many(removed.read()) {
         handlers.handle(&mut commands, &mut keys, ());

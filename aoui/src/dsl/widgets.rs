@@ -6,10 +6,10 @@ use bevy::text::Font;
 use bevy::window::CursorIcon;
 use crate::widgets::button::{Payload, Button, CheckButton, RadioButton};
 use crate::widgets::scrollframe::ClippingBundle;
-use crate::{Dimension, Anchor, Size2, Hitbox, build_frame};
+use crate::{Dimension, Anchor, Size2, Hitbox, build_frame, Clipping};
 use crate::bundles::{AouiBundle, AouiSpriteBundle};
 use crate::dsl::prelude::{PropagateFocus, SetCursor};
-use crate::events::{EventFlags, Handlers, ButtonClick, ToggleChange, TextChange, TextSubmit, MouseWheel};
+use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit, MouseWheel};
 use crate::widgets::scroll::Scrolling;
 use crate::widget_extension;
 use crate::signals::Receiver;
@@ -28,8 +28,8 @@ widget_extension!(
         pub color: Option<Color>,    
         pub cursor_bar: Option<Entity>,
         pub cursor_area: Option<Entity>,
-        pub on_change: Handlers<TextChange>,
-        pub on_submit: Handlers<TextSubmit>,
+        pub on_change: Handlers<EvTextChange>,
+        pub on_submit: Handlers<EvTextSubmit>,
     }
 );
 
@@ -83,7 +83,7 @@ widget_extension!(
         /// Sets the CursorIcon when hovering this button, default is `Hand`
         pub cursor: Option<CursorIcon>,
         /// Sends a signal whenever the button is clicked.
-        pub on_click: Handlers<ButtonClick>,
+        pub on_click: Handlers<EvButtonClick>,
         /// If set, `submit` sends its contents.
         pub payload: OptionX<Payload>,
     }
@@ -123,9 +123,9 @@ widget_extension!(
         /// Sends a signal whenever the button is clicked and its value is `true`.
         /// 
         /// Like button, this sends either `()` or `Payload`.
-        pub on_checked: Handlers<ButtonClick>,
+        pub on_checked: Handlers<EvButtonClick>,
         /// Sends a `bool` signal whenever the button is clicked.
-        pub on_change: Handlers<ToggleChange>,
+        pub on_change: Handlers<EvToggleChange>,
         /// Sets whether the default value is checked or not.
         pub checked: bool,
     }
@@ -168,7 +168,7 @@ widget_extension!(
         /// Discriminant for this button's value, must be comparable.
         pub value: OptionX<Payload>,
         /// Sends a signal whenever the button is clicked.
-        pub on_click: Handlers<ButtonClick>,
+        pub on_click: Handlers<EvButtonClick>,
     }
 );
 
@@ -249,6 +249,7 @@ impl Widget for ClippingFrameBuilder {
             panic!("Buffer size cannot be 0.")
         };
         let entity = build_frame!(commands, self).id();
+        commands.entity(entity).insert(Clipping::new(true));
         let (clip, image) = ClippingBundle::new(
             assets.expect("Please pass in the asset server."), 
             self.buffer, 

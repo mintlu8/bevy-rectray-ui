@@ -1,7 +1,7 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::{AouiPlugin, widgets::drag::DragConstraint};
+use bevy_aoui::{AouiPlugin, widgets::drag::DragConstraint, events::{EvPositionFactor, EvMouseDrag}};
 
 pub fn main() {
     App::new()
@@ -77,7 +77,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             },
             extra: DragX,
             extra: DragConstraint,
-            extra: send1.mark::<SigChange>()
+            extra: handler! {EvPositionFactor => {send1}} 
         }
     });
 
@@ -85,7 +85,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [300, 100],
         color: color!(gold),
         text: "<= Drag and this will change!",
-        extra: recv1.mark::<SigText>().map(|x: f32| format!("<= has value {:.2}!", x))
+        extra: recv1.map::<SigText>(|x: f32| format!("<= has value {:.2}!", x))
     });
 
     let (send2, recv2) = signal();
@@ -100,8 +100,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             color: color!(aqua),
             extra: DragX,
             extra: DragConstraint,
-            extra: recv2.mark::<SigDrag>(),
-            extra: send3.mark::<SigChange>()
+            extra: recv2.build::<SigDrag>(),
+            extra: handler! {EvPositionFactor => {send3}} 
         }
     });
 
@@ -119,13 +119,13 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             icon: CursorIcon::Hand,
         },
         //extra: DragBoth,
-        extra: send2.mark::<SigDrag>(),
+        extra: handler! {EvMouseDrag => {send2}} ,
     });
 
     text! ((commands, assets) {
         offset: [300, -100],
         color: color!(gold),
         text: "<= Drag and this will change!",
-        extra: recv3.mark::<SigText>().map(|x: f32| format!("<= has value {:.2}!", x))
+        extra: recv3.map::<SigText>(|x: f32| format!("<= has value {:.2}!", x))
     });
 }

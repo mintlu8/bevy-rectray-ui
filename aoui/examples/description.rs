@@ -15,7 +15,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    paragraph!(commands {
+    paragraph!((commands, assets) {
         dimension: [400, 700],
         child: rectangle! {
             color: color!(neutral800),

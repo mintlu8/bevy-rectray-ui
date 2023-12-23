@@ -1,9 +1,6 @@
-use std::{borrow::Cow, sync::mpsc::Receiver};
-
+use std::borrow::Cow;
 use bevy::asset::{Asset, Handle, AssetServer};
-
 use crate::{signals::DataTransfer, widgets::button::Payload};
-
 use super::{DslFrom, DslInto};
 
 /// Extended `Option` for the DSL.

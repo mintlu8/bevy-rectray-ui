@@ -26,8 +26,16 @@ pub struct Root;
 pub struct AnchorMarker;
 
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+    use bevy_aoui::dsl::prelude::*;
     let texture = assets.load::<Image>("square.png");
     commands.spawn(Camera2dBundle::default());
+
+    text!(commands {
+        anchor: TopRight,
+        text: "FPS: 0.00",
+        color: color!(gold),
+        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+    });
 
     use rand::prelude::*;
     let mut rng = rand::thread_rng();

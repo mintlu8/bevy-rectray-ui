@@ -1,5 +1,5 @@
-use bevy::{window::CursorIcon, app::{Last, App}, ecs::schedule::IntoSystemConfigs};
-use crate::{widgets::button::CursorDefault, schedule::AouiCleanupSet};
+use bevy::{window::CursorIcon, app::App};
+use crate::widgets::button::CursorDefault;
 
 /// Extension methods to `World` and `App`
 pub trait WorldExtension {

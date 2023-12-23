@@ -10,7 +10,7 @@ use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without,
 use crate::signals::KeyStorage;
 use crate::{RotatedRect, Transform2D, Dimension, bundles::AouiTextBundle};
 use crate::signals::{Receiver, types::SigInvoke};
-use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction, ActiveDetection, TextChange, TextSubmit, Handlers};
+use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction, ActiveDetection, EvTextChange, EvTextSubmit, Handlers};
 use ab_glyph::Font as FontTrait;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -434,7 +434,7 @@ pub fn text_on_click_outside(
 pub fn inputbox_keyboard(
     mut commands: Commands,
     mut storage: ResMut<KeyStorage>,
-    mut query: Query<(&mut InputBox, Option<&Handlers<TextChange>>, Option<&Handlers<TextSubmit>>, Option<&Receiver<SigInvoke>>, ActiveDetection)>,
+    mut query: Query<(&mut InputBox, Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>, Option<&Receiver<SigInvoke>>, ActiveDetection)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {

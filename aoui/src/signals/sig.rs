@@ -39,19 +39,19 @@ impl Signal {
     }
 
     pub fn read<T: DataTransfer>(&self) -> Option<T> {
-        let mut lock = self.inner.lock().unwrap();
+        let lock = self.inner.lock().unwrap();
         self.polled.store(true, Ordering::Relaxed);
         lock.get()
     }
 
     pub fn read_dyn(&self) -> Object {
-        let mut lock = self.inner.lock().unwrap();
+        let lock = self.inner.lock().unwrap();
         self.polled.store(true, Ordering::Relaxed);
         lock.clone()
     }
 
     pub fn read_any(&self) -> bool {
-        let mut lock = self.inner.lock().unwrap();
+        let lock = self.inner.lock().unwrap();
         self.polled.store(true, Ordering::Relaxed);
         lock.is_some()
     }

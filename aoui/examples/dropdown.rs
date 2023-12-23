@@ -29,7 +29,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
     });
     
     let (send, recv_rot, fold_recv) = signal();
@@ -54,7 +54,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 anchor: Left,
                 text: "",
                 font: "ComicNeue-Bold.ttf",
-                extra: text_recv.mark::<SigText>().map(|x: &str| x.to_string())
+                extra: text_recv.new_receiver().map::<SigText>(|x: &str| x.to_string())
             },
         },
         child: text! {
@@ -63,7 +63,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             center: Center,
             rotation: degrees(90),
             text: "v",
-            extra: recv_rot.mark::<SigRotation>().map(|x: bool| if x {0.0} else {PI/2.0}),
+            extra: recv_rot.map::<SigRotation>(|x: bool| if x {0.0} else {PI/2.0}),
             extra: transition! (Rotation 0.5 CubicInOut default PI)
         },
         child: clipping_layer! {
@@ -72,7 +72,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             layer: 1,
             buffer: [800, 800],
             scroll: Scrolling::Y,
-            extra: fold_recv.mark::<SigOpacity>().map(|x: bool| if x {1.0f32} else {0.0f32}),
+            extra: fold_recv.map::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
             extra: transition! (Opacity 0.5 Linear default 0.0),
             dimension: size2!(14 em, 4 em),
             child: use_opacity(|| vbox!((commands, assets){
