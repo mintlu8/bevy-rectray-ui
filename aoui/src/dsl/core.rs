@@ -32,10 +32,8 @@ impl Widget for FrameBuilder {
         }
         if let Some(layer) = self.layer {
             base.insert(layer);
-        } else {
-            if let Some(layer) = get_layer() {
-                base.insert(layer);
-            }
+        } else if let Some(layer) = get_layer() {
+            base.insert(layer);
         }
         if is_using_opacity() {
             base.insert(OpacityWriter);

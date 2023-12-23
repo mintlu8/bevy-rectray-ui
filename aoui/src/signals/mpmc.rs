@@ -36,10 +36,11 @@ impl SignalMapper {
     }
 }
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! signal_mapper {
     ($in_ty: ty, $f: expr) => {
-        crate::signals::SignalMapper::Function(
+        $crate::signals::SignalMapper::Function(
             Box::new(move |obj: &mut $crate::signals::Object| {
                 let Some(a) = obj.get::<$in_ty>() else {return};
                 *obj = Object::new(($f)(a));
@@ -47,7 +48,7 @@ macro_rules! signal_mapper {
         )
     };
     (|$var: ident: $ty: ty| $expr: expr) => {
-        crate::signals::SignalMapper::Function(
+        $crate::signals::SignalMapper::Function(
             Box::new(move |obj: &mut $crate::signals::Object| {
                 let Some(a) = obj.get::<$in_ty>() else {return};
                 *obj = Object::new((|$var: $ty| $expr)(a));
@@ -55,7 +56,7 @@ macro_rules! signal_mapper {
         )
     };
     (|mut $var: ident: $ty: ty| $expr: expr) => {
-        crate::signals::SignalMapper::Function(
+        $crate::signals::SignalMapper::Function(
             Box::new(move |obj: &mut $crate::signals::Object| {
                 let Some(a) = obj.get::<$in_ty>() else {return};
                 *obj = Object::new((|mut $var: $ty| $expr)(a));
@@ -238,11 +239,13 @@ impl<T: SignalReceiver> Debug for Receiver<T> {
 
 impl<T: DataTransfer> Sender<T> {
     pub fn send(&self, item: T) {
-        self.signal.write(item);
+        let obj = self.map.map(Object::new(item));
+        self.signal.write_dyn(obj);
     }
 
     pub fn send_dyn(&self, item: Object) {
-        self.signal.write_dyn(item);
+        let obj = self.map.map(item);
+        self.signal.write_dyn(obj);
     }
 
     /// Create a new receiver of the underlying signal.
@@ -252,6 +255,15 @@ impl<T: DataTransfer> Sender<T> {
             p: PhantomData 
         }
     }
+
+    /// Try remove the underlying item if polled,
+    /// if not, set it as polled.
+    /// 
+    /// This simulates bevy's double buffered events.
+    pub fn try_cleanup(&self) {
+        self.signal.try_clean();
+    }
+
 }
 
 
@@ -288,11 +300,13 @@ impl Debug for DynamicSender {
 }
 impl DynamicSender{
     pub fn send<T: DataTransfer>(&self, item: T) {
-        self.signal.write(item);
+        let obj = self.map.map(Object::new(item));
+        self.signal.write_dyn(obj);
     }
 
     pub fn send_dyn(&self, item: Object) {
-        self.signal.write_dyn(item);
+        let obj = self.map.map(item);
+        self.signal.write_dyn(obj);
     }
 
     /// Create a new receiver of the underlying signal.
@@ -301,6 +315,14 @@ impl DynamicSender{
             signal: self.signal.clone(), 
             p: PhantomData 
         }
+    }
+
+    /// Try remove the underlying item if polled,
+    /// if not, set it as polled.
+    /// 
+    /// This simulates bevy's double buffered events.
+    pub fn try_cleanup(&self) {
+        self.signal.try_clean();
     }
 }
 

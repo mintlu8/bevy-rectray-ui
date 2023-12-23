@@ -178,7 +178,7 @@ impl<T: Interpolation> Interpolate<T> {
 
     /// Update the timer
     pub fn update(&mut self, time: f32) {
-        self.current = self.current + time;
+        self.current += time;
     }
 
     /// Set position and stop interpolation.

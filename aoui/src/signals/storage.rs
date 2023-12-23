@@ -30,7 +30,7 @@ impl KeyStorage {
 
     /// Obtain a value with a key
     pub fn get<T: DataTransfer>(&self, name: impl AsRef<str>) -> Option<T> {
-        self.0.get(name.as_ref()).map(|x| x.value.get()).flatten()
+        self.0.get(name.as_ref()).and_then(|x| x.value.get())
     }
 
     /// Sets a value, returns the original value if exists.
@@ -41,9 +41,9 @@ impl KeyStorage {
         match self.0.get_mut(name.as_ref()) {
             Some(original) => {
                 if original.value == obj {
-                    return Some(obj);
+                    Some(obj)
                 } else {
-                    return Some(mem::replace(original, ChangeDetectObject::new(obj)).value);
+                    Some(mem::replace(original, ChangeDetectObject::new(obj)).value)
                 }
             },
             None => {
@@ -60,9 +60,9 @@ impl KeyStorage {
         match self.0.get_mut(name.as_ref()) {
             Some(original) => {
                 if original.value == obj {
-                    return Some(obj);
+                    Some(obj)
                 } else {
-                    return Some(mem::replace(original, ChangeDetectObject::new(obj)).value);
+                    Some(mem::replace(original, ChangeDetectObject::new(obj)).value)
                 }
             },
             None => {
@@ -93,7 +93,7 @@ impl KeyStorage {
     pub fn get_changed<T: DataTransfer>(&self, name: impl AsRef<str>) -> Option<T> {
         self.0.get(name.as_ref())
             .filter(|x| x.changed)
-            .map(|x| x.value.get()).flatten()
+            .and_then(|x| x.value.get())
     }
 
     /// Set all `changed` values to false.

@@ -27,8 +27,12 @@ pub use crate::events::{
     LeftPressed, LeftDrag,
     MidPressed, MidDrag,
     RightPressed, RightDrag,
-    EvLoseFocus,
     CustomCursor,
+
+    EvButtonClick, EvToggleChange,
+    EvObtainFocus, EvLoseFocus,
+    EvMouseDrag, EvTextChange, EvTextSubmit,
+    EvPositionFactor,
 };
 pub use crate::OpacityWriter;
 pub use crate::signals::{signal, fps_signal, Sender, Receiver, types::*};
@@ -49,6 +53,14 @@ pub const DragY: crate::widgets::drag::Draggable = crate::widgets::drag::Draggab
 pub const DragBoth: crate::widgets::drag::Draggable = crate::widgets::drag::Draggable::BOTH;
 pub const DragSnapBack: crate::widgets::drag::DragSnapBack = crate::widgets::drag::DragSnapBack::DEFAULT;
 
+pub const ScrollX: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::X;
+pub const ScrollY: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::Y;
+pub const ScrollNegX: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::NEG_X;
+pub const ScrollNegY: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::NEG_Y;
+pub const ScrollPosX: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::POS_X;
+pub const ScrollPosY: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::POS_Y;
+
+pub const ScrollBoth: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::BOTH;
 pub const Inherit: Anchor = Anchor::Inherit;
 
 pub use super::atlas::AtlasRectangles::Grid as AtlasGrid;

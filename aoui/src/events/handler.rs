@@ -158,10 +158,19 @@ impl<T: EventHandling> Handlers<T> {
             }
         }
     }
+
+    pub fn cleanup(&self){ 
+        self.handlers.iter().for_each(|x| match x {
+            Handler::OneShotSystem(_) => (),
+            Handler::Signal(sig) => sig.try_cleanup(),
+            Handler::DynamicSignal(sig) => sig.try_cleanup(),
+            Handler::GlobalKey(_, _) => (),
+        })
+    }
 }
 
 /// Trait for a handleable event.
-pub trait EventHandling {
+pub trait EventHandling: 'static {
     type Data: DataTransfer + Clone;
     type Context: Default + Send + Sync + 'static;
     fn new_context() -> Self::Context;
@@ -175,7 +184,7 @@ pub fn event_handle<T: EventQuery + Send + Sync + 'static> (
 ) {
     for (action, system) in query.iter() {
         if T::validate(&system.context, action) {
-            system.handle(&mut commands, &mut keys, T::get_data(&system.context, &action));
+            system.handle(&mut commands, &mut keys, T::get_data(&system.context, action));
         }
     }
 }
@@ -196,9 +205,7 @@ mod sealed {
             $(impl EventHandling for $crate::events::$ident {
                 type Data = ();
                 type Context = ();
-                fn new_context() -> Self::Context {
-                    ()
-                }
+                fn new_context() -> Self::Context {}
             }
             
             impl EventQuery for $crate::events::$ident {
@@ -208,9 +215,7 @@ mod sealed {
                     EventFlags::$ident.contains(other.flags())
                 }
 
-                fn get_data(_: &Self::Context, _: &Self::Component) -> () {
-                    ()
-                }
+                fn get_data(_: &Self::Context, _: &Self::Component) -> () {}
             })*
         };
     }
@@ -247,9 +252,7 @@ impl EventQuery for ClickOutside {
     fn validate(_: &Self::Context, _: &Self::Component) -> bool {
         true
     }
-    fn get_data(_: &Self::Context, _: &Self::Component) -> Self::Data {
-        ()
-    }
+    fn get_data(_: &Self::Context, _: &Self::Component) -> Self::Data {}
 }
 
 macro_rules! impl_entity_query_for_mouse_state {
@@ -265,9 +268,7 @@ macro_rules! impl_entity_query_for_mouse_state {
             fn validate(_: &Self::Context, other: &Self::Component) -> bool {
                 EventFlags::$ident.contains(other.flags())
             }
-            fn get_data(_: &Self::Context, _: &Self::Component) -> Self::Data {
-                ()
-            }
+            fn get_data(_: &Self::Context, _: &Self::Component) -> Self::Data {}
         })*
     };
 }

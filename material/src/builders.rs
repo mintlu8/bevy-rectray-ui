@@ -1,5 +1,5 @@
 use bevy::{math::Vec2, render::color::Color};
-use bevy_aoui::{widget_extension, dsl::{DslInto, DslFrom}};
+use bevy_aoui::dsl::DslFrom;
 
 #[derive(Debug, Default)]
 pub enum FillShape {

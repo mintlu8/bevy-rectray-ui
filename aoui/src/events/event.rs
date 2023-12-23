@@ -86,6 +86,26 @@ tlbf::tlbf!(
     }
 );
 
+type EvIdle = Idle;
+type EvHover = Hover;
+type EvLeftDrag = LeftDrag;
+type EvLeftDown = LeftDown;
+type EvLeftPressed = LeftPressed;
+type EvLeftClick = LeftClick;
+type EvDoubleClick = DoubleClick;
+type EvMidDown = MidDown;
+type EvMidPressed = MidPressed;
+type EvMidClick = MidClick;
+type EvMidDrag = MidDrag;
+type EvRightDown = RightDown;
+type EvRightPressed = RightPressed;
+type EvRightClick = RightClick;
+type EvRightDrag = RightDrag;
+type EvDrop = Drop;
+type EvDragEnd = DragEnd;
+type EvClickOutside = ClickOutside;
+type EvMouseWheel = MouseWheel;
+
 
 impl EventFlags {
     pub const fn const_or(self, other: EventFlags) -> Self{
@@ -93,38 +113,40 @@ impl EventFlags {
     }
 }
 
-/// Check if widget has lost focus (drag, hover, pressed).
+/// An event sent if widget is being dragged.
+/// 
+/// Sends the state `Start`, `Continue`, `End`.
+/// Delta can be found in the input context.
 #[derive(Debug)]
 pub enum EvMouseDrag{}
 
-/// Check if widget has lost focus (drag, hover, pressed).
+/// An event sent if widget has lost focus (drag, hover, pressed).
 #[derive(Debug)]
 pub enum EvLoseFocus{}
 
-/// Check if widget has obtained focus (drag, hover, pressed).
+/// An event sent if widget has obtained focus (drag, hover, pressed).
 #[derive(Debug)]
 pub enum EvObtainFocus{}
 
-/// Check if widget has obtained focus (drag, hover, pressed).
-#[derive(Debug)]
-pub enum EvOnChange{}
-
-/// Check if widget has obtained focus (drag, hover, pressed).
+/// An event that sends the `Payload` value of a widget in the button family.
 #[derive(Debug)]
 pub enum EvButtonClick{}
 
-/// Check if widget has obtained focus (drag, hover, pressed).
+/// An event that sends the `bool` value of a Toggle/CheckButton.
 #[derive(Debug)]
 pub enum EvToggleChange{}
 
-/// Check if widget has obtained focus (drag, hover, pressed).
+/// An event that sends the content of a text input
+/// on change.
 #[derive(Debug)]
 pub enum EvTextChange{}
 
-/// Check if widget has obtained focus (drag, hover, pressed).
+/// An event that sends the content of a text input via
+/// pressing enter or signal piping.
 #[derive(Debug)]
 pub enum EvTextSubmit{}
 
-/// Check if widget has obtained focus (drag, hover, pressed).
+/// An event that sends a floating point number based on 
+/// the position of a sprite, via either scrolling or dragging.
 #[derive(Debug)]
 pub enum EvPositionFactor{}

@@ -41,6 +41,7 @@ impl Plugin for WidgetsPlugin {
                 button::set_cursor,
                 button::event_conditional_visibility,
                 button::check_conditional_visibility,
+                atlas::build_deferred_atlas,
             ))
             .add_systems(PostUpdate, richtext::synchronize_glyph_spaces.in_set(AouiLoadInputSet))
             .add_systems(PostUpdate, inputbox::sync_em_inputbox.in_set(AouiStoreOutputSet))

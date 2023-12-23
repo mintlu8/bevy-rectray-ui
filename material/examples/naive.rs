@@ -27,7 +27,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(black),
-        extra: fps_signal(|x| format!("FPS: {:.2}", x))
+        extra: fps_signal::<SigText>(|x| format!("FPS: {:.2}", x))
     });
 
     material_sprite!((commands, assets) {

@@ -1,5 +1,9 @@
 use bevy::{render::{color::Color, texture::Image}, window::CursorIcon, ecs::{component::Component, system::Query}, hierarchy::BuildChildren, math::Vec2};
-use bevy_aoui::{widget_extension, Size, dsl::{Widget, HandleOrString, OptionX}, build_frame, widgets::button::{PropagateFocus, CheckButton, Payload, SetCursor, CheckButtonState}, signals::{Sender, types::{SigSubmit, SigChange}}, events::{EventFlags, CursorFocus}, anim::{Interpolate, Easing, Offset, EaseFunction}, Hitbox, Dimension, Size2, material_sprite, size2};
+use bevy_aoui::{widget_extension, build_frame, Hitbox, Dimension, Size2, material_sprite};
+use bevy_aoui::anim::{Interpolate, Easing, Offset, EaseFunction};
+use bevy_aoui::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange};
+use bevy_aoui::widgets::button::{PropagateFocus, CheckButton, Payload, SetCursor, CheckButtonState};
+use bevy_aoui::dsl::{Widget, HandleOrString, OptionX};
 
 use crate::{shapes::CapsuleMaterial, builders::Stroke};
 
@@ -60,9 +64,9 @@ widget_extension!(
         /// Sends a signal whenever the button is clicked and its value is `true`.
         /// 
         /// Like button, this sends either `()` or `Payload`.
-        pub submit: OptionX<Sender<SigSubmit>>,
+        pub on_checked: Handlers<EvButtonClick>,
         /// Sends a `bool` signal whenever the button is clicked.
-        pub change: OptionX<Sender<SigChange>>,
+        pub on_toggle: Handlers<EvToggleChange>,
         /// Sets whether the default value is checked or not.
         pub checked: bool,
 
@@ -123,8 +127,11 @@ impl Widget for MToggleBuilder {
         if self.hitbox.is_none() {
             frame.insert(Hitbox::FULL);
         }
-        if let OptionX::Some(submit) = self.submit  {
-            frame.insert(submit);
+        if !self.on_checked.is_empty()  {
+            frame.insert(self.on_checked);
+        }
+        if !self.on_toggle.is_empty()  {
+            frame.insert(self.on_toggle);
         }
         if let OptionX::Some(payload) = self.payload  {
             frame.insert(payload);

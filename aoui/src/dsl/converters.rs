@@ -104,10 +104,7 @@ impl<T: Asset> HandleOrString<T> {
     }
 
     pub fn is_some(&self) -> bool{
-        match self {
-            HandleOrString::None => false,
-            _ => true,
-        }
+        matches!(self, HandleOrString::None)
     }
 
     pub fn is_none(&self) -> bool{

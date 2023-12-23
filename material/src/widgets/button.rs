@@ -1,10 +1,20 @@
 
-use bevy::{render::{color::Color, texture::{Image, BevyDefault}, render_resource::{Extent3d, TextureDimension}}, asset::Handle, window::CursorIcon, sprite::{Sprite, Mesh2dHandle}, ecs::{component::Component, system::Query}, hierarchy::BuildChildren, text::Font, transform::components::GlobalTransform};
-use bevy_aoui::{widget_extension, signals::{types::SigSubmit, Sender}, dsl::{Widget, mesh_rectangle}, build_frame, widgets::button::{PropagateFocus, Button, SetCursor, Payload}, events::{EventFlags, CursorFocus}, Hitbox, anim::{Interpolate, Easing, EaseFunction}, size2, text, layout::{Container, CompactLayout, FlexDir, LayoutControl::IgnoreLayout}, sprite, bundles::BuildTransformBundle, BuildMeshTransform, material_sprite};
+use bevy::render::color::Color;
+use bevy::render::texture::{Image, BevyDefault};
+use bevy::render::render_resource::{Extent3d, TextureDimension};
+use bevy::{hierarchy::BuildChildren, text::Font, transform::components::GlobalTransform};
+use bevy::sprite::{Sprite, Mesh2dHandle};
+use bevy::window::CursorIcon;
+use bevy::ecs::{component::Component, system::Query};
+use bevy_aoui::{widget_extension, build_frame, Hitbox, size2, text, layout::{Container, CompactLayout, FlexDir}, sprite, bundles::BuildTransformBundle, BuildMeshTransform};
+use bevy_aoui::anim::{Interpolate, Easing};
+use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvButtonClick};
+use bevy_aoui::widgets::button::{PropagateFocus, Button, SetCursor, Payload};
+use bevy_aoui::dsl::{Widget, mesh_rectangle};
 use bevy_aoui::dsl::HandleOrString;
 use bevy_aoui::dsl::OptionX;
 use crate::{shadow, builders::Stroke};
-use crate::shapes::{CapsuleMaterial, RoundedRectangleMaterial, CapsuleShadowMaterial, RoundedShadowMaterial};
+use crate::shapes::{CapsuleMaterial, RoundedRectangleMaterial};
 
 #[derive(Debug, Component, Clone, Copy, Default)]
 pub struct ButtonColors {
@@ -44,7 +54,7 @@ widget_extension!(
         pub icon_hover: HandleOrString<Image>,
         pub icon_pressed: HandleOrString<Image>,
         pub stroke: Stroke,
-        pub signal: OptionX<Sender<SigSubmit>>,
+        pub signal: Handlers<EvButtonClick>,
         pub payload: OptionX<Payload>,
         pub capsule: bool,
         pub radius: Option<f32>,
@@ -104,8 +114,8 @@ impl Widget for MButtonBuilder {
         if self.hitbox.is_none() {
             frame.insert(Hitbox::FULL);
         }
-        if let OptionX::Some(submit) = self.signal  {
-            frame.insert(submit);
+        if !self.signal.is_empty() {
+            frame.insert(self.signal);
         }
         if let OptionX::Some(payload) = self.payload  {
             frame.insert(payload);
@@ -161,7 +171,7 @@ impl Widget for MButtonBuilder {
         match (self.capsule, self.radius, no_background) {
             (.., true) => (frame, frame),
             (true, ..) => {
-                let mut mat = if let Some(im) = self.texture.try_get(assets) {
+                let mat = if let Some(im) = self.texture.try_get(assets) {
                     CapsuleMaterial::from_image(im, background)
                 } else {
                     CapsuleMaterial::new(background)
@@ -182,7 +192,7 @@ impl Widget for MButtonBuilder {
                 (frame, frame)
             },
             (_, Some(radius), ..) => {
-                let mut mat = if let Some(im) = self.texture.try_get(assets) {
+                let mat = if let Some(im) = self.texture.try_get(assets) {
                     RoundedRectangleMaterial::from_image(im, background, radius)
                 } else {
                     RoundedRectangleMaterial::new(background, radius)
@@ -208,15 +218,9 @@ impl Widget for MButtonBuilder {
                     ..Default::default()
                 }, TextureDimension::D2, vec![255, 255, 255, 255], BevyDefault::bevy_default());
                 if let Some(shadow_size) = self.shadow {
-                    let color = self.shadow_color.unwrap_or(Color::BLACK);
+                    let shadow_color = self.shadow_color.unwrap_or(Color::BLACK);
                     let shadow_z = self.shadow_z.unwrap_or(f32::EPSILON * 8.0);
-
-                    let shadow = material_sprite!((commands, assets) {
-                        dimension: size2![1 + {shadow_size * 2.0} px, 1 + {shadow_size * 2.0} px],
-                        z: shadow_z,
-                        material: RoundedShadowMaterial::new(color, 0.0, shadow_size),
-                        extra: IgnoreLayout,
-                    });
+                    let shadow = shadow!(commands, assets, shadow_color, 0.0, shadow_size, shadow_z);
                     commands.entity(frame).insert((
                         Sprite::default(),
                         assets.add(texture),

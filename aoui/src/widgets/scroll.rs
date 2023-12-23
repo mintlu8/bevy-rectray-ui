@@ -48,20 +48,68 @@ impl ScrollDirection {
 /// * Piping `SigScroll` from `SigScroll` recipient is unspecified behavior.
 #[derive(Debug, Clone, Copy, Component)]
 pub struct Scrolling {
-    x: bool,
-    y: bool,
+    pos_x: bool,
+    neg_x: bool,
+    pos_y: bool,
+    neg_y: bool,
 }
 
 impl Scrolling {
-    pub const X: Scrolling = Scrolling { x: true, y: false };
-    pub const Y: Scrolling = Scrolling { x: false, y: true };
-    pub const BOTH: Scrolling = Scrolling { x: true, y: true };
+    pub const X: Scrolling = Scrolling { 
+        pos_x: true, 
+        neg_x: true, 
+        pos_y: false, 
+        neg_y: false,
+    };
+    pub const Y: Scrolling = Scrolling { 
+        pos_x: false, 
+        neg_x: false, 
+        pos_y: true, 
+        neg_y: true,
+    };
+    pub const NEG_X: Scrolling = Scrolling { 
+        pos_x: false, 
+        neg_x: true, 
+        pos_y: false, 
+        neg_y: false,
+    };
+    pub const NEG_Y: Scrolling = Scrolling { 
+        pos_x: false, 
+        neg_x: false, 
+        pos_y: false, 
+        neg_y: true,
+    };
+    pub const POS_X: Scrolling = Scrolling { 
+        pos_x: true, 
+        neg_x: false, 
+        pos_y: false, 
+        neg_y: false,
+    };
+    pub const POS_Y: Scrolling = Scrolling { 
+        pos_x: false, 
+        neg_x: false, 
+        pos_y: true, 
+        neg_y: false,
+    };
+    pub const BOTH: Scrolling = Scrolling { 
+        pos_x: true, 
+        neg_x: true, 
+        pos_y: true, 
+        neg_y: true,
+    };
+
+    pub fn x_scroll(&self) -> bool {
+        self.neg_x || self.pos_x
+    }
+
+    pub fn y_scroll(&self) -> bool {
+        self.neg_y || self.pos_y
+    }
 }
 
 impl Default for Scrolling {
-
     fn default() -> Self {
-        Self { x: true, y: true }
+        Self::BOTH
     }
 }
 
@@ -87,7 +135,7 @@ pub fn scrolling_system(
             Some((scroll, dimension, children, receiver.poll()?, handler, fac))));
     for (scroll, dimension, children, delta, handler, fac) in iter {
         let size = dimension.size;
-        let delta_scroll = match (scroll.x, scroll.y) {
+        let delta_scroll = match (scroll.x_scroll(), scroll.y_scroll()) {
             (true, true) => delta,
             (true, false) => Vec2::new(delta.x + delta.y, 0.0),
             (false, true) => Vec2::new(0.0, delta.x + delta.y),
@@ -117,10 +165,19 @@ pub fn scrolling_system(
                 min = min.min(bl);
                 max = max.max(tr);
             }
+            let constraint_min = Vec2::new(
+                if scroll.neg_x {f32::MIN} else {0.0}, 
+                if scroll.neg_y {f32::MIN} else {0.0}, 
+            );
+            let constraint_max = Vec2::new(
+                if scroll.pos_x {f32::MAX} else {0.0}, 
+                if scroll.pos_y {f32::MAX} else {0.0}, 
+            );
             let clamp_min = (size_min - min).min(size_max - max).min(Vec2::ZERO);
             let clamp_max = (size_max - max).max(size_min - min).max(Vec2::ZERO);
             if let Ok((_, mut transform, _)) = child_query.get_mut(container) {
                 let offset = offset.clamp(clamp_min, clamp_max);
+                let offset = offset.clamp(constraint_min, constraint_max);
                 // If scrolled to the end pipe the scroll event to the parent.
                 if transform.offset == offset.into() {
                     if let Some(piping) = handler {
@@ -130,7 +187,7 @@ pub fn scrolling_system(
                 transform.offset = offset.into();
                 if let Some(fac_handler) = fac {
                     let frac = (offset - clamp_min) / (clamp_max - clamp_min);
-                    let frac = match (scroll.x, scroll.y) {
+                    let frac = match (scroll.x_scroll(), scroll.y_scroll()) {
                         (true, false) => frac.x.clamp(0.0, 1.0),
                         (false, true) => frac.y.clamp(0.0, 1.0),
                         _ => {

@@ -21,11 +21,12 @@ impl Signal {
     }
 
     pub fn try_clean(&self)  {
-        if self.polled.swap(true, Ordering::Relaxed) == true {
+        if self.polled.swap(true, Ordering::Relaxed) {
             self.inner.lock().unwrap().clean();
         }
     }
 
+    #[allow(dead_code)]
     pub fn write(&self, item: impl DataTransfer) {
         let mut lock = self.inner.lock().unwrap();
         lock.set(item);
