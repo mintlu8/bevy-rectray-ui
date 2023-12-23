@@ -1,6 +1,6 @@
 
-use bevy::{ecs::{system::{Query, Res, Resource}, component::Component, query::Without}, hierarchy::Children, math::Vec2, log::warn};
-use crate::{Dimension, Transform2D, Anchor, AoUIREM, dsl::prelude::{Sender, Receiver, SigChange}, signals::types::SigScroll};
+use bevy::{ecs::{system::{Query, Res, Resource, Commands, ResMut}, component::Component, query::Without}, hierarchy::Children, math::Vec2, log::warn};
+use crate::{Dimension, Transform2D, Anchor, AouiREM, signals::{Receiver, KeyStorage}, signals::types::SigScroll, events::{MouseWheel, Handlers, PositionFactor}};
 
 use crate::events::MouseWheelAction;
 
@@ -66,25 +66,26 @@ impl Default for Scrolling {
 }
 
 pub fn scrolling_system(
-    rem: Option<Res<AoUIREM>>,
+    mut commands: Commands,
+    mut key_storage: ResMut<KeyStorage>,
+    rem: Option<Res<AouiREM>>,
     direction: Option<Res<ScrollDirection>>,
-    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Sender<SigScroll>>, Option<&Sender<SigChange>>)>,
-    sender: Query<(&MouseWheelAction, &Sender<SigScroll>), Without<Scrolling>>,
-    receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Sender<SigScroll>>, Option<&Sender<SigChange>>), Without<MouseWheelAction>>,
+    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Handlers<MouseWheel>>, Option<&Handlers<PositionFactor>>)>,
+    sender: Query<(&MouseWheelAction, &Handlers<MouseWheel>), Without<Scrolling>>,
+    receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Handlers<MouseWheel>>, Option<&Handlers<PositionFactor>>), Without<MouseWheelAction>>,
     mut child_query: Query<(&Dimension, &mut Transform2D, Option<&Children>)>,
 ) {
     let rem = rem.map(|x|x.get()).unwrap_or(16.0);
     let direction = direction.map(|x|x.get()).unwrap_or(Vec2::ONE);
     for (action, signal) in sender.iter() {
-        signal.send(action.get());
+        signal.handle(&mut commands, &mut key_storage, action.get());
     }
     let iter = scroll.iter()
-        .map(|(scroll, dimension, children, action, send, change)| 
-            (scroll, dimension, children, action.get(), send, change))
-        .chain(receiver.iter().filter_map(|(scroll, dimension, children, receiver, send, change)| 
-            Some((scroll, dimension, children, receiver.poll()?, send, change)))
-        );
-    for (scroll, dimension, children, delta, send, change) in iter {
+        .map(|(scroll, dimension, children, action, handler, fac)| 
+            (scroll, dimension, children, action.get(), handler, fac))
+        .chain(receiver.iter().filter_map(|(scroll, dimension, children, receiver, handler, fac)| 
+            Some((scroll, dimension, children, receiver.poll()?, handler, fac))));
+    for (scroll, dimension, children, delta, handler, fac) in iter {
         let size = dimension.size;
         let delta_scroll = match (scroll.x, scroll.y) {
             (true, true) => delta,
@@ -122,12 +123,12 @@ pub fn scrolling_system(
                 let offset = offset.clamp(clamp_min, clamp_max);
                 // If scrolled to the end pipe the scroll event to the parent.
                 if transform.offset == offset.into() {
-                    if let Some(send) = send {
-                        send.send(delta)
+                    if let Some(piping) = handler {
+                        piping.handle(&mut commands, &mut key_storage, delta);
                     }
                 }
                 transform.offset = offset.into();
-                if let Some(signal) = change {
+                if let Some(fac_handler) = fac {
                     let frac = (offset - clamp_min) / (clamp_max - clamp_min);
                     let frac = match (scroll.x, scroll.y) {
                         (true, false) => frac.x.clamp(0.0, 1.0),
@@ -137,7 +138,7 @@ pub fn scrolling_system(
                             continue;
                         },
                     };
-                    signal.send(frac)
+                    fac_handler.handle(&mut commands, &mut key_storage, frac);
                 }
             }
         }            

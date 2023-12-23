@@ -1,20 +1,35 @@
+use bevy::ecs::system::ResMut;
 use bevy::hierarchy::Children;
 use bevy::asset::{Handle, Assets};
 use bevy::input::{keyboard::KeyCode, Input};
 use bevy::ecs::{query::Changed, event::EventReader, system::Commands};
+use bevy::render::color::Color;
 use bevy::window::{Window, PrimaryWindow, ReceivedCharacter};
 use bevy::text::{Text, Font};
 use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
-use crate::{RotatedRect, Transform2D, Dimension, bundles::AoUITextBundle};
-use crate::signals::{Sender, Receiver, types::{SigChange, SigSubmit, SigInvoke}};
-use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction};
+use crate::signals::KeyStorage;
+use crate::{RotatedRect, Transform2D, Dimension, bundles::AouiTextBundle};
+use crate::signals::{Receiver, types::SigInvoke};
+use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction, ActiveDetection, TextChange, TextSubmit, Handlers};
 use ab_glyph::Font as FontTrait;
-
-use super::TextColor;
 
 #[derive(Debug, Default, Clone, Copy)]
 enum LeftRight {
     Left, #[default] Right,
+}
+
+
+/// Color of text.
+#[derive(Debug, Clone, Copy, Component)]
+pub struct TextColor(pub Color);
+
+impl TextColor {
+    pub fn get(&self) -> Color {
+        self.0
+    }
+    pub fn set(&mut self, color: Color) {
+        self.0 = color
+    }
 }
 
 /// Single line text input.
@@ -281,15 +296,16 @@ pub fn text_on_mouse_double_click(
 pub fn update_inputbox_cursor(
     mut commands: Commands,
     fonts: Res<Assets<Font>>,
-    query: Query<(Entity, &InputBox, &Dimension, &Handle<Font>, &TextColor), (Changed<InputBox>, Without<InputBoxCursorArea>, Without<Text>)>,
-    mut text: Query<(Entity, &Parent, Option<&Children>), (With<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>, Without<Text>)>,
-    mut bar: Query<(&Parent, &mut Transform2D, &mut Visibility), (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<Text>)>,
-    mut area: Query<(&Parent, &mut Transform2D, &mut Dimension, &mut Visibility), (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<Text>)>,
+    query: Query<(Entity, &InputBox, &Dimension, &Handle<Font>, &TextColor, ActiveDetection), (Changed<InputBox>, Without<InputBoxCursorArea>, Without<Text>)>,
+    mut text: Query<(Entity, &Parent, Option<&Children>), (With<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>, Without<Text>, Without<InputBox>)>,
+    mut bar: Query<(&Parent, &mut Transform2D, &mut Visibility), (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<Text>, Without<InputBox>)>,
+    mut area: Query<(&Parent, &mut Transform2D, &mut Dimension, &mut Visibility), (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<Text>, Without<InputBox>)>,
     mut letters: Query<(Entity, &mut Transform2D, &mut Dimension, &mut Text, &mut Visibility), (Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>
 ) {
     use ab_glyph::ScaleFont as FontTrait;
     use bevy::prelude::*;
-    for (entity, input_box, dimension, font_handle, color) in query.iter() {
+    for (entity, input_box, dimension, font_handle, color, active) in query.iter() {
+        if !active.is_active() { continue; }
         let font = match fonts.get(font_handle){
             Some(font) => font.font.as_scaled(dimension.em),
             None => continue,
@@ -343,7 +359,7 @@ pub fn update_inputbox_cursor(
                 }
             } else {
                 added.push(commands.spawn({
-                    AoUITextBundle {
+                    AouiTextBundle {
                         transform: Transform2D::UNIT.with_offset(Vec2::new(cursor + center, 0.0)),
                         dimension: Dimension::owned(crate::size2!([{bounds.width()} px, 1 em])),
                         text: Text::from_section(chara, TextStyle { 
@@ -416,11 +432,17 @@ pub fn text_on_click_outside(
     }
 }
 pub fn inputbox_keyboard(
-    mut query: Query<(&mut InputBox, Option<&Sender<SigChange>>, Option<&Sender<SigSubmit>>, Option<&Receiver<SigInvoke>>)>,
+    mut commands: Commands,
+    mut storage: ResMut<KeyStorage>,
+    mut query: Query<(&mut InputBox, Option<&Handlers<TextChange>>, Option<&Handlers<TextSubmit>>, Option<&Receiver<SigInvoke>>, ActiveDetection)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {
-    for (mut inputbox, change, submit, invoke) in query.iter_mut().filter(|(input, ..)| input.has_focus()) {
+    for (mut inputbox, change, submit, invoke, active) in query.iter_mut().filter(|(input, ..)| input.has_focus()) {
+        if !active.is_active() {
+            inputbox.focus = false;
+            continue;
+        }
         let mut changed = false;
         if keys.any_pressed(CONTROL) {
             if keys.just_pressed(KeyCode::C) {
@@ -463,7 +485,7 @@ pub fn inputbox_keyboard(
                     '\t' => (),
                     '\r'|'\n' => {
                         if let Some(submit) = submit {
-                            submit.send(inputbox.get().to_owned())
+                            submit.handle(&mut commands, &mut storage, inputbox.get().to_owned())
                         }
                     },
                     '\x08'|'\x7f' => inputbox.backspace(),
@@ -473,15 +495,15 @@ pub fn inputbox_keyboard(
             }
         }
         if let Some(invoke) = invoke {
-            if invoke.poll_any() {
+            if invoke.poll().is_some() {
                 if let Some(submit) = submit {
-                    submit.send(inputbox.get().to_owned())
+                    submit.handle(&mut commands, &mut storage, inputbox.get().to_owned())
                 }
             }
         }
         if changed {
             if let Some(change) = change {
-                change.send(inputbox.get().to_owned())
+                change.handle(&mut commands, &mut storage, inputbox.get().to_owned())
             }
         }
     }

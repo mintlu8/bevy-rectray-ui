@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, any::TypeId};
 use downcast_rs::{impl_downcast, Downcast};
 
 const _: Option<Box<dyn DataTransfer>> = None;
@@ -6,6 +6,9 @@ const _: Option<Box<dyn DataTransfer>> = None;
 pub trait DataTransfer: Downcast + Debug + Send + Sync + 'static {
     fn dyn_clone(&self) -> Box<dyn DataTransfer>;
     fn dyn_eq(&self, other: &dyn DataTransfer) -> bool;
+    fn type_id(&self) -> TypeId {
+        TypeId::of::<Self>()
+    }
 }
 
 impl_downcast!(DataTransfer);
@@ -22,7 +25,7 @@ impl<T> DataTransfer for T where T: Debug + Clone + PartialEq + Send + Sync + 's
     }
 }
 
-/// A type erased dynamic object.
+/// A type erased nullable dynamic object.
 #[derive(Debug)]
 #[derive(Default)]
 pub struct Object(Option<Box<dyn DataTransfer>>);

@@ -6,8 +6,8 @@ pub use crate::{color, colors, gradient, transition, size2, markers};
 pub use super::DslInto;
 pub use super::util::*;
 pub use super::util::DslHitbox::*;
-pub use super::util::AoUISpacialConsts::*;
-pub use super::AoUICommands;
+pub use super::util::AouiSpacialConsts::*;
+pub use super::AouiCommands;
 pub use bevy::prelude::BuildChildren;
 pub use std::f32::consts::PI;
 pub const INFINITY: f32 = f32::INFINITY;
@@ -19,19 +19,19 @@ pub use crate::anim::{Interpolate, Offset, Rotation, Scale, Index};
 pub use interpolation::EaseFunction;
 pub use crate::events::{
     EventFlags,
-    Down as LeftDown, Click as LeftClick, 
+    LeftDown, LeftClick, 
     MidDown, MidClick, 
     RightDown, RightClick,
     DragEnd, Drop, ClickOutside,
     Hover, 
-    Pressed as LeftPressed, Drag as LeftDrag,
+    LeftPressed, LeftDrag,
     MidPressed, MidDrag,
     RightPressed, RightDrag,
     LoseFocus,
     CustomCursor,
 };
 pub use crate::OpacityWriter;
-pub use crate::signals::{signal, sig_fps, Sender, Receiver, types::*};
+pub use crate::signals::{signal, fps_signal, Sender, Receiver, types::*};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::button::{
     PropagateFocus, DisplayIf, SetCursor, CheckButtonState, radio_button_group
@@ -52,8 +52,9 @@ pub const DragSnapBack: crate::widgets::drag::DragSnapBack = crate::widgets::dra
 pub const Inherit: Anchor = Anchor::Inherit;
 
 pub use super::atlas::AtlasRectangles::Grid as AtlasGrid;
+pub use super::Aspect::Preserve;
 
-pub use crate::{frame, sprite, textbox, atlas};
+pub use crate::{frame, sprite, text, atlas};
 pub use crate::{material_sprite, material_mesh};
 pub use crate::{one_shot, handler};
 pub use crate::{padding, compact, paragraph, span, hbox, vbox, hspan, vspan};
@@ -61,12 +62,13 @@ pub use crate::{linebreak, table, flex_table, fixed_grid, sized_grid,};
 pub use crate::{inputbox, button, check_button, radio_button, clipping_layer};
 pub use crate::rectangle;
 
-pub use crate::dsl::context::{with_layer, use_opacity};
+pub use crate::dsl::context::{with_layer, use_opacity, with_marker};
 
 use bevy::ecs::bundle::Bundle;
 use bevy::transform::components::GlobalTransform;
 
-pub fn build_transform(anc: Anchor) -> impl Bundle {
+/// Build transform at an anchor.
+pub fn transform_at(anc: Anchor) -> impl Bundle {
     (
         BuildTransform(anc),
         GlobalTransform::default()

@@ -1,8 +1,8 @@
-use bevy::{asset::Handle, sprite::{TextureAtlas, TextureAtlasSprite}, math::UVec2};
+use bevy::{asset::Handle, sprite::{TextureAtlas, TextureAtlasSprite}, math::UVec2, ecs::entity::Entity};
 use bevy::math::{Vec2, Rect};
 use bevy::render::{texture::Image, color::Color};
 
-use crate::{widget_extension, map_builder, dsl::builders::FrameBuilder, widgets::DeferredAtlasBuilder, bundles::BuildTransformBundle};
+use crate::{widget_extension, widgets::DeferredAtlasBuilder, bundles::BuildTransformBundle, build_frame};
 
 use super::{Widget, DslFrom};
 
@@ -68,13 +68,8 @@ widget_extension!(pub struct AtlasBuilder {
 });
 
 impl Widget for AtlasBuilder {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> bevy::prelude::Entity {
-        let entity = map_builder!(self => FrameBuilder move (
-            anchor, parent_anchor, center, opacity, visible,
-            offset, rotation, scale, z, dimension, hitbox,
-            layer, font_size, event
-        )).spawn_with(commands, assets);
-        commands.entity(entity).insert(BuildTransformBundle::default());
+    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (Entity, Entity) {
+        let entity = build_frame!(commands, self).insert(BuildTransformBundle::default()).id();
         let assets = ||assets.expect("Please pass in the AssetServer.");
         let [x, y] = self.flip;
         let sprite = TextureAtlasSprite{
@@ -160,7 +155,7 @@ impl Widget for AtlasBuilder {
                 ));
             }
         }
-        entity
+        (entity, entity)
     }
 }
 

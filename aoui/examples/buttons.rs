@@ -2,7 +2,7 @@
 #![recursion_limit = "256"]
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
-use bevy_aoui::AoUIPlugin;
+use bevy_aoui::AouiPlugin;
 use bevy_aoui::WorldExtension;
 
 pub fn main() {
@@ -16,7 +16,7 @@ pub fn main() {
         }))
         .add_systems(Startup, init)
         .add_plugins(FrameTimeDiagnosticsPlugin)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .register_cursor_default(CursorIcon::Arrow)
         .run();
 }
@@ -26,71 +26,71 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    textbox!(commands {
+    text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: sig_fps().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
     });
     
 
     let (send1, recv1) = signal();
     let (send2, recv2) = signal();
 
-    vbox!((commands, assets) {
+    vbox!(commands {
         offset: [0, 100],
         child: check_button! {
-            dimension: size2!([14 em, 2 em]),
+            dimension: size2!(14 em, 2 em),
             checked: true,
-            change: send1,
+            on_change: send1,
             child: sprite!{
                 anchor: Left,
-                dimension: size2!([2 em, 2 em]),
+                dimension: size2!(2 em, 2 em),
                 sprite: "check.png",
                 extra: DisplayIf(CheckButtonState::Checked)
             },
             child: sprite!{
                 anchor: Left,
-                dimension: size2!([2 em, 2 em]),
+                dimension: size2!(2 em, 2 em),
                 sprite: "unchecked.png",
                 extra: DisplayIf(CheckButtonState::Unchecked)
             },
-            child: textbox!{
+            child: text!{
                 anchor: Left,
-                offset: size2!([2.5 em, 0]),
+                offset: size2!(2.5 em, 0),
                 text: "This is a checkbox",
             },
         },
         child: check_button! {
-            dimension: size2!([14 em, 2 em]),
-            change: send2,
+            dimension: size2!(14 em, 2 em),
+            on_change: send2,
             child: sprite!{
                 anchor: Left,
-                dimension: size2!([2 em, 2 em]),
+                dimension: size2!(2 em, 2 em),
                 sprite: "check.png",
                 extra: DisplayIf(CheckButtonState::Checked)
             },
             child: sprite!{
                 anchor: Left,
-                dimension: size2!([2 em, 2 em]),
+                dimension: size2!(2 em, 2 em),
                 sprite: "unchecked.png",
                 extra: DisplayIf(CheckButtonState::Unchecked)
             },
-            child: textbox!{
+            child: text!{
                 anchor: Left,
-                offset: size2!([2.5 em, 0]),
+                offset: size2!(2.5 em, 0),
                 text: "This is also a checkbox",
             },
         }
     });
 
-    textbox! (commands {
+    text! (commands {
         offset: [300, 120],
         color: color!(gold),
         text: "<= true!",
         extra: recv1.mark::<SigText>().map(|x: bool| format!("<= {}!", x))
     });
-    textbox! (commands {
+    text! (commands {
         offset: [300, 80],
         color: color!(gold),
         text: "<= false!",
@@ -100,34 +100,34 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let (ctx, sig) = radio_button_group::<_, 4>("Fire");
     let elements = ["Fire", "Water", "Earth", "Wind"];
 
-    textbox! (commands {
+    text! (commands {
         offset: [300, -100],
         color: color!(gold),
         text: "<= This reflects the value of the radio button.",
         extra: sig.mark::<SigText>().map(|x: &str| format!("<= has value {}!", x))
     });
 
-    vbox!((commands, assets) {
+    vbox!(commands {
         offset: [0, -150],
         child: #radio_button! {
-            dimension: size2!([14 em, 2 em]),
+            dimension: size2!(14 em, 2 em),
             context: #ctx,
             value: #elements,
             child: sprite!{
                 anchor: Left,
-                dimension: size2!([2 em, 2 em]),
+                dimension: size2!(2 em, 2 em),
                 sprite: "radio.png",
                 extra: DisplayIf(CheckButtonState::Checked)
             },
             child: sprite!{
                 anchor: Left,
-                dimension: size2!([2 em, 2 em]),
+                dimension: size2!(2 em, 2 em),
                 sprite: "unchecked.png",
                 extra: DisplayIf(CheckButtonState::Unchecked)
             },
-            child: textbox!{
+            child: text!{
                 anchor: Left,
-                offset: size2!([2.5 em, 0]),
+                offset: size2!(2.5 em, 0),
                 text: #elements,
             },
         },
@@ -135,7 +135,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     
     let (send, recv) = signal();
 
-    textbox! (commands {
+    text! (commands {
         offset: [300, 0],
         color: color!(gold),
         text: "<= Click this button.",
@@ -143,36 +143,36 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     });
 
 
-    button! ((commands, assets) {
-        dimension: size2!([12 em, 2 em]),
+    button! (commands {
+        dimension: size2!(12 em, 2 em),
         font_size: em(2),
         cursor: CursorIcon::Hand,
         child: rectangle!{
-            dimension: size2!([100%, 100%]),
+            dimension: size2!(100%, 100%),
             color: color!(blue500),
             extra: DisplayIf(EventFlags::Idle)
         },
-        child: textbox!{
+        child: text!{
             text: "Click Me!",
             color: color!(gold),
             extra: DisplayIf(EventFlags::Idle),
             z: 0.1
         },
         child: rectangle!{
-            dimension: size2!([100%, 100%]),
+            dimension: size2!(100%, 100%),
             color: color!(blue800),
-            extra: DisplayIf(EventFlags::Hover|EventFlags::Pressed)
+            extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed)
         },
-        child: textbox!{
+        child: text!{
             text: "Hovering!",
             color: color!(gold),
             extra: DisplayIf(EventFlags::Hover),
             z: 0.1
         },
-        child: textbox!{
+        child: text!{
             text: "Clicked!",
             color: color!(gold),
-            extra: DisplayIf(EventFlags::Pressed),
+            extra: DisplayIf(EventFlags::LeftPressed),
             z: 0.1
         },
         extra: handler!{LeftClick => {

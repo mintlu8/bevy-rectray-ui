@@ -1,8 +1,8 @@
-use bevy::{math::Vec2, render::{view::RenderLayers, mesh::Mesh, render_resource::PrimitiveTopology}, sprite::{Material2d, Mesh2dHandle}, transform::components::GlobalTransform};
+use bevy::{math::Vec2, render::{view::RenderLayers, mesh::Mesh, render_resource::PrimitiveTopology}, sprite::{Material2d, Mesh2dHandle}, transform::components::GlobalTransform, ecs::entity::Entity};
 
-use crate::{Anchor, Opacity, Size2, FontSize, events::EventFlags, Hitbox, map_builder, dsl::builders::FrameBuilder, BuildMeshTransform};
+use crate::{Anchor, Opacity, Size2, FontSize, events::EventFlags, Hitbox, BuildMeshTransform, build_frame};
 
-use super::{OneOrTwo, Widget, util::HandleOrAsset};
+use super::{OneOrTwo, Widget, converters::HandleOrAsset, Aspect};
 
 #[derive(Debug, Default)]
 /// A `MaterialMesh2d` with a rectangle mesh.
@@ -17,41 +17,44 @@ pub struct MaterialSpriteBuilder<M: Material2d> {
     pub scale: Option<OneOrTwo<Vec2>>,
     pub z: f32,
     pub dimension: Option<Size2>,
+    pub aspect: Aspect,
     pub font_size: FontSize,
     pub event: Option<EventFlags>,
     pub hitbox: Option<Hitbox>,
+    pub clipping: bool,
     pub layer: Option<RenderLayers>,
-    pub material: Option<HandleOrAsset<M>>,
+    pub material: HandleOrAsset<M>,
+}
+
+pub fn mesh_rectangle() -> Mesh {
+    Mesh::new(PrimitiveTopology::TriangleList)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, 
+            vec![[-0.5, -0.5, 0.0], [0.5, -0.5, 0.0], [-0.5, 0.5, 0.0], [0.5, 0.5, 0.0]]
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, 
+            vec![[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, 
+            vec![[0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0]]
+        )
+        .with_indices(Some(bevy::render::mesh::Indices::U32(vec![
+            0, 1, 2,
+            1, 2, 3
+        ])))
 }
 
 impl<M: Material2d> Widget for MaterialSpriteBuilder<M> {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> bevy::prelude::Entity {
-        let entity = map_builder!(self => FrameBuilder move (
-            anchor, parent_anchor, center, opacity, visible,
-            offset, rotation, scale, z, dimension, hitbox,
-            layer, font_size, event
-        )).spawn_with(commands, assets);
+    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (Entity, Entity) {
+        let mut entity = build_frame!(commands, self);
         let assets = assets.expect("Please pass in the asset server.");
-        let mesh = Mesh::new(PrimitiveTopology::TriangleList)
-            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, 
-                vec![[-0.5, -0.5, 0.0], [0.5, -0.5, 0.0], [-0.5, 0.5, 0.0], [0.5, 0.5, 0.0]]
-            )
-            .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, 
-                vec![[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]
-            )
-            .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, 
-                vec![[0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [0.0, 0.0, 1.0]]
-            )
-            .with_indices(Some(bevy::render::mesh::Indices::U32(vec![
-                0, 1, 2,
-                1, 2, 3
-            ])));
-        commands.entity(entity).insert((
-            self.material.expect("Please specify a material.").get(Some(assets)),
+        let mesh = mesh_rectangle();
+        let e = entity.insert((
+            self.material.expect(Some(assets), "Please specify a material."),
             Mesh2dHandle(assets.add(mesh)),
             GlobalTransform::IDENTITY,
             BuildMeshTransform,
-        )).id()
+        )).id();
+        (e, e)
     }
 }
 
@@ -80,27 +83,26 @@ pub struct MaterialMeshBuilder<M: Material2d> {
     pub scale: Option<OneOrTwo<Vec2>>,
     pub z: f32,
     pub dimension: Option<Size2>,
+    pub aspect: Aspect,
     pub font_size: FontSize,
     pub event: Option<EventFlags>,
     pub hitbox: Option<Hitbox>,
     pub layer: Option<RenderLayers>,
-    pub mesh: Option<HandleOrAsset<Mesh>>,
-    pub material: Option<HandleOrAsset<M>>,
+    pub clipping: bool,
+    pub mesh: HandleOrAsset<Mesh>,
+    pub material: HandleOrAsset<M>,
 }
 
 impl<M: Material2d> Widget for MaterialMeshBuilder<M> {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> bevy::prelude::Entity {
-        let entity = map_builder!(self => FrameBuilder move (
-            anchor, parent_anchor, center, opacity, visible,
-            offset, rotation, scale, z, dimension, hitbox,
-            layer, font_size, event
-        )).spawn_with(commands, assets);
-        commands.entity(entity).insert((
-            self.material.expect("Please specify a material.").get(assets),
-            Mesh2dHandle(self.mesh.expect("Please specify a mesh.").get(assets)),
+    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (Entity, Entity) {
+        let mut entity = build_frame!(commands, self);
+        let e = entity.insert((
+            self.material.expect(assets, "Please specify a material."),
+            Mesh2dHandle(self.mesh.expect(assets, "Please specify a mesh.")),
             GlobalTransform::IDENTITY,
             BuildMeshTransform,
-        )).id()
+        )).id();
+        (e, e)
     }
 }
 

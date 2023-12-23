@@ -1,14 +1,14 @@
-# Bevy AoUI
+# Bevy Aoui
 
-[![AoUI](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
+[![Aoui](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
 [![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
 
 A light-weight anchor-offset based 2D sprite layout system for the bevy engine.
 
-Bevy AoUI provides a light-weight rectangular anchor-offset based 2D sprite layout,
+Bevy Aoui provides a light-weight rectangular anchor-offset based 2D sprite layout,
 UI layout and skeletal animation system.
 
-Similar to the philosophy of Rust, AoUI provides low level control through the
+Similar to the philosophy of Rust, Aoui provides low level control through the
 anchor-offset system and high level ergonomics through its layout system.
 
 ## Getting Started
@@ -18,16 +18,16 @@ Before you start you should check out `bevy_aoui`'s examples if you like shapes 
 [![Widgets](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
 [![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
 
-First add the AoUI Plugin:
+First add the Aoui Plugin:
 
 ```rust
-app.add_plugins(AoUIPlugin)
+app.add_plugins(AouiPlugin)
 ```
 
 Create a sprite:
 
 ```rust
-commands.spawn(AoUISpriteBundle {
+commands.spawn(AouiSpriteBundle {
     sprite: Sprite { 
         color: Color::RED,
         ..Default::default()
@@ -49,7 +49,7 @@ commands.spawn(AoUISpriteBundle {
 Create some text:
 
 ```rust
-commands.spawn(AoUITextBundle {
+commands.spawn(AouiTextBundle {
     text: Text::from_section(
         "Hello, World!!", 
         style(Color::WHITE)
@@ -71,13 +71,13 @@ commands.spawn(AoUITextBundle {
 If you don't like the verbosity, check out the DSL in `bevy_aoui`:
 
 ```rust
-button! ((commands, assets) {
-    dimension: size2!([12 em, 2 em]),
+button! (commands {
+    dimension: size2!(12 em, 2 em),
     font_size: em(2),
     hitbox: Rect(1),
     cursor: CursorIcon::Hand,
     child: rectangle!{
-        dimension: size2!([100%, 100%]),
+        dimension: size2!(100%, 100%),
         fill: color!(blue500),
     },
     child: textbox!{
@@ -93,9 +93,9 @@ button! ((commands, assets) {
 
 ## Core Concepts
 
-AoUI offers a refreshingly different paradigm from traditional CSS based UI layout.
+Aoui offers a refreshingly different paradigm from traditional CSS based UI layout.
 
-AoUI Sprites contains these core components:
+Aoui Sprites contains these core components:
 
 * [anchor](Transform2D::anchor)
 * [center](Transform2D::center)
@@ -128,15 +128,15 @@ with Bevy's [`Children`](bevy::prelude::Children) component.
 
 Check out the book for more information.
 
-## Advantages of AoUI
+## Advantages of Aoui
 
 There are many awesome UI libraries in the bevy ecosystem
-that you should definitely use over AoUI in
-many use cases. However, AoUI offers some unique advantages:
+that you should definitely use over Aoui in
+many use cases. However, Aoui offers some unique advantages:
 
 * Full ECS support with easy feature composition.
 
-AoUI is built fully embracing bevy's ecosystem.
+Aoui is built fully embracing bevy's ecosystem.
 You can mix and match our modularized components
 and add, remove or edit any system you want to change.
 
@@ -161,13 +161,13 @@ You can mix and match anchoring and layouts to best suit your needs.
 ### What about the widgets?
 
 `bevy_aoui` is a layout system, not a widget library.
-Implementations of most AoUI widgets
+Implementations of most Aoui widgets
 will live outside of the main crate, like in `bevy_aoui`.
 
 `bevy_aoui` is a lot more experimental and subject to more
 changes than `bevy_aoui`. Checkout our examples for simple widget implementations.
 
-`AoUI` is commited to not have a standard look and not interacting with the
+`Aoui` is commited to not have a standard look and not interacting with the
 render pipeline as much as possible, therefore the standard widgets
 might not be an out-of-the-box solution for you.
 

@@ -20,7 +20,7 @@ pub fn signal_receive_offset(mut query: Query<(&Receiver<SigOffset>, &mut Transf
     query.par_iter_mut().for_each(|(sig, mut transform, interpolate)| {
         let Some(offset) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
-            interpolate.interpolate_to_or_reverse(offset);
+            interpolate.interpolate_to(offset);
         } else {
             transform.offset.edit_raw(|v| *v = offset)
         }
@@ -32,7 +32,7 @@ pub fn signal_receive_offset_x(mut query: Query<(&Receiver<SigOffsetX>, &mut Tra
         let Some(offset) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
             let y = interpolate.target().y;
-            interpolate.interpolate_to_or_reverse(Vec2::new(offset, y));
+            interpolate.interpolate_to(Vec2::new(offset, y));
         } else {
             transform.offset.edit_raw(|v| v.x = offset)
         }
@@ -44,7 +44,7 @@ pub fn signal_receive_offset_y(mut query: Query<(&Receiver<SigOffsetY>, &mut Tra
         let Some(offset) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
             let x = interpolate.target().x;
-            interpolate.interpolate_to_or_reverse(Vec2::new(x, offset));
+            interpolate.interpolate_to(Vec2::new(x, offset));
         } else {
             transform.offset.edit_raw(|v| v.y = offset)
         }
@@ -55,7 +55,7 @@ pub fn signal_receive_rotation(mut query: Query<(&Receiver<SigRotation>, &mut Tr
     query.par_iter_mut().for_each(|(sig, mut transform, interpolate)| {
         let Some(rotation) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
-            interpolate.interpolate_to_or_reverse(rotation);
+            interpolate.interpolate_to(rotation);
         } else {
             transform.rotation = rotation;
         }
@@ -66,7 +66,7 @@ pub fn signal_receive_scale(mut query: Query<(&Receiver<SigScale>, &mut Transfor
     query.par_iter_mut().for_each(|(sig, mut transform, interpolate)| {
         let Some(scale) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
-            interpolate.interpolate_to_or_reverse(scale);
+            interpolate.interpolate_to(scale);
         } else {
             transform.scale = scale;
         }
@@ -78,7 +78,7 @@ pub fn signal_receive_scale_x(mut query: Query<(&Receiver<SigScaleX>, &mut Trans
         let Some(scale) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
             let y = interpolate.target().y;
-            interpolate.interpolate_to_or_reverse(Vec2::new(scale, y));
+            interpolate.interpolate_to(Vec2::new(scale, y));
         } else {
             transform.scale.x = scale;
         }
@@ -90,7 +90,7 @@ pub fn signal_receive_scale_y(mut query: Query<(&Receiver<SigScaleY>, &mut Trans
         let Some(scale) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
             let x = interpolate.target().x;
-            interpolate.interpolate_to_or_reverse(Vec2::new(x, scale));
+            interpolate.interpolate_to(Vec2::new(x, scale));
         } else {
             transform.scale.y = scale;
         }
@@ -101,7 +101,7 @@ pub fn signal_receive_dimension(mut query: Query<(&Receiver<SigDimension>, &mut 
     query.par_iter_mut().for_each(|(sig, mut dimension, interpolate)| {
         let Some(dim) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
-            interpolate.interpolate_to_or_reverse(dim);
+            interpolate.interpolate_to(dim);
         } else {
             dimension.edit_raw(|v| *v = dim);
         }
@@ -113,7 +113,7 @@ pub fn signal_receive_dimension_x(mut query: Query<(&Receiver<SigDimensionX>, &m
         let Some(dim) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
             let y = interpolate.target().y;
-            interpolate.interpolate_to_or_reverse(Vec2::new(dim, y));
+            interpolate.interpolate_to(Vec2::new(dim, y));
         } else {
             dimension.edit_raw(|v| v.y = dim);
         }
@@ -125,7 +125,7 @@ pub fn signal_receive_dimension_y(mut query: Query<(&Receiver<SigDimensionY>, &m
         let Some(dim) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
             let x = interpolate.target().x;
-            interpolate.interpolate_to_or_reverse(Vec2::new(x, dim));
+            interpolate.interpolate_to(Vec2::new(x, dim));
         } else {
             dimension.edit_raw(|v| v.y = dim);
         }
@@ -136,7 +136,25 @@ pub fn signal_receive_opacity(mut query: Query<(&Receiver<SigOpacity>, &mut Opac
     query.par_iter_mut().for_each(|(sig, mut opacity, interpolate)| {
         let Some(op) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
-            interpolate.interpolate_to_or_reverse(op)
+            interpolate.interpolate_to(op)
+        } else {
+            opacity.opacity = op;
+        }
+    })
+}
+
+pub fn signal_receive_disable(mut query: Query<(&Receiver<SigDisable>, &mut Opacity)>) {
+    query.par_iter_mut().for_each(|(sig, mut opacity)| {
+        let Some(op) = sig.poll() else {return};
+        opacity.disabled = op;
+    })
+}
+pub fn signal_receive_opacity_disable(mut query: Query<(&Receiver<SigOpacityDisable>, &mut Opacity, Option<&mut Interpolate<Opacity>>)>) {
+    query.par_iter_mut().for_each(|(sig, mut opacity, interpolate)| {
+        let Some(op) = sig.poll() else {return};
+        opacity.disabled = op <= 0.0;
+        if let Some(mut interpolate) = interpolate {
+            interpolate.interpolate_to(op)
         } else {
             opacity.opacity = op;
         }

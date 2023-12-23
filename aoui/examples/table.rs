@@ -1,11 +1,11 @@
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AoUIPlugin, dsl::DslInto, Anchor, material_sprite};
+use bevy_aoui::{AouiPlugin, dsl::DslInto, Anchor, material_sprite};
 
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, init)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .add_plugins(Material2dPlugin::<Circle>::default())
         .run();
 }
@@ -40,14 +40,14 @@ fn anchor_circle(commands: &mut Commands, assets: &Res<AssetServer>, anchor: imp
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    vbox! (commands {
+    vbox! ((commands, assets) {
         anchor: Top,
         margin: 4,
-        child: textbox! { 
+        child: text! { 
             anchor: Top,
             text: "Fixed Table Demo",
         },
-        child: textbox! { 
+        child: text! { 
             anchor: Top,
             text: "5 columns of 20%, 10%, 20%, 30%, 20%" 
         },
@@ -59,37 +59,37 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         z: 1,
         extra: Sprite::default(),
         child: rectangle! {
-            dimension: size2!([100%, 100%]),
+            dimension: size2!(100%, 100%),
             color: color!(black),
             extra: IgnoreLayout,
             z: -1,
             child: rectangle! {
                 anchor: Left,
-                dimension: size2!([20%, 100%]),
+                dimension: size2!(20%, 100%),
                 color: color!(blue300)
             },
             child: rectangle! {
                 anchor: Left,
-                offset: size2!([20%, 0]),
-                dimension: size2!([10%, 100%]),
+                offset: size2!(20%, 0),
+                dimension: size2!(10%, 100%),
                 color: color!(blue400)
             },
             child: rectangle! {
                 anchor: Left,
-                offset: size2!([30%, 0]),
-                dimension: size2!([20%, 100%]),
+                offset: size2!(30%, 0),
+                dimension: size2!(20%, 100%),
                 color: color!(blue500)
             },
             child: rectangle! {
                 anchor: Left,
-                offset: size2!([50%, 0]),
-                dimension: size2!([30%, 100%]),
+                offset: size2!(50%, 0),
+                dimension: size2!(30%, 100%),
                 color: color!(blue600)
             },
             child: rectangle! {
                 anchor: Left,
-                offset: size2!([80%, 0]),
-                dimension: size2!([20%, 100%]),
+                offset: size2!(80%, 0),
+                dimension: size2!(20%, 100%),
                 color: color!(blue700)
             }
         },

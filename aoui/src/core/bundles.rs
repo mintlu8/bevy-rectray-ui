@@ -1,3 +1,7 @@
+//! Bundles mapping the features of `bevy_2d`.
+//!
+//! The implementations here mimics the behavior of bevy 
+//! and not necessarily the same of their corresponding widget builder.
 #![allow(missing_docs)]
 use bevy::{
     prelude::*, 
@@ -5,24 +9,25 @@ use bevy::{
     text::{Text2dBounds, TextLayoutInfo}
 };
 
-use crate::{Transform2D, RotatedRect, BuildTransform, Hitbox, layout::LayoutControl, Dimension, Size2, Opacity, Anchor};
+use crate::{Transform2D, RotatedRect, BuildTransform, Hitbox, layout::LayoutControl, Dimension, Size2, Opacity, Anchor, Clipping};
 
 
-/// The minimal bundle required for AoUI to function.
+/// The minimal bundle required for Aoui to function.
 ///
 /// Provides DOM propagation but no rendering support.
 #[derive(Debug, Default, Bundle)]
-pub struct AoUIBundle {
+pub struct AouiBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
+    pub clipping: Clipping,
     pub opacity: Opacity,
     pub vis: VisibilityBundle,
 }
 
-impl AoUIBundle {
+impl AouiBundle {
     pub fn empty(anchor: Anchor, size: impl Into<Size2>) -> Self{
-        AoUIBundle {
+        AouiBundle {
             transform: Transform2D::UNIT.with_anchor(anchor),
             dimension: Dimension::owned(size.into()),
             ..Default::default()
@@ -30,7 +35,7 @@ impl AoUIBundle {
     }
 }
 
-/// A bundle generating a [`GlobalTransform`] with AoUI.
+/// A bundle generating a [`GlobalTransform`] with Aoui.
 #[derive(Debug, Default, Bundle)]
 pub struct BuildTransformBundle {
     pub builder: BuildTransform,
@@ -46,11 +51,11 @@ impl BuildTransformBundle {
     }
 }
 
-/// A bundle that breaks a multiline [`Container`](crate::Container) 
+/// A bundle that breaks a multiline [`Container`](crate::layout::Container) 
 /// in place without taking up space.
 #[derive(Debug, Bundle)]
 pub struct LinebreakBundle {
-    bundle: AoUIBundle,
+    bundle: AouiBundle,
     control: LayoutControl,
 }
 
@@ -58,7 +63,7 @@ pub struct LinebreakBundle {
 impl LinebreakBundle {
     pub fn new(size: impl Into<Size2>) -> Self{
         Self {
-            bundle: AoUIBundle { 
+            bundle: AouiBundle { 
                 dimension: Dimension {
                     dim: crate::DimensionSize::Owned(size.into()),
                     ..Default::default()
@@ -71,7 +76,7 @@ impl LinebreakBundle {
 
     pub fn ems(size: Vec2) -> Self{
         Self {
-            bundle: AoUIBundle { 
+            bundle: AouiBundle { 
                 dimension: Dimension {
                     dim: crate::DimensionSize::Owned(Size2::em(size.x, size.y)),
                     ..Default::default()
@@ -89,25 +94,43 @@ impl Default for LinebreakBundle {
     }
 }
 
-/// The AoUI version of [`SpriteBundle`](https://docs.rs/bevy/latest/bevy/sprite/struct.SpriteBundle.html)
+/// The Aoui version of [`SpriteBundle`](bevy::sprite::SpriteBundle)
 #[cfg(feature="bundles")]
 #[derive(Debug, Default, Bundle)]
-pub struct AoUISpriteBundle {
+pub struct AouiSpriteBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
     pub build: BuildTransform,
     pub sprite: Sprite,
     pub texture: Handle<Image>,
+    pub clipping: Clipping,
     pub opacity: Opacity,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,
 }
 
-/// The AoUI version of [`Text2dBundle`](https://docs.rs/bevy/latest/bevy/prelude/struct.Text2dBundle.html)
+/// The Aoui version of [`SpriteSheetBundle`](bevy::sprite::SpriteSheetBundle)
 #[cfg(feature="bundles")]
 #[derive(Debug, Default, Bundle)]
-pub struct AoUITextBundle {
+pub struct AouiSpriteSheetBundle {
+    pub transform: Transform2D,
+    pub dimension: Dimension,
+    pub rect: RotatedRect,
+    pub build: BuildTransform,
+    pub sprite: TextureAtlasSprite,
+    pub texture: Handle<TextureAtlas>,
+    pub clipping: Clipping,
+    pub opacity: Opacity,
+    pub vis: VisibilityBundle,
+    pub global: GlobalTransform,
+}
+
+
+/// The Aoui version of [`Text2dBundle`](bevy::text::Text2dBundle)
+#[cfg(feature="bundles")]
+#[derive(Debug, Default, Bundle)]
+pub struct AouiTextBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
@@ -117,22 +140,24 @@ pub struct AoUITextBundle {
     pub text_anchor: bevy::sprite::Anchor,
     pub text_bounds: Text2dBounds,
     pub text_layout: TextLayoutInfo,
+    pub clipping: Clipping,
     pub opacity: Opacity,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,
 }
 
 
-/// The AoUI version of [`MaterialMesh2dBundle`](https://docs.rs/bevy/latest/bevy/prelude/struct.Text2dBundle.html)
+/// The Aoui version of [`MaterialMesh2dBundle`](bevy::sprite::MaterialMesh2dBundle)
 #[cfg(feature="bundles")]
 #[derive(Debug, Default, Bundle)]
-pub struct AoUIMaterialMesh2dBundle<M: Material2d>{
+pub struct AouiMaterialMesh2dBundle<M: Material2d>{
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub rect: RotatedRect,
     pub build: BuildTransform,
     pub mesh: Mesh2dHandle,
     pub material: Handle<M>,
+    pub clipping: Clipping,
     pub opacity: Opacity,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,

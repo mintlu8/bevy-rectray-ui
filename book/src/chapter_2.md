@@ -31,15 +31,15 @@ If specified as `Inherit`, it is always the same as `anchor`.
 ## Dimension
 
 Each sprite has a dimension which is crucial for constructing the rectangles.
-AoUI offers two modes to determine the size of a sprite:
+Aoui offers two modes to determine the size of a sprite:
 
 * Owned
 * Copied
 
-When size is Owned, AoUI maintains the size of the rect, and tries to update the size of
+When size is Owned, Aoui maintains the size of the rect, and tries to update the size of
 its corresponding data, i.e. `custom_size`.
 
-When size is Copied, AoUI will dynamically obtain the size of the rect from `Sprite`, `Text2dLayout`,
+When size is Copied, Aoui will dynamically obtain the size of the rect from `Sprite`, `Text2dLayout`,
 `Handle<Image>` etc, and update the size of its rect.
 
 It is recommended to use `Copied` for text in particular,
@@ -56,7 +56,7 @@ Owned dimension supports these modes:
 ## Font Size
 
 We have a font size system, similar to Html and CSS.
-`AoUI` propagates an `em` value that controls the size
+`Aoui` propagates an `em` value that controls the size
 of fonts in the `Text` widget.
 
 You can use the `FontSize` component to change the size of

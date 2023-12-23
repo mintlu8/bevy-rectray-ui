@@ -1,5 +1,5 @@
 use bevy::{prelude::*, log::LogPlugin};
-use bevy_aoui::AoUIPlugin;
+use bevy_aoui::AouiPlugin;
 
 pub fn main() {
     let mut app = App::new();
@@ -10,7 +10,7 @@ pub fn main() {
             }),
             ..Default::default()
         }).disable::<LogPlugin>())
-        .add_plugins(AoUIPlugin);
+        .add_plugins(AouiPlugin);
     //bevy_mod_debugdump::print_schedule_graph(&mut app, PreUpdate);
     //bevy_mod_debugdump::print_schedule_graph(&mut app, Update);
     bevy_mod_debugdump::print_schedule_graph(&mut app, PostUpdate);

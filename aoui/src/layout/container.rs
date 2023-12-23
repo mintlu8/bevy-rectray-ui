@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{Size2, layout::Layout};
 
-/// A configurable container that lays out a sequence of AoUI Sprites.
+/// A configurable container that lays out a sequence of Entities.
 #[derive(Debug, Component)]
 pub struct Container {
     /// Layout of the container.
@@ -10,10 +10,11 @@ pub struct Container {
     /// Margin between cells, always corresponds to the X and Y axis
     /// regardless of layout directions.
     pub margin: Size2,
+    /// Padding around the container.
+    pub padding: Size2,
 }
 
-/// Info for layout
-#[derive(Debug)]
+/// Dimension info of a layout parent.
 pub struct LayoutInfo {
     pub dimension: Vec2,
     pub em: f32,
@@ -50,6 +51,8 @@ pub enum LayoutControl {
     /// 
     /// If removed this way, the sprite will not be rendered and its children will not be updated.
     WhiteSpace,
+    /// Experimental: Unimplemented.
+    EntireRow,
 }
 
 

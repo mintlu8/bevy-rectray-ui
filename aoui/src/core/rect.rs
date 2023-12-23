@@ -1,7 +1,7 @@
 
 use std::ops::Mul;
 
-use bevy::{math::{Vec2, Affine2}, reflect::Reflect, prelude::Component, ecs::entity::Entity, };
+use bevy::{math::{Vec2, Affine2, Rect}, reflect::Reflect, prelude::Component, ecs::entity::Entity, };
 
 /// Anchor of a sprite, this is a more concise implementation than bevy's.
 /// 
@@ -121,49 +121,36 @@ pub enum PointOrRect {
     Rect(Affine2)
 }
 
-/// Relevant info about an AoUI sprite's parent.
+/// Relevant info about an Aoui sprite's parent.
 #[doc(hidden)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Copy, Clone)]
 pub struct ParentInfo {
     pub entity: Option<Entity>,
-    pub position: PointOrRect,
-    pub rotation: f32,
-    pub z: f32,
+    pub rect: RotatedRect,
+    pub anchor: Option<Vec2>,
     pub dimension: Vec2,
-    pub scale: Vec2,
     pub em: f32,
     pub opacity: f32,
+    pub clip: Option<Affine2>,
+    pub disabled: bool,
 }
 
 impl ParentInfo {
-    pub fn new(entity: Option<Entity>, rect: &RotatedRect, dimension: Vec2, em: f32, opacity: f32) -> Self{
-        ParentInfo{
-            entity,
-            position: PointOrRect::Rect(rect.affine),
-            rotation: rect.rotation,
-            scale: rect.scale,
-            z: rect.z,
-            dimension,
-            em,
-            opacity,
-        }
-    }
-
-    pub fn from_anchor(entity: Option<Entity>, rect: &RotatedRect, anc: Vec2, dimension: Vec2, em: f32, opacity: f32) -> Self{
-        ParentInfo{
-            entity,
-            position: PointOrRect::Point(rect.anchor(Anchor::new(anc))),
-            rotation: rect.rotation,
-            scale: rect.scale,
-            z: rect.z,
-            dimension,
-            em,
-            opacity,
-        }
+    pub fn with_anchor(mut self, anc: Vec2) -> Self {
+        self.anchor = Some(self.rect.anchor(Anchor(anc)));
+        self
     }
 }
 
 impl RotatedRect {
+
+    pub fn rect(&self) -> Rect {
+        Rect{
+            min: self.affine.transform_point2(Vec2::new(-0.5, -0.5)),
+            max: self.affine.transform_point2(Vec2::new(0.5, 0.5)),
+        }
+    }
+
     /// Find the screen space position of an anchor.
     #[inline]
     pub fn anchor(&self, anchor: Anchor) -> Vec2 {
@@ -181,21 +168,20 @@ impl RotatedRect {
         Vec2::from_angle(-self.rotation).rotate(position - self.center())
     }
 
-    /// Create an [`RotatedRect`] represeting the sprite's position on the screen space
+    /// Create an [`RotatedRect`] representing the sprite's position on the screen space
     /// and an `Affine3A` that converts into the `GlobalTransform` suitable from the screen space
     pub fn construct(parent: &ParentInfo, parent_anchor: Anchor, anchor: Anchor, offset: Vec2, dim: Vec2,
             center: Anchor, rotation: f32, scale: Vec2, z: f32) -> Self{
-        let parent_anchor = match parent.position {
-            PointOrRect::Point(p) => p,
-            PointOrRect::Rect(r) => r.transform_point2(parent_anchor.or(anchor).as_vec()),
-        };
+        let parent_anchor = parent.anchor.unwrap_or_else(|| 
+            parent.rect.affine.transform_point2(parent_anchor.or(anchor).as_vec())
+        );
         // apply offset and dimension
         let self_center = offset + (center.as_vec() - anchor.as_vec()) * dim;
         let dir = (Anchor::Center.as_vec() - center.as_vec()) * dim;
 
-        let out_center = Vec2::from_angle(parent.rotation).rotate(self_center * parent.scale) + parent_anchor;
-        let rotation = parent.rotation + rotation;
-        let scale = parent.scale * scale;
+        let out_center = Vec2::from_angle(parent.rect.rotation).rotate(self_center * parent.rect.scale) + parent_anchor;
+        let rotation = parent.rect.rotation + rotation;
+        let scale = parent.rect.scale * scale;
         let out_origin = out_center + Vec2::from_angle(rotation).rotate(dir * scale);
 
         Self {

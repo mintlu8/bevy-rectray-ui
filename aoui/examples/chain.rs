@@ -15,7 +15,7 @@ pub fn main() {
         .add_plugins(bevy_egui::EguiPlugin)
         .add_systems(Startup, init)
         .add_systems(Update, egui_window)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .run();
 }
 
@@ -31,7 +31,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
-    let mut last = commands.spawn((AoUISpriteBundle {
+    let mut last = commands.spawn((AouiSpriteBundle {
         transform: Transform2D::UNIT.with_anchor(Anchor::Center).with_z(0.1),
         sprite: Sprite {
             color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5),
@@ -42,7 +42,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         ..Default::default()
     }, Root)).id();
     for _ in 0..120 {
-        let curr = commands.spawn(AoUISpriteBundle {
+        let curr = commands.spawn(AouiSpriteBundle {
             transform: Transform2D::UNIT
                 .with_anchor(Anchor::CenterLeft)
                 .with_center(Anchor::CenterLeft)
@@ -56,7 +56,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             texture: texture.clone(),
             ..Default::default()
         }).id();
-        let marker = commands.spawn((AoUISpriteBundle {
+        let marker = commands.spawn((AouiSpriteBundle {
             transform: Transform2D::UNIT
                 .with_offset(Vec2::new(1.0, 0.0))
                 .with_anchor(Anchor::CenterRight)

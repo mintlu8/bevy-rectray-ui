@@ -4,17 +4,24 @@
 #[doc(hidden)]
 #[macro_export]
 macro_rules! inline_context {
-    ($ctx: tt [$($path: tt)*] [$($fields: tt)*]) => {
-        $crate::meta_dsl!($ctx [$($path)*] {$($fields)*} {} {} {})
+    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($fields: tt)*]) => {
+        $crate::meta_dsl!($ctx [$($path)*] {$($fields)*} {} {} {} {$($entity)?})
     };
-    ($ctx: tt [$($path: tt)*] [$($out: tt)*] child: #$macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
-        $crate::inline_context!($ctx [$($path)*] [
+    ($ctx: tt [$($path: tt)*] [] [$($out: tt)*] entity: $entity: ident $(,$($rest: tt)*)?) => {
+        $crate::inline_context!($ctx [$($path)*] [$entity] [$($out)*] $($($rest)*)?)
+    };
+
+    ($ctx: tt [$($path: tt)*] [$e: ident] [$($out: tt)*] entity: $entity: ident $(,$($rest: tt)*)?) => {
+        compile_error!("Duplicate field: entity.")
+    };
+    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($out: tt)*] child: #$macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
+        $crate::inline_context!($ctx [$($path)*] [$($entity)?] [
             $($out)*
             children: $crate::quote_syntax!($ctx $macro { $($expr)* }),
         ] $($($rest)*)?)
     };
-    ($ctx: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
-        $crate::inline_context!($ctx [$($path)*] [
+    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
+        $crate::inline_context!($ctx [$($path)*] [$($entity)?] [
             $($out)*
             $field: $macro! (
                 $ctx {
@@ -23,8 +30,8 @@ macro_rules! inline_context {
             ),
         ] $($($rest)*)?)
     };
-    ($ctx: tt [$($path: tt)*] [$($out: tt)*] $field: ident: $head: expr $(,$($rest: tt)*)?) => {
-        $crate::inline_context!($ctx [$($path)*] [$($out)* $field: $head,] $($($rest)*)?)
+    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($out: tt)*] $field: ident: $head: expr $(,$($rest: tt)*)?) => {
+        $crate::inline_context!($ctx [$($path)*] [$($entity)?] [$($out)* $field: $head,] $($($rest)*)?)
     };
 }
 
@@ -280,12 +287,26 @@ macro_rules! parse_children {
     };
 }
 
-/// The core macro for our DSL.
+/// The core macro for creating DSL for widgets.
+/// 
+/// To create a custom widget macro:
+/// ```
+/// # /*
+/// #[macro_export]
+/// macro_rules! macro_name {
+///     {$commands: tt {$($tt:tt)*}} => {
+///         bevy_aoui::meta_dsl!($commands [$crate::absolute::path::to::WidgetBuilder] {
+///             $($tt)*
+///         })
+///     };
+/// }
+/// # */
+/// ```
 #[macro_export]
 macro_rules! meta_dsl {
 
     ($commands: tt [$($path: tt)*] {$($fields: tt)*} ) => {
-        $crate::inline_context!($commands [$($path)*] [] $($fields)*)
+        $crate::inline_context!($commands [$($path)*] [] [] $($fields)*)
     };
 
     ($commands: tt [$($path: tt)*]
@@ -293,6 +314,7 @@ macro_rules! meta_dsl {
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
         {$($child_type: ident: $children: expr),*}
+        {$($out:ident)?}
     ) => {
         $crate::meta_dsl!($commands
             [$($path)*]
@@ -300,6 +322,7 @@ macro_rules! meta_dsl {
             {$($f2: $e2),*}
             {$($extras,)* $expr}
             {$($child_type: $children),*}
+            {$($out)?}
         )
     };
 
@@ -308,6 +331,7 @@ macro_rules! meta_dsl {
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
         {$($child_type: ident: $children: expr),*}
+        {$($out:ident)?}
     ) => {
         $crate::meta_dsl!($commands
             [$($path)*]
@@ -315,6 +339,7 @@ macro_rules! meta_dsl {
             {$($f2: $e2),*}
             {$($extras),*}
             {$($child_type: $children,)* child: $expr}
+            {$($out)?}
         )
     };
 
@@ -323,6 +348,7 @@ macro_rules! meta_dsl {
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
         {$($child_type: ident: $children: expr),*}
+        {$($out:ident)?}
     ) => {
         $crate::meta_dsl!($commands
             [$($path)*]
@@ -330,6 +356,7 @@ macro_rules! meta_dsl {
             {$($f2: $e2),*}
             {$($extras),*}
             {$($child_type: $children,)* children: $expr}
+            {$($out)?}
         )
     };
 
@@ -338,6 +365,7 @@ macro_rules! meta_dsl {
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
         {$($child_type: ident: $children: expr),*}
+        {$($out:ident)?}
     ) => {
         $crate::meta_dsl!($commands
             [$($path)*]
@@ -345,6 +373,7 @@ macro_rules! meta_dsl {
             {$($f2: $e2,)* $field: $expr}
             {$($extras),*}
             {$($child_type: $children),*}
+            {$($out)?}
         )
     };
 
@@ -352,20 +381,25 @@ macro_rules! meta_dsl {
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*}
         {$($child_type: ident: $children: expr),*}
+        {$($out:ident)?}
     ) => {
         {
-            use $crate::dsl::{DslInto, AoUICommands};
-            let extras = ($($extras),*);
-            let children = $crate::parse_children!(($commands) _children {$($child_type: $children),*} {});
+            use $crate::dsl::{DslInto, AouiCommands, Widget};
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()
             };
-            $commands.spawn_aoui((
+            let extras = ($($extras),*);
+            let children = entity.scope_fn(||
+                $crate::parse_children!(($commands) _children {$($child_type: $children),*} {})
+            );
+            let out = $commands.spawn_aoui((
                 entity,
                 extras,
                 children,
-            ))
+            ));
+            $($out = out;)?
+            out
         }
     };
 
@@ -373,22 +407,27 @@ macro_rules! meta_dsl {
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*}
         {$($child_type: ident: $children: expr),*}
+        {$($out:ident)?}
     ) => {
         {
-            use $crate::dsl::{DslInto, AoUICommands};
-            let extras = ($($extras),*);
-            let children = $crate::parse_children!(($commands, $assets) _children {$($child_type: $children),*} {});
+            use $crate::dsl::{DslInto, AouiCommands, Widget};
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()
             };
-            $commands.spawn_aoui_with_assets(
+            let extras = ($($extras),*);
+            let children = entity.scope_fn(||
+                $crate::parse_children!(($commands,$assets) _children {$($child_type: $children),*} {})
+            );
+            let out = $commands.spawn_aoui_with_assets(
                 &$assets, (
                     entity,
                     extras,
                     children,
                 )
-            )
+            );
+            $($out = out;)?
+            out
         }
     };
 
@@ -396,20 +435,26 @@ macro_rules! meta_dsl {
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*}
         {$($child_type: ident: $children: expr),*}
+        {$($out:ident)?}
     ) => {
         {
-            use $crate::dsl::{DslInto, AoUICommands};
-            let extras = ($($extras),*);
-            let children = $crate::parse_children!($commands _children {$($child_type: $children),*} {});
+            use $crate::dsl::{DslInto, AouiCommands, Widget};
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()
             };
-            $commands.spawn_aoui((
+            let extras = ($($extras),*);
+            let children = entity.scope_fn(||
+                $crate::parse_children!($commands _children {$($child_type: $children),*} {})
+            );
+
+            let out = $commands.spawn_aoui((
                 entity,
                 extras,
                 children,
-            ))
+            ));
+            $($out = out;)?
+            out
         }
     };
 }
@@ -437,54 +482,38 @@ macro_rules! transform2d {
 #[macro_export]
 macro_rules! dimension {
     ($this: expr) => {
-        match $this.dimension {
-            Some(size) => $crate::Dimension::owned(size).with_em($this.font_size),
-            None => $crate::Dimension::COPIED.with_em($this.font_size),
+        {
+            let dimension = match $this.dimension {
+                Some(size) => $crate::Dimension::owned(size),
+                None => $crate::Dimension::COPIED.with_em($this.font_size),
+            }.with_em($this.font_size);
+            match $this.aspect {
+                $crate::dsl::Aspect::None => dimension,
+                $crate::dsl::Aspect::Preserve => dimension.with_preserve_aspect(true),
+                $crate::dsl::Aspect::Owned(aspect) =>  dimension.with_aspect(aspect),
+            }
         }
     }
 }
 
-/// Create a widget extension based on the definition of `Frame`
+/// Create a widget builder based on the definition of a primitive widget.
 #[macro_export]
 macro_rules! widget_extension {
     (
         $(#[$($parent_attr:tt)*])*
         $vis0: vis struct $name: ident { $($fields: tt)* }
         // Due to macro_rules, this shadows self.
-        $(,$this: ident,
-        $commands: ident,
-        $assets: ident,
-        components: ($($input: tt)*)
-        $(,spawn: (
-            $($children: expr $(=> $comp4: expr)? ),* $(,)?
-        ))? $(,)?)?
     ) => {
-        $crate::widget_extension2! {
+        $crate::frame_extension! {
             $(#[$($parent_attr:tt)*])*
             $vis0 struct $name { $($fields)* }
-            // Due to macro_rules, this shadows self.
-            $(,$this,
-            $commands,
-            $assets,
-            input: ($($input)*),
-            components: (),
-            dynamic: (),
-            pattern: (),
-            spawn: ( $($($children $(=> $comp4)? ),*)? ))?
         }
     };
     (
         $(#[$($parent_attr:tt)*])*
         $vis0: vis struct $name: ident: Sprite { $($fields: tt)* }
-        $(,$this: ident,
-        $commands: ident,
-        $assets: ident,
-        components: (  $($input: tt)* )
-        $(,spawn: (
-            $($children: expr $(=> $comp4: expr)? ),* $(,)?
-        ))? $(,)?)?
     ) => {
-        $crate::widget_extension2! {
+        $crate::frame_extension! {
             $(#[$($parent_attr:tt)*])*
             $vis0 struct $name { 
                 /// Handle of the image asset.
@@ -499,40 +528,13 @@ macro_rules! widget_extension {
                 pub flip: [bool; 2],
                 $($fields)* 
             }
-            $(,$this,
-            $commands,
-            $assets,
-            input: (
-                $crate::bevy::prelude::Sprite {
-                    custom_size: $this.size,
-                    color: $this.color.unwrap_or(bevy::prelude::Color::WHITE),
-                    rect: $this.rect,
-                    flip_x: $this.flip[0],
-                    flip_y: $this.flip[1],
-                    ..Default::default()
-                },
-                $this.sprite.get($assets),
-                $crate::bundles::BuildTransformBundle::default(),
-                $($input)*
-            ),
-            components: (),
-            dynamic: (),
-            pattern: (),
-            spawn: ( $($($children $(=> $comp4)? ),*)? ))?
         }
     };
     (
         $(#[$($parent_attr:tt)*])*
         $vis0: vis struct $name: ident: Text { $($fields: tt)* }
-        $(,$this: ident,
-        $commands: ident,
-        $assets: ident,
-        components: ($($input: tt)*)
-        $(,spawn: (
-            $($children: expr $(=> $comp4: expr)? ),* $(,)?
-        ))? $(,)?)?
     ) => {
-        $crate::widget_extension2! {
+        $crate::frame_extension! {
             $(#[$($parent_attr:tt)*])*
             $vis0 struct $name { 
                 /// The text string.
@@ -551,48 +553,14 @@ macro_rules! widget_extension {
                 pub break_line_on: Option<bevy::text::BreakLineOn>,
                 $($fields)* 
             }
-            $(,$this,
-            $commands,
-            $assets,
-            input: (
-                $crate::bevy::text::Text {
-                    sections: vec![$crate::bevy::text::TextSection::new(
-                        $this.text,
-                        $crate::bevy::text::TextStyle {
-                            font: $this.font.get($assets),
-                            color: $this.color.unwrap_or($crate::bevy::prelude::Color::WHITE),
-                            ..Default::default()
-                        }
-                    )],
-                    linebreak_behavior: if let Some(b) = $this.break_line_on {
-                        b
-                    } else if $this.wrap {
-                        $crate::bevy::text::BreakLineOn::WordBoundary
-                    } else {
-                        $crate::bevy::text::BreakLineOn::NoWrap
-                    },
-                    ..Default::default()
-                },
-                match $this.bounds {
-                    Some(size) => $crate::bevy::text::Text2dBounds { size },
-                    None => $crate::bevy::text::Text2dBounds::UNBOUNDED,
-                },
-                $crate::bevy::text::TextLayoutInfo::default(),
-                Into::<bevy::sprite::Anchor>::into($this.anchor),
-                $crate::bundles::BuildTransformBundle::default()
-                $($input)*
-            ),
-            components: (),
-            dynamic: (),
-            pattern: (),
-            spawn: ( $($($children $(=> $comp4)? ),*)? ))?
         }
     };
 }
 
+
 #[doc(hidden)]
 #[macro_export]
-macro_rules! widget_extension2 {
+macro_rules! frame_extension {
     (
         $(#[$($parent_attr:tt)*])*
         $vis0: vis struct $name: ident {
@@ -624,12 +592,16 @@ macro_rules! widget_extension2 {
             pub scale: Option<$crate::dsl::OneOrTwo<$crate::bevy::math::Vec2>>,
             /// Z depth of the sprite.
             pub z: f32,
+            /// If true, clips its children, requires no rotation to function properly
+            pub clipping: bool,
             /// Owned dimension of the sprite.
             /// 
             /// If not set, size is fetched dynamically from various sources.
             /// 
             /// The `size` field from `SpriteBuilder` sets the size of the underlying sprite instead.
             pub dimension: Option<$crate::Size2>,
+            /// Aspect ration of sprite, default is o
+            pub aspect: $crate::dsl::Aspect,
             /// Propagated font size.
             pub font_size: $crate::FontSize,
             /// Sets up which event this receives.
@@ -644,267 +616,32 @@ macro_rules! widget_extension2 {
             $($(#[$($attr)*])* $vis $field: $ty),*
         }
     };
-    (
-        $(#[$($parent_attr:tt)*])*
-        $vis0: vis struct $name: ident {
-            $(
-                $(#[$($attr:tt)*])*
-                $vis: vis $field: ident: $ty: ty
-            ),* $(,)?
-        },
-        $this: ident,
-        $commands: ident,
-        $assets: ident,
-        input: (),
-        components: ( $($comp: expr),* ),
-        dynamic: ($($if: expr => $comp2: expr),*),
-        pattern: ($($pat: pat = $pat_field: expr => $comp3: expr),*),
-        spawn: (
-            $($children: expr $(=> $comp4: expr)? ),*
-        )
-    ) => {
-        $crate::widget_extension2! (
-            $(#[$($parent_attr)*])*
-            $vis0 struct $name {
-                $(
-                    $(#[$($attr)*])*
-                    $vis $field: $ty
-                ),*
-            }
-        );
-
-        const _: () = {
-            use $crate::dsl::DslInto;
-            use $crate::bevy::prelude::BuildChildren;
-            impl $crate::dsl::Widget for $name {
-                #[allow(unused)]
-                fn spawn_with(self, $commands: &mut $crate::bevy::prelude::Commands, $assets: Option<&$crate::bevy::asset::AssetServer>) -> $crate::bevy::prelude::Entity {
-                    let $this = self;
-                    let mut base = $commands.spawn((
-                        $crate::bundles::AoUIBundle {
-                            transform: $crate::transform2d!($this),
-                            dimension: $crate::dimension!($this),
-                            opacity: $this.opacity,
-                            vis: $this.visible.dinto(),
-                            ..Default::default()
-                        },
-                        $($comp),*
-                    ));
-                    if let Some(event) = $this.event {
-                        base.insert(event);
-                    }
-                    if let Some(hitbox) = $this.hitbox {
-                        base.insert(hitbox);
-                    } else if $this.event.is_some() {
-                        base.insert($crate::Hitbox::FULL);
-                    }
-                    if let Some(layer) = $this.layer {
-                        base.insert(layer);
-                    } else {
-                        if let Some(layer) = $crate::dsl::get_layer() {
-                            base.insert($crate::bevy::render::view::RenderLayers::layer(layer.get()));
-                        }
-                    }
-                    if $crate::dsl::is_using_opacity() {
-                        base.insert($crate::OpacityWriter);
-                    }
-                    $(if $if {
-                        base.insert($comp2);
-                    })*
-                    $(if let $pat = $pat_field {
-                        base.insert($comp3);
-                    })*
-                    let base = base.id();
-                    let children = [$(
-                        {
-                            let child = $children;
-                            $commands.entity(child)$(.insert($comp4))?.id()
-                        }
-                    ),*];
-                    $commands.entity(base).push_children(&children);
-                    base
-                }
-            }
-        };
-    };
-    (
-        $(#[$($parent_attr:tt)*])*
-        $vis0: vis struct $name: ident { $($fields: tt)* },
-        $this: ident,
-        $commands: ident,
-        $assets: ident,
-        input: ($bundle: expr, $($rest: tt)*),
-        components: ( $($comp: expr),* ),
-        dynamic: ($($if: expr => $comp2: expr),*),
-        pattern: ($($pat: pat = $pat_field: expr => $comp3: expr),*),
-        spawn: ( $($children: expr $(=> $comp4: expr)? ),* )
-    ) => {
-        $crate::widget_extension2! (
-            $(#[$($parent_attr)*])*
-            $vis0 struct $name { $($fields)* },
-            $this,
-            $commands,
-            $assets,
-            input: ($($rest)*),
-            components: ( $($comp,)* $bundle),
-            dynamic: ($($if => $comp2),*),
-            pattern: ($($pat = $pat_field => $comp3),*),
-            spawn: ( $($children $(=> $comp4)? ),* )
-        );
-    };
-    (
-        $(#[$($parent_attr:tt)*])*
-        $vis0: vis struct $name: ident { $($fields: tt)* },
-        $this: ident,
-        $commands: ident,
-        $assets: ident,
-        input: ($bundle: expr),
-        components: ( $($comp: expr),* ),
-        dynamic: ($($if: expr => $comp2: expr),*),
-        pattern: ($($pat: pat = $pat_field: expr => $comp3: expr),*),
-        spawn: ( $($children: expr $(=> $comp4: expr)? ),* )
-    ) => {
-        $crate::widget_extension2! (
-            $(#[$($parent_attr)*])*
-            $vis0 struct $name { $($fields)* },
-            $this,
-            $commands,
-            $assets,
-            input: (),
-            components: ( $($comp,)* $bundle),
-            dynamic: ($($if => $comp2),*),
-            pattern: ($($pat = $pat_field => $comp3),*),
-            spawn: ( $($children $(=> $comp4)? ),* )
-        );
-    };
-    (
-        $(#[$($parent_attr:tt)*])*        
-        $vis0: vis struct $name: ident { $($fields: tt)* },
-        $this: ident,
-        $commands: ident,
-        $assets: ident,
-        input: ($pat0: pat = $pat_field0: expr => $expr0: expr, $($rest: tt)*),
-        components: ( $($comp: expr),* ),
-        dynamic: ($($if: expr => $comp2: expr),*),
-        pattern: ($($pat: pat = $pat_field: expr => $comp3: expr),*),
-        spawn: (
-            $($children: expr $(=> $comp4: expr)? ),*
-        )
-    ) => {
-        $crate::widget_extension2! {
-            $(#[$($parent_attr)*])*
-            $vis0 struct $name { $($fields)* },
-            $this,
-            $commands,
-            $assets,
-            input: ($($rest)*),
-            components: ($($comp),*),
-            dynamic: ($($if => $comp2),*),
-            pattern: ($($pat = $pat_field => $comp3,)* $pat0 = $pat_field0 => $expr0),
-            spawn: (
-                $($children $(=> $comp4)? ),*
-            )
-        }
-    };
-    (
-        $(#[$($parent_attr:tt)*])*        
-        $vis0: vis struct $name: ident { $($fields: tt)* },
-        $this: ident,
-        $commands: ident,
-        $assets: ident,
-        input: ($pat0: pat = $pat_field0: expr => $expr0: expr),
-        components: ( $($comp: expr),* ),
-        dynamic: ($($if: expr => $comp2: expr),*),
-        pattern: ($($pat: pat = $pat_field: expr => $comp3: expr),*),
-        spawn: (
-            $($children: expr $(=> $comp4: expr)? ),*
-        )
-    ) => {
-        $crate::widget_extension2! {
-            $(#[$($parent_attr)*])*
-            $vis0 struct $name { $($fields)* },
-            $this,
-            $commands,
-            $assets,
-            input: (),
-            components: ($($comp),*),
-            dynamic: ($($if => $comp2),*),
-            pattern: ($($pat = $pat_field => $comp3,)* $pat0 = $pat_field0 => $expr0),
-            spawn: (
-                $($children $(=> $comp4)? ),*
-            )
-        }
-    };
-    (
-        $(#[$($parent_attr:tt)*])*
-        $vis0: vis struct $name: ident { $($fields: tt)* },
-        $this: ident,
-        $commands: ident,
-        $assets: ident,
-        input: ($if0: expr => $expr0: expr, $($rest: tt)*),
-        components: ( $($comp: expr),* ),
-        dynamic: ($($if: expr => $comp2: expr),*),
-        pattern: ($($pat: pat = $pat_field: expr => $comp3: expr),*),
-        spawn: (
-            $($children: expr $(=> $comp4: expr)? ),*
-        )
-    ) => {
-        $crate::widget_extension2! (
-            $(#[$($parent_attr)*])*            
-            $vis0 struct $name { $($fields)* },
-            $this,
-            $commands,
-            $assets,
-            input: ($($rest)*),
-            components: ($($comp),*),
-            dynamic: ($($if => $comp2,)* $if0 => $expr0),
-            pattern: ($($pat = $pat_field => $comp3),*),
-            spawn: (
-                $($children $(=> $comp4)? ),*
-            )
-        );
-    };
-    (
-        $(#[$($parent_attr:tt)*])*
-        $vis0: vis struct $name: ident { $($fields: tt)* },
-        $this: ident,
-        $commands: ident,
-        $assets: ident,
-        input: ($if0: expr => $expr0: expr),
-        components: ( $($comp: expr),* ),
-        dynamic: ($($if: expr => $comp2: expr),*),
-        pattern: ($($pat: pat = $pat_field: expr => $comp3: expr),*),
-        spawn: (
-            $($children: expr $(=> $comp4: expr)? ),*
-        )
-    ) => {
-        $crate::widget_extension2! (
-            $(#[$($parent_attr)*])*            
-            $vis0 struct $name { $($fields)* },
-            $this,
-            $commands,
-            $assets,
-            input: (),
-            components: ($($comp),*),
-            dynamic: ($($if => $comp2,)* $if0 => $expr0),
-            pattern: ($($pat = $pat_field => $comp3),*),
-            spawn: (
-                $($children $(=> $comp4)? ),*
-            )
-        );
-    };
 }
 
+/// Use a widget builder's fields to build a frame, returns an `EntityCommands`.
 #[macro_export]
-macro_rules! map_builder {
-    ($this: expr => $target: ident move (
-        $($moved:ident),* $(,)?
-    )$({
-        $($added: ident: $expr: expr),* $(,)?
-    })?) => {
-        $target {
-            $($moved: $this.$moved,)*
-            $($($added: $expr,)*)?
+macro_rules! build_frame {
+    ($commands: expr, $this: expr) => {
+        {
+            let entity = $crate::dsl::Widget::spawn($crate::dsl::builders::FrameBuilder {
+                anchor: $this.anchor,
+                parent_anchor: $this.parent_anchor,
+                center: $this.center,
+                opacity: $this.opacity,
+                visible: $this.visible,
+                offset: $this.offset,
+                rotation: $this.rotation,
+                scale: $this.scale,
+                z: $this.z,
+                dimension: $this.dimension,
+                font_size: $this.font_size,
+                event: $this.event,
+                hitbox: $this.hitbox,
+                layer: $this.layer,
+                aspect: $this.aspect,
+                clipping: $this.clipping,
+            }, $commands);
+            $commands.entity(entity.0)
         }
-    };
+    }
 }

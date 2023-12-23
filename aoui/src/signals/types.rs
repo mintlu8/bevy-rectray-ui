@@ -3,19 +3,6 @@ use bevy::render::color::Color;
 
 use crate::widgets::drag::DragState;
 
-
-#[macro_export]
-macro_rules! signal_senders {
-    ($($(#[$($attr:tt)*])* $name: ident),* $(,)?) => {
-        $(
-            $(#[$($attr)*])*
-            #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)] 
-            pub enum $name {}
-            impl $crate::signals::SignalSender for $name {}
-        )*
-    };
-}
-
 #[macro_export]
 macro_rules! signal_receivers {
     ($($(#[$($attr:tt)*])* $name: ident: $ty: ty),* $(,)?) => {
@@ -37,7 +24,6 @@ macro_rules! signal_both {
             $(#[$($attr)*])*
             #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)] 
             pub enum $name {}
-            impl $crate::signals::SignalSender for $name {}
             impl $crate::signals::SignalReceiver for $name {
                 type Type = $ty;
             }
@@ -45,17 +31,17 @@ macro_rules! signal_both {
     };
 }
 
-signal_senders!(
-    /// The canonical output of the widget, including `Button` press,
-    /// `enter` press on `InputBox`, etc. 
-    /// 
-    /// When receiving a submit signal, widgets like `InputBox` will emit
-    /// a `Submit` signal of its own. 
-    /// Thus enabling the `Button -> Text -> Output` chain.
-    SigSubmit, 
-    /// Send a signal whenever the output of a widget is changed.
-    SigChange, 
-);
+// signal_senders!(
+//     /// The canonical output of the widget, including `Button` press,
+//     /// `enter` press on `InputBox`, etc. 
+//     /// 
+//     /// When receiving a submit signal, widgets like `InputBox` will emit
+//     /// a `Submit` signal of its own. 
+//     /// Thus enabling the `Button -> Text -> Output` chain.
+//     SigSubmit, 
+//     /// Send a signal whenever the output of a widget is changed.
+//     SigChange, 
+// );
 
 signal_both!(
     /// Sent if a non-draggable sprite is being dragged, 
@@ -65,9 +51,7 @@ signal_both!(
     SigDrag: DragState,
     /// Sent if being scrolled on, `Scroll` sprite will be scrolled if receiving this signal.
     SigScroll: Vec2,
-);
 
-signal_receivers!(
     /// Triggers some behavior when sent to another widget.
     SigInvoke: (),
 
@@ -99,6 +83,10 @@ signal_receivers!(
     SigColor: Color,
     /// Modifies the recipient's opacity.
     SigOpacity: f32,
+    /// Modifies the recipient's disabled status.
+    SigDisable: bool,
+    /// Modifies the recipient's opacity, if 0, disables the target.
+    SigOpacityDisable: f32,
 
     /// Modifies the recipient layout's margin.
     SigMargin: Vec2,

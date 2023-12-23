@@ -67,7 +67,7 @@ use bevy::{asset::{Handle, Assets}, text::Font, render::color::Color, math::Vec2
 use bevy::ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component, query::Changed};
 use crate::{Transform2D, Anchor, FontSize, Dimension, Size2};
 use crate::layout::{Container, CompactLayout, FlexDir};
-use crate::bundles::AoUIBundle;
+use crate::bundles::AouiBundle;
 use crate::layout::LayoutControl;
 
 /// This widget always has the width of a space and line height of a widget.
@@ -411,7 +411,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
         macro_rules! spawn {
             ($s: expr) => {
                 {
-                    let entity = $crate::textbox! ((self.commands) {
+                    let entity = $crate::text! ((self.commands) {
                         text: $s,
                         anchor: self.anchor(),
                         font_size: self.size(),
@@ -435,7 +435,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
         macro_rules! line_gap {
             () => {
                 self.buffer.push(self.commands.spawn((
-                    AoUIBundle{
+                    AouiBundle{
                         dimension: Dimension {
                             set_em: self.line_gap.1,
                             ..Default::default()
@@ -457,7 +457,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                 if self.buffer.len() != last_space { 
                     last_space = self.buffer.len() + 1;
                     let entity = self.commands.spawn((
-                        AoUIBundle{
+                        AouiBundle{
                             transform: Transform2D {
                                 anchor: self.anchor(),
                                 ..Default::default()
@@ -604,7 +604,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                             Some(RichTextScope::Zip) => {
                                 let anchor = self.anchor();
                                 self.buffer.push(self.commands.spawn((
-                                    AoUIBundle {
+                                    AouiBundle {
                                         dimension: Dimension {
                                             set_em: self.size(),
                                             ..Default::default()
@@ -616,6 +616,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                                             direction: FlexDir::LeftToRight
                                         }),
                                         margin: Size2::ZERO,
+                                        padding: Size2::ZERO,
                                     }
                                 ))
                                 .insert(Transform2D::UNIT.with_anchor(anchor))

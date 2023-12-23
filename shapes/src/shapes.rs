@@ -1,5 +1,5 @@
 use bevy::{math::Vec2, sprite::{Mesh2dHandle, ColorMaterial}, prelude::Color};
-use bevy_aoui::{widget_extension, dsl::{prelude::OneOrTwo, DslFrom}, bundles::BuildTransformBundle};
+use bevy_aoui::{widget_extension, dsl::{prelude::OneOrTwo, DslFrom, Widget}, bundles::BuildTransformBundle, build_frame};
 use bevy_prototype_lyon::prelude::*;
 
 use crate::systems::{ShapeDimension, Shapes};
@@ -54,29 +54,32 @@ widget_extension! {
         /// 
         /// The default is `Round`.
         pub caps: Option<OneOrTwo<[LineCap; 2]>>,
-    },
-    this, commands, assets,    
-    components: (
-        BuildTransformBundle::default(),
-        this.shape.build_path(this.anchor, this.size.unwrap_or(Vec2::ONE)),
-        this.shape,
-        ShapeDimension { 
-            size: this.size.unwrap_or(Vec2::ONE), 
-            anchor: this.anchor,
-        },
-        Mesh2dHandle::default(),
-        assets.expect("Please pass in the AssetServer").add(ColorMaterial::default()),
-        OptionX::Some(fill) = this.fill => fill,
-        OptionX::Some(stroke) = this.stroke => {
-            let mut stroke = stroke;
-            if let Some(OneOrTwo([l ,r])) = this.caps.dinto() {
-                stroke.options = stroke.options.with_start_cap(l).with_end_cap(r)
-            }
-            stroke
-        }
-    ),
+    }
 }
 
+impl Widget for ShapeBuilder {
+    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+        let mut frame = build_frame!(commands, self);
+        frame.insert((
+            BuildTransformBundle::default(),
+            self.shape.build_path(self.anchor, self.size.unwrap_or(Vec2::ONE)),
+            self.shape,
+            ShapeDimension { 
+                size: self.size.unwrap_or(Vec2::ONE), 
+                anchor: self.anchor,
+            },
+            Mesh2dHandle::default(),
+            assets.expect("Please pass in the AssetServer").add(ColorMaterial::default()),
+        ));
+        if let OptionX::Some(fill) = self.fill {
+            frame.insert(fill);
+        }
+        if let OptionX::Some(stroke) = self.stroke {
+            frame.insert(stroke);
+        }
+        (frame.id(), frame.id())
+    }
+}
 
 /// Construct a shape with `bevy_prototype_lyon`.
 #[macro_export]

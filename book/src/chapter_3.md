@@ -2,9 +2,9 @@
 
 These are the components used in the core pipeline.
 
-## AoUI
+## Aoui
 
-`AoUI` is a marker component that enables our render pipeline.
+`Aoui` is a marker component that enables our render pipeline.
 
 ## Transform2D
 
@@ -30,7 +30,7 @@ so you can ignore it most of the time.
 ## RotatedRect
 
 A 2D rectangle with a `z` value,
-This is the canonical output of `AoUI`.
+This is the canonical output of `Aoui`.
 Used for transform generation, mesh generation,
 cursor detection, local space transformation, etc.
 

@@ -1,13 +1,13 @@
 //! Demo for the span based layouts.
 
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AoUIPlugin, material_sprite};
+use bevy_aoui::{AouiPlugin, material_sprite};
 
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, init)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .add_plugins(Material2dPlugin::<Circle>::default())
         .run();
 }
@@ -44,10 +44,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         red, yellow, green, blue,
     ];
 
-    vbox! (commands {
+    vbox! ((commands, assets) {
         anchor: Top,
         margin: 4,
-        child: #textbox! { 
+        child: #text! { 
             anchor: Top,
             text: #text,
             color: #colors,

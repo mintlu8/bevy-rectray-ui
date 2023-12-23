@@ -30,7 +30,7 @@ pub fn main() {
             ..Default::default()
         }))
         .add_plugins(EguiPlugin)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .add_plugins(LogDiagnosticsPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
@@ -42,13 +42,13 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    let textbox = paragraph!((commands, assets) {
+    let textbox = paragraph!(commands {
         dimension: [700, 700],
-        margin: size2!([0.4 em, 0]),
+        margin: size2!(0.4 em, 0),
         font_size: em(1),
         child: rectangle! {
             color: color!(neutral800),
-            dimension: size2!([100%, 100%]),
+            dimension: size2!(100%, 100%),
             extra: IgnoreLayout,
         }
     });
@@ -58,7 +58,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     LOREM_IPSUM.split('\n').for_each(|x| {
         x.split([' ']).filter(|x| !x.is_empty()).for_each(|w| {
             words.push(
-                textbox!(commands {
+                text!(commands {
                     color: color!(white),
                     anchor: TopLeft,
                     text: w,

@@ -1,7 +1,7 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::{AoUIPlugin, widgets::drag::DragConstraint};
+use bevy_aoui::{AouiPlugin, widgets::drag::DragConstraint};
 
 pub fn main() {
     App::new()
@@ -14,7 +14,7 @@ pub fn main() {
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .add_plugins(Material2dPlugin::<Circle>::default())
         .run();
 }
@@ -37,11 +37,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    textbox!(commands {
+    text!((commands, assets) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: sig_fps().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
     });
     material_sprite! ((commands, assets) {
         dimension: [100, 100],
@@ -51,10 +51,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             fill: Color::RED,
             stroke: Color::BLACK
         },
-        event: EventFlags::Hover|EventFlags::Drag,
+        event: EventFlags::Hover|EventFlags::LeftDrag,
         extra: DragBoth,
         extra: SetCursor { 
-            flags: EventFlags::Hover|EventFlags::Drag, 
+            flags: EventFlags::Hover|EventFlags::LeftDrag, 
             icon: CursorIcon::Hand,
         },
         extra: DragSnapBack,
@@ -70,9 +70,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             dimension: [50, 50],
             anchor: Left,
             color: color!(aqua),
-            event: EventFlags::Hover|EventFlags::Drag,
+            event: EventFlags::Hover|EventFlags::LeftDrag,
             extra: SetCursor { 
-                flags: EventFlags::Hover|EventFlags::Drag, 
+                flags: EventFlags::Hover|EventFlags::LeftDrag, 
                 icon: CursorIcon::Hand,
             },
             extra: DragX,
@@ -81,7 +81,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
 
-    textbox! (commands {
+    text! ((commands, assets) {
         offset: [300, 100],
         color: color!(gold),
         text: "<= Drag and this will change!",
@@ -109,20 +109,20 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         dimension: [100, 100],
         offset: [-300, -100],
         hitbox: Rect(1),
-        event: EventFlags::Hover|EventFlags::Drag,
+        event: EventFlags::Hover|EventFlags::LeftDrag,
         material: Circle {
             fill: color!(aqua),
             stroke: color!(blue),
         },
         extra: SetCursor { 
-            flags: EventFlags::Hover|EventFlags::Drag, 
+            flags: EventFlags::Hover|EventFlags::LeftDrag, 
             icon: CursorIcon::Hand,
         },
         //extra: DragBoth,
         extra: send2.mark::<SigDrag>(),
     });
 
-    textbox! (commands {
+    text! ((commands, assets) {
         offset: [300, -100],
         color: color!(gold),
         text: "<= Drag and this will change!",

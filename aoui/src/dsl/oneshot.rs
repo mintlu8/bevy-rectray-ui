@@ -47,29 +47,31 @@ macro_rules! one_shot {
 #[macro_export]
 macro_rules! complex_handler {
     ($commands: expr, $flag: ty => {$($tt: tt)*}) => {
-        $crate::complex_handler!($commands, $flag => {} {$($tt)*})
+        {
+            let mut empty = $crate::events::Handlers::<$flag>::new_empty();
+            $crate::complex_handler!(empty, $commands, {$($tt)*});
+            empty
+        }
     };
-    ($commands: expr, $flag: ty => {$($exprs: expr),*} {fn $($name: ident)?$(<$($generic: ident$(: $ty: ident)?),*>)? ($($arg:tt)*){$($tt:tt)*} $(,$($rest: tt)*)?}) => {
-        $crate::complex_handler!($commands, $flag => 
-            {
-                $($exprs,)* 
-                $crate::events::Handler::OneShotSystem($crate::one_shot!($commands => fn $(<$($generic$(: $ty)?),*>)? ($($arg)*){$($tt)*}))
-            } {$($($rest)*)?}
-        )
+    ($name: ident, $commands: expr, {fn $($_: ident)?$(<$($generic: ident$(: $ty: ident)?),*>)? ($($arg:tt)*){$($tt:tt)*} $(,$($rest: tt)*)?}) => {
+        {
+            $name = $name.with($crate::events::Handler::OneShotSystem($crate::one_shot!($commands => fn $(<$($generic$(: $ty)?),*>)? ($($arg)*){$($tt)*})));
+            $crate::complex_handler!($name, $commands, {$($($rest)*)?});
+        }
     };
-    ($commands: expr, $flag: ty => {$($exprs: expr),*} {$signal: expr $(,$($rest: tt)*)?}) => {
-        $crate::complex_handler!($commands, $flag => 
-            {
-                $($exprs,)* 
-                $crate::events::Handler::Signal($signal)
-            } {$($($rest)*)?}
-        )
+    ($name: ident, $commands: expr, {$key: literal = $value: expr $(,$($rest: tt)*)?}) => {
+        {
+            $name = $name.with($crate::events::Handler::GlobalKey($key.to_string(), $crate::signal_mapper!($value)));
+            $crate::complex_handler!($name, $commands, {$($($rest)*)?});
+        }
     };
-    ($commands: expr, $flag: ty => {$($exprs: expr),*} {}) => {
-        $crate::events::Handlers::<$flag>::from_multi(
-            [$($exprs),*]
-        )
-    }
+    ($name: ident, $commands: expr, {$expr: expr $(,$($rest: tt)*)?}) => {
+        {
+            $name = $name.with($expr);
+            $crate::complex_handler!($name, $commands, {$($($rest)*)?});
+        }
+    };
+    ($name: ident, $commands: expr, {}) => {}
 }
 /// Construct a one-shot system dynamically for an event.
 /// 

@@ -54,9 +54,7 @@ tlbf::tlbf!(
     /// * `Drag` listens for `Down`, `DragEnd` and `Drag`
     /// * `DoubleClick` listens for `DoubleClick`, which replaces `Click` or `DragEnd`
     /// * `Drop` listens for `Drop`
-    /// * `ClickOutside` listens for mouse up outside.
-    /// 
-    /// Additionally `LoseFocus` listens for lost of `CursorFocus`.
+    /// * `ClickOutside` listens for mouse up outside
     ///
     /// Events are emitted as 3 separate components, each frame a sprite can receive at most one of each:
     /// * `CursorFocus`: `Hover`, `Pressed`, `Drag`.
@@ -72,10 +70,10 @@ tlbf::tlbf!(
     pub EventFlags: u32 {
         Idle,
         Hover,
-        Drag,
-        Down,
-        Pressed,
-        Click,
+        LeftDrag,
+        LeftDown,
+        LeftPressed,
+        LeftClick,
         DoubleClick,
         MidDown,
         MidPressed,
@@ -99,14 +97,38 @@ impl EventFlags {
     }
 }
 
+/// Check if widget has lost focus (drag, hover, pressed).
 #[derive(Debug)]
-pub struct EventSignal{
-    pub event: EventFlags,
-    pub signal: Sender,
-}
+pub enum MouseDrag{}
 
-impl EventSignal {
-    pub fn new(event: EventFlags, signal: Sender) -> Self {
-        EventSignal { event, signal }
-    }
-}
+/// Check if widget has lost focus (drag, hover, pressed).
+#[derive(Debug)]
+pub enum LoseFocus{}
+
+/// Check if widget has obtained focus (drag, hover, pressed).
+#[derive(Debug)]
+pub enum ObtainFocus{}
+
+/// Check if widget has obtained focus (drag, hover, pressed).
+#[derive(Debug)]
+pub enum OnChange{}
+
+/// Check if widget has obtained focus (drag, hover, pressed).
+#[derive(Debug)]
+pub enum ButtonClick{}
+
+/// Check if widget has obtained focus (drag, hover, pressed).
+#[derive(Debug)]
+pub enum ToggleChange{}
+
+/// Check if widget has obtained focus (drag, hover, pressed).
+#[derive(Debug)]
+pub enum TextChange{}
+
+/// Check if widget has obtained focus (drag, hover, pressed).
+#[derive(Debug)]
+pub enum TextSubmit{}
+
+/// Check if widget has obtained focus (drag, hover, pressed).
+#[derive(Debug)]
+pub enum PositionFactor{}

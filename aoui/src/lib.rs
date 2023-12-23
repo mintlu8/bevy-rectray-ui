@@ -1,95 +1,107 @@
-//! Bevy AoUI provides a light-weight rectangular anchor-offset based 2D sprite layout, 
-//! UI layout and skeletal animation system.
+//! Bevy Aoui is a 2D and UI solution for the bevy engine.
 //! 
-//! Similar to the philosophy of Rust, AoUI provides low level control through the 
-//! anchor-offset system and high level ergonomics through its layout system.
-//! 
-//! # The AoUI Pipeline
-//! 
-//! AoUI is not a full render pipeline system, but rather a 
-//! [`Transform`](bevy::prelude::Transform) and
-//! [`GlobalTransform`](bevy::prelude::GlobalTransform) generator.
-//! 
-//! AoUI replaces bevy's standard transform systems
-//! like [`propagate_transforms`](bevy::transform::systems::propagate_transforms)
-//! and [`sync_simple_transforms`](bevy::transform::systems::sync_simple_transforms)
-//! on structs marked with [AoUI],
-//! while leveraging other parts of bevy's standard library and ecosystem whenever possible.
-//! 
-//! AoUI provides 2 rendering methods: 
-//! * [`BuildTransform`] generates `GlobalTransform` directly.
-//! * [`BuildTransform`] generates `Transform`.
-//! 
-//! AoUI propagates translation, rotation, scale and font size down its tree.
-//! 
-//! In the default pipeline, the root node of the AoUI tree is the window. 
-//! meaning orphaned sprites will be placed against the window's rectangle.
 //!
 //! # Getting Started
 //! 
-//! Before you start you should check out `bevy_aoui`'s examples if you like shapes or DSL.
-//! 
-//! First add the AoUI Plugin:
+//! First add the Aoui Plugin:
 //! 
 //! ```
 //! # /*
-//! app.add_plugins(AoUIPlugin)
+//! app.add_plugins(AouiPlugin)
 //! # */
 //! ```
+//! 
+//! Import the [DSL prelude](dsl::prelude) in the function scope 
+//! (it will pollute your namespace otherwise).
+//! 
+//! 
+//! ```
+//! # /*
+//! fn spawn(mut commands: Commands, assets: Res<AssetServer>) {
+//!     use bevy_aoui::dsl::prelude::*;
+//!     ...
+//! }
+//! # */
+//! ```
+//! 
+//! If you don't like the DSL you can try using our [bundles] or [widget builders](crate::dsl::builders).;
 //! 
 //! Create a sprite:
 //! 
 //! ```
 //! # /*
-//! commands.spawn(AoUISpriteBundle {
-//!     sprite: Sprite { 
-//!         color: Color::RED,
-//!         ..Default::default()
-//!     },
-//!     transform: Transform2D { 
-//!         center: Some(Anchor::Center),
-//!         anchor: Anchor::TopCenter,
-//!         offset: Vec2::new(20.0, 0.0),
-//!         rotation: 1.21,
-//!         scale: Vec2::new(4.0, 1.0),
-//!         ..Default::default()
-//!     },
-//!     dimension: Dimension::pixels(Vec2::new(50.0, 50.0)),
-//!     texture: assets.load("sprite.png"),
-//!     ..Default::default()
-//! });
+//! sprite!(commands {
+//!     sprite: "Ferris.png",
+//!     anchor: Left,
+//!     offset: [40, 0],
+//!     dimension: [200, 200],
+//! })
 //! # */
 //! ```
 //! 
-//! Create some text:
+//! This spawns a "Ferris.png" to the center left of the screen,
+//! moved to the right by 40 px, with dimension 200 px * 200 px.
+//! 
+//! Create a stack of words:
 //! 
 //! ```
 //! # /*
-//! commands.spawn(AoUITextBundle {
-//!     text: Text::from_section(
-//!         "Hello, World!!", 
-//!         style(Color::WHITE)
-//!     ),
-//!     font: assets.load::<Font>("OpenSans.ttf"),
-//!     transform: Transform2D { 
-//!         center: Some(Anchor::Center),
-//!         anchor: Anchor::TopCenter,
-//!         offset: Vec2::new(20.0, 0.0),
-//!         rotation: 1.21,
-//!         scale: Vec2::new(4.0, 1.0),
-//!         ..Default::default()
+//! vbox!(commands {
+//!     font_size: em(2),
+//!     child: text! {
+//!         text: "Hello"
 //!     },
-//!     dimension: Dimension::COPIED.with_em(SetEM::Pixels(24.0)),
-//!     ..Default::default()
+//!     child: text! {
+//!         text: "rust"
+//!     },
+//!     child: text! {
+//!         text: "and"
+//!     },
+//!     child: text! {
+//!         text: "bevy"
+//!     },
 //! });
 //! # */
 //! ```
 //! 
-//! # Core Concepts
-//!
-//! AoUI offers a refreshingly different paradigm from traditional CSS based UI layout.
+//! # What `bevy_aoui` provides:
 //! 
-//! AoUI Sprites contains these core components:
+//! * Fine grained low level anchor-offset layout system.
+//! * First class support for rotation and scaling.
+//! * Simple and intuitive containers.
+//! * Native ECS components with no external context.
+//! * Complete support of bevy's 2D primitives.
+//! * Input handling system for mouse and cursor.
+//! * Building blocks for most common widgets.
+//! * Event handling through one-shot systems.
+//! * Reactivity and animation through marked signals.
+//! * `macro_rules` based DSL that annihilates boilerplate.
+//! * Easy integration with third-party 2D crates.
+//! * Easy migration to future bevy versions.
+//! 
+//! # What' `bevy_aoui` is not
+//! 
+//! * Not a renderer.
+//! 
+//!     `bevy_aoui` has minimal rendering features and no third party bevy dependencies,
+//!     this ensures maintainability and easy migration to future bevy versions, 
+//!     at the cost of not having out of the box widget styles.
+//! 
+//! * Not `bevy_ui` compatible.
+//! 
+//!     `bevy_aoui` is not dependent on `bevy_ui` in any way. This means `bevy_ui` exclusive
+//!     features won't be available in `bevy_aoui` as is.
+//! 
+//! * No ui script or serialization.
+//!     
+//!     `bevy_aoui` uses rust code for a lot of things, including events and reactivity, 
+//!     serializing the UI might be difficult.
+//! 
+//! # The Anchor-Offset Layout System
+//!
+//! Aoui offers a refreshingly different paradigm from traditional CSS based UI layout.
+//! 
+//! The core attributes of this system include:
 //! * [anchor](Transform2D::anchor)
 //! * [center](Transform2D::center)
 //! * [offset](Transform2D::offset)
@@ -97,72 +109,146 @@
 //! * [scale](Transform2D::scale)
 //! * [dimension](Dimension::dim)
 //! 
-//! Each sprite is conceptualized as a rectangle with a dimension and 
-//! 9 [anchors](bevy::sprite::Anchor): `BottomLeft`, `CenterRight`, `Center`, etc.
-//! 
-//! [Custom anchors](bevy::sprite::Anchor::Custom) can be used but not in some layouts.
-//! 
-//! Sprites are connected to parent sprites via one of the parent's anchors
-//! and can be offset by a `Vec2`. When the offset is set to `(0, 0)`, 
-//! the anchors of the parent and child sprites overlap.
-//! 
-//! <svg width="256px" height="256px" style="margin-left: auto; margin-right: auto; display: block;" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
-//!     <g transform="matrix(0.358906,0,0,0.278019,-25.4441,-14.0335)">
-//!         <rect x="70.893" y="50.477" width="356.639" height="460.401" style="fill:none;stroke:rgb(239,239,239);stroke-width:6.23px;"/>
-//!     </g>
-//!     <g transform="matrix(0.164311,0,0,0.164311,-0.154123,22.9892)">
-//!         <g transform="matrix(6.08604,-0,-0,6.08604,0.937997,-139.913)">
-//!             <path d="M44.623,48.433L47.218,49.191L45.52,51.296" style="fill:none;stroke:rgb(239,239,239);stroke-width:1px;stroke-linejoin:miter;stroke-miterlimit:10;"/>
-//!             <path d="M0,64C0,64 40.751,51.22 47.218,49.191" style="fill:none;stroke:rgb(239,239,239);stroke-width:1px;"/>
-//!         </g>
-//!     </g>
-//!     <g transform="matrix(0.25,0,0,0.535029,0.812428,-19.6745)">
-//!         <rect x="188.717" y="54.654" width="148.18" height="148.18" style="fill:none;stroke:rgb(239,239,239);stroke-width:2.39px;"/>
-//!     </g>
-//! </svg>
+//! Sprites are rectangles, they are connected to parent sprites via one of the parent's anchors `anchor`
+//! and translated by `offset`. Then they are scaled and rotated around the sprite's `center`,
+//! which can be different from `anchor`.
 //! 
 //! In the case of parentless sprites, they are anchored to the window's rectangle.
 //! 
-//! When applying `rotation` and `scale`, sprites can use a 
-//! `center` that operates independently from the anchor.
+//! Dimension determines the size of the rectangle.
+//! Our relative size system allows dimension to be based on various sources:
+//! fixed pixels, sprite/text size, font size, parent size, sprite aspect ratio, etc.
 //! 
 //! # Container
 //! 
-//! Anchor-Offset is well-suited for isolated UI components, but when it comes to arranging
-//! multiple UI elements in a specific order, you'll find the `Container` useful.
+//! Anchor-Offset offers fine-grained control over the layout, but you can surrender
+//! that control to [containers](layout) for ergonomics.
 //! 
-//! The `Container` is a layout system that only depends on insertion order and works
-//! with Bevy's [`Children`](bevy::prelude::Children) component.
+//! The `Container` is a very simple layout system that
+//! only depends on insertion order of its children. You can find your
+//! [`hbox`](layout::CompactLayout), [`grid`](layout::FixedGridLayout) or [`paragraph`](layout::ParagraphLayout) here.
 //! 
-//! Check out the book for more information.
+//! You can implement [`Layout`](layout::Layout) yourself to create a custom layout.
 //! 
-//! # Advantages of AoUI
+//! # Widget Abstractions
 //! 
-//! There are many awesome UI libraries in the bevy ecosystem
-//! that you should definitely use over AoUI in
-//! many use cases. However, AoUI offers some unique advantages:
+//! [widget builders](crate::dsl::builders) are used to empower our DSL.
+//! Widget builders implements [`Widget`](dsl::Widget) and [`Default`] and can be used in general like so:
 //! 
-//! * Full ECS support with easy feature composition.
+//! ```
+//! # /*
+//! FrameBuilder {
+//!     offset: [121, 423].dinto(),
+//!     anchor: Center.dinto(),
+//!     color: color!(red).dinto()
+//!     ..Default::default()
+//! }.build(commands)
+//! # */
+//! ```
 //! 
-//! AoUI is built fully embracing bevy's ecosystem. 
-//! You can mix and match our modularized components
-//! and add, remove or edit any system you want to change.
+//! This returns an [`Entity`](bevy::ecs::entity::Entity).
 //! 
-//! * Relative size system.
+//! `dinto` is implemented in [`DslFrom`](dsl::DslFrom) or [`DslInto`](dsl::DslInto). 
+//! which gives us nice conversion like `[i32; 2] -> Vec2`, which saves us a lot of typing!
 //! 
-//! Full support for web like size units: `em`, `rem`, `%`, etc.
+//! When using the dsl macro, this becomes 
+//! ```
+//! # /*
+//! frame! (commands {
+//!     offset: [121, 423],
+//!     anchor: Center,
+//!     color: color!(red),
+//! });
+//! # */
+//! ```
 //! 
-//! * First class rotation and scaling support.
+//! much nicer, right?
 //! 
-//! You are can rotate and scale any sprite from any position on it with ease.
+//! `commands` is the context, if `AssetServer` is needed 
+//! we can put `commands` there.
+//!
+//! # DSL Syntax
 //! 
-//! * Simple but versatile layout system.
+//! The DSL have a few special fields that makes it much more powerful than
+//! a simple struct constructor.
 //! 
-//! Simple layouts that work out of the box with minimal configuration.
+//! ## child and children
 //! 
-//! * High level abstractions with low level control.
+//! `child:` is a special field that can be repeated, it accepts an `Entity`
+//! and inserts it as a child.
 //! 
-//! You can mix and match anchoring and layouts to best suit your needs.
+//! ```
+//! # /*
+//! frame! (commands {
+//!     ...
+//!     child: rectangle! {
+//!         dimension: [40, 40]
+//!     },
+//!     child: text! {
+//!         text: "Hello, World!!"
+//!     },
+//! });
+//! # */
+//! ```
+//! 
+//! This syntax, notice the use of braces `{}`,
+//! ```
+//! field: macro! { .. },
+//! ```
+//! 
+//! Will be automatically rewritten as
+//! ```
+//! field: macro!(commands { .. }),
+//! ```
+//! 
+//! Which serves as context propagation. 
+//! 
+//! `children:` adds an iterator as children to the entity.
+//! Iterators of `Entity` and `&Entity` are both accepted.
+//! Child and children guarantees insertion order.
+//! 
+//! ## extra
+//! 
+//! Extra adds a component or a bundle to a widget,
+//! which is the idiomatic pattern to compose behaviors.
+//! 
+//! ```
+//! # /*
+//! // Example: Add dragging support to a `Sprite`.
+//! sprite! (commands {
+//!     ...
+//!     extra: DragX,
+//!     extra: DragConstraint,
+//!     extra: DragSnapBack,
+//! });
+//! # */
+//! ```
+//! 
+//! ## entity
+//! 
+//! `entity` lets us fetch the [`Entity`](bevy::ecs::entity::Entity)
+//! directly from a nested macro invocation.
+//! ```
+//! # /*
+//! let sprite_entity: Entity;
+//! sprite! (commands {
+//!     child: sprite! {
+//!         entity: sprite_entity,
+//!     }
+//! });
+//! # */
+//! ```
+//! 
+//! # Next Steps
+//! 
+//! Checkout our modules for more documentations and examples.
+//! 
+//! * [events]
+//! * [signals]
+//! * [widgets]
+//! * [animation](anim)
+//! 
+//! 
 #![allow(clippy::type_complexity)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::single_match)]
@@ -186,16 +272,16 @@ pub use schedule::CorePlugin;
 
 /// Plugin for both widgets and events.
 #[derive(Debug)]
-pub struct AoUIPlugin;
+pub struct AouiPlugin;
 
-impl bevy::prelude::Plugin for AoUIPlugin {
+impl bevy::prelude::Plugin for AouiPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .add_plugins(schedule::CorePlugin)
             .add_plugins(signals::SignalsPlugin)
             .add_plugins(events::CursorEventsPlugin)
             .add_plugins(anim::AnimationPlugin)
-            .add_plugins(widgets::schedule::WidgetsPlugin)
+            .add_plugins(widgets::WidgetsPlugin)
         ;
     }
 }

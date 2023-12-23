@@ -1,10 +1,13 @@
 use std::{sync::{Mutex, Arc}, ops::Deref};
 
-use bevy::{render::view::Visibility, window::{Window, PrimaryWindow, CursorIcon}, hierarchy::Children, ecs::entity::Entity};
+use bevy::{render::view::Visibility, hierarchy::Children, ecs::{entity::Entity, system::ResMut}};
+use bevy::window::{Window, PrimaryWindow, CursorIcon};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
-use crate::{Opacity, signals::Object, dsl::prelude::{SigSubmit, SigChange, signal, Receiver}};
-
-use crate::{events::{EventFlags, CursorFocus, CursorAction}, signals::DataTransfer, dsl::prelude::Interpolate, signals::Sender};
+use crate::{Opacity, dsl::prelude::signal, signals::KeyStorage};
+use crate::signals::{Object, DynamicSender, SignalReceiver, ReceiverBuilder};
+use crate::events::{Handlers, ButtonClick, ToggleChange};
+use crate::{signals::DataTransfer, dsl::prelude::Interpolate};
+use crate::events::{EventFlags, CursorFocus, CursorAction};
 
 
 /// Set cursor if [`CursorFocus`] is some [`EventFlags`].
@@ -32,12 +35,12 @@ pub fn event_conditional_visibility(mut query: Query<(&DisplayIf<EventFlags>, Op
         if focus.is_some() && display_if.0.contains(focus.unwrap().flags()) 
             || focus.is_none() && display_if.0.contains(EventFlags::Idle) {
             if let Some(opacity) = opacity.as_mut() {
-                opacity.interpolate_to_or_reverse(1.0);
+                opacity.interpolate_to(1.0);
             } else {
                 *vis = Visibility::Inherited;
             }
         } else if let Some(opacity) = opacity.as_mut() {
-            opacity.interpolate_to_or_reverse(0.0);
+            opacity.interpolate_to(0.0);
         } else {
             *vis = Visibility::Hidden;
         }
@@ -106,36 +109,30 @@ impl From<bool> for CheckButton {
 /// Component for `RadioButton`, contains the shared state.
 /// 
 /// Discriminant is the `Payload` component.
-#[derive(Debug, Component)]
-pub struct RadioButton(Arc<Mutex<Object>>, Sender);
-
-impl Clone for RadioButton {
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.fork())
-    }
-}
+#[derive(Debug, Clone, Component)]
+pub struct RadioButton(Arc<Mutex<Object>>, DynamicSender);
 
 impl RadioButton {
-    pub fn new(default: impl DataTransfer) -> (Self, Receiver) {
-        let (send, recv) = signal();
+    pub fn new(default: impl DataTransfer) -> (Self, DynamicSender) {
+        let (send, _) = signal::<(), _>();
         (
-            RadioButton(Arc::new(Mutex::new(Object::new(default))), send),
-            recv
+            RadioButton(Arc::new(Mutex::new(Object::new(default))), send.clone().dynamic()),
+            send.dynamic()
         )
     }
 
     pub fn set(&self, payload: &Payload) {
         let mut lock = self.0.lock().unwrap();
         *lock = payload.0.clone();
-        self.1.send_object(payload.0.clone())
+        self.1.send_dyn(payload.0.clone())
     }
 
     pub fn get<T: DataTransfer>(&self) -> Option<T> {
         self.0.lock().unwrap().get()
     }
 
-    pub fn fork_signal<T: DataTransfer>(&self) -> Receiver {
-        self.1.get_receiver()
+    pub fn new_receiver<T: SignalReceiver>(&self) -> ReceiverBuilder<T::Type> {
+        self.1.new_receiver()
     }
 }
 
@@ -147,46 +144,52 @@ impl PartialEq<Payload> for RadioButton {
 }
 
 pub fn button_on_click(
-    query: Query<(&CursorAction, &Sender<SigSubmit>, Option<&Payload>), With<Button>>
+    mut commands: Commands,
+    mut key_storage: ResMut<KeyStorage>,
+    query: Query<(&CursorAction, &Handlers<ButtonClick>, Option<&Payload>), With<Button>>
 ) {
     for (action, submit, payload) in query.iter() {
-        if !action.is(EventFlags::Click) { continue }
+        if !action.is(EventFlags::LeftClick) { continue }
         if let Some(payload) = payload {
-            submit.send_object(payload.0.clone());
+            submit.handle_dyn(&mut commands, &mut key_storage, payload.0.clone());
         } else {
-            submit.send_empty()
+            submit.handle_dyn(&mut commands, &mut key_storage, Object::new(()));
         }
     }
 }
 
 pub fn check_button_on_click(
-    mut query: Query<(&CursorAction, &mut CheckButton, Option<&Sender<SigChange>>, Option<&Sender<SigSubmit>>, Option<&Payload>)>
+    mut commands: Commands,
+    mut key_storage: ResMut<KeyStorage>,
+    mut query: Query<(&CursorAction, &mut CheckButton, Option<&Handlers<ToggleChange>>, Option<&Handlers<ButtonClick>>, Option<&Payload>)>
 ) {
     for (action, mut state, change, submit, payload) in query.iter_mut() {
-        if !action.is(EventFlags::Click) { continue }
+        if !action.is(EventFlags::LeftClick) { continue }
         let state = state.rev();
         if let Some(signal) = change {
-            signal.send(state)
+            signal.handle(&mut commands, &mut key_storage, state);
         }
         if !state {continue;}
         if let Some(signal) = submit {
             if let Some(payload) = payload {
-                signal.send_object(payload.0.clone());
+                signal.handle_dyn(&mut commands, &mut key_storage, payload.0.clone());
             } else {
-                signal.send_empty()
+                signal.handle_dyn(&mut commands, &mut key_storage, Object::new(()));
             }
         }
     }
 }
 
 pub fn radio_button_on_click(
-    mut query: Query<(&CursorAction, &RadioButton, &Payload, Option<&Sender<SigSubmit>>)>
+    mut commands: Commands,
+    mut key_storage: ResMut<KeyStorage>,
+    mut query: Query<(&CursorAction, &RadioButton, &Payload, Option<&Handlers<ButtonClick>>)>
 ) {
     for (action, state, payload, submit) in query.iter_mut() {
-        if !action.is(EventFlags::Click) { continue }
+        if !action.is(EventFlags::LeftClick) { continue }
         state.set(payload);
         if let Some(signal) = submit {
-            signal.send_object(payload.0.clone());
+            signal.handle_dyn(&mut commands, &mut key_storage, payload.0.clone());
         }
     }
 }
@@ -197,12 +200,12 @@ pub fn check_conditional_visibility(
     query.par_iter_mut().for_each(|(display_if, state, mut vis, mut opacity)| {
         if &display_if.0 == state {
             if let Some(opacity) = opacity.as_mut() {
-                opacity.interpolate_to_or_reverse(1.0);
+                opacity.interpolate_to(1.0);
             } else {
                 *vis = Visibility::Inherited;
             }
         } else if let Some(opacity) = opacity.as_mut() {
-            opacity.interpolate_to_or_reverse(0.0);
+            opacity.interpolate_to(0.0);
         } else {
             *vis = Visibility::Hidden;
         }
@@ -315,7 +318,7 @@ mod sealed {
 
     use super::RadioButton;
 
-    use crate::signals::{DataTransfer, Receiver};
+    use crate::signals::{DataTransfer, Receiver, DynamicSender};
 
     pub trait ConstructRadioButtonSignal<const N: usize>: Sized {
         fn construct(default: impl DataTransfer) -> Self;
@@ -328,7 +331,7 @@ mod sealed {
         }
     }
 
-    impl<const N: usize> ConstructRadioButtonSignal<N> for ([RadioButton; N], Receiver) {
+    impl<const N: usize> ConstructRadioButtonSignal<N> for ([RadioButton; N], DynamicSender) {
         fn construct(default: impl DataTransfer) -> Self {
             let (result, recv) = RadioButton::new(default);
             (array_init::array_init(|_|result.clone()), recv)

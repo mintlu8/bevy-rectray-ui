@@ -1,6 +1,6 @@
 
 use bevy::math::UVec2;
-use crate::{Size2, layout::*, SizeUnit};
+use crate::{Size2, layout::*, SizeUnit, build_frame};
 pub use crate::bundles::LinebreakBundle as Linebreak;
 
 /// Construct a dummy entity for linebreak in a layout.
@@ -11,16 +11,15 @@ macro_rules! linebreak {
     };
     (($commands: expr $(, $tt:expr)*), $size: expr $(,)?) => {
         {
-            use $crate::dsl::DslInto;
-            let OneOrTwo(size) = $size.dinto();
+            use $crate::dsl::DslInto;            
+            let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
             $commands.spawn($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
     (($commands: expr $(, $tt:expr)*) {$size: expr}) => {
         {
-            use $crate::dsl::DslInto;
-            let size: $crate::Size2;
-            OneOrTwo(size) = $size.dinto();
+            use $crate::dsl::DslInto;            
+            let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
             $commands.spawn($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
@@ -30,15 +29,14 @@ macro_rules! linebreak {
     ($commands: tt $size: expr $(,)?) => {
         {
             use $crate::dsl::DslInto;
-            let OneOrTwo(size) = $size.dinto();
+            let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
             $commands.spawn($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
     ($commands: tt {$size: expr}) => {
         {
             use $crate::dsl::DslInto;
-            let size: $crate::Size2;
-            OneOrTwo(size) = $size.dinto();
+            let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
             $commands.spawn($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
@@ -46,25 +44,31 @@ macro_rules! linebreak {
 
 use crate::widget_extension;
 
-use super::util::OneOrTwo;
+use super::{util::OneOrTwo, Widget};
 
 
 widget_extension! {
     pub struct PaddingBuilder {
-        margin: OneOrTwo<Size2>,
+        pub padding: OneOrTwo<Size2>,
         pub x: Option<bool>,
         pub y: Option<bool>,
-    },
-    this, commands, assets,
-    components: (
-        Container {
-            layout: Box::new(Padding { 
-                x: this.x.unwrap_or(true), 
-                y: this.y.unwrap_or(true), 
-            }),
-            margin: this.margin.0,
-        }
-    ),
+    }
+}
+
+impl Widget for PaddingBuilder {
+    fn spawn_with(self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+        let entity = build_frame!(commands, self).insert(
+            Container {
+                layout: Box::new(FitLayout { 
+                    x: self.x.unwrap_or(true), 
+                    y: self.y.unwrap_or(true), 
+                }),
+                margin: Size2::ZERO,
+                padding: self.padding.0,
+            }
+        ).id();
+        (entity, entity)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -89,31 +93,39 @@ widget_extension! {
         pub stack: Option<FlexDir>,
         pub stretch: bool,
         pub margin: OneOrTwo<Size2>,
-    },
-    this, commands, assets,
-    components: (
-        Container {
-            layout: match this.r#type {
-                Some(SpanContainerNames::Compact) => Box::new(CompactLayout { 
-                    direction: this.direction.unwrap_or(FlexDir::LeftToRight) 
-                }),
-                Some(SpanContainerNames::Span) => Box::new(SpanLayout { 
-                    direction: this.direction.unwrap_or(FlexDir::LeftToRight), 
-                    stretch: this.stretch,
-                }),
-                Some(SpanContainerNames::Paragraph) => Box::new(ParagraphLayout { 
-                    direction: this.direction.unwrap_or(FlexDir::LeftToRight), 
-                    stack: this.stack.unwrap_or(match this.direction {
-                        Some(FlexDir::BottomToTop|FlexDir::TopToBottom) => FlexDir::LeftToRight,
-                        _ => FlexDir::TopToBottom,
-                    }), 
-                    stretch: this.stretch
-                }),
-                None => panic!("Please specify the container type."),
-            },
-            margin: this.margin.0
-        }
-    ),
+        pub padding: OneOrTwo<Size2>,
+    }
+}
+
+impl Widget for SpanContainerBuilder {
+    fn spawn_with(self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+        let entity = build_frame!(commands, self).insert(
+            Container {
+                layout: match self.r#type {
+                    Some(SpanContainerNames::Compact) => Box::new(CompactLayout { 
+                        direction: self.direction.unwrap_or(FlexDir::LeftToRight) 
+                    }),
+                    Some(SpanContainerNames::Span) => Box::new(SpanLayout { 
+                        direction: self.direction.unwrap_or(FlexDir::LeftToRight), 
+                        stretch: self.stretch,
+                    }),
+                    Some(SpanContainerNames::Paragraph) => Box::new(ParagraphLayout { 
+                        direction: self.direction.unwrap_or(FlexDir::LeftToRight), 
+                        stack: self.stack.unwrap_or(match self.direction {
+                            Some(FlexDir::BottomToTop|FlexDir::TopToBottom) => FlexDir::LeftToRight,
+                            _ => FlexDir::TopToBottom,
+                        }), 
+                        stretch: self.stretch
+                    }),
+                    None => panic!("Please specify the container type."),
+                },
+                margin: self.margin.0,
+                padding: self.padding.0,
+            }
+        ).id();
+        (entity, entity)
+        
+    }
 }
 
 widget_extension! {
@@ -128,54 +140,58 @@ widget_extension! {
         pub alignment: Option<Alignment>,
         pub stretch: bool,
         pub margin: OneOrTwo<Size2>,
-    },
-    this, commands, assets,
-    components: (
-        {
-            let row_dir = this.row.unwrap_or(FlexDir::LeftToRight);
-            let column_dir = this.column.unwrap_or(match row_dir {
-                FlexDir::LeftToRight | FlexDir::RightToLeft => FlexDir::TopToBottom,
-                FlexDir::BottomToTop | FlexDir::TopToBottom => FlexDir::LeftToRight,
-            });
-            let alignment = this.alignment.unwrap_or(match row_dir {
-                FlexDir::LeftToRight | FlexDir::RightToLeft => Alignment::Left,
-                FlexDir::BottomToTop | FlexDir::TopToBottom => Alignment::Top,
-            });
+        pub padding: OneOrTwo<Size2>,
+    }
+}
+
+impl Widget for GridContainerBuilder {
+    fn spawn_with(self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+        let row_dir = self.row.unwrap_or(FlexDir::LeftToRight);
+        let column_dir = self.column.unwrap_or(match row_dir {
+            FlexDir::LeftToRight | FlexDir::RightToLeft => FlexDir::TopToBottom,
+            FlexDir::BottomToTop | FlexDir::TopToBottom => FlexDir::LeftToRight,
+        });
+        let alignment = self.alignment.unwrap_or(match row_dir {
+            FlexDir::LeftToRight | FlexDir::RightToLeft => Alignment::Left,
+            FlexDir::BottomToTop | FlexDir::TopToBottom => Alignment::Top,
+        });
+        let entity = build_frame!(commands, self).insert(
             Container {
-                layout: match this.r#type {
+                layout: match self.r#type {
                     Some(GridContainerNames::FixedGrid) => Box::new(FixedGridLayout {
-                        cells: this.cell_count.expect("cell_count must be specified."),
+                        cells: self.cell_count.expect("cell_count must be specified."),
                         row_dir,
                         column_dir,
                         alignment,
                     }),
                     Some(GridContainerNames::SizedGrid) => Box::new(SizedGridLayout {
-                        cell_size: this.cell_size.expect("cell_size must be specified."),
+                        cell_size: self.cell_size.expect("cell_size must be specified."),
                         row_dir,
                         column_dir,
                         alignment,
-                        stretch: this.stretch,
+                        stretch: self.stretch,
                     }),
                     Some(GridContainerNames::FlexTable) => Box::new(DynamicTableLayout {
-                        columns: this.column_count.expect("column_count must be specified."),
+                        columns: self.column_count.expect("column_count must be specified."),
                         row_dir,
                         column_dir,
-                        stretch: this.stretch,
+                        stretch: self.stretch,
                     }),
                     Some(GridContainerNames::Table) => Box::new(TableLayout {
-                        columns: this.columns,
+                        columns: self.columns,
                         row_dir,
                         column_dir,
-                        stretch: this.stretch,
+                        stretch: self.stretch,
                     }),
                     None => panic!("Please specify the container type."),
                 },
-                margin: this.margin.0,
+                margin: self.margin.0,
+                padding: self.padding.0,
             }
-        }
-    ),
+        ).id();
+        (entity, entity)
+    }
 }
-
 
 /// Construct a compact layout.
 #[macro_export]

@@ -1,7 +1,7 @@
 // This tries to be egui
 
 use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
-use bevy_aoui::{AoUIPlugin, widgets::drag::Draggable};
+use bevy_aoui::{AouiPlugin, widgets::drag::Draggable};
 
 pub fn main() {
     App::new()
@@ -15,7 +15,7 @@ pub fn main() {
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_plugins(LogDiagnosticsPlugin::default())
         .add_systems(Startup, init)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .run();
 }
 
@@ -24,7 +24,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
     let (send, recv) = signal();
-    compact!((commands, assets) {
+    compact!(commands {
         direction: TopToBottom,
         hitbox: Rect(1),
         extra: Draggable::BOTH,
@@ -35,18 +35,18 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             dimension: size2!(1 + [5, 5] px),
             extra: IgnoreLayout,
         },
-        child: textbox! {
+        child: text! {
             text: "Egui? Just kidding!",
-            event: EventFlags::Drag,
+            event: EventFlags::LeftDrag,
             extra: SetCursor { 
-                flags: EventFlags::Hover|EventFlags::Drag, 
+                flags: EventFlags::Hover|EventFlags::LeftDrag, 
                 icon: CursorIcon::Hand,
             },
             extra: send.mark::<SigDrag>(),
         },
-        child: textbox! {
+        child: text! {
             text: "Checkbox",
-            event: EventFlags::Drag,
+            event: EventFlags::LeftDrag,
         },
     });
 }

@@ -33,7 +33,7 @@ pub fn copy_anchor_sprite(mut query: Query<(&mut Sprite, &Transform2D)>) {
 /// Synchonize size between `Sprite` and `Dimension`
 pub fn copy_dimension_sprite(mut query: Query<(&Sprite, &Handle<Image>, &mut Dimension)>, assets: Res<Assets<Image>>) {
     query.par_iter_mut().for_each(|(sp, im, mut dimension)| {
-        dimension.update_copied(|| {
+        dimension.update_size(|| {
             match sp.custom_size {
                 Some(x) => x,
                 None => match sp.rect {
@@ -55,7 +55,7 @@ pub fn copy_anchor_atlas(mut query: Query<(&mut TextureAtlasSprite, &Transform2D
 /// copy size between `TextureAtlasSprite` to `Dimension`
 pub fn copy_dimension_atlas(mut query: Query<(&TextureAtlasSprite, &Handle<TextureAtlas>, &mut Dimension)>, assets: Res<Assets<TextureAtlas>>) {
     query.par_iter_mut().for_each(|(sp, im, mut dimension)| {
-        dimension.update_copied(|| {
+        dimension.update_size(|| {
             match sp.custom_size {
                 Some(size) => size,
                 None => (|| -> Option<_> {
@@ -112,21 +112,21 @@ pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFont
 /// Copy opacity as text alpha.
 pub fn sync_opacity_text(mut query: Query<(&Opacity, &mut Text), With<OpacityWriter>>) {
     query.par_iter_mut().for_each(|(opacity, mut text)| {
-        text.sections.iter_mut().for_each(|x| {x.style.color.set_a(opacity.computed);} )
+        text.sections.iter_mut().for_each(|x| {x.style.color.set_a(opacity.computed_opacity);} )
     })
 }
 
 /// Copy opacity as sprite alpha.
 pub fn sync_opacity_sprite(mut query: Query<(&Opacity, &mut Sprite), With<OpacityWriter>>) {
     query.par_iter_mut().for_each(|(opacity, mut sprite)| {
-        sprite.color.set_a(dbg!(opacity.computed));
+        sprite.color.set_a(opacity.computed_opacity);
     })
 }
 
 /// Copy opacity as atlas alpha.
 pub fn sync_opacity_atlas(mut query: Query<(&Opacity, &mut TextureAtlasSprite), With<OpacityWriter>>) {
     query.par_iter_mut().for_each(|(opacity, mut sprite)| {
-        sprite.color.set_a(opacity.computed);
+        sprite.color.set_a(opacity.computed_opacity);
     })
 }
 

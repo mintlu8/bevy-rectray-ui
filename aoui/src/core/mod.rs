@@ -2,7 +2,7 @@
 pub(crate) mod rect;
 pub(crate) mod components;
 pub(crate) mod hitbox;
-pub(crate) mod compute;
+pub(crate) mod pipeline;
 pub(crate) mod scaling;
 pub(crate) mod systems;
 

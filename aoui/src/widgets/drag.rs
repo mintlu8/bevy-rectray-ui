@@ -1,9 +1,9 @@
-use bevy::{math::Vec2, ecs::{system::{Query, Res}, component::Component, query::{Without, With}, entity::Entity}, hierarchy::Parent, log::warn};
-use crate::{Transform2D, signals::types::SigDrag, Dimension, dsl::prelude::SigChange, Anchor};
+use bevy::{math::Vec2, ecs::{system::{Query, Res, ResMut, Commands}, component::Component, query::{Without, With}, entity::Entity}, hierarchy::Parent, log::warn};
+use crate::{Transform2D, signals::{types::SigDrag, KeyStorage}, Dimension, Anchor, events::{Handlers, MouseDrag, PositionFactor}};
 use serde::{Serialize, Deserialize};
 
 use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::{Interpolate, Offset}};
-use crate::signals::{Receiver, Sender};
+use crate::signals::Receiver;
 
 
 /// A component that enables dragging and dropping. 
@@ -18,8 +18,8 @@ use crate::signals::{Receiver, Sender};
 /// * [`DragConstraint`]: If specified, the sprite cannot go over bounds of its parent.
 /// * [`DragSnapBack`]: Move the sprite back to its original position if dropped. 
 /// Uses `Transition` if applicable.
-/// * [`Sender<Changed>`](crate::signals::Sender): A signal that sends a value in `0..=1` in its constraints when being dragged.
-/// * [`SigDrag`](crate::signals::types::SigDrag): 
+/// * [`Sender<Changed>`]: A signal that sends a value in `0..=1` in its constraints when being dragged.
+/// * [`SigDrag`]: 
 /// Sent by a non-draggable sprite with a drag event handler, 
 /// and received by a draggable sprite without an event handler.
 /// This is useful for creating a small draggable area, like a banner.
@@ -90,20 +90,22 @@ pub struct DragConstraint;
 
 
 pub fn drag_start(
-    send: Query<(&CursorAction, &Sender<SigDrag>), Without<Draggable>>,
+    mut commands: Commands,
+    mut storage: ResMut<KeyStorage>,
+    send: Query<(&CursorAction, &Handlers<MouseDrag>), Without<Draggable>>,
     mut receive: Query<(&Receiver<SigDrag>, &mut Draggable, &Transform2D, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut Draggable, &Transform2D, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>)>,
     ) {
 
     for (focus, send) in send.iter() {
-        if focus.intersects(EventFlags::Down | EventFlags::MidDown | EventFlags:: RightDown)  {
-            send.send(DragState::Start)
+        if focus.intersects(EventFlags::LeftDown | EventFlags::MidDown | EventFlags:: RightDown)  {
+            send.handle(&mut commands, &mut storage, DragState::Start);
         }
     }
 
     let iter = query.iter_mut()
         .filter_map(|(action, drag, transform, snap, interpolate)| {
-            if action.intersects(EventFlags::Down | EventFlags::MidDown | EventFlags:: RightDown) {
+            if action.intersects(EventFlags::LeftDown | EventFlags::MidDown | EventFlags:: RightDown) {
                 Some((drag, transform, snap, interpolate))
             } else {
                 None
@@ -135,33 +137,36 @@ pub fn drag_start(
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DragState {
+    #[default]
     Start,
     Dragging,
     End,
 }
 
 pub fn dragging(
+    mut commands: Commands,
+    mut storage: ResMut<KeyStorage>,
     state: Res<CursorState>,
-    send: Query<(&CursorFocus, &Sender<SigDrag>), Without<Draggable>>,
+    send: Query<(&CursorFocus, &Handlers<MouseDrag>), Without<Draggable>>,
     mut receive: Query<(Entity, &Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>, &Receiver<SigDrag>), Without<CursorFocus>>,
     mut query: Query<(Entity, &CursorFocus, &Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>)>,
     parent_query: Query<&Dimension, (Without<Draggable>, Without<DragConstraint>)>,
-    constraint_query: Query<(&Parent, &Dimension, Option<&Sender<SigChange>>), With<DragConstraint>>
+    constraint_query: Query<(&Parent, &Dimension, Option<&Handlers<PositionFactor>>), With<DragConstraint>>
 ) {
     let delta = state.cursor_position() - state.down_position();
 
     for (focus, send) in send.iter() {
-        if !focus.intersects(EventFlags::Drag | EventFlags::MidDrag | EventFlags:: RightDrag)  {
+        if !focus.intersects(EventFlags::LeftDrag | EventFlags::MidDrag | EventFlags:: RightDrag)  {
             continue;
         }
-        send.send(DragState::Dragging);
+        send.handle(&mut commands, &mut storage, DragState::Dragging);
     }
 
     let iter = query.iter_mut()
         .filter_map(|(entity, focus, drag, transform, interpolate)| {
-            if focus.intersects(EventFlags::Drag | EventFlags::MidDrag | EventFlags:: RightDrag) {
+            if focus.intersects(EventFlags::LeftDrag | EventFlags::MidDrag | EventFlags:: RightDrag) {
                 Some((entity, drag, transform, interpolate))
             } else {
                 None
@@ -202,8 +207,8 @@ pub fn dragging(
                 
                 if let Some(signal) = signal {
                     match (drag.x, drag.y) {
-                        (true, false) => signal.send((pos.x - min.x) / (max.x - min.x)),
-                        (false, true) => signal.send((pos.y - min.y) / (max.y - min.y)),
+                        (true, false) => signal.handle(&mut commands, &mut storage, (pos.x - min.x) / (max.x - min.x)),
+                        (false, true) => signal.handle(&mut commands, &mut storage, (pos.y - min.y) / (max.y - min.y)),
                         _ => warn!("Cannot send `Changed` signal from 2d dragging."),
                     }
                 }
@@ -222,7 +227,9 @@ pub fn dragging(
 
 
 pub fn drag_end(
-    send: Query<(&CursorAction, &Sender<SigDrag>), Without<Draggable>>,
+    mut commands: Commands,
+    mut storage: ResMut<KeyStorage>,
+    send: Query<(&CursorAction, &Handlers<MouseDrag>), Without<Draggable>>,
     mut receive: Query<(&mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>, &Receiver<SigDrag>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>)>
 ) {
@@ -230,7 +237,7 @@ pub fn drag_end(
         if !focus.intersects(EventFlags::DragEnd)  {
             continue;
         }
-        send.send(DragState::End);
+        send.handle(&mut commands, &mut storage, DragState::End);
     }
     
     let iter = query.iter_mut()

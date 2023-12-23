@@ -2,14 +2,14 @@
 
 `bevy_aoui` provides a simple DSL syntax for UI generation.
 
-For every AoUI widget struct, there is a macro with a corresponding name
+For every Aoui widget struct, there is a macro with a corresponding name
 `e.g.` `SpriteBuilder` has `sprite!`
 
 The macro has syntax almost identical to struct construction:
 
 ```rust
 widget!((commands) {
-    name: "Hello AoUI!",
+    name: "Hello Aoui!",
     dimension: [20, 20],
     color: color!(red),
 })
@@ -19,7 +19,7 @@ which translates to
 
 ```rust
 Widget {
-    name: "Hello AoUI!".dinto(),
+    name: "Hello Aoui!".dinto(),
     dimension: [20, 20].dinto(),
     color: color!(red).dinto(),
     ..Default::default()
@@ -101,18 +101,18 @@ sprite! ( (commands) {
 * `child`: repeatable, given an `Entity`, insert them as children.
 
 ```rust
-inputbox! ((commands, assets) {
-    dimension: size2!([400, 32]),
+inputbox! (commands {
+    dimension: size2!(400, 32),
     color: color!(red),
     child: shape! {
         shape: Shapes::Rectangle,
         fill: color!(gold),
-        dimension: size2!([2, 1 em]),
+        dimension: size2!(2, 1 em),
     },
     child: shape! {
         shape: Shapes::Rectangle,
         fill: color!(green) * 0.5,
-        dimension: size2!([12, 1 em]),
+        dimension: size2!(12, 1 em),
     },
 });
 ```

@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AoUIPlugin, WorldExtension};
+use bevy_aoui::{AouiPlugin, WorldExtension};
 
 pub fn main() {
     App::new()
@@ -12,7 +12,7 @@ pub fn main() {
         }))
         .add_systems(Startup, init)
         .register_cursor_default(CursorIcon::Arrow)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .run();
 }
@@ -22,15 +22,15 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    textbox!(commands {
+    text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: sig_fps().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
     });
 
-    textbox! ((commands, assets) {
-        dimension: size2!([400, 1 em]),
+    text! ((commands, assets) {
+        dimension: size2!(400, 1 em),
         font_size: em(4),
         text: "I'm Spinning!",
         font: "ComicNeue-Bold.ttf",

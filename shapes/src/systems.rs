@@ -3,7 +3,7 @@ use bevy_aoui::{Transform2D, Dimension, Anchor};
 use bevy_prototype_lyon::prelude::{GeometryBuilder, Path};
 use bevy_prototype_lyon::shapes::*;
 
-/// A shape managed by AoUI.
+/// A shape managed by Aoui.
 #[derive(Debug, Clone, Component, Reflect, Default)]
 pub enum Shapes {
     Circle,
@@ -17,7 +17,7 @@ pub enum Shapes {
     Svg(String)
 }
 
-/// AoUI controlled aspects of Shape.
+/// Aoui controlled aspects of Shape.
 /// 
 /// Provides intermediate change detection.
 #[derive(Debug, Clone, Component, Reflect)]

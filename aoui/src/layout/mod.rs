@@ -1,3 +1,5 @@
+//! Container and Layouts for `bevy_aoui`.
+
 pub(crate) mod util;
 pub(crate) mod layouts;
 pub(crate) mod span;

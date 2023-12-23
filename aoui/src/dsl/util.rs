@@ -1,20 +1,18 @@
-use std::borrow::Cow;
-
-use bevy::asset::{Handle, Asset, AssetServer};
 use bevy::math::Vec2;
-use crate::widgets::button::Payload;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit};
 use crate::{Size2, FontSize, layout::Alignment, layout::FlexDir};
 
-use crate::signals::{Sender, Receiver, SignalSender, DataTransfer, SignalReceiver};
 
 use super::DslFrom;
 use super::convert::DslInto;
 
 /// Syntax for constructing a hitbox.
+#[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DslHitbox<T: DslInto<OneOrTwo<Vec2>>> {
+    /// A rectangular hitbox.
     Rect(T),
+    /// An elliptical hitbox.
     Ellipse(T),
 }
 
@@ -33,11 +31,33 @@ impl<T: DslInto<OneOrTwo<Vec2>>> DslInto<Option<Hitbox>> for DslHitbox<T> {
     }
 }
 
-/// Unified constants for various enums used by `AoUI`.
+#[doc(hidden)]
+#[derive(Debug, Default, Clone, Copy)]
+pub enum Aspect {
+    #[default]
+    None,
+    /// Preserves the aspect from the associated sprite.
+    Preserve,
+    Owned(f32),
+}
+
+impl DslFrom<i32> for Aspect {
+    fn dfrom(value: i32) -> Self {
+        Aspect::Owned(value as f32)
+    }
+}
+
+impl DslFrom<f32> for Aspect {
+    fn dfrom(value: f32) -> Self {
+        Aspect::Owned(value)
+    }
+}
+
+/// Unified constants for various enums used by `Aoui`.
 /// 
 /// Note `Left` can be used as `CenterLeft`, etc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AoUISpacialConsts {
+pub enum AouiSpacialConsts {
     TopLeft,
     TopCenter,
     TopRight,
@@ -57,95 +77,116 @@ pub enum AoUISpacialConsts {
     BottomToTop,
 }
 
-impl DslInto<Anchor> for AoUISpacialConsts {
-    fn dinto(self) -> Anchor {
-        match self {
-            AoUISpacialConsts::TopLeft => Anchor::TopLeft,
-            AoUISpacialConsts::TopCenter => Anchor::TopCenter,
-            AoUISpacialConsts::TopRight => Anchor::TopRight,
-            AoUISpacialConsts::CenterLeft => Anchor::CenterLeft,
-            AoUISpacialConsts::Center => Anchor::Center,
-            AoUISpacialConsts::CenterRight => Anchor::CenterRight,
-            AoUISpacialConsts::BottomLeft => Anchor::BottomLeft,
-            AoUISpacialConsts::BottomCenter => Anchor::BottomCenter,
-            AoUISpacialConsts::BottomRight => Anchor::BottomRight,
-            AoUISpacialConsts::Top => Anchor::TopCenter,
-            AoUISpacialConsts::Bottom => Anchor::BottomCenter,
-            AoUISpacialConsts::Left => Anchor::CenterLeft,
-            AoUISpacialConsts::Right => Anchor::CenterRight,
+impl DslFrom<AouiSpacialConsts> for Anchor {
+    fn dfrom(value: AouiSpacialConsts) -> Self {
+        match value {
+            AouiSpacialConsts::TopLeft => Anchor::TopLeft,
+            AouiSpacialConsts::TopCenter => Anchor::TopCenter,
+            AouiSpacialConsts::TopRight => Anchor::TopRight,
+            AouiSpacialConsts::CenterLeft => Anchor::CenterLeft,
+            AouiSpacialConsts::Center => Anchor::Center,
+            AouiSpacialConsts::CenterRight => Anchor::CenterRight,
+            AouiSpacialConsts::BottomLeft => Anchor::BottomLeft,
+            AouiSpacialConsts::BottomCenter => Anchor::BottomCenter,
+            AouiSpacialConsts::BottomRight => Anchor::BottomRight,
+            AouiSpacialConsts::Top => Anchor::TopCenter,
+            AouiSpacialConsts::Bottom => Anchor::BottomCenter,
+            AouiSpacialConsts::Left => Anchor::CenterLeft,
+            AouiSpacialConsts::Right => Anchor::CenterRight,
             c => panic!("{:?} is not an Anchor.", c),
         }
+    }
+}
+
+impl DslFrom<AouiSpacialConsts> for Option<Anchor> {
+    fn dfrom(value: AouiSpacialConsts) -> Self {
+        Some(match value {
+            AouiSpacialConsts::TopLeft => Anchor::TopLeft,
+            AouiSpacialConsts::TopCenter => Anchor::TopCenter,
+            AouiSpacialConsts::TopRight => Anchor::TopRight,
+            AouiSpacialConsts::CenterLeft => Anchor::CenterLeft,
+            AouiSpacialConsts::Center => Anchor::Center,
+            AouiSpacialConsts::CenterRight => Anchor::CenterRight,
+            AouiSpacialConsts::BottomLeft => Anchor::BottomLeft,
+            AouiSpacialConsts::BottomCenter => Anchor::BottomCenter,
+            AouiSpacialConsts::BottomRight => Anchor::BottomRight,
+            AouiSpacialConsts::Top => Anchor::TopCenter,
+            AouiSpacialConsts::Bottom => Anchor::BottomCenter,
+            AouiSpacialConsts::Left => Anchor::CenterLeft,
+            AouiSpacialConsts::Right => Anchor::CenterRight,
+            c => panic!("{:?} is not an Anchor.", c),
+        })
     }
 }
 
 type BevyAnchor = bevy::sprite::Anchor;
 
-impl DslInto<BevyAnchor> for AoUISpacialConsts {
+impl DslInto<BevyAnchor> for AouiSpacialConsts {
     fn dinto(self) -> BevyAnchor {
         match self {
-            AoUISpacialConsts::TopLeft => BevyAnchor::TopLeft,
-            AoUISpacialConsts::TopCenter => BevyAnchor::TopCenter,
-            AoUISpacialConsts::TopRight => BevyAnchor::TopRight,
-            AoUISpacialConsts::CenterLeft => BevyAnchor::CenterLeft,
-            AoUISpacialConsts::Center => BevyAnchor::Center,
-            AoUISpacialConsts::CenterRight => BevyAnchor::CenterRight,
-            AoUISpacialConsts::BottomLeft => BevyAnchor::BottomLeft,
-            AoUISpacialConsts::BottomCenter => BevyAnchor::BottomCenter,
-            AoUISpacialConsts::BottomRight => BevyAnchor::BottomRight,
-            AoUISpacialConsts::Top => BevyAnchor::TopCenter,
-            AoUISpacialConsts::Bottom => BevyAnchor::BottomCenter,
-            AoUISpacialConsts::Left => BevyAnchor::CenterLeft,
-            AoUISpacialConsts::Right => BevyAnchor::CenterRight,
+            AouiSpacialConsts::TopLeft => BevyAnchor::TopLeft,
+            AouiSpacialConsts::TopCenter => BevyAnchor::TopCenter,
+            AouiSpacialConsts::TopRight => BevyAnchor::TopRight,
+            AouiSpacialConsts::CenterLeft => BevyAnchor::CenterLeft,
+            AouiSpacialConsts::Center => BevyAnchor::Center,
+            AouiSpacialConsts::CenterRight => BevyAnchor::CenterRight,
+            AouiSpacialConsts::BottomLeft => BevyAnchor::BottomLeft,
+            AouiSpacialConsts::BottomCenter => BevyAnchor::BottomCenter,
+            AouiSpacialConsts::BottomRight => BevyAnchor::BottomRight,
+            AouiSpacialConsts::Top => BevyAnchor::TopCenter,
+            AouiSpacialConsts::Bottom => BevyAnchor::BottomCenter,
+            AouiSpacialConsts::Left => BevyAnchor::CenterLeft,
+            AouiSpacialConsts::Right => BevyAnchor::CenterRight,
             c => panic!("{:?} is not an Anchor.", c),
         }
     }
 }
 
-impl DslInto<Alignment> for AoUISpacialConsts {
+impl DslInto<Alignment> for AouiSpacialConsts {
     fn dinto(self) -> Alignment {
         match self {
-            AoUISpacialConsts::Center => Alignment::Center,
-            AoUISpacialConsts::Top => Alignment::Top,
-            AoUISpacialConsts::Bottom => Alignment::Bottom,
-            AoUISpacialConsts::Left => Alignment::Left,
-            AoUISpacialConsts::Right => Alignment::Right,
+            AouiSpacialConsts::Center => Alignment::Center,
+            AouiSpacialConsts::Top => Alignment::Top,
+            AouiSpacialConsts::Bottom => Alignment::Bottom,
+            AouiSpacialConsts::Left => Alignment::Left,
+            AouiSpacialConsts::Right => Alignment::Right,
             c => panic!("{:?} is not an Alignment.", c),
         }
     }
 }
 
-impl DslInto<Option<Alignment>> for AoUISpacialConsts {
+impl DslInto<Option<Alignment>> for AouiSpacialConsts {
     fn dinto(self) -> Option<Alignment> {
         Some(match self {
-            AoUISpacialConsts::Center => Alignment::Center,
-            AoUISpacialConsts::Top => Alignment::Top,
-            AoUISpacialConsts::Bottom => Alignment::Bottom,
-            AoUISpacialConsts::Left => Alignment::Left,
-            AoUISpacialConsts::Right => Alignment::Right,
+            AouiSpacialConsts::Center => Alignment::Center,
+            AouiSpacialConsts::Top => Alignment::Top,
+            AouiSpacialConsts::Bottom => Alignment::Bottom,
+            AouiSpacialConsts::Left => Alignment::Left,
+            AouiSpacialConsts::Right => Alignment::Right,
             c => panic!("{:?} is not an Alignment.", c),
         })
     }
 }
 
-impl DslInto<FlexDir> for AoUISpacialConsts {
+impl DslInto<FlexDir> for AouiSpacialConsts {
     fn dinto(self) -> FlexDir {
         match self {
-            AoUISpacialConsts::LeftToRight => FlexDir::LeftToRight,
-            AoUISpacialConsts::RightToLeft => FlexDir::RightToLeft,
-            AoUISpacialConsts::TopToBottom => FlexDir::TopToBottom,
-            AoUISpacialConsts::BottomToTop => FlexDir::BottomToTop,
+            AouiSpacialConsts::LeftToRight => FlexDir::LeftToRight,
+            AouiSpacialConsts::RightToLeft => FlexDir::RightToLeft,
+            AouiSpacialConsts::TopToBottom => FlexDir::TopToBottom,
+            AouiSpacialConsts::BottomToTop => FlexDir::BottomToTop,
             c => panic!("{:?} is not an FlexDir.", c),
         }
     }
 }
 
-impl DslInto<Option<FlexDir>> for AoUISpacialConsts {
+impl DslInto<Option<FlexDir>> for AouiSpacialConsts {
     fn dinto(self) -> Option<FlexDir> {
         Some(match self {
-            AoUISpacialConsts::LeftToRight => FlexDir::LeftToRight,
-            AoUISpacialConsts::RightToLeft => FlexDir::RightToLeft,
-            AoUISpacialConsts::TopToBottom => FlexDir::TopToBottom,
-            AoUISpacialConsts::BottomToTop => FlexDir::BottomToTop,
+            AouiSpacialConsts::LeftToRight => FlexDir::LeftToRight,
+            AouiSpacialConsts::RightToLeft => FlexDir::RightToLeft,
+            AouiSpacialConsts::TopToBottom => FlexDir::TopToBottom,
+            AouiSpacialConsts::BottomToTop => FlexDir::BottomToTop,
             c => panic!("{:?} is not an FlexDir.", c),
         })
     }
@@ -310,6 +351,9 @@ impl_one_or_two!(Size2, x, y, Size2::pixels(x as f32, y as f32));
 #[doc(hidden)]
 #[macro_export]
 macro_rules! size {
+    (infer) => {
+        ($crate::SizeUnit::Infer, 0.0)
+    };
     ($x: tt) => {
         ($crate::SizeUnit::Pixels, $x as f32)
     };
@@ -340,48 +384,48 @@ macro_rules! size {
     (-$x: tt %) => {
         ($crate::SizeUnit::Percent, -($x as f32) / 100.0)
     };
-    (1 - $x: tt px) => {
+    (1 + $x: tt px) => {
         ($crate::SizeUnit::MarginPx, $x as f32)
     };
-    (1 + $x: tt px) => {
+    (1 - $x: tt px) => {
         ($crate::SizeUnit::MarginPx, -($x as f32))
     };
-    (1 - $x: tt em) => {
+    (1 + $x: tt em) => {
         ($crate::SizeUnit::MarginEm, $x as f32)
     };
-    (1 + $x: tt em) => {
+    (1 - $x: tt em) => {
         ($crate::SizeUnit::MarginEm, -($x as f32))
     };
-    (1 - $x: tt rem) => {
+    (1 + $x: tt rem) => {
         ($crate::SizeUnit::MarginRem, $x as f32)
     };
-    (1 + $x: tt rem) => {
+    (1 - $x: tt rem) => {
         ($crate::SizeUnit::MarginRem, -($x as f32))
     };
 }
 
 
-/// Construct a [`Size2`](bevy_aoui::Size2) through CSS like syntax.
+/// Construct a [`Size2`](crate::Size2) through CSS like syntax.
 /// 
 /// # Examples
 /// ```
 /// # use bevy_aoui::size2;
 /// # let PI = 3.0;
 /// // We perform auto float conversion.
-/// size2!([40, 50.5]);
+/// size2!(40, 50.5);
 /// // Supply a unit like this
 /// size2!([1, 1] rem);
 /// // Supply multiple unit types like this.
-/// size2!([40%, 1 em]);
+/// size2!(40%, 1 em);
 /// // Aside from the negative sign
 /// // expressions need to be in wrapped parenthesis or braces.
-/// size2!([-3 px, (PI * 2.0) rem]);
+/// size2!(-3 px, (PI * 2.0) rem);
 /// size2!([-3 px, {
 ///     let pi = 3.0;
 ///     pi * 2.0
 /// } rem]);
 /// // `1 - 2px` means `100% - 2px`, or 2px smaller than parent dimension.
-/// size2!([1 - 2 px, 1 + 4 em]);
+/// size2!(1 - 2 px, 1 + 4 em);
 /// // or expressed as
 /// size2!(1 - [4.5, 6.6] px);
 /// ```
@@ -393,6 +437,9 @@ macro_rules! size {
 macro_rules! size2 {
     (full) => {
         $crate::Size2::FULL
+    };
+    (0) => {
+        $crate::Size2::ZERO
     };
     ([$($tt:tt)*]) => {
         $crate::size2!(@accumulate [] [$($tt)*])
@@ -407,159 +454,15 @@ macro_rules! size2 {
         $crate::size2!(@accumulate [$($tt1)* $tt] [$($tt2)*])
     };
     ([$x: expr, $y: expr] $unit: tt)=> {
-        $crate::size2!([$x $unit, $y $unit])
+        $crate::size2!($x $unit, $y $unit)
     };
     (1 - [$x: expr, $y: expr] $unit: tt)=> {
-        $crate::size2!([1 - $x $unit, 1 - $y $unit])
+        $crate::size2!(1 - $x $unit, 1 - $y $unit)
     };
     (1 + [$x: expr, $y: expr] $unit: tt)=> {
-        $crate::size2!([1 + $x $unit, 1 + $y $unit])
+        $crate::size2!(1 + $x $unit, 1 + $y $unit)
     };
-}
-
-
-/// This bypasses the option impl on dinto.
-#[doc(hidden)]
-#[derive(Debug, Default)]
-pub enum OptionX<T> {
-    Some(T),
-    #[default]
-    None,
-}
-
-impl<T> OptionX<T> {
-    pub fn expect(self, s: &str) -> T {
-        match self {
-            OptionX::Some(v) => v,
-            OptionX::None => panic!("{}", s),
-        }
-    }
-}
-
-impl<T: SignalSender, A: SignalSender> DslFrom<Sender<A>> for OptionX<Sender<T>>{
-    fn dfrom(value: Sender<A>) -> OptionX<Sender<T>> {
-        OptionX::Some(value.mark::<T>())
-    }
-}
-
-impl<T: SignalReceiver,  A: SignalReceiver> DslFrom<Receiver<A>> for OptionX<Receiver<T>>{
-    fn dfrom(value: Receiver<A>) -> OptionX<Receiver<T>> {
-        OptionX::Some(value.mark::<T>())
-    }
-}
-
-impl<T: DataTransfer + Clone> DslFrom<T> for OptionX<Payload> {
-    fn dfrom(value: T) -> Self {
-        OptionX::Some(Payload::new(value))
-    }
-}
-
-#[doc(hidden)]
-#[derive(Debug)]
-pub enum HandleOrString<T: Asset>{
-    Handle(Handle<T>),
-    String(String),
-}
-
-impl<T: Asset> HandleOrString<T> {
-    pub fn get(self, assets: Option<&AssetServer>) -> Handle<T>{
-        match self {
-            HandleOrString::Handle(handle) => handle,
-            HandleOrString::String(string) => {
-                assets.expect("Please pass in the AssetServer.")
-                    .load(string)
-            },
-        }
-    }
-}
-
-impl<T: Asset> Default for HandleOrString<T> {
-    fn default() -> Self {
-        Self::Handle(Default::default())
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for Handle<T> {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::Handle(self)
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for &Handle<T> {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::Handle(self.clone())
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for &str {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::String(self.to_owned())
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for String {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::String(self)
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for &&str {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::String((*self).to_owned())
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for &String {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::String(self.clone())
-    }
-}
-
-impl<'t, T: Asset> DslInto<HandleOrString<T>> for Cow<'t, str> {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::String(self.into_owned())
-    }
-}
-
-#[doc(hidden)]
-#[derive(Debug)]
-pub enum HandleOrAsset<T: Asset>{
-    Handle(Handle<T>),
-    Asset(T),
-}
-
-impl<T: Asset> HandleOrAsset<T> {
-    pub fn get(self, assets: Option<&AssetServer>) -> Handle<T>{
-        match self {
-            HandleOrAsset::Handle(handle) => handle,
-            HandleOrAsset::Asset(asset) => {
-                assets.expect("Please pass in the AssetServer.")
-                    .add(asset)
-            },
-        }
-    }
-}
-
-impl<T: Asset> DslFrom<Handle<T>> for Option<HandleOrAsset<T>>{
-    fn dfrom(value: Handle<T>) -> Self {
-        Some(HandleOrAsset::Handle(value))
-    }
-}
-
-impl<T: Asset> DslFrom<&Handle<T>> for Option<HandleOrAsset<T>>{
-    fn dfrom(value: &Handle<T>) -> Self {
-        Some(HandleOrAsset::Handle(value.clone()))
-    }
-}
-
-impl<T: Asset> DslFrom<T> for Option<HandleOrAsset<T>>{
-    fn dfrom(value: T) -> Self {
-        Some(HandleOrAsset::Asset(value))
-    }
-}
-
-impl<T: Asset> DslFrom<&T> for Option<HandleOrAsset<T>> where T: Clone{
-    fn dfrom(value: &T) -> Self {
-        Some(HandleOrAsset::Asset(value.clone()))
-    }
+    ($($tt:tt)*) => {
+        $crate::size2!(@accumulate [] [$($tt)*])
+    };
 }

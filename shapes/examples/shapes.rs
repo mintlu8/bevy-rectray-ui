@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use bevy_aoui::{AoUIPlugin, linebreak};
-use bevy_aoui_shapes::{shape, Shapes, AoUIShapesPlugin};
+use bevy_aoui::{AouiPlugin, linebreak};
+use bevy_aoui_shapes::{shape, Shapes, AouiShapesPlugin};
 use bevy_prototype_lyon::prelude::*;
 
 pub fn main() {
@@ -8,8 +8,8 @@ pub fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, init)
         .add_plugins(ShapePlugin)
-        .add_plugins(AoUIPlugin)
-        .add_plugins(AoUIShapesPlugin)
+        .add_plugins(AouiPlugin)
+        .add_plugins(AouiShapesPlugin)
         .run();
 }
 

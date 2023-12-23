@@ -16,7 +16,7 @@ pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(EguiPlugin)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .add_systems(Startup, init)
         .add_systems(Update, egui_window)
         .run();

@@ -3,12 +3,13 @@ use float_next_after::NextAfter;
 
 use crate::{*, layout::*};
 
-type AoUIEntity<'t> = (
+type AouiEntity<'t> = (
     Entity,
     &'t mut Dimension,
     &'t Transform2D,
     &'t mut RotatedRect,
     &'t mut Opacity,
+    &'t mut Clipping,
 );
 
 #[allow(clippy::too_many_arguments)]
@@ -17,7 +18,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
     parent: ParentInfo,
     entity: Entity,
     rem: f32,
-    mut_query: &mut Query<AoUIEntity, TAll>,
+    mut_query: &mut Query<AouiEntity, TAll>,
     flex_query: &Query<&Container>,
     parent_query: &Query<&Parent>,
     child_query: &Query<&Children>,
@@ -31,12 +32,18 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
     }
 
     // SAFETY: safe since double mut access is gated by the hierarchy check
-    let Ok((entity, mut dim, transform, mut orig, mut opacity, ..)) = (unsafe {mut_query.get_unchecked(entity)}) else {return};
-    
+    let Ok((entity, mut dim, transform, mut orig, mut opacity, mut clipping, ..)) 
+        = (unsafe {mut_query.get_unchecked(entity)}) else {return};
+
     let (dimension, em) = dim.update(parent.dimension, parent.em, rem);
     let offset = transform.offset.as_pixels(parent.dimension, em, rem);
-    opacity.computed = opacity.opacity * parent.opacity;
-    let opacity = opacity.computed;
+    
+    clipping.global = parent.clip;
+
+    opacity.computed_opacity = opacity.opacity * parent.opacity;
+    opacity.computed_disabled = opacity.disabled || parent.disabled;
+    let disabled = opacity.computed_disabled;
+    let opacity = opacity.computed_opacity;
 
     if let Ok(layout) = flex_query.get(entity) {
         let children = child_query.get(entity).map(|x| x.iter()).into_iter().flatten();
@@ -66,11 +73,16 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             }
         }
         let margin = layout.margin.as_pixels(parent.dimension, em, rem);
-        let LayoutOutput{ entity_anchors, dimension: size } = layout.place(
+        let LayoutOutput{ mut entity_anchors, dimension: size } = layout.place(
             &LayoutInfo { dimension, em, rem, margin }, 
             args
         );
-
+        let padding = layout.padding.as_pixels(parent.dimension, em, rem) * 2.0;
+        let fac = size / (size + padding);
+        let size = size + padding;
+        if !fac.is_nan() {
+            entity_anchors.iter_mut().for_each(|(_, anc)| *anc *= fac);
+        }
         dim.size = size;
         let rect = RotatedRect::construct(
             &parent,
@@ -82,20 +94,29 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             transform.rotation,
             transform.scale,
             if transform.z != 0.0 {
-                parent.z + transform.z
+                parent.rect.z + transform.z
             } else {
-                parent.z.next_after(f32::INFINITY)
+                parent.rect.z.next_after(f32::INFINITY)
             }        
         );
 
-        queue.extend(entity_anchors.into_iter()
-            .map(|(e, anc)| (e, ParentInfo::from_anchor(Some(entity), &rect, anc, dimension, em, opacity))));
+        let info = ParentInfo {
+            entity: Some(entity),
+            rect,
+            anchor: None,
+            dimension: size,
+            em,
+            opacity,
+            disabled,
+            clip: if clipping.clip {Some(rect.affine.inverse())} else {parent.clip},
+        };
+
+        queue.extend(entity_anchors.into_iter().map(|(e, anc)| (e, info.with_anchor(anc))));
         if orig.as_ref() != &rect {
             *orig = rect
         }
-        let parent = ParentInfo::new(Some(entity), &rect, size, em, opacity);
         for (child, _) in other_entities {
-            queue.push((child, parent))
+            queue.push((child, info))
         }
         return;
     }
@@ -110,16 +131,26 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         transform.rotation,
         transform.scale,
         if transform.z != 0.0 {
-            parent.z + transform.z
+            parent.rect.z + transform.z
         } else {
-            parent.z.next_after(f32::INFINITY)
+            parent.rect.z.next_after(f32::INFINITY)
         }
     );
+    
 
     if let Ok(children) = child_query.get(entity) {
-        let parent = ParentInfo::new(Some(entity), &rect, dimension, em, opacity);
+        let info = ParentInfo {
+            entity: Some(entity),
+            rect,
+            anchor: None,
+            dimension,
+            em,
+            opacity,
+            disabled,
+            clip: if clipping.clip {Some(rect.affine.inverse())} else {parent.clip},
+        };
         for child in children {
-            queue.push((*child, parent))
+            queue.push((*child, info))
         }
     }
 
@@ -173,22 +204,31 @@ pub(crate) type TAll = ();
 pub fn compute_aoui_transforms<'t, R: RootQuery<'t>, TRoot: ReadOnlyWorldQuery, TAll: ReadOnlyWorldQuery>(
     root: Query<R::Query, R::ReadOnly>,
     root_entities: Query<Entity, TRoot>,
-    mut entity_query: Query<AoUIEntity, TAll>,
+    mut entity_query: Query<AouiEntity, TAll>,
     flex_query: Query<&Container>,
     parent_query: Query<&Parent>,
     child_query: Query<&Children>,
     control_query: Query<&LayoutControl>,
-    res_rem: Option<Res<AoUIREM>>,
+    res_rem: Option<Res<AouiREM>>,
 ) {
     let rem = res_rem.map(|x| x.get()).unwrap_or(16.0);
 
-    let (window_rect, dim) = R::as_rect(&root);
+    let (window_rect, dimension) = R::as_rect(&root);
 
     let mut queue = Vec::new();
+    let window_info = ParentInfo {
+        entity: None,
+        rect: window_rect,
+        anchor: None,
+        dimension,
+        em: rem,
+        opacity: 1.0,
+        disabled: false,
+        clip: None,
+    };
 
     for (entity, ..) in entity_query.iter_many(root_entities.iter()) {
-        let parent = ParentInfo::new(None, &window_rect, dim, rem, 1.0);
-        queue.push((entity, parent))
+        queue.push((entity, window_info))
     }
 
     while !queue.is_empty() {

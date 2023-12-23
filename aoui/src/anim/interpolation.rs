@@ -1,6 +1,9 @@
 use std::ops::{Add, Mul};
 
-use bevy::{math::{Vec2, Vec4}, render::color::Color, ecs::{component::Component, system::{Query, Res}}, time::Time, sprite::{Sprite, TextureAtlasSprite}, text::Text};
+use bevy::{render::color::Color, time::Time, text::Text};
+use bevy::sprite::{Sprite, TextureAtlasSprite};
+use bevy::ecs::{component::Component, system::{Query, Res}};
+use bevy::math::{Vec2, Vec4};
 use crate::{Transform2D, Dimension, Opacity};
 use interpolation::EaseFunction;
 use smallvec::SmallVec;
@@ -173,9 +176,9 @@ impl<T: Interpolation> Interpolate<T> {
         result
     }
 
-    /// Returns true on the last frame.
+    /// Update the timer
     pub fn update(&mut self, time: f32) {
-        self.current += time;
+        self.current = self.current + time;
     }
 
     /// Set position and stop interpolation.
@@ -184,25 +187,17 @@ impl<T: Interpolation> Interpolate<T> {
         self.current = 0.0;
         self.time = self.default_time;
     }
-    
-    /// Rules: if range is the same, ignore
-    /// 
-    /// If is already moving, use current position as `from`
+
+    /// If `to` is the current target, ignore.
+    /// If `to` is the current source, reverse.
+    /// Otherwise interpolate to the target.
     pub fn interpolate_to(&mut self, to: T::FrontEnd) {
-        if self.target() != to {
+        if self.range.len() > 1 && T::into_front_end(self.range[0].0) == to {
+            self.reverse()
+        } else if self.target() != to {
             self.range = [(self.get_data(), 0.0), (T::into_data(to), 1.0)].into_iter().collect();
             self.current = 0.0;
             self.time = self.default_time;
-        }
-    }
-
-    /// Call `reverse` if interpolating to current animation's source, 
-    /// otherwise call `interpolate_to`.
-    pub fn interpolate_to_or_reverse(&mut self, to: T::FrontEnd) {
-        if self.range.len() > 1 && T::into_front_end(self.range[0].0) == to {
-            self.reverse()
-        } else {
-            self.interpolate_to(to)
         }
     }
 
@@ -213,13 +208,16 @@ impl<T: Interpolation> Interpolate<T> {
         self.current = (self.time - self.current).clamp(0.0, self.time);
     }
 
-
-    /// Interpolate to a target.
-    /// If target is the same, always ignore.
-    /// If not, always replaces the first value with the current position.
+    /// If end of `range` is the current target, ignore.
+    /// If end of `range` is the current source, reverse.
+    /// Otherwise interpolate with range, using the current position as range[0].
+    /// 
+    /// Write directly if this behavior is not desired.
     pub fn interpolate(&mut self, range: impl IntoInterpolate<T>) {
         let mut range = range.into_interpolate();
-        if !opt_eq::<T>(self.range.last(), range.last()) {
+        if self.range.len() > 1 && opt_eq::<T>(range.last(), self.range.first()) {
+            self.reverse()
+        } else if !opt_eq::<T>(self.range.last(), range.last()) {
             let pos = self.get_data();
             range[0] = (pos, 0.0);
             self.range = range;
@@ -227,29 +225,15 @@ impl<T: Interpolation> Interpolate<T> {
             self.time = self.default_time;
         }
     }
-
-    /// Call `reverse` if interpolating to current animation's source, 
-    /// otherwise call `interpolate_to`.
-    pub fn interpolate_or_reverse(&mut self, range: impl IntoInterpolate<T>) {
-        let range = range.into_interpolate();
-        if self.range.len() > 1 && opt_eq::<T>(range.last(), self.range.first()) {
-            self.reverse()
-        } else {
-            self.interpolate(range)
-        }
-    }
     
-    /// Interpolate to a target, overwriting default time.
-    /// If target is the same, always ignore.
-    /// If not, always replaces the first value with the current position.
+    /// Interpolate to a target, overwriting default time, 
+    /// and using the current position as range[0].
     pub fn interpolate_with_time(&mut self, range: impl IntoInterpolate<T>, time: f32) {
         let mut range = range.into_interpolate();
-        if !opt_eq::<T>(self.range.last(), range.last()) {
-            let pos = self.get_data();
-            range[0] = (pos, 0.0);
-            self.range = range;
-            self.current = 0.0;
-        }
+        let pos = self.get_data();
+        range[0] = (pos, 0.0);
+        self.range = range;
+        self.current = 0.0;
         self.time = time;
     }
 }

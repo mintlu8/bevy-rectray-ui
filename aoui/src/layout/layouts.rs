@@ -16,12 +16,17 @@ const _: Option<Box<dyn Layout>> = None;
 /// meaning it will update its size based on the size occupied by its children. 
 /// You can parent it to an anchor of
 /// a fixed sized widget for alignment.
+/// 
+/// # Object Safety
+/// 
+/// This trait is object safe.
 pub trait Layout: Downcast + Debug + Send + Sync + 'static {
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput;
 }
 
 impl_downcast!(Layout);
 
+/// Output of a layout, containing anchors of entities, and the computed dimension of the layout.
 #[derive(Debug)]
 pub struct LayoutOutput {
     pub entity_anchors: Vec<(Entity, Vec2)>,
@@ -35,30 +40,32 @@ impl LayoutOutput {
     }
 }
 
-/// Dynamic layout that always has the same size as sum of its child, with margin added.
+/// Dynamic layout perfectly cotaining its child, best used with padding.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
-pub struct Padding {
+pub struct FitLayout {
     pub x: bool,
     pub y: bool,
 }
 
-impl Layout for Padding {
-    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
+impl Default for FitLayout {
+    fn default() -> Self {
+        FitLayout { x: true, y: true }
+    }
+}
+
+impl Layout for FitLayout {
+    fn place(&self, info: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
         let mut max = Vec2::ZERO;
-        let margin = parent.margin;
         let mut entity_anchors: Vec<_> = entities.into_iter().map(|x| {
             max = max.max(x.dimension);
             (x.entity, x.anchor.as_vec())
         }).collect();
 
         let dimension = Vec2::new(
-            if self.x {max.x} else {parent.dimension.x},
-            if self.y {max.y} else {parent.dimension.y},
+            if self.x {max.x} else {info.dimension.x},
+            if self.y {max.y} else {info.dimension.y},
         );
-        let m = (dimension - margin) / dimension;
-        entity_anchors.iter_mut().for_each(|(_, anchor)| *anchor *= m);
-        let dimension = dimension + margin * 2.0;
-        LayoutOutput { entity_anchors, dimension: dimension + margin * 2.0 }
+        LayoutOutput { entity_anchors, dimension }
     }
 }
 
@@ -127,8 +134,6 @@ pub struct SizedGridLayout {
     /// Significant when an early linebreak occurs.
     pub alignment: Alignment,
     /// if specified, adjust cell size to fill the grid without changing cell count.
-    /// 
-    /// This only affects [`Cells::Sized`] mode.
     pub stretch: bool,
 }
 

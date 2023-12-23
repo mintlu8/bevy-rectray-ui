@@ -1,4 +1,4 @@
-use bevy::{prelude::*, reflect::Reflect};
+use bevy::{prelude::*, reflect::Reflect, math::Affine2};
 
 use crate::{Size2, FontSize, Anchor};
 
@@ -26,11 +26,21 @@ pub struct Dimension {
     pub dim: DimensionSize,
     /// Modifies font size `em`.
     pub set_em: FontSize,
+    /// If set, always preserves the aspect ratio of the input sprite.
+    /// 
+    /// This will resize the dimension and affect children laid out against
+    /// this sprite.
+    pub preserve_aspect: bool,
     /// Evaluated size in pixels.
     ///     
     /// This value is computed every frame. 
     #[cfg_attr(feature="serde", serde(skip))]
     pub size: Vec2,
+    /// Aspect ratio of the sprite.
+    /// 
+    /// If paired with a sprite this will be copied.
+    #[cfg_attr(feature="serde", serde(skip))]
+    pub aspect: f32,
     /// Font size `em` on this sprite.
     /// 
     /// This value is computed every frame. 
@@ -44,7 +54,9 @@ impl Default for Dimension {
             dim: DimensionSize::Copied,
             set_em: FontSize::None,
             size: Vec2::ZERO,
-            em: 16.0,
+            preserve_aspect: false,
+            aspect: 1.0,
+            em: 0.0,
         }
     }
 }
@@ -56,7 +68,9 @@ impl Dimension {
         dim: DimensionSize::Copied,
         set_em: FontSize::None,
         size: Vec2::ZERO,
-        em: 16.0,
+        preserve_aspect: false,
+        aspect: 1.0,
+        em: 0.0,
     };
 
     /// Dimension inherited from parent.
@@ -64,6 +78,8 @@ impl Dimension {
         dim: DimensionSize::Owned(Size2::FULL),
         set_em: FontSize::None,
         size: Vec2::ZERO,
+        preserve_aspect: false,
+        aspect: 1.0,
         em: 0.0,
     };
 
@@ -74,6 +90,8 @@ impl Dimension {
             dim: DimensionSize::Owned(Size2::pixels(size.x, size.y)),
             set_em: FontSize::None,
             size: Vec2::ZERO,
+            preserve_aspect: false,
+            aspect: 1.0,
             em: 0.0,
         }
     }
@@ -84,6 +102,8 @@ impl Dimension {
             dim: DimensionSize::Owned(Size2::percent(size.x, size.y)),
             set_em: FontSize::None,
             size: Vec2::ZERO,
+            preserve_aspect: false,
+            aspect: 1.0,
             em: 0.0,
         }
     }
@@ -94,6 +114,8 @@ impl Dimension {
             dim: DimensionSize::Owned(size),
             set_em: FontSize::None,
             size: Vec2::ZERO,
+            preserve_aspect: false,
+            aspect: 1.0,
             em: 0.0,
         }
     }
@@ -104,6 +126,32 @@ impl Dimension {
             dim: self.dim,
             set_em: em,
             size: self.size,
+            preserve_aspect: false,
+            aspect: 1.0,
+            em: self.em,
+        }
+    }
+
+    /// Set aspect, and set preserve_aspect to true.
+    pub const fn with_aspect(self, aspect: f32) -> Self {
+        Self {
+            dim: self.dim,
+            set_em: self.set_em,
+            size: self.size,
+            preserve_aspect: true,
+            aspect,
+            em: self.em,
+        }
+    }
+
+    /// Add preserve aspect.
+    pub const fn with_preserve_aspect(self, preserve: bool) -> Self {
+        Self {
+            dim: self.dim,
+            set_em: self.set_em,
+            size: self.size,
+            preserve_aspect: preserve,
+            aspect: 1.0,
             em: self.em,
         }
     }
@@ -118,6 +166,19 @@ impl Dimension {
         };
         match self.dim {
             DimensionSize::Copied => (self.size, self.em),
+            DimensionSize::Owned(v) if self.preserve_aspect => {
+                let mut size = v.as_pixels(parent, self.em, rem);
+                let current_aspect = size.x / size.y;
+                if current_aspect > self.aspect {
+                    size.x = size.y * self.aspect
+                } else {
+                    size.y = size.x / self.aspect
+                }
+                if !size.is_nan() {
+                    self.size = size;
+                }
+                (self.size, self.em)
+            }
             DimensionSize::Owned(v) => {
                 self.size = v.as_pixels(parent, self.em, rem);
                 (self.size, self.em)
@@ -162,10 +223,14 @@ impl Dimension {
         }
     }
 
-    /// Update by a copied value.
-    pub fn update_copied(&mut self, value: impl FnOnce() -> Vec2) {
+    /// If `copied`, copy size. If `preserve_aspect`, copy aspect ratio.
+    pub fn update_size(&mut self, value: impl FnOnce() -> Vec2) {
         match self.dim {
             DimensionSize::Copied => self.size = value(),
+            DimensionSize::Owned(_) if self.preserve_aspect => {
+                let value = value();
+                self.aspect = value.y / value.x;
+            }
             _ => (),
         }
     }
@@ -179,7 +244,7 @@ impl Dimension {
     }
 }
 
-/// The 2D transform component for AoUI
+/// The 2D transform component for Aoui
 #[derive(Debug, Copy, Clone, Component, Reflect)]
 pub struct Transform2D{
     /// The sprite's offset, as well as
@@ -305,26 +370,40 @@ pub struct Opacity {
     /// User specified opacity of the widget.
     pub opacity: f32,
     /// Computed opacity of the widget.
-    pub computed: f32
+    pub computed_opacity: f32,
+    /// Disabled
+    pub disabled: bool,
+    /// Propagated disabled value.
+    pub computed_disabled: bool,
 }
 
 impl Opacity {
     /// Fully opaque.
     pub const OPAQUE: Self = Self {
         opacity: 1.0,
-        computed: 1.0,
+        computed_opacity: 1.0,
+        disabled: false,
+        computed_disabled: false,
     };
     /// Fully transparent.
     pub const TRANSPARENT: Self = Self {
         opacity: 0.0,
-        computed: 0.0,
+        computed_opacity: 0.0,
+        disabled: false,
+        computed_disabled: false,
     };
     /// Create opacity from a value.
     pub const fn new(v: f32) -> Self {
         Self {
             opacity: v,
-            computed: v,
+            computed_opacity: v,
+            disabled: false,
+            computed_disabled: false,
         }
+    }
+
+    pub fn is_active(&self) -> bool {
+        !self.computed_disabled && !self.disabled && self.computed_opacity > 0.0
     }
 }
 
@@ -340,4 +419,40 @@ impl Default for Opacity {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
 pub struct OpacityWriter;
 
+/// Data related to clipping.
+#[derive(Debug, Component, Default)]
+pub struct Clipping {
+    /// If set, use this sprite's bounding rectangle to clip its children.
+    /// 
+    /// This currently only affect events, you need `clipping_layer` for
+    /// render clipping. This might change in the future.
+    pub clip: bool,
+    /// Global space clipping, is the inverse of some parent's `RotatedRect`.
+    /// 
+    /// This occludes cursor events.
+    pub global: Option<Affine2>,
+    /// Local space clipping, between `0..=1`.
+    /// 
+    /// Experimental, unused currently.
+    pub local: Option<Rect>,
+}
 
+impl Clipping {
+    pub fn new(clip: bool) -> Self {
+        Clipping {
+            clip,
+            global: None,
+            local: None,
+        }
+    }
+
+    pub fn contains(&self, pos: Vec2) -> bool {
+        match self.global {
+            Some(affine) => {
+                let vec = affine.transform_point2(pos);
+                vec.x.abs() <= 0.5 && vec.y.abs() <= 0.5
+            }
+            None => true,
+        }
+    }
+}

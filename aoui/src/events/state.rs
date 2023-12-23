@@ -53,7 +53,7 @@ impl Default for CursorState {
 
 impl CursorState {
 
-    /// Check if mouse event is catched by AoUI this frame.
+    /// Check if mouse event is catched by Aoui this frame.
     pub fn catched(&self) -> bool {
         self.catched
     }

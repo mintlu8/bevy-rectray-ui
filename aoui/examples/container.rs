@@ -18,7 +18,7 @@ pub fn main() {
         }))
         .add_plugins(bevy_egui::EguiPlugin)
         .add_systems(Startup, init)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .add_systems(Update, egui_window)
         .insert_resource(ChildSize(Vec2::splat(30.0)))
         .run();
@@ -34,7 +34,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let texture = assets.load::<Image>("square.png");
     commands.spawn(Camera2dBundle::default());
 
-    let container = commands.spawn((AoUISpriteBundle {
+    let container = commands.spawn((AouiSpriteBundle {
         sprite: Sprite {
             color: Color::rgb_linear(0.8, 0.8, 0.8),
             ..Default::default()
@@ -47,9 +47,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             stretch: false,
         }),
         margin: Size2::pixels(2.0, 2.0),
+        padding: Size2::pixels(0.0, 0.0),
     }, RootFlex)).id();
 
-    commands.spawn((AoUISpriteBundle {
+    commands.spawn((AouiSpriteBundle {
         sprite: Sprite {
             color: Color::WHITE,
             ..Default::default()
@@ -71,7 +72,7 @@ pub fn random_color() -> Color {
 }
 
 pub fn spawn(commands: &mut Commands, anchor: Anchor, size: Vec2, flexbox: Entity, assets: &Res<AssetServer>){
-    let child = commands.spawn(AoUISpriteBundle {
+    let child = commands.spawn(AouiSpriteBundle {
         sprite: Sprite {
             color: random_color(),
             ..Default::default()
@@ -111,7 +112,7 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
 
     egui::Window::new("Console").show(ctx.ctx_mut(), |ui| {
         
-        ui.label("AoUI Container");
+        ui.label("Aoui Container");
 
         let Vec2 { x, y } = dimension.raw_mut();
         ui.add(Slider::new(x, 0.0..=2000.0).text("width"));

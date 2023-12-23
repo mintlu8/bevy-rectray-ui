@@ -4,7 +4,7 @@ use crate::Transform2D;
 
 use crate::widgets::scrollframe::CameraClip;
 
-use super::AoUICamera;
+use super::AouiCamera;
 
 
 /// Must be unparented to work correctly.
@@ -25,8 +25,8 @@ impl CustomCursor {
 
 pub fn custom_cursor_controller(
     windows: Query<&Window, With<PrimaryWindow>>,
-    marked_camera: Query<(&Camera, &GlobalTransform), With<AoUICamera>>,
-    unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<AoUICamera>, Without<CameraClip>)>,
+    marked_camera: Query<(&Camera, &GlobalTransform), With<AouiCamera>>,
+    unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<AouiCamera>, Without<CameraClip>)>,
     mut query: Query<(&CustomCursor, &mut Transform2D, &mut Visibility)>
 ) {
 

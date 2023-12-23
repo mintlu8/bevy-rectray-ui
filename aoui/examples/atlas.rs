@@ -1,7 +1,7 @@
 use bevy::asset::AssetLoader;
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::WorldExtension;
-use bevy_aoui::AoUIPlugin;
+use bevy_aoui::AouiPlugin;
 use bevy_aoui::widgets::scroll::ScrollDirection;
 
 pub fn main() {
@@ -16,7 +16,7 @@ pub fn main() {
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .init_asset_loader::<AtlasImporter>()
         .add_systems(Startup, init)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .register_cursor_default(CursorIcon::Arrow)
         .insert_resource(ScrollDirection::INVERTED)
         .run();
@@ -69,14 +69,14 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    textbox!(commands {
+    text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: sig_fps().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x))
     });
     
-    vbox!((commands, assets)  {
+    vbox!(commands  {
         child: atlas! {
             dimension: [128, 128],
             atlas: "ducky.json",

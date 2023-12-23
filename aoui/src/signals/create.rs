@@ -1,53 +1,30 @@
 
-use std::marker::PhantomData;
+use super::{DataTransfer, Signal, mpmc::SenderBuilder, mpmc::ReceiverBuilder};
 
-use super::{Sender, Receiver, mpmc::Signal};
-
-pub trait SignalCreate {
+pub trait SignalCreate<T> {
     fn new() -> Self;
 }
 
 macro_rules! signal_create {
     ($sender: ident, $first: ident) => {
-        impl SignalCreate for ($sender, $first) {
+        impl<T: DataTransfer> SignalCreate<T> for ($sender<T>, $first<T>) {
             fn new() -> Self {
                 let signal = Signal::new();
                 (
-                    $sender{
-                        signal: signal.clone(), 
-                        map: None,
-                        p: PhantomData
-                    },
-                    $first{
-                        signal, 
-                        map: None,
-                        p: PhantomData
-                    }, 
+                    $sender::new(signal.clone()),
+                    $first::new(signal),
                 )
             }
         }
     };
     ($sender: ident, $first: ident, $($receivers: ident),*) => {
-        impl
-            SignalCreate for ($sender, $($receivers),* , $first) {
+        impl<T: DataTransfer> SignalCreate<T> for ($sender<T>, $($receivers<T>),* , $first<T>) {
             fn new() -> Self {
                 let signal = Signal::new();
                 (
-                    $sender{
-                        signal: signal.clone(), 
-                        map: None,
-                        p: PhantomData
-                    }, 
-                    $($receivers{
-                        signal: signal.clone(), 
-                        map: None,
-                        p: PhantomData
-                    },)*
-                    $first{
-                        signal, 
-                        map: None,
-                        p: PhantomData
-                    },
+                    $sender::new(signal.clone()),
+                    $($receivers::new(signal.clone()),)*
+                    $first::new(signal),
                 )
             }
         }
@@ -56,10 +33,10 @@ macro_rules! signal_create {
     };
 }
 
-signal_create!(Sender, 
-    Receiver, Receiver, Receiver, Receiver,
-    Receiver, Receiver, Receiver, Receiver,
-    Receiver, Receiver, Receiver, Receiver
+signal_create!(SenderBuilder, 
+    ReceiverBuilder, ReceiverBuilder, ReceiverBuilder, ReceiverBuilder,
+    ReceiverBuilder, ReceiverBuilder, ReceiverBuilder, ReceiverBuilder,
+    ReceiverBuilder, ReceiverBuilder, ReceiverBuilder, ReceiverBuilder
 );   
 
 
@@ -111,6 +88,6 @@ signal_create!(Sender,
 /// app.register_aoui_signal::<ButtonClick>()
 /// # */
 /// ```
-pub fn signal<S: SignalCreate>() -> S {
+pub fn signal<T, S: SignalCreate<T>>() -> S {
     S::new()
 }

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_aoui::{AoUIPlugin, WorldExtension};
+use bevy_aoui::{AouiPlugin, WorldExtension};
 
 
 pub fn main() {
@@ -13,7 +13,7 @@ pub fn main() {
         }))
         .add_systems(Startup, init)
         .register_cursor_default(CursorIcon::Arrow)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .run();
 }
 
@@ -24,7 +24,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let (submit_sender, recv_s1, recv_s2) = signal();
     let (change_sender, recv_c1, recv_c2) = signal();
     inputbox! ((commands, assets) {
-        dimension: size2!([400, 1 em]),
+        dimension: size2!(400, 1 em),
         offset: [0, 200],
         font_size: em(4),
         hitbox: Rect(1),
@@ -34,42 +34,42 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         cursor_bar: rectangle! {
             color: color!(gold),
             z: 0.1,
-            dimension: size2!([2, 1 em]),
+            dimension: size2!(2, 1 em),
         },
         cursor_area: rectangle! {
             color: color!(green) * 0.5,
             z: -0.2,
-            dimension: size2!([12, 1 em]),
+            dimension: size2!(12, 1 em),
         },
-        submit: submit_sender,
-        change: change_sender,
+        on_submit: submit_sender,
+        on_change: change_sender,
     });
 
-    textbox!(commands {
+    text!((commands, assets) {
         text: "This is a receiver.",
         offset: [-200, 0],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_s1.mark::<SigText>(),
+        extra: recv_s1.build::<SigText>(),
     });
 
-    textbox!(commands {
+    text!((commands, assets) {
         text: "This is a formatter.",
         offset: [-200, -200],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_s2.mark::<SigText>().map(|s: String| format!("Received string \"{}\"!", s)),
+        extra: recv_s2.map::<SigText>(|s: String| format!("Received string \"{}\"!", s)),
     });
 
-    textbox!(commands {
+    text!((commands, assets) {
         text: "This is a change detector.",
         offset: [200, 0],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_c1.mark::<SigText>(),
+        extra: recv_c1.build::<SigText>(),
     });
 
-    textbox!(commands {
+    text!((commands, assets) {
         text: "This is a change detecting formatter.",
         offset: [200, -200],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_c2.mark::<SigText>().map(|s: String| format!("Received string \"{}\"!", s)),
+        extra: recv_c2.map::<SigText>(|s: String| format!("Received string \"{}\"!", s)),
     });
 }

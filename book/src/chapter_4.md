@@ -1,6 +1,6 @@
 # DSL Syntax
 
-For every AoUI widget builder struct, there is a macro with a corresponding name.
+For every Aoui widget builder struct, there is a macro with a corresponding name.
 e.g. `SpriteBuilder` has `sprite!`
 
 The macro has syntax almost identical to struct construction, that returns an `Entity`:
@@ -32,7 +32,7 @@ which has to be a `TokenTree` (single variable or in parenthesis).
 if you need to pass in the asset server `assets`:
 
 ```rust
-frame!((commands, assets) {
+frame!(commands {
     dimension: [20, 20],
     color: color!(red),
 })
@@ -119,20 +119,20 @@ sprite! (commands {
 Example: Hierarchy
 
 ```rust
-sprite! ((commands, assets) {
-    dimension: size2!([400, 32]),
+sprite! (commands {
+    dimension: size2!(400, 32),
     color: color!(red),
     child: sprite! {
         color: color!(gold),
-        dimension: size2!([2, 1 em]),
+        dimension: size2!(2, 1 em),
         child: sprite! {
             color: color!(blue),
-            dimension: size2!([100%, 100%]),
+            dimension: size2!(100%, 100%),
         }
     },
     child: textbox! {
         color: color!(green) * 0.5,
-        dimension: size2!([12, 1 em]),
+        dimension: size2!(12, 1 em),
         text: "Hello, World!"
     },
 });

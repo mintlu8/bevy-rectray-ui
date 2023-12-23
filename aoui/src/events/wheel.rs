@@ -1,10 +1,9 @@
 use bevy::{input::mouse::MouseWheel, math::Vec2, window::{Window, PrimaryWindow}, render::camera::Camera, transform::components::GlobalTransform, ecs::component::Component};
 use bevy::ecs::{system::{Query, Commands}, event::EventReader, query::{With, Without}, entity::Entity};
-use crate::{RotatedRect, Hitbox};
 
 use crate::widgets::scrollframe::CameraClip;
 
-use super::{EventFlags, AoUICamera};
+use super::{EventFlags, AouiCamera, CursorDetection, ActiveDetection};
 
 
 /// This is relatively independent, as the mousewheel action does not take
@@ -23,9 +22,9 @@ impl MouseWheelAction {
 pub fn mousewheel_event(
     mut commands: Commands,
     windows: Query<&Window, With<PrimaryWindow>>,
-    marked_camera: Query<(&Camera, &GlobalTransform), With<AoUICamera>>,
-    unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<AoUICamera>, Without<CameraClip>)>,
-    query: Query<(Entity, &RotatedRect, &Hitbox, &EventFlags)>,
+    marked_camera: Query<(&Camera, &GlobalTransform), With<AouiCamera>>,
+    unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<AouiCamera>, Without<CameraClip>)>,
+    query: Query<(Entity, &EventFlags, ActiveDetection, CursorDetection, )>,
     mut reader: EventReader<MouseWheel>,
 ) {
     let(camera, camera_transform) = match marked_camera.get_single() {
@@ -39,9 +38,9 @@ pub fn mousewheel_event(
     let Some(mouse_pos) = window.cursor_position()
         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
         .map(|ray| ray.origin.truncate()) else {return;};
-    if let Some(entity) = query.iter().filter(|(.., flags)| flags.contains(crate::events::MouseWheel))
-        .filter(|(_, rect, hitbox, _)| hitbox.contains(rect, mouse_pos))
-        .max_by(|(_, a, ..), (_, b, ..)| a.z.total_cmp(&b.z))
+    if let Some(entity) = query.iter()
+        .filter(|(_, flags, active, hitbox)| flags.contains(EventFlags::MouseWheel) && active.is_active() && hitbox.contains(mouse_pos))
+        .max_by(|(.., a), (.., b)| a.compare(b))
         .map(|(entity,..)| entity) {
             
         for event in reader.read() {

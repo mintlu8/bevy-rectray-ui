@@ -66,6 +66,6 @@ pub fn build_deferred_atlas(
         };
         commands.entity(entity)
             .remove::<DeferredAtlasBuilder>()
-            .insert(server.add(dbg!(atlas)));
+            .insert(server.add(atlas));
     }
 }

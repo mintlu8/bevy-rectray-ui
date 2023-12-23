@@ -4,9 +4,9 @@ use bevy::{prelude::{Vec2, Resource}, reflect::Reflect};
 /// 
 /// By default this is `16 px`.
 #[derive(Debug, Resource)]
-pub struct AoUIREM(f32);
+pub struct AouiREM(f32);
 
-impl AoUIREM {
+impl AouiREM {
     pub fn get(&self) -> f32 {
         self.0
     }
@@ -15,7 +15,7 @@ impl AoUIREM {
         self.0 = rem
     }
 }
-impl Default for AoUIREM {
+impl Default for AouiREM {
     fn default() -> Self {
         Self(16.0)
     }
@@ -51,12 +51,29 @@ pub enum SizeUnit{
     Rem,
     /// Percent of parent size.
     Percent,
-    /// 100% - a px
+    /// 100% + a px
     MarginPx,
-    /// 100% - a em
+    /// 100% + a em
     MarginEm,
-    /// 100% - a rem
+    /// 100% + a rem
     MarginRem,
+}
+
+
+impl SizeUnit {
+    /// Compute size in pixels given parent info.
+    #[inline]
+    pub fn as_pixels(self, value: f32, parent: f32, em: f32, rem: f32) -> f32 {
+        match self {
+            SizeUnit::Pixels => value,
+            SizeUnit::Em => value * em,
+            SizeUnit::Rem => value * rem,
+            SizeUnit::Percent => value * parent,
+            SizeUnit::MarginPx => parent + value,
+            SizeUnit::MarginEm => parent + value * em,
+            SizeUnit::MarginRem => parent + value * rem,
+        }
+    }
 }
 
 /// A context sensitive Vec2
@@ -67,21 +84,17 @@ pub struct Size2 {
     raw: Vec2,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Default, Reflect)]
+pub struct Size {
+    unit: SizeUnit,
+    value: f32,
+}
 
-impl SizeUnit {
-
+impl Size {
     /// Compute size in pixels given parent info.
     #[inline]
-    pub fn as_pixels(self, value: f32, parent: f32, em: f32, rem: f32) -> f32 {
-        match self {
-            SizeUnit::Pixels => value,
-            SizeUnit::Em => value * em,
-            SizeUnit::Rem => value * rem,
-            SizeUnit::Percent => value * parent,
-            SizeUnit::MarginPx => parent - value,
-            SizeUnit::MarginEm => parent - value * em,
-            SizeUnit::MarginRem => parent - value * rem,
-        }
+    pub fn as_pixels(self, parent: f32, em: f32, rem: f32) -> f32 {
+        self.unit.as_pixels(self.value, parent, em, rem)
     }
 }
 

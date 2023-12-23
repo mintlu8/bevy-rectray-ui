@@ -1,18 +1,18 @@
 # Primitive Widgets
 
-`bevy_aoui` has a few primitive widgets for `AoUI`
+`bevy_aoui` has a few primitive widgets for `Aoui`
 corresponding to bevy2d's primitives.
 They only display something and have no additional behaviors.
 
 | name | bundle | widget | macro |
 | ---- | ------ | ------ | ----- |
-| Frame | `AoUIBundle` | `FrameBuilder` | `frame!` |
-| Sprite | `AoUISpriteBundle` | `SpriteBuilder` | `sprite!` |
+| Frame | `AouiBundle` | `FrameBuilder` | `frame!` |
+| Sprite | `AouiSpriteBundle` | `SpriteBuilder` | `sprite!` |
 | Rectangle | -- | `RectangleBuilder` | `rectangle!` |
-| Text | `AoUIText2dBundle` | `TextBoxBuilder` | `textbox!` |
-| Atlas | `AoUIAtlasSpriteBundle` | `AtlasSpriteBuilder` | `atlas!` |
+| Text | `AouiText2dBundle` | `TextBoxBuilder` | `textbox!` |
+| Atlas | `AouiAtlasSpriteBundle` | `AtlasSpriteBuilder` | `atlas!` |
 | MaterialSprite | -- | `MaterialSpriteBuilder` | `material_sprite!` |
-| MaterialMesh | `AoUIMaterialMesh2dBundle` | `MaterialMeshBuilder` | `material_mesh!` |
+| MaterialMesh | `AouiMaterialMesh2dBundle` | `MaterialMeshBuilder` | `material_mesh!` |
 
 When using macros it might be difficult to find documents for it from your editor.
 The easiest way is to look for its corresponding builder struct in

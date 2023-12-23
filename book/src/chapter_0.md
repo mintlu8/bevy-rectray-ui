@@ -97,6 +97,10 @@
     However this will incur a performance cost and might not be the ideal solution
     for every use case.
 
+    A bounds editing implementation could be made in the future,
+    but that is difficult to maintain,
+    widget specific, and may require unstable features from bevy.
+
 * No support for drastically different aspect ratios
 
     `bevy_aoui` is not a html engine, and our Layout systems is

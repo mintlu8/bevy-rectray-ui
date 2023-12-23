@@ -18,7 +18,7 @@ pub fn main() {
         .add_systems(Startup, init)
         .add_systems(Update, egui_window)
         .add_plugins(EguiPlugin)
-        .add_plugins(AoUIPlugin)
+        .add_plugins(AouiPlugin)
         .run();
 }
 
@@ -35,7 +35,7 @@ pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, enitity: 
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
     for anchor in ANCHORS {
-        let child = commands.spawn(AoUISpriteBundle {
+        let child = commands.spawn(AouiSpriteBundle {
             sprite: Sprite {
                 color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5),
                 custom_size: Some(Vec2::new(size, size)),
@@ -59,18 +59,18 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let texture = assets.load::<Image>("square.png");
     commands.spawn(Camera2dBundle::default());
 
-    textbox!(commands {
+    text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
         z: 100,
-        extra: sig_fps().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x)),
+        extra: fps_signal().mark::<SigText>().map(|x: f32| format!("FPS: {:.2}", x)),
     });
 
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
 
-    let enitity = commands.spawn(AoUISpriteBundle {
+    let enitity = commands.spawn(AouiSpriteBundle {
         sprite: Sprite {
             color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 1.0),
             custom_size: Some(Vec2::new(800.0, 800.0)),

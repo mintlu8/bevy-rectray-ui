@@ -43,6 +43,18 @@ impl<'t, T> DslFrom<&'t mut T> for T where T: Clone{
     }
 }
 
+impl DslFrom<&str> for Option<String> {
+    fn dfrom(value: &str) -> Self {
+        Some(value.to_owned())
+    }
+}
+
+impl DslFrom<i32> for Option<f32> {
+    fn dfrom(value: i32) -> Self {
+        Some(value as f32)
+    }
+}
+
 impl DslFrom<i32> for f32 {
     fn dfrom(value: i32) -> Self {
         value as f32
