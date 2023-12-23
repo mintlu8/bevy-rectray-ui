@@ -1,7 +1,6 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::WorldExtension;
 use bevy_aoui::AouiPlugin;
-use bevy_aoui::widgets::scroll::ScrollDirection;
 
 pub fn main() {
     App::new()
@@ -16,7 +15,7 @@ pub fn main() {
         .add_systems(Startup, init)
         .add_plugins(AouiPlugin)
         .register_cursor_default(CursorIcon::Arrow)
-        .insert_resource(ScrollDirection::INVERTED)
+        .register_inverted_scrolling([0.5, 0.5])
         .run();
 }
 

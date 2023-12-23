@@ -19,15 +19,15 @@ pub use crate::anim::{Interpolate, Offset, Rotation, Scale, Index};
 pub use interpolation::EaseFunction;
 pub use crate::events::{
     EventFlags,
-    LeftDown, LeftClick, 
-    MidDown, MidClick, 
-    RightDown, RightClick,
-    DragEnd, Drop, ClickOutside,
-    Hover, 
-    LeftPressed, LeftDrag,
-    MidPressed, MidDrag,
-    RightPressed, RightDrag,
     CustomCursor,
+    EvLeftDown, EvLeftClick, 
+    EvMidDown, EvMidClick, 
+    EvRightDown, EvRightClick,
+    EvDragEnd, EvDrop, EvClickOutside,
+    EvHover, 
+    EvLeftPressed, EvLeftDrag,
+    EvMidPressed, EvMidDrag,
+    EvRightPressed, EvRightDrag,
 
     EvButtonClick, EvToggleChange,
     EvObtainFocus, EvLoseFocus,
@@ -43,6 +43,7 @@ pub use crate::widgets::button::{
 pub use crate::widgets::scroll::{
     Scrolling, ScrollDirection
 };
+pub use crate::widgets::drag::DragConstraint;
 
 pub const FlipX: [bool; 2] = [true, false];
 pub const FlipY: [bool; 2] = [false, true];

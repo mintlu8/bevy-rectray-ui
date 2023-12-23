@@ -23,7 +23,7 @@ ab_glyph = "^0.2.23"
 arboard = { version = "^3.2", default-features = false }
 colorthis = {version = "^0.1.1", features=["compact"]}
 substring = "^1.4"
-tlbf = "^0.2"
+tlbf = "^0.3"
 interpolation = "^0.3"
 smallvec = { version = "^1.11", features = ["const_new"] }
 parse-color = "^0.1.2"

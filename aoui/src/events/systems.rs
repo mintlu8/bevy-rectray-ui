@@ -119,16 +119,16 @@ pub fn mouse_button_input(
             state.catched = true;
             if buttons.just_pressed(MouseButton::Left) {
                 commands.entity(entity).insert(CursorAction(EventFlags::LeftDown));
-                if flag.contains(LeftDrag) {
+                if flag.contains(EventFlags::LeftDrag) {
                     state.drag_target = Some(entity);
                     state.dragging = true;
                     state.drag_button = MouseButton::Left;
-                    state.drag_dbl_click = flag.contains(DoubleClick);
+                    state.drag_dbl_click = flag.contains(EventFlags::DoubleClick);
                     commands.entity(entity).insert(CursorFocus(EventFlags::LeftDrag));
                 } else {
                     commands.entity(entity).insert(CursorFocus(EventFlags::LeftPressed));
                 }
-            } else if flag.contains(LeftClick) {
+            } else if flag.contains(EventFlags::LeftClick) {
                 commands.entity(entity).insert(CursorFocus(EventFlags::LeftPressed));
             }
         }
@@ -144,7 +144,7 @@ pub fn mouse_button_input(
             state.catched = true;
             if buttons.just_pressed(MouseButton::Right) {
                 commands.entity(entity).insert(CursorAction(EventFlags::RightDown));
-                if flag.contains(RightDrag) {
+                if flag.contains(EventFlags::RightDrag) {
                     state.drag_target = Some(entity);
                     state.drag_button = MouseButton::Right;
                     state.drag_dbl_click = false;
@@ -152,7 +152,7 @@ pub fn mouse_button_input(
                 } else {
                     commands.entity(entity).insert(CursorFocus(EventFlags::RightPressed));
                 }
-            } else if flag.contains(RightClick) {
+            } else if flag.contains(EventFlags::RightClick) {
                 commands.entity(entity).insert(CursorFocus(EventFlags::RightPressed));
             }
         }
@@ -169,7 +169,7 @@ pub fn mouse_button_input(
             if buttons.just_pressed(MouseButton::Middle) {
                 state.down_pos = mouse_pos;
                 commands.entity(entity).insert(CursorAction(EventFlags::MidDown));
-                if flag.contains(MidDrag) {
+                if flag.contains(EventFlags::MidDrag) {
                     state.drag_target = Some(entity);
                     state.drag_button = MouseButton::Middle;
                     state.drag_dbl_click = false;
@@ -177,7 +177,7 @@ pub fn mouse_button_input(
                 } else {
                     commands.entity(entity).insert(CursorFocus(EventFlags::MidPressed));
                 }
-            } else if flag.contains(MidClick) {
+            } else if flag.contains(EventFlags::MidClick) {
                 commands.entity(entity).insert(CursorFocus(EventFlags::MidPressed));
             }
         }
@@ -188,7 +188,7 @@ pub fn mouse_button_input(
                 .filter(|(.., hitbox)| hitbox.contains(mouse_pos) && hitbox.contains(down))
                 .max_by(|(.., a), (.., b)| a.compare(b))
                 .map(|(entity, flags, _)| 
-                    if flags.contains(DoubleClick) && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
+                    if flags.contains(EventFlags::DoubleClick) && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
                         commands.entity(entity).insert(CursorAction(EventFlags::DoubleClick));
                         state.clear_dbl_click();
                     } else {

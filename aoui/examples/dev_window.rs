@@ -1,7 +1,7 @@
 // This tries to be egui
 
 use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
-use bevy_aoui::{AouiPlugin, widgets::drag::Draggable, events::EvMouseDrag, WorldExtension};
+use bevy_aoui::{AouiPlugin, widgets::drag::Draggable, WorldExtension};
 
 pub fn main() {
     App::new()

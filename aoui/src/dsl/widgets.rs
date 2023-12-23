@@ -9,7 +9,7 @@ use crate::widgets::scrollframe::ClippingBundle;
 use crate::{Dimension, Anchor, Size2, Hitbox, build_frame, Clipping};
 use crate::bundles::{AouiBundle, AouiSpriteBundle};
 use crate::dsl::prelude::{PropagateFocus, SetCursor};
-use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit, MouseWheel};
+use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit, EvMouseWheel};
 use crate::widgets::scroll::Scrolling;
 use crate::widget_extension;
 use crate::signals::Receiver;
@@ -231,7 +231,7 @@ widget_extension!(
         /// If set, configure scrolling for this widget.
         pub scroll: Option<Scrolling>,
         /// If set, send the scrolling input to another widget if scrolled to the end.
-        pub scroll_send: Handlers<MouseWheel>,
+        pub scroll_send: Handlers<EvMouseWheel>,
         /// If set, receive the scrolling input from a signal.
         pub scroll_recv: Option<Receiver<SigScroll>>,
         /// Set the size of the buffer this is rendered to, won't be resized dynamically.

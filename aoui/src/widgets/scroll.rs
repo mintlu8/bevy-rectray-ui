@@ -1,10 +1,10 @@
 
 use bevy::{ecs::{system::{Query, Res, Resource, Commands, ResMut}, component::Component, query::Without}, hierarchy::Children, math::Vec2, log::warn};
-use crate::{Dimension, Transform2D, Anchor, AouiREM, signals::{Receiver, KeyStorage}, signals::types::SigScroll, events::{MouseWheel, Handlers, EvPositionFactor}};
+use crate::{Dimension, Transform2D, Anchor, AouiREM, signals::{Receiver, KeyStorage}, signals::types::SigScroll, events::{EvMouseWheel, Handlers, EvPositionFactor}};
 
 use crate::events::MouseWheelAction;
 
-/// Resource that determines the direction and magnitude of mousewheel scrolling.
+/// Resource that determines the direction and magnitude of mouse wheel scrolling.
 #[derive(Debug, Clone, Copy, Resource)]
 pub struct ScrollDirection(Vec2);
 
@@ -15,6 +15,9 @@ impl ScrollDirection {
     pub const INVERTED: Self = Self(Vec2::new(1.0, -1.0));
     pub fn new(dir: Vec2) -> Self {
         Self(dir)
+    }
+    pub fn inverted(dir: Vec2) -> Self {
+        Self(dir * Vec2::new(1.0, -1.0))
     }
     pub fn get(&self) -> Vec2 {
         self.0
@@ -118,9 +121,9 @@ pub fn scrolling_system(
     mut key_storage: ResMut<KeyStorage>,
     rem: Option<Res<AouiREM>>,
     direction: Option<Res<ScrollDirection>>,
-    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Handlers<MouseWheel>>, Option<&Handlers<EvPositionFactor>>)>,
-    sender: Query<(&MouseWheelAction, &Handlers<MouseWheel>), Without<Scrolling>>,
-    receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Handlers<MouseWheel>>, Option<&Handlers<EvPositionFactor>>), Without<MouseWheelAction>>,
+    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Handlers<EvMouseWheel>>, Option<&Handlers<EvPositionFactor>>)>,
+    sender: Query<(&MouseWheelAction, &Handlers<EvMouseWheel>), Without<Scrolling>>,
+    receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Handlers<EvMouseWheel>>, Option<&Handlers<EvPositionFactor>>), Without<MouseWheelAction>>,
     mut child_query: Query<(&Dimension, &mut Transform2D, Option<&Children>)>,
 ) {
     let rem = rem.map(|x|x.get()).unwrap_or(16.0);

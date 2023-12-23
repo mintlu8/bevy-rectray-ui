@@ -7,13 +7,13 @@ use bevy::math::Vec2;
 use smallvec::SmallVec;
 
 use crate::dsl::{DslFrom, DslInto};
-use crate::events::{EventFlags, CursorAction, CursorFocus, ClickOutside, CursorClickOutside};
+use crate::events::*;
 use crate::signals::{DataTransfer, Sender, DynamicSender, SignalMapper, SenderBuilder, KeyStorage, Object};
 use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;
 
-use super::{EvLoseFocus, EvObtainFocus, EvButtonClick, EvTextSubmit, EvTextChange, EvToggleChange, MouseWheel, EvMouseDrag, EvPositionFactor};
+use super::{EvLoseFocus, EvObtainFocus, EvButtonClick, EvTextSubmit, EvTextChange, EvToggleChange, EvMouseDrag, EvPositionFactor};
 
 /// Event handlers.
 #[derive(Debug, Component)]
@@ -202,13 +202,13 @@ mod sealed {
 
     macro_rules! impl_entity_query_for_mouse_active {
         ($($ident:ident)*) => {
-            $(impl EventHandling for $crate::events::$ident {
+            $(impl EventHandling for $crate::events::sealed::$ident {
                 type Data = ();
                 type Context = ();
                 fn new_context() -> Self::Context {}
             }
             
-            impl EventQuery for $crate::events::$ident {
+            impl EventQuery for $crate::events::sealed::$ident {
                 type Component = CursorAction;
             
                 fn validate(_: &Self::Context, other: &Self::Component) -> bool {
@@ -226,7 +226,7 @@ mod sealed {
     );
 }
 
-impl EventHandling for MouseWheel {
+impl EventHandling for EvMouseWheel {
     type Data = Vec2;
     type Context = ();
     fn new_context() -> Self::Context {}
@@ -240,13 +240,13 @@ impl EventHandling for EvMouseDrag {
     }
 }
 
-impl EventHandling for ClickOutside {
+impl EventHandling for EvClickOutside {
     type Data = ();
     type Context = ();
     fn new_context() -> Self::Context {}
 }
 
-impl EventQuery for ClickOutside {
+impl EventQuery for EvClickOutside {
     type Component = CursorClickOutside;
 
     fn validate(_: &Self::Context, _: &Self::Component) -> bool {
@@ -257,12 +257,12 @@ impl EventQuery for ClickOutside {
 
 macro_rules! impl_entity_query_for_mouse_state {
     ($($ident:ident)*) => {
-        $(impl EventHandling for $crate::events::$ident {
+        $(impl EventHandling for $crate::events::sealed::$ident {
             type Data = ();
             type Context = ();
             fn new_context() -> Self::Context {}
         }
-        impl EventQuery for $crate::events::$ident {
+        impl EventQuery for $crate::events::sealed::$ident {
             type Component = CursorFocus;
         
             fn validate(_: &Self::Context, other: &Self::Component) -> bool {

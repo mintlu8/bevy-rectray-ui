@@ -4,6 +4,8 @@ use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use bevy_aoui::AouiPlugin;
 use bevy_aoui::WorldExtension;
+use bevy_aoui::signals::Receiver;
+use bevy_aoui::signals::types::SigInvoke;
 
 pub fn main() {
     App::new()
@@ -15,12 +17,23 @@ pub fn main() {
             ..Default::default()
         }))
         .add_systems(Startup, init)
+        .add_systems(Update, recv)
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_plugins(AouiPlugin)
         .register_cursor_default(CursorIcon::Arrow)
         .run();
 }
 
+#[derive(Debug, Component)]
+pub struct Listen(Receiver<SigInvoke>);
+
+pub fn recv(query: Query<&Listen>) {
+    for item in query.iter() {
+        if item.0.poll_any() {
+            println!("Signal is received!");
+        }
+    }
+}
 
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
@@ -133,7 +146,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
     });
     
-    let (send, recv) = signal();
+    let (send, recv, recv2) = signal();
+
+    commands.spawn(Listen(recv2.build()));
 
     text! ((commands, assets) {
         offset: [300, 0],
@@ -141,7 +156,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         text: "<= Click this button.",
         extra: recv.map::<SigText>(|_: ()| format!("<= You clicked it!"))
     });
-
 
     button! ((commands, assets) {
         dimension: size2!(12 em, 2 em),
@@ -175,9 +189,12 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             extra: DisplayIf(EventFlags::LeftPressed),
             z: 0.1
         },
-        extra: handler!{LeftClick => {
+        extra: handler!{EvLeftClick => {
             fn (){ println!("Clicked"); },
             send,
+        }},
+        extra: handler!{EvHover => {
+            fn (){ println!("Hovering"); },
         }},
     });
 }

@@ -1,7 +1,7 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::{AouiPlugin, widgets::drag::DragConstraint, events::{EvPositionFactor, EvMouseDrag}};
+use bevy_aoui::AouiPlugin;
 
 pub fn main() {
     App::new()

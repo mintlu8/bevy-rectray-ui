@@ -65,7 +65,7 @@
 //! outside the scope of this crate.
 
 use bevy::{prelude::*, ecs::query::WorldQuery};
-use crate::{schedule::{AouiEventSet, AouiCleanupSet}, Hitbox, Clipping, RotatedRect, Opacity};
+use crate::{schedule::{AouiEventSet, AouiCleanupSet}, Hitbox, Clipping, RotatedRect, Opacity, WorldExtension};
 
 mod systems;
 mod state;
@@ -138,28 +138,53 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .add_systems(PreUpdate, mouse_button_input.in_set(AouiEventSet))
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
             .add_systems(Last, remove_focus.in_set(AouiCleanupSet))
-            .add_systems(Update, cursor::custom_cursor_controller)
             .add_systems(Update, (
-                event_handle::<LeftClick>,
-                event_handle::<LeftDown>,
-                event_handle::<DragEnd>,
-                event_handle::<RightClick>,
-                event_handle::<RightDown>,
-                event_handle::<MidClick>,
-                event_handle::<MidDown>,
-                event_handle::<DoubleClick>,
-                event_handle::<DragEnd>,
-                event_handle::<ClickOutside>,
-
-                event_handle::<Hover>,
-                event_handle::<LeftPressed>,
-                event_handle::<LeftDrag>,
-                event_handle::<MidPressed>,
-                event_handle::<MidDrag>,
-                event_handle::<RightPressed>,
-                event_handle::<RightDrag>,
+                event_handle::<EvLeftClick>,
+                event_handle::<EvLeftDown>,
+                event_handle::<EvDragEnd>,
+                event_handle::<EvRightClick>,
+                event_handle::<EvRightDown>,
+                event_handle::<EvMidClick>,
+                event_handle::<EvMidDown>,
+                event_handle::<EvDoubleClick>,
+                event_handle::<EvDragEnd>,
+                event_handle::<EvClickOutside>,
+                event_handle::<EvHover>,
+                event_handle::<EvLeftPressed>,
+                event_handle::<EvLeftDrag>,
+                event_handle::<EvMidPressed>,
+                event_handle::<EvMidDrag>,
+                event_handle::<EvRightPressed>,
+                event_handle::<EvRightDrag>,
                 lose_focus_detection,
+                obtain_focus_detection,
             ))
+            .register_event::<EvLeftClick>()
+            .register_event::<EvLeftDown>()
+            .register_event::<EvDragEnd>()
+            .register_event::<EvRightClick>()
+            .register_event::<EvRightDown>()
+            .register_event::<EvMidClick>()
+            .register_event::<EvMidDown>()
+            .register_event::<EvDoubleClick>()
+            .register_event::<EvDragEnd>()
+            .register_event::<EvClickOutside>()
+            .register_event::<EvHover>()
+            .register_event::<EvLeftPressed>()
+            .register_event::<EvLeftDrag>()
+            .register_event::<EvMidPressed>()
+            .register_event::<EvMidDrag>()
+            .register_event::<EvRightPressed>()
+            .register_event::<EvRightDrag>()
+            .register_event::<EvMouseDrag>()
+            .register_event::<EvObtainFocus>()
+            .register_event::<EvLoseFocus>()
+            .register_event::<EvObtainFocus>()
+            .register_event::<EvButtonClick>()
+            .register_event::<EvToggleChange>()
+            .register_event::<EvTextChange>()
+            .register_event::<EvTextSubmit>()
+            .register_event::<EvPositionFactor>()
         ;
     }
 }
