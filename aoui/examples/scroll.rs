@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, WorldExtension};
+use bevy_aoui::AouiPlugin;
 
 pub fn main() {
     App::new()
@@ -14,7 +14,6 @@ pub fn main() {
         .add_systems(Startup, init)
         .add_plugins(AouiPlugin)
         // classic macos stuff
-        .register_inverted_scrolling([0.5, 0.5])
         .run();
 }
 
@@ -36,7 +35,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [-400, 200],
         color: color!(gold),
         text: "Scroll this! =>",
-        extra: recv1.map::<SigText>(|x: f32| format!("This has value {:.2}! =>", x))
+        extra: recv1.map_recv::<SigText>(|x: f32| format!("This has value {:.2}! =>", x))
     });
     
     sprite! (commands {
@@ -156,7 +155,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [-400, -200],
         color: color!(gold),
         text: "Scroll this! =>",
-        extra: recv2.map::<SigText>(|x: f32| format!("This has value {:.2}! =>", x))
+        extra: recv2.map_recv::<SigText>(|x: f32| format!("This has value {:.2}! =>", x))
     });
 
     sprite! (commands {

@@ -60,12 +60,16 @@
 //! * If target is the source of current animation, reverse.
 //! * Otherwise interpolate to the target.
 
-use bevy::{ecs::schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, app::{Update, Plugin}};
+use bevy::{ecs::schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, app::{Update, Plugin}, render::color::Color, sprite::{Sprite, TextureAtlasSprite}, text::Text};
 
 use ::interpolation::Ease;
 pub use ::interpolation::EaseFunction;
 mod interpolation;
-pub use interpolation::{Interpolate, Offset, Rotation, Scale, Index};
+pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Index};
+mod assoc;
+pub use assoc::{MaybeAnim, InterpolateAssociation};
+
+use crate::{Dimension, Opacity, Transform2D};
 //mod state_machine;
 //pub use state_machine::WidgetState;
 
@@ -119,15 +123,27 @@ impl Plugin for AnimationPlugin {
             .configure_sets(Update, InterpolationSet)
             .configure_sets(Update, InterpolationUpdateSet.after(InterpolationSet))
             .add_systems(Update, (
-                interpolation::interpolate_offset,
-                interpolation::interpolate_rotation,
-                interpolation::interpolate_scale,
-                interpolation::interpolate_dimension,
-                interpolation::interpolate_index,
-                interpolation::interpolate_color,
-                interpolation::interpolate_opacity,
+                <(Transform2D, Offset)>::system,
+                <(Transform2D, Rotation)>::system,
+                <(Transform2D, Offset)>::system,
+                <(Transform2D, Scale)>::system,
+                <(Dimension, Dimension)>::system,
+                <(Sprite, Color)>::system,
+                <(TextureAtlasSprite, Color)>::system,
+                <(Text, Color)>::system,
+                <(Sprite, Color)>::system,
+                <(Opacity, Opacity)>::system,
+                <(TextureAtlasSprite, Index)>::system,
             ).in_set(InterpolationSet))
-            .add_systems(Update, interpolation::update_interpolate.in_set(InterpolationUpdateSet))
+            .add_systems(Update, (
+                Offset::update_interpolate,
+                Rotation::update_interpolate,
+                Scale::update_interpolate,
+                Dimension::update_interpolate,
+                Color::update_interpolate,
+                Opacity::update_interpolate,
+                Index::update_interpolate,
+            ).in_set(InterpolationUpdateSet))
         ;
     }
 }

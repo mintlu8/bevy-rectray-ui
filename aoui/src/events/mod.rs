@@ -78,8 +78,10 @@ pub use event::*;
 pub use state::*;
 use systems::*;
 pub use handler::*;
-pub use wheel::MouseWheelAction;
+pub use wheel::{MouseWheelAction, ScrollScaling};
 pub use cursor::CustomCursor;
+
+use self::cursor::custom_cursor_controller;
 
 /// Marker component for Aoui's camera, optional.
 /// 
@@ -134,6 +136,7 @@ pub(crate) struct CursorEventsPlugin;
 impl bevy::prelude::Plugin for CursorEventsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.init_resource::<CursorState>()
+            .init_resource::<ScrollScaling>()
             .init_resource::<DoubleClickThreshold>()
             .add_systems(PreUpdate, mouse_button_input.in_set(AouiEventSet))
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
@@ -158,6 +161,7 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
                 event_handle::<EvRightDrag>,
                 lose_focus_detection,
                 obtain_focus_detection,
+                custom_cursor_controller,
             ))
             .register_event::<EvLeftClick>()
             .register_event::<EvLeftDown>()

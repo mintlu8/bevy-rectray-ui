@@ -40,6 +40,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
     
     clipping.global = parent.clip;
 
+    opacity.occluded = false;
     opacity.computed_opacity = opacity.opacity * parent.opacity;
     opacity.computed_disabled = opacity.disabled || parent.disabled;
     let disabled = opacity.computed_disabled;
@@ -49,25 +50,33 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         let children = child_query.get(entity).map(|x| x.iter()).into_iter().flatten();
         let mut other_entities = Vec::new();
         let mut args = Vec::new();
+        let mut index = 0;
         for child in children {
             if !mut_query.contains(*child) { continue }
             if parent_query.get(*child).ok().map(|x| x.get()) != Some(entity) {
                 panic!("Malformed hierarchy, parent child mismatch.")
             }
+            // otherwise cloned property will recursively overflow this entire thing.
+            let dimension = if dim.is_owned() {dimension} else {Vec2::ZERO};
+
+            let range = layout.range.clone().unwrap_or(0..usize::MAX);
             // SAFETY: safe since double mut access is gated by the hierarchy check
-            if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { mut_query.get_unchecked(*child) } {
+            if let Ok((_, child_dim, child_transform, ..)) = unsafe { mut_query.get_unchecked(*child) } {
                 match control_query.get(*child) {
                     Ok(LayoutControl::IgnoreLayout) => other_entities.push((
                         *child, 
                         child_transform.get_parent_anchor()
                     )),
                     control => {
-                        args.push(LayoutItem {
-                            entity: *child,
-                            anchor: child_transform.get_parent_anchor(),
-                            dimension: child_dim.update(dimension, em, rem).0 * child_transform.scale,
-                            control: control.copied().unwrap_or_default(),
-                        })
+                        if range.contains(&index) {
+                            args.push(LayoutItem {
+                                entity: *child,
+                                anchor: child_transform.get_parent_anchor(),
+                                dimension: child_dim.estimate(dimension, em, rem),
+                                control: control.copied().unwrap_or_default(),
+                            })
+                        }
+                        index += 1;
                     }
                 };
             }
@@ -84,6 +93,11 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             entity_anchors.iter_mut().for_each(|(_, anc)| *anc *= fac);
         }
         dim.size = size;
+        if layout.dimension_agnostic() {
+            dim.reliable_size = size;
+        } else {
+            dim.reliable_size = Vec2::ZERO;
+        }
         let rect = RotatedRect::construct(
             &parent,
             transform.parent_anchor,
@@ -120,6 +134,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         }
         return;
     }
+    dim.reliable_size = Vec2::ZERO;
 
     let rect = RotatedRect::construct(
         &parent,

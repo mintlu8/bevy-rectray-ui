@@ -95,7 +95,6 @@ impl Default for LinebreakBundle {
 }
 
 /// The Aoui version of [`SpriteBundle`](bevy::sprite::SpriteBundle)
-#[cfg(feature="bundles")]
 #[derive(Debug, Default, Bundle)]
 pub struct AouiSpriteBundle {
     pub transform: Transform2D,
@@ -111,7 +110,6 @@ pub struct AouiSpriteBundle {
 }
 
 /// The Aoui version of [`SpriteSheetBundle`](bevy::sprite::SpriteSheetBundle)
-#[cfg(feature="bundles")]
 #[derive(Debug, Default, Bundle)]
 pub struct AouiSpriteSheetBundle {
     pub transform: Transform2D,
@@ -128,7 +126,6 @@ pub struct AouiSpriteSheetBundle {
 
 
 /// The Aoui version of [`Text2dBundle`](bevy::text::Text2dBundle)
-#[cfg(feature="bundles")]
 #[derive(Debug, Default, Bundle)]
 pub struct AouiTextBundle {
     pub transform: Transform2D,
@@ -148,7 +145,6 @@ pub struct AouiTextBundle {
 
 
 /// The Aoui version of [`MaterialMesh2dBundle`](bevy::sprite::MaterialMesh2dBundle)
-#[cfg(feature="bundles")]
 #[derive(Debug, Default, Bundle)]
 pub struct AouiMaterialMesh2dBundle<M: Material2d>{
     pub transform: Transform2D,

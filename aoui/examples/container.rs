@@ -48,6 +48,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }),
         margin: Size2::pixels(2.0, 2.0),
         padding: Size2::pixels(0.0, 0.0),
+        range: None,
     }, RootFlex)).id();
 
     commands.spawn((AouiSpriteBundle {

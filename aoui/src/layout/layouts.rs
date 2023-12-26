@@ -21,7 +21,11 @@ const _: Option<Box<dyn Layout>> = None;
 /// 
 /// This trait is object safe.
 pub trait Layout: Downcast + Debug + Send + Sync + 'static {
+    /// Place sprites in the layout.
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput;
+    /// If specified, dimension is considered reliable 
+    /// even if `Dimension` is a percentage of parent's.
+    fn dimension_agnostic(&self) -> bool { false }
 }
 
 impl_downcast!(Layout);
@@ -47,6 +51,12 @@ pub struct FitLayout {
     pub y: bool,
 }
 
+impl FitLayout {
+    pub const XY: Self = Self { x: true, y: true };
+    pub const X: Self = Self { x: true, y: false };
+    pub const Y: Self = Self { x: false, y: true };
+}
+
 impl Default for FitLayout {
     fn default() -> Self {
         FitLayout { x: true, y: true }
@@ -66,6 +76,10 @@ impl Layout for FitLayout {
             if self.y {max.y} else {info.dimension.y},
         );
         LayoutOutput { entity_anchors, dimension }
+    }
+
+    fn dimension_agnostic(&self) -> bool {
+        true
     }
 }
 

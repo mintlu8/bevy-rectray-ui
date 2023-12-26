@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use bevy::prelude::*;
 
 use crate::{Size2, layout::Layout};
@@ -12,6 +14,8 @@ pub struct Container {
     pub margin: Size2,
     /// Padding around the container.
     pub padding: Size2,
+    /// If set, only display a subset of children.
+    pub range: Option<Range<usize>>,
 }
 
 /// Dimension info of a layout parent.

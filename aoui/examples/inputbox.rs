@@ -38,6 +38,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             z: -0.1,
             dimension: size2!(12, 1 em),
         },
+        child: rectangle! {
+            dimension: Size2::FULL,
+            color: color!(red900),
+            z: -0.2
+        }
     });
     inputbox! ((commands, assets) {
         dimension: size2!(400, 1 em),
@@ -59,5 +64,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             z: -0.1,
             dimension: size2!(12, 1 em),
         },
+        child: rectangle! {
+            dimension: Size2::FULL,
+            color: color!(red900),
+            z: -0.2
+        }
     });
 }

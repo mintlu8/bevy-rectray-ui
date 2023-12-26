@@ -1,8 +1,8 @@
-use bevy::{math::Vec2, ecs::{system::{Query, Res, ResMut, Commands}, component::Component, query::{Without, With}, entity::Entity}, hierarchy::Parent, log::warn};
-use crate::{Transform2D, signals::{types::SigDrag, KeyStorage}, Dimension, Anchor, events::{Handlers, EvMouseDrag, EvPositionFactor}};
+use bevy::{math::Vec2, ecs::{system::{Query, Res, ResMut, Commands}, component::Component, query::{Without, With}, entity::Entity}, hierarchy::Parent, log::warn, window::{Window, PrimaryWindow}};
+use crate::{Transform2D, signals::{types::SigDrag, KeyStorage}, Dimension, Anchor, events::{Handlers, EvMouseDrag, EvPositionFactor}, anim::MaybeAnim};
 use serde::{Serialize, Deserialize};
 
-use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::{Interpolate, Offset}};
+use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::Offset};
 use crate::signals::Receiver;
 
 
@@ -93,8 +93,8 @@ pub fn drag_start(
     mut commands: Commands,
     mut storage: ResMut<KeyStorage>,
     send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Draggable>>,
-    mut receive: Query<(&Receiver<SigDrag>, &mut Draggable, &Transform2D, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>), Without<CursorAction>>,
-    mut query: Query<(&CursorAction, &mut Draggable, &Transform2D, Option<&mut DragSnapBack>, Option<&mut Interpolate<Offset>>)>,
+    mut receive: Query<(&Receiver<SigDrag>, &mut Draggable, MaybeAnim<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
+    mut query: Query<(&CursorAction, &mut Draggable, MaybeAnim<Transform2D, Offset>, Option<&mut DragSnapBack>)>,
     ) {
 
     for (focus, send) in send.iter() {
@@ -104,31 +104,27 @@ pub fn drag_start(
     }
 
     let iter = query.iter_mut()
-        .filter_map(|(action, drag, transform, snap, interpolate)| {
+        .filter_map(|(action, drag, transform, snap)| {
             if action.intersects(EventFlags::LeftDown | EventFlags::MidDown | EventFlags:: RightDown) {
-                Some((drag, transform, snap, interpolate))
+                Some((drag, transform, snap))
             } else {
                 None
             }
         }).chain(receive.iter_mut()
-        .filter_map(|(action, drag, transform, snap, interpolate)|{
+        .filter_map(|(action, drag, transform, snap)|{
             if action.poll() == Some(DragState::Start) {
-                Some((drag, transform, snap, interpolate))
+                Some((drag, transform, snap))
             } else {
                 None
             }
         }));
 
-    for (mut drag, transform, mut snap, mut interpolate) in iter {
-        match transform.offset.get_pixels() {
+    for (mut drag, mut transform, mut snap) in iter {
+        match transform.component.offset.get_pixels() {
             Some(pixels) => {
                 drag.set(pixels);
                 if let Some(snap) = &mut snap {
-                    if let Some(inter) = &mut interpolate {
-                        snap.set(inter.take_target());
-                    } else {
-                        snap.set(pixels);
-                    }
+                    snap.set(transform.take());
                     
                 }
             },
@@ -148,12 +144,13 @@ pub enum DragState {
 pub fn dragging(
     mut commands: Commands,
     mut storage: ResMut<KeyStorage>,
+    window: Query<&Window, With<PrimaryWindow>>,
     state: Res<CursorState>,
     send: Query<(&CursorFocus, &Handlers<EvMouseDrag>), Without<Draggable>>,
-    mut receive: Query<(Entity, &Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>, &Receiver<SigDrag>), Without<CursorFocus>>,
-    mut query: Query<(Entity, &CursorFocus, &Draggable, &mut Transform2D, Option<&mut Interpolate<Offset>>)>,
+    mut receive: Query<(Entity, &Draggable, MaybeAnim<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorFocus>>,
+    mut query: Query<(Entity, &CursorFocus, &Draggable, MaybeAnim<Transform2D, Offset>)>,
     parent_query: Query<&Dimension, (Without<Draggable>, Without<DragConstraint>)>,
-    constraint_query: Query<(&Parent, &Dimension, Option<&Handlers<EvPositionFactor>>), With<DragConstraint>>
+    constraint_query: Query<(Option<&Parent>, &Dimension, Option<&Handlers<EvPositionFactor>>), With<DragConstraint>>
 ) {
     let delta = state.cursor_position() - state.down_position();
 
@@ -165,22 +162,24 @@ pub fn dragging(
     }
 
     let iter = query.iter_mut()
-        .filter_map(|(entity, focus, drag, transform, interpolate)| {
+        .filter_map(|(entity, focus, drag, transform)| {
             if focus.intersects(EventFlags::LeftDrag | EventFlags::MidDrag | EventFlags:: RightDrag) {
-                Some((entity, drag, transform, interpolate))
+                Some((entity, drag, transform))
             } else {
                 None
             }
         }).chain(receive.iter_mut()
-        .filter_map(|(entity, drag, transform, interpolate, recv)|{
+        .filter_map(|(entity, drag, transform, recv)|{
             if recv.poll() == Some(DragState::Dragging) {
-                Some((entity, drag, transform, interpolate))
+                Some((entity, drag, transform))
             } else {
                 None
             }
         }));
 
-    for (entity, drag, mut transform, interpolate) in iter {
+    let window_size = window.get_single().map(|x| Vec2::new(x.width(), x.height())).ok();
+
+    for (entity, drag, mut transform) in iter {
         if !(drag.x || drag.y) { continue; }
         let mut pos = drag.last_drag_start() + {
             Vec2::new(
@@ -189,39 +188,37 @@ pub fn dragging(
             )
         };
         if let Ok((parent, dim, signal)) = constraint_query.get(entity) {
-            if let Ok(dimension) = parent_query.get(parent.get()) {
-                let min = dimension.size * Anchor::BottomLeft;
-                let max = dimension.size * Anchor::TopRight;
-                let origin = dimension.size * transform.get_parent_anchor() 
-                    - dim.size * transform.anchor;
-                let min = min + dim.size / 2.0 - origin;
-                let max = max - dim.size / 2.0 - origin;
-                let (min, max) = (min.min(max), min.max(max));
-
-                if drag.x && max.x >= min.x {
-                    pos.x = pos.x.clamp(min.x, max.x);
-                }
-                if drag.y && max.y >= min.y {
-                    pos.y = pos.y.clamp(min.y, max.y);
-                }
+            let Some(dimension) = parent
+                .and_then(|p| parent_query.get(p.get()).ok())
+                .map(|x| x.size)
+                .or(window_size)
+                else {continue};
                 
-                if let Some(signal) = signal {
-                    match (drag.x, drag.y) {
-                        (true, false) => signal.handle(&mut commands, &mut storage, (pos.x - min.x) / (max.x - min.x)),
-                        (false, true) => signal.handle(&mut commands, &mut storage, (pos.y - min.y) / (max.y - min.y)),
-                        _ => warn!("Cannot send `Changed` signal from 2d dragging."),
-                    }
+            let min = dimension * Anchor::BottomLeft;
+            let max = dimension * Anchor::TopRight;
+            let origin = dimension * transform.component.get_parent_anchor() 
+                - dim.size * transform.component.anchor;
+            let min = min + dim.size / 2.0 - origin;
+            let max = max - dim.size / 2.0 - origin;
+            let (min, max) = (min.min(max), min.max(max));
+
+            if drag.x && max.x >= min.x {
+                pos.x = pos.x.clamp(min.x, max.x);
+            }
+            if drag.y && max.y >= min.y {
+                pos.y = pos.y.clamp(min.y, max.y);
+            }
+            
+            if let Some(signal) = signal {
+                match (drag.x, drag.y) {
+                    (true, false) => signal.handle(&mut commands, &mut storage, (pos.x - min.x) / (max.x - min.x)),
+                    (false, true) => signal.handle(&mut commands, &mut storage, (pos.y - min.y) / (max.y - min.y)),
+                    _ => warn!("Cannot send `Changed` signal from 2d dragging."),
                 }
-            } else {
-                warn!("Drag constraints require a non-draggable parent to function.");
             }
         }
 
-        //let pos = drag.last_drag_start() + pos;
-        transform.offset.edit_raw(|x| *x = pos);
-        if let Some(mut interpolate) = interpolate {
-            interpolate.set(pos)
-        }
+        transform.force_set(pos);
     }
 }
 
@@ -230,8 +227,8 @@ pub fn drag_end(
     mut commands: Commands,
     mut storage: ResMut<KeyStorage>,
     send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Draggable>>,
-    mut receive: Query<(&mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>, &Receiver<SigDrag>), Without<CursorAction>>,
-    mut query: Query<(&CursorAction, &mut DragSnapBack, &mut Transform2D, Option<&mut Interpolate<Offset>>)>
+    mut receive: Query<(&mut DragSnapBack, MaybeAnim<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorAction>>,
+    mut query: Query<(&CursorAction, &mut DragSnapBack, MaybeAnim<Transform2D, Offset>)>
 ) {
     for (focus, send) in send.iter() {
         if !focus.intersects(EventFlags::DragEnd)  {
@@ -241,28 +238,24 @@ pub fn drag_end(
     }
     
     let iter = query.iter_mut()
-        .filter_map(|(action, drag, transform, interpolate)| {
+        .filter_map(|(action, drag, transform)| {
             if action.intersects(EventFlags::DragEnd) {
-                Some((drag, transform, interpolate))
+                Some((drag, transform))
             } else {
                 None
             }
         }).chain(receive.iter_mut()
-        .filter_map(|(drag, transform, interpolate, recv)|{
+        .filter_map(|(drag, transform, recv)|{
             if recv.poll() == Some(DragState::End) {
-                Some((drag, transform, interpolate))
+                Some((drag, transform))
             } else {
                 None
             }
         }));
 
-    for (mut snap, mut transform, mut interpolate) in iter {
+    for (mut snap, mut transform) in iter {
         if let Some(orig) = snap.drag_start.take() {
-            if let Some(inter) = &mut interpolate {
-                inter.interpolate_to(orig)
-            } else {
-                transform.offset.edit_raw(|x| *x = orig)
-            }
+            transform.set(orig)
         }
     }
 }

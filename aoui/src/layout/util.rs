@@ -5,8 +5,9 @@ use bevy::prelude::Reflect;
 use crate::{layout::LayoutControl, Anchor};
 
 /// Horizontal or Vertical.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-pub(crate) enum Axis {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect, Default)]
+pub enum Axis {
+    #[default]
     Horizontal, Vertical,
 }
 

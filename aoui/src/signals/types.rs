@@ -1,24 +1,11 @@
 use bevy::math::Vec2;
 use bevy::render::color::Color;
 
+use crate::events::MouseWheelAction;
 use crate::widgets::drag::DragState;
 
 #[macro_export]
 macro_rules! signal_receivers {
-    ($($(#[$($attr:tt)*])* $name: ident: $ty: ty),* $(,)?) => {
-        $(
-            $(#[$($attr)*])*
-            #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)] 
-            pub enum $name {}
-            impl $crate::signals::SignalReceiver for $name {
-                type Type = $ty;
-            }
-        )*
-    };
-}
-
-#[macro_export]
-macro_rules! signal_both {
     ($($(#[$($attr:tt)*])* $name: ident: $ty: ty),* $(,)?) => {
         $(
             $(#[$($attr)*])*
@@ -43,14 +30,14 @@ macro_rules! signal_both {
 //     SigChange, 
 // );
 
-signal_both!(
+signal_receivers!(
     /// Sent if a non-draggable sprite is being dragged, 
     /// `Draggable` sprite will be dragged if receiving this signal.
     /// 
     /// This is useful for creating a draggable banner for a non-draggable parent sprite.
     SigDrag: DragState,
     /// Sent if being scrolled on, `Scroll` sprite will be scrolled if receiving this signal.
-    SigScroll: Vec2,
+    SigScroll: MouseWheelAction,
 
     /// Triggers some behavior when sent to another widget.
     SigInvoke: (),

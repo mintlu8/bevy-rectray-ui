@@ -9,12 +9,21 @@ var<uniform> shadow_size: f32;
 @group(1) @binding(2)
 var<uniform> size: vec2<f32>;
 
+@group(1) @binding(3) 
+var<uniform> capsule: f32;
+
 // (--, +-, +-, ++)
-@group(1) @binding(3)
+@group(1) @binding(4)
 var<uniform> corners: vec4<f32>;
 
-@group(1) @binding(4)
-var<uniform> darken: f32;
+fn sdf(in: vec2<f32>) -> f32 {
+    if (in.x > 0.0 && in.y > 0.0) {
+        return sqrt(in.x * in.x + in.y * in.y);
+    } else {
+        return max(in.x, in.y);
+    }
+} 
+
 
 fn sigmoid(t: f32) -> f32 {
     return 1.0 / (1.0 + exp(-t));
@@ -23,21 +32,22 @@ fn sigmoid(t: f32) -> f32 {
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     // the UVs are now adjusted around the middle of the rect.
-    var corner = corners.x;
+    var radius = corners.x;
     if in.uv.x > 0.5 && in.uv.y > 0.5 {
-        corner = corners.w;
+        radius = corners.w;
     } else if in.uv.x > 0.5 {
-        corner = corners.y;
+        radius = corners.y;
     } else if in.uv.y > 0.5 {
-        corner = corners.z;
+        radius = corners.z;
     }
-    let origin = size / 2.0 - corner - shadow_size;
+    let capsule_radius = min(size.x, size.y) / 2.0 - shadow_size;
+    radius = radius * (1.0 - capsule) + capsule_radius * capsule;
 
-    var position = max(abs((in.uv - 0.5) * size + vec2(-shadow_size / 4.0, shadow_size / 6.0)) - origin , vec2(0.0, 0.0));
+    let origin = size / 2.0 - radius - shadow_size;
 
-    var factor = sqrt(position.x * position.x + position.y * position.y);
-    factor = smoothstep(0.5, 0.75, sigmoid(1.0 - smoothstep(corner - shadow_size, corner + shadow_size, factor)));
-    var result = color * factor;
-    result.a = clamp((result.a * darken), 0.0, 1.0);
-    return result;
+    var position = abs((in.uv - 0.5) * size + vec2(-shadow_size / 4.0, shadow_size / 6.0)) - origin;
+
+    var factor = sdf(position);
+    factor = smoothstep(0.5, 0.75, sigmoid(1.0 - smoothstep(radius - shadow_size, radius + shadow_size, factor)));
+    return  color * factor;
 }

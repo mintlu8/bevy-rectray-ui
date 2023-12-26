@@ -37,7 +37,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         direction: TopToBottom,
         hitbox: Rect(1),
         extra: Draggable::BOTH,
-        extra: recv.build::<SigDrag>(),
+        extra: recv.recv::<SigDrag>(),
         child: rectangle! {
             z: -1,
             color: color!(darkblue),

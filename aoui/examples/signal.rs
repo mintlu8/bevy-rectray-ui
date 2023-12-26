@@ -43,33 +43,38 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
         on_submit: submit_sender,
         on_change: change_sender,
+        child: rectangle! {
+            dimension: Size2::FULL,
+            color: color!(red950),
+            z: -0.2
+        }
     });
 
     text!((commands, assets) {
         text: "This is a receiver.",
         offset: [-200, 0],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_s1.build::<SigText>(),
+        extra: recv_s1.recv::<SigText>(),
     });
 
     text!((commands, assets) {
         text: "This is a formatter.",
         offset: [-200, -200],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_s2.map::<SigText>(|s: String| format!("Received string \"{}\"!", s)),
+        extra: recv_s2.map_recv::<SigText>(|s: String| format!("Received string \"{}\"!", s)),
     });
 
     text!((commands, assets) {
         text: "This is a change detector.",
         offset: [200, 0],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_c1.build::<SigText>(),
+        extra: recv_c1.recv::<SigText>(),
     });
 
     text!((commands, assets) {
         text: "This is a change detecting formatter.",
         offset: [200, -200],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_c2.map::<SigText>(|s: String| format!("Received string \"{}\"!", s)),
+        extra: recv_c2.map_recv::<SigText>(|s: String| format!("Received string \"{}\"!", s)),
     });
 }

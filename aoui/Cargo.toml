@@ -30,17 +30,10 @@ parse-color = "^0.1.2"
 xi-unicode = "^0.3"
 thiserror = "^1"
 once_cell = "^1.19"
-array-init = "^2.1"
 
 
 [features]
-default = ["bundles", "serde"]
-## Enable alternative versions of bevy's sprite, spritesheet and text bundles.
-bundles = []
-## Enable alternative versions of bevy's sprite, spritesheet and text bundles.
-widgets = ["events"]
-## Enable alternative versions of bevy's sprite, spritesheet and text bundles.
-events = []
+default = ["serde"]
 
 [dev-dependencies]
 bevy_egui = "^0.23"

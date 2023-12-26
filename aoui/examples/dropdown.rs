@@ -2,7 +2,6 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::WorldExtension;
 use bevy_aoui::AouiPlugin;
-use bevy_aoui::widgets::scroll::ScrollDirection;
 
 pub fn main() {
     App::new()
@@ -17,7 +16,6 @@ pub fn main() {
         .add_systems(Startup, init)
         .add_plugins(AouiPlugin)
         .register_cursor_default(CursorIcon::Arrow)
-        .insert_resource(ScrollDirection::INVERTED)
         .run();
 }
 
@@ -38,7 +36,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         "Water", "Earth", "Fire", "Air"
     ];
 
-    let (text_ctx, text_recv) = radio_button_group::<_, 4>("");
+    let text_ctx = radio_button_group::<[_; 4]>("");
+    let text_recv = text_ctx.recv();
     check_button!((commands, assets){
         dimension: size2!(22 em, 2 em),
         on_change: send,
@@ -54,7 +53,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 anchor: Left,
                 text: "",
                 font: "ComicNeue-Bold.ttf",
-                extra: text_recv.new_receiver().map::<SigText>(|x: &str| x.to_string())
+                extra: text_recv.map_recv::<SigText>(|x: &str| x.to_string())
             },
         },
         child: text! {
@@ -63,7 +62,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             center: Center,
             rotation: degrees(90),
             text: "v",
-            extra: recv_rot.map::<SigRotation>(|x: bool| if x {0.0} else {PI/2.0}),
+            extra: recv_rot.map_recv::<SigRotation>(|x: bool| if x {0.0} else {PI/2.0}),
             extra: transition! (Rotation 0.5 CubicInOut default PI)
         },
         child: clipping_layer! {
@@ -72,7 +71,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             layer: 1,
             buffer: [800, 800],
             scroll: Scrolling::Y,
-            extra: fold_recv.map::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
+            extra: fold_recv.map_recv::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
             extra: transition! (Opacity 0.5 Linear default 0.0),
             dimension: size2!(14 em, 4 em),
             child: use_opacity(|| vbox!((commands, assets){

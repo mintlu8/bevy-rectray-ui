@@ -15,6 +15,10 @@ impl Layout for CompactLayout {
             FlexDir::TopToBottom => compact(margin, entities, negy, posx),
         }.normalized()
     }
+
+    fn dimension_agnostic(&self) -> bool {
+        true
+    }
 }
 
 impl Layout for SpanLayout {

@@ -1,6 +1,5 @@
 use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
 use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder};
-use bevy_aoui::widgets::scroll::ScrollDirection;
 
 pub fn main() {
     App::new()
@@ -15,7 +14,6 @@ pub fn main() {
         .add_plugins(LogDiagnosticsPlugin::default())
         .add_systems(Startup, init)
         .add_plugins(AouiPlugin)
-        .insert_resource(ScrollDirection::INVERTED)
         .run();
 }
 

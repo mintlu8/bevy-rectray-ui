@@ -1,7 +1,7 @@
+use std::ops::Range;
 
 use bevy::math::UVec2;
 use crate::{Size2, layout::*, SizeUnit, build_frame};
-pub use crate::bundles::LinebreakBundle as Linebreak;
 
 /// Construct a dummy entity for linebreak in a layout.
 #[macro_export]
@@ -65,6 +65,7 @@ impl Widget for PaddingBuilder {
                 }),
                 margin: Size2::ZERO,
                 padding: self.padding.0,
+                range: None,
             }
         ).id();
         (entity, entity)
@@ -94,6 +95,7 @@ widget_extension! {
         pub stretch: bool,
         pub margin: OneOrTwo<Size2>,
         pub padding: OneOrTwo<Size2>,
+        pub range: Option<Range<usize>>,
     }
 }
 
@@ -121,6 +123,7 @@ impl Widget for SpanContainerBuilder {
                 },
                 margin: self.margin.0,
                 padding: self.padding.0,
+                range: self.range,
             }
         ).id();
         (entity, entity)
@@ -141,6 +144,7 @@ widget_extension! {
         pub stretch: bool,
         pub margin: OneOrTwo<Size2>,
         pub padding: OneOrTwo<Size2>,
+        pub range: Option<Range<usize>>,
     }
 }
 
@@ -187,13 +191,14 @@ impl Widget for GridContainerBuilder {
                 },
                 margin: self.margin.0,
                 padding: self.padding.0,
+                range: self.range,
             }
         ).id();
         (entity, entity)
     }
 }
 
-/// Construct a compact layout.
+/// Construct a fit layout, commonly used for padding.
 #[macro_export]
 macro_rules! padding {
     {$commands: tt {$($tt:tt)*}} => {

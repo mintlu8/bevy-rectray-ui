@@ -10,6 +10,7 @@ pub fn remove_focus(mut commands: Commands,
     query1: Query<Entity, With<CursorFocus>>, 
     query2: Query<Entity, With<CursorAction>>,
     query3: Query<Entity, With<CursorClickOutside>>,
+    query4: Query<Entity, With<MouseWheelAction>>,
 ) {
     for entity in query1.iter() {
         commands.entity(entity).remove::<CursorFocus>();
@@ -19,6 +20,9 @@ pub fn remove_focus(mut commands: Commands,
     }
     for entity in query3.iter() {
         commands.entity(entity).remove::<CursorClickOutside>();
+    }
+    for entity in query4.iter() {
+        commands.entity(entity).remove::<MouseWheelAction>();
     }
 }
 
@@ -57,7 +61,7 @@ pub fn mouse_button_input(
             Err(_) => return,
         },
     };
-    let Ok(window) = windows.get_single() else { return };       
+    let Ok(window) = windows.get_single() else { return };
     let Some(mouse_pos) = window.cursor_position()
         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
         .map(|ray| ray.origin.truncate()) else {return;};

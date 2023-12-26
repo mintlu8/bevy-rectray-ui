@@ -101,23 +101,24 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [300, 120],
         color: color!(gold),
         text: "<= true!",
-        extra: recv1.map::<SigText>(|x: bool| format!("<= {}!", x))
+        extra: recv1.map_recv::<SigText>(|x: bool| format!("<= {}!", x))
     });
     text! ((commands, assets) {
         offset: [300, 80],
         color: color!(gold),
         text: "<= false!",
-        extra: recv2.map::<SigText>(|x: bool| format!("<= {}!", x))
+        extra: recv2.map_recv::<SigText>(|x: bool| format!("<= {}!", x))
     });
     
-    let (ctx, sig) = radio_button_group::<_, 4>("Fire");
+    let ctx = radio_button_group::<[_; 4]>("Fire");
+    let sig = ctx.recv();
     let elements = ["Fire", "Water", "Earth", "Wind"];
 
     text! ((commands, assets) {
         offset: [300, -100],
         color: color!(gold),
         text: "<= This reflects the value of the radio button.",
-        extra: sig.new_receiver().map::<SigText>(|x: &str| format!("<= has value {}!", x))
+        extra: sig.map_recv::<SigText>(|x: &str| format!("<= has value {}!", x))
     });
 
     vbox!((commands, assets) {
@@ -148,13 +149,13 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     
     let (send, recv, recv2) = signal();
 
-    commands.spawn(Listen(recv2.build()));
+    commands.spawn(Listen(recv2.recv()));
 
     text! ((commands, assets) {
         offset: [300, 0],
         color: color!(gold),
         text: "<= Click this button.",
-        extra: recv.map::<SigText>(|_: ()| format!("<= You clicked it!"))
+        extra: recv.map_recv::<SigText>(|_: ()| format!("<= You clicked it!"))
     });
 
     button! ((commands, assets) {

@@ -1,10 +1,10 @@
+use std::fmt::Debug;
 use std::ops::{Add, Mul};
 
-use bevy::{render::color::Color, time::Time, text::Text};
-use bevy::sprite::{Sprite, TextureAtlasSprite};
+use bevy::{render::color::Color, time::Time};
 use bevy::ecs::{component::Component, system::{Query, Res}};
 use bevy::math::{Vec2, Vec4};
-use crate::{Transform2D, Dimension, Opacity};
+use crate::{Dimension, Opacity};
 use interpolation::EaseFunction;
 use smallvec::SmallVec;
 
@@ -248,13 +248,22 @@ fn opt_eq<T: Interpolation>(left: Option<&(T::Data, f32)>, right: Option<&(T::Da
 }
 
 /// Trait for a marker type representing a target of interpolation.
-pub trait Interpolation {
+pub trait Interpolation: Sized + 'static {
+    /// The data written and read from interpolation.
     type FrontEnd: PartialEq + Copy;
-    // We don't compare data.
-    type Data: Add<Self::Data, Output = Self::Data> + Mul<f32, Output = Self::Data> + Copy;
+    /// The data used for interpolation since FrontEnd like int may not be
+    /// suitable for lerping.
+    type Data: Add<Self::Data, Output = Self::Data> + Mul<f32, Output = Self::Data> + Debug + Copy + Send + Sync + 'static;
 
     fn into_data(data: Self::FrontEnd) -> Self::Data;
     fn into_front_end(data: Self::Data) -> Self::FrontEnd;
+    fn update_interpolate(
+        time: Res<Time>,
+        mut query: Query<&mut Interpolate<Self>>
+    ) {
+        let delta = time.delta_seconds();
+        query.par_iter_mut().for_each(move |mut x| x.update(delta))
+    }
 }
 
 #[derive(Debug)]
@@ -315,103 +324,4 @@ impl Interpolation for Opacity {
     type Data = f32;
     fn into_data(data: Self::FrontEnd) -> Self::Data { data }
     fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
-}
-
-pub fn interpolate_offset(
-    mut query: Query<(&mut Transform2D, &Interpolate<Offset>)>
-) {
-    for (mut transform, interpolate) in query.iter_mut() {
-        transform.offset.edit_raw(|x| *x = interpolate.get());
-    }
-}
-
-pub fn interpolate_rotation(
-    mut query: Query<(&mut Transform2D, &Interpolate<Rotation>)>
-) {
-    for (mut transform, interpolate) in query.iter_mut() {
-        transform.rotation = interpolate.get();
-    }
-}
-
-pub fn interpolate_scale(
-    mut query: Query<(&mut Transform2D, &Interpolate<Scale>)>
-) {
-    for (mut transform, interpolate) in query.iter_mut() {
-        transform.scale = interpolate.get();
-    }
-}
-
-pub fn interpolate_dimension(
-    mut query: Query<(&mut Dimension, &Interpolate<Dimension>)>
-) {
-    for (mut dimension, interpolate) in query.iter_mut() {
-        if dimension.is_owned() {
-            dimension.edit_raw(|x| *x = interpolate.get());
-        }
-    }
-}
-
-pub fn interpolate_index(
-    mut query: Query<(&mut TextureAtlasSprite, &Interpolate<Index>)>
-) {
-    for (mut atlas, interpolate) in query.iter_mut() {
-        atlas.index = interpolate.get()
-    }
-}
-
-pub fn interpolate_color(
-    mut sp_query: Query<(&mut Sprite, &Interpolate<Color>)>,
-    mut text_query: Query<(&mut Text, &Interpolate<Color>)>
-) {
-    for (mut sprite, interpolate) in sp_query.iter_mut() {
-        sprite.color = interpolate.get();
-    }
-    for (mut text, interpolate) in text_query.iter_mut() {
-        let color = interpolate.get();
-        for section in text.sections.iter_mut() {
-            section.style.color = color;
-        }
-    }
-}
-
-pub fn interpolate_opacity(
-    mut query: Query<(&mut Opacity, &Interpolate<Opacity>)>
-) {
-    for (mut opacity, interpolate) in query.iter_mut() {
-        opacity.opacity = interpolate.get();
-    }
-}
-
-pub fn update_interpolate(
-    time: Res<Time>,
-    mut query0: Query<&mut Interpolate<Offset>>,
-    mut query1: Query<&mut Interpolate<Rotation>>,
-    mut query2: Query<&mut Interpolate<Scale>>,
-    mut query3: Query<&mut Interpolate<Dimension>>,
-    mut query4: Query<&mut Interpolate<Index>>,
-    mut query5: Query<&mut Interpolate<Color>>,
-    mut query6: Query<&mut Interpolate<Opacity>>,
-) {
-    let time = time.delta_seconds();
-    for mut item in query0.iter_mut() {
-        item.update(time);
-    }
-    for mut item in query1.iter_mut() {
-        item.update(time);
-    }
-    for mut item in query2.iter_mut() {
-        item.update(time);
-    }
-    for mut item in query3.iter_mut() {
-        item.update(time);
-    }
-    for mut item in query4.iter_mut() {
-        item.update(time);
-    }
-    for mut item in query5.iter_mut() {
-        item.update(time);
-    }
-    for mut item in query6.iter_mut() {
-        item.update(time);
-    }
 }

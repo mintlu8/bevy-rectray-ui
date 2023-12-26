@@ -1,46 +1,50 @@
 
-use super::{DataTransfer, Signal, mpmc::SenderBuilder, mpmc::ReceiverBuilder};
+use super::{DataTransfer, Signal, mpmc::SignalBuilder};
 
 pub trait SignalCreate<T> {
     fn new() -> Self;
 }
 
 macro_rules! signal_create {
-    ($sender: ident, $first: ident) => {
-        impl<T: DataTransfer> SignalCreate<T> for ($sender<T>, $first<T>) {
+    ($first: ident) => {
+        impl<T: DataTransfer> SignalCreate<T> for ($first<T>,) {
             fn new() -> Self {
-                let signal = Signal::new();
-                (
-                    $sender::new(signal.clone()),
-                    $first::new(signal),
-                )
+                ($first::new(Signal::new()), )
             }
         }
     };
-    ($sender: ident, $first: ident, $($receivers: ident),*) => {
-        impl<T: DataTransfer> SignalCreate<T> for ($sender<T>, $($receivers<T>),* , $first<T>) {
+    ($first: ident, $($receivers: ident),*) => {
+        impl<T: DataTransfer> SignalCreate<T> for ($($receivers<T>),* , $first<T>) {
             fn new() -> Self {
                 let signal = Signal::new();
                 (
-                    $sender::new(signal.clone()),
                     $($receivers::new(signal.clone()),)*
                     $first::new(signal),
                 )
             }
         }
 
-        signal_create!($sender, $($receivers),*);
+        signal_create!($($receivers),*);
     };
 }
 
-signal_create!(SenderBuilder, 
-    ReceiverBuilder, ReceiverBuilder, ReceiverBuilder, ReceiverBuilder,
-    ReceiverBuilder, ReceiverBuilder, ReceiverBuilder, ReceiverBuilder,
-    ReceiverBuilder, ReceiverBuilder, ReceiverBuilder, ReceiverBuilder
-);   
+signal_create!(SignalBuilder, 
+    SignalBuilder, SignalBuilder, SignalBuilder, SignalBuilder,
+    SignalBuilder, SignalBuilder, SignalBuilder, SignalBuilder,
+    SignalBuilder, SignalBuilder, SignalBuilder, SignalBuilder
+);
+
+impl<T: DataTransfer, const N: usize> SignalCreate<T> for [SignalBuilder<T>; N] {
+    fn new() -> Self {
+        let signal = Signal::new();
+        core::array::from_fn(|_|SignalBuilder::new(signal.clone()))
+    }
+}
 
 
-/// Create a spmc signal that can be polled. 
+/// Create a mpmc signal that can be polled. 
+/// 
+/// The result can be inferred as either a tuple or an array of `SignalBuilders`.
 /// 
 /// # Writing
 /// 

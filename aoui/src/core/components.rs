@@ -1,6 +1,6 @@
 use bevy::{prelude::*, reflect::Reflect, math::Affine2};
 
-use crate::{Size2, FontSize, Anchor};
+use crate::{Size2, FontSize, Anchor, SizeUnit};
 
 /// Size of the sprite.
 ///
@@ -36,6 +36,13 @@ pub struct Dimension {
     /// This value is computed every frame. 
     #[cfg_attr(feature="serde", serde(skip))]
     pub size: Vec2,
+    /// A reliable min for '%' base dimensions.
+    ///     
+    /// This value is set by copied sources and dimension agnostic layouts.
+    /// 
+    /// If not set, the size would be 0 during the layout phase.
+    #[cfg_attr(feature="serde", serde(skip))]
+    pub reliable_size: Vec2,
     /// Aspect ratio of the sprite.
     /// 
     /// If paired with a sprite this will be copied.
@@ -54,6 +61,7 @@ impl Default for Dimension {
             dim: DimensionSize::Copied,
             set_em: FontSize::None,
             size: Vec2::ZERO,
+            reliable_size: Vec2::ZERO,
             preserve_aspect: false,
             aspect: 1.0,
             em: 0.0,
@@ -68,6 +76,7 @@ impl Dimension {
         dim: DimensionSize::Copied,
         set_em: FontSize::None,
         size: Vec2::ZERO,
+        reliable_size: Vec2::ZERO,
         preserve_aspect: false,
         aspect: 1.0,
         em: 0.0,
@@ -78,6 +87,7 @@ impl Dimension {
         dim: DimensionSize::Owned(Size2::FULL),
         set_em: FontSize::None,
         size: Vec2::ZERO,
+        reliable_size: Vec2::ZERO,
         preserve_aspect: false,
         aspect: 1.0,
         em: 0.0,
@@ -90,6 +100,7 @@ impl Dimension {
             dim: DimensionSize::Owned(Size2::pixels(size.x, size.y)),
             set_em: FontSize::None,
             size: Vec2::ZERO,
+            reliable_size: Vec2::ZERO,
             preserve_aspect: false,
             aspect: 1.0,
             em: 0.0,
@@ -102,6 +113,7 @@ impl Dimension {
             dim: DimensionSize::Owned(Size2::percent(size.x, size.y)),
             set_em: FontSize::None,
             size: Vec2::ZERO,
+            reliable_size: Vec2::ZERO,
             preserve_aspect: false,
             aspect: 1.0,
             em: 0.0,
@@ -114,6 +126,7 @@ impl Dimension {
             dim: DimensionSize::Owned(size),
             set_em: FontSize::None,
             size: Vec2::ZERO,
+            reliable_size: Vec2::ZERO,
             preserve_aspect: false,
             aspect: 1.0,
             em: 0.0,
@@ -126,6 +139,7 @@ impl Dimension {
             dim: self.dim,
             set_em: em,
             size: self.size,
+            reliable_size: Vec2::ZERO,
             preserve_aspect: false,
             aspect: 1.0,
             em: self.em,
@@ -138,6 +152,7 @@ impl Dimension {
             dim: self.dim,
             set_em: self.set_em,
             size: self.size,
+            reliable_size: Vec2::ZERO,
             preserve_aspect: true,
             aspect,
             em: self.em,
@@ -150,6 +165,7 @@ impl Dimension {
             dim: self.dim,
             set_em: self.set_em,
             size: self.size,
+            reliable_size: Vec2::ZERO,
             preserve_aspect: preserve,
             aspect: 1.0,
             em: self.em,
@@ -182,6 +198,48 @@ impl Dimension {
             DimensionSize::Owned(v) => {
                 self.size = v.as_pixels(parent, self.em, rem);
                 (self.size, self.em)
+            }
+        }
+    }
+
+    /// Estimate size for dynamic layout, this notably does not use non-canon values.
+    pub fn estimate(&self, parent: Vec2, em: f32, rem: f32) -> Vec2 {
+        let em = match self.set_em{
+            FontSize::None => em,
+            FontSize::Pixels(v) => v,
+            FontSize::Ems(v) => em * v,
+            FontSize::Rems(v) => rem * v,
+        };
+        match self.dim {
+            DimensionSize::Copied => self.size,
+            DimensionSize::Owned(v) if self.preserve_aspect => {
+                let mut size = v.as_pixels(parent, em, rem);
+                let current_aspect = size.x / size.y;
+                if current_aspect > self.aspect {
+                    size.x = size.y * self.aspect
+                } else {
+                    size.y = size.x / self.aspect
+                }
+                if size.is_nan() {
+                    return Vec2::ZERO;
+                }
+                if v.units().0 == SizeUnit::Percent {
+                    size.x = self.reliable_size.x;
+                }
+                if v.units().0 == SizeUnit::Percent {
+                    size.x = self.reliable_size.x;
+                }
+                size
+            }
+            DimensionSize::Owned(v) => {
+                let mut size = v.as_pixels(parent, self.em, rem);
+                if v.units().0 == SizeUnit::Percent {
+                    size.x = self.reliable_size.x;
+                }
+                if v.units().0 == SizeUnit::Percent {
+                    size.x = self.reliable_size.x;
+                }
+                size
             }
         }
     }
@@ -226,7 +284,10 @@ impl Dimension {
     /// If `copied`, copy size. If `preserve_aspect`, copy aspect ratio.
     pub fn update_size(&mut self, value: impl FnOnce() -> Vec2) {
         match self.dim {
-            DimensionSize::Copied => self.size = value(),
+            DimensionSize::Copied => {
+                self.size = value();
+                self.reliable_size = self.size;
+            },
             DimensionSize::Owned(_) if self.preserve_aspect => {
                 let value = value();
                 self.aspect = value.y / value.x;
@@ -371,6 +432,8 @@ pub struct Opacity {
     pub opacity: f32,
     /// Computed opacity of the widget.
     pub computed_opacity: f32,
+    /// Occluded
+    pub occluded: bool,
     /// Disabled
     pub disabled: bool,
     /// Propagated disabled value.
@@ -383,6 +446,7 @@ impl Opacity {
         opacity: 1.0,
         computed_opacity: 1.0,
         disabled: false,
+        occluded: false,
         computed_disabled: false,
     };
     /// Fully transparent.
@@ -390,6 +454,7 @@ impl Opacity {
         opacity: 0.0,
         computed_opacity: 0.0,
         disabled: false,
+        occluded: false,
         computed_disabled: false,
     };
     /// Create opacity from a value.
@@ -398,12 +463,24 @@ impl Opacity {
             opacity: v,
             computed_opacity: v,
             disabled: false,
+            occluded: false,
             computed_disabled: false,
         }
     }
 
     pub fn is_active(&self) -> bool {
-        !self.computed_disabled && !self.disabled && self.computed_opacity > 0.0
+        !self.computed_disabled && !self.occluded && !self.disabled && self.computed_opacity > 0.0
+    }
+
+    pub fn is_disabled(&self) -> bool {
+        self.computed_disabled
+    }
+    pub fn get(&self) -> f32 {
+        if self.occluded {
+            0.0
+        } else {
+            self.computed_opacity
+        }
     }
 }
 

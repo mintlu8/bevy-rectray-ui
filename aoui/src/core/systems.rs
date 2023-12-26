@@ -100,6 +100,12 @@ pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimensio
 }
 
 
+
+/// Copy em as text size.
+pub fn set_occluded(mut query: Query<&mut Opacity>) {
+    query.par_iter_mut().for_each(|mut op| { op.occluded = true })
+}
+
 /// Copy em as text size.
 pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFontSizeSync>>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
@@ -112,14 +118,14 @@ pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFont
 /// Copy opacity as text alpha.
 pub fn sync_opacity_text(mut query: Query<(&Opacity, &mut Text), With<OpacityWriter>>) {
     query.par_iter_mut().for_each(|(opacity, mut text)| {
-        text.sections.iter_mut().for_each(|x| {x.style.color.set_a(opacity.computed_opacity);} )
+        text.sections.iter_mut().for_each(|x| {x.style.color.set_a(opacity.get());} )
     })
 }
 
 /// Copy opacity as sprite alpha.
 pub fn sync_opacity_sprite(mut query: Query<(&Opacity, &mut Sprite), With<OpacityWriter>>) {
     query.par_iter_mut().for_each(|(opacity, mut sprite)| {
-        sprite.color.set_a(opacity.computed_opacity);
+        sprite.color.set_a(opacity.get());
     })
 }
 

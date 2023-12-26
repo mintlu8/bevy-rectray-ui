@@ -32,6 +32,20 @@ impl TextColor {
     }
 }
 
+/// If we deny overflowing input or not.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum InputOverflow {
+    /// Deny overflow.
+    #[default]
+    Deny,
+    /// Allow overflow but not handle it.
+    Allow,
+    /// Allow n characters
+    Characters(usize),
+    /// Not implemented.
+    Scroll,
+}
+
 /// Single line text input.
 /// 
 /// InputBox requires 3 children to function properly:
@@ -47,6 +61,7 @@ impl TextColor {
 /// might not behave properly if tempered externally.
 #[derive(Debug, Component, Default)]
 pub struct InputBox {
+    overflow: InputOverflow,
     cursor_start: usize,
     cursor_len: usize,
     text: String,
@@ -72,9 +87,10 @@ pub struct InputBoxCursorBar;
 pub struct InputBoxCursorArea;
 
 impl InputBox {
-    pub fn new(s: impl Into<String>) -> Self{
+    pub fn new(s: impl Into<String>, overflow: InputOverflow) -> Self{
         Self {
             text: s.into(),
+            overflow,
             ..Default::default()
         }
     }
@@ -86,7 +102,6 @@ impl InputBox {
     pub fn is_empty(&self) -> bool {
         self.text.is_empty()
     }
-
 
     pub fn cursor_len(&self) -> usize {
         self.cursor_len
@@ -133,6 +148,14 @@ impl InputBox {
         self.focus = false;
     }
 
+    /// Try push char and obtain the string, may deny based on length.
+    pub fn try_push(&self, c: char) -> String {
+        self.text.chars().take(self.cursor_start)
+            .chain(std::iter::once(c))
+            .chain(self.text.chars().skip(self.cursor_start + self.cursor_len))
+            .collect()
+    }
+
     /// Simulate the behavior of typing a char.
     pub fn push(&mut self, c: char) {
         self.text = self.text.chars().take(self.cursor_start)
@@ -141,6 +164,14 @@ impl InputBox {
             .collect();
         self.cursor_start += 1;
         self.cursor_len = 0;
+    }
+
+    /// Try push str and obtain the string, may deny based on length.
+    pub fn try_push_str(&self, c: &str) -> String{
+        self.text.chars().take(self.cursor_start)
+            .chain(c.chars())
+            .chain(self.text.chars().skip(self.cursor_start + self.cursor_len))
+            .collect()
     }
 
     /// Simulates the behavior of pasting.
@@ -293,6 +324,17 @@ pub fn text_on_mouse_double_click(
     }
 }
 
+pub fn measure_string<F: ab_glyph::Font>(font: &impl ab_glyph::ScaleFont<F>, string: String) -> f32 {
+    let mut cursor = 0.0;
+    let mut last = '\0';
+    for chara in string.chars() {
+        cursor += font.kern(font.glyph_id(last), font.glyph_id(chara));            
+        cursor += font.h_advance(font.glyph_id(chara));
+        last = chara
+    }
+    cursor
+}
+
 pub fn update_inputbox_cursor(
     mut commands: Commands,
     fonts: Res<Assets<Font>>,
@@ -322,7 +364,7 @@ pub fn update_inputbox_cursor(
         let (start_index, end_index) = (input_box.cursor_start, (input_box.cursor_start + input_box.cursor_len).saturating_sub(1));
         let (mut start, mut end) = (cursor, cursor);
         let mut max = (0, 0.0);
-        let mut last = ' ';
+        let mut last = '\0';
         for (index, chara) in input_box.text.chars().enumerate() {
             let glyph = font.scaled_glyph(chara);
             cursor += font.kern(font.glyph_id(last), font.glyph_id(chara));            
@@ -433,12 +475,13 @@ pub fn text_on_click_outside(
 }
 pub fn inputbox_keyboard(
     mut commands: Commands,
+    fonts: Res<Assets<Font>>,
     mut storage: ResMut<KeyStorage>,
-    mut query: Query<(&mut InputBox, Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>, Option<&Receiver<SigInvoke>>, ActiveDetection)>,
+    mut query: Query<(&mut InputBox, &Dimension, &Handle<Font>, Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>, Option<&Receiver<SigInvoke>>, ActiveDetection)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {
-    for (mut inputbox, change, submit, invoke, active) in query.iter_mut().filter(|(input, ..)| input.has_focus()) {
+    for (mut inputbox, dimension, font_handle, change, submit, invoke, active) in query.iter_mut().filter(|(input, ..)| input.has_focus()) {
         if !active.is_active() {
             inputbox.focus = false;
             continue;
@@ -453,6 +496,22 @@ pub fn inputbox_keyboard(
             } else if keys.just_pressed(KeyCode::V) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                     if let Ok(text) = clipboard.get_text() {
+                        if inputbox.overflow == InputOverflow::Deny {
+                            let string = inputbox.try_push_str(&text);
+                            let font = match fonts.get(font_handle){
+                                Some(font) => font.font.as_scaled(dimension.em),
+                                None => continue,
+                            };
+                            let len = measure_string(&font, string);
+                            if len > dimension.size.x {
+                                continue;
+                            }
+                        } else if let InputOverflow::Characters(c) = inputbox.overflow {
+                            let string = inputbox.try_push_str(&text);
+                            if string.chars().count() > c {
+                                continue;
+                            }
+                        }
                         inputbox.push_str(&text);
                         changed = true;
                     }                   
@@ -489,7 +548,25 @@ pub fn inputbox_keyboard(
                         }
                     },
                     '\x08'|'\x7f' => inputbox.backspace(),
-                    _ => inputbox.push(char.char)
+                    _ => {
+                        if inputbox.overflow == InputOverflow::Deny {
+                            let string = inputbox.try_push(char.char);
+                            let font = match fonts.get(font_handle){
+                                Some(font) => font.font.as_scaled(dimension.em),
+                                None => continue,
+                            };
+                            let len = measure_string(&font, string);
+                            if len > dimension.size.x {
+                                continue;
+                            }
+                        } else if let InputOverflow::Characters(c) = inputbox.overflow {
+                            let string = inputbox.try_push(char.char);
+                            if string.chars().count() > c {
+                                continue;
+                            }
+                        }
+                        inputbox.push(char.char)
+                    }
                 }
                 changed = true;
             }

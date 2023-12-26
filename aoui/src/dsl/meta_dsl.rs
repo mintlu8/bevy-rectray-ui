@@ -385,6 +385,7 @@ macro_rules! meta_dsl {
     ) => {
         {
             use $crate::dsl::{DslInto, AouiCommands, Widget};
+            #[allow(clippy::needless_update)]
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()
@@ -411,6 +412,7 @@ macro_rules! meta_dsl {
     ) => {
         {
             use $crate::dsl::{DslInto, AouiCommands, Widget};
+            #[allow(clippy::needless_update)]
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()
@@ -439,6 +441,7 @@ macro_rules! meta_dsl {
     ) => {
         {
             use $crate::dsl::{DslInto, AouiCommands, Widget};
+            #[allow(clippy::needless_update)]
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()

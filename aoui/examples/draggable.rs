@@ -85,7 +85,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [300, 100],
         color: color!(gold),
         text: "<= Drag and this will change!",
-        extra: recv1.map::<SigText>(|x: f32| format!("<= has value {:.2}!", x))
+        extra: recv1.map_recv::<SigText>(|x: f32| format!("<= has value {:.2}!", x))
     });
 
     let (send2, recv2) = signal();
@@ -100,7 +100,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             color: color!(aqua),
             extra: DragX,
             extra: DragConstraint,
-            extra: recv2.build::<SigDrag>(),
+            extra: recv2.recv::<SigDrag>(),
             extra: handler! {EvPositionFactor => {send3}} 
         }
     });
@@ -126,6 +126,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [300, -100],
         color: color!(gold),
         text: "<= Drag and this will change!",
-        extra: recv3.map::<SigText>(|x: f32| format!("<= has value {:.2}!", x))
+        extra: recv3.map_recv::<SigText>(|x: f32| format!("<= has value {:.2}!", x))
     });
 }

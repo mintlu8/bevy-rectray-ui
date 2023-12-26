@@ -13,7 +13,7 @@ use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextC
 use crate::widgets::scroll::Scrolling;
 use crate::widget_extension;
 use crate::signals::Receiver;
-use crate::widgets::inputbox::TextColor;
+use crate::widgets::inputbox::{TextColor, InputOverflow};
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea, InputBoxText};
 
 use super::context::with_layer;
@@ -30,6 +30,7 @@ widget_extension!(
         pub cursor_area: Option<Entity>,
         pub on_change: Handlers<EvTextChange>,
         pub on_submit: Handlers<EvTextSubmit>,
+        pub overflow: InputOverflow,
     }
 );
 
@@ -37,7 +38,7 @@ impl Widget for InputBoxBuilder {
     fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
         let mut entity = build_frame!(commands, self);
         entity.insert((
-            InputBox::new(&self.text),
+            InputBox::new(&self.text, self.overflow),
             TextColor(self.color.expect("color is required.")),
             self.font.get(assets),
             self.event.unwrap_or(EventFlags::LeftDrag)|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside,

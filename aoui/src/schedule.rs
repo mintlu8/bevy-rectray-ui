@@ -77,6 +77,7 @@ impl bevy::prelude::Plugin for CorePlugin {
                 .after(sync_simple_transforms)
             )
             .add_systems(PostUpdate, (
+                set_occluded,
                 copy_anchor, 
                 copy_anchor_sprite, 
                 copy_anchor_atlas,

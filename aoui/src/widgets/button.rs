@@ -1,10 +1,10 @@
-use std::{sync::{Mutex, Arc}, ops::Deref};
+use std::{sync::{Mutex, Arc}, ops::Deref, mem};
 
 use bevy::{render::view::Visibility, hierarchy::Children, ecs::{entity::Entity, system::ResMut}};
 use bevy::window::{Window, PrimaryWindow, CursorIcon};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
 use crate::{Opacity, dsl::prelude::signal, signals::KeyStorage};
-use crate::signals::{Object, DynamicSender, SignalReceiver, ReceiverBuilder};
+use crate::signals::{Object, DynamicSender, SignalBuilder};
 use crate::events::{Handlers, EvButtonClick, EvToggleChange};
 use crate::{signals::DataTransfer, dsl::prelude::Interpolate};
 use crate::events::{EventFlags, CursorFocus, CursorAction};
@@ -113,12 +113,9 @@ impl From<bool> for CheckButton {
 pub struct RadioButton(Arc<Mutex<Object>>, DynamicSender);
 
 impl RadioButton {
-    pub fn new(default: impl DataTransfer) -> (Self, DynamicSender) {
-        let (send, _) = signal::<(), _>();
-        (
-            RadioButton(Arc::new(Mutex::new(Object::new(default))), send.clone().dynamic()),
-            send.dynamic()
-        )
+    pub fn new(default: impl DataTransfer) -> Self {
+        let (send,) = signal::<(), _>();
+        RadioButton(Arc::new(Mutex::new(Object::new(default))), send.clone().dynamic_send())
     }
 
     pub fn set(&self, payload: &Payload) {
@@ -131,7 +128,7 @@ impl RadioButton {
         self.0.lock().unwrap().get()
     }
 
-    pub fn new_receiver<T: SignalReceiver>(&self) -> ReceiverBuilder<T::Type> {
+    pub fn recv<T: DataTransfer>(&self) -> SignalBuilder<T> {
         self.1.new_receiver()
     }
 }
@@ -242,40 +239,44 @@ pub fn set_cursor(
 }
 
 
+pub fn generate_check_button_state(
+    mut commands: Commands,
+    query1: Query<(Entity, &CheckButton)>,
+    query2: Query<(Entity, &RadioButton, &Payload)>
+) {
+    for (entity, btn) in query1.iter() {
+        commands.entity(entity).insert(CheckButtonState::from(btn.get()));
+    }
+    for (entity, radio, payload) in query2.iter() {
+        commands.entity(entity).insert(CheckButtonState::from(radio == payload));
+    }
+}
+
 /// Marker component for passing `CursorFocus`, 
-/// `CursorAction` and `CheckButtonState` to their children.
-/// 
-/// Does **not** propagate through hierarchy if chained.
+/// `CursorAction` and `CheckButtonState` to their descendants.
 #[derive(Debug, Clone, Copy, Component, Default)]
 pub struct PropagateFocus;
 
-/// Propagate [`CursorFocus`] and [`CursorAction`] down to children.
-pub fn propagate_focus(mut commands: Commands, 
-    query1: Query<(&CursorFocus, &Children), With<PropagateFocus>>, 
-    query2: Query<(&CursorAction, &Children), With<PropagateFocus>>,
-    query3: Query<(&CheckButton, &Children), With<PropagateFocus>>,
-    query4: Query<(&RadioButton, &Payload, &Children), With<PropagateFocus>>,
+/// Propagate [`CursorFocus`] and [`CursorAction`] down descendants.
+pub fn propagate_focus<T: Component + Clone>(
+    mut commands: Commands, 
+    query: Query<(&T, &Children), With<PropagateFocus>>, 
+    descendent: Query<&Children>
 ) {
-    for (focus, children) in query1.iter() {
+    let mut queue = Vec::new();
+    for (focus, children) in query.iter() {
         for child in children {
-            commands.entity(*child).insert(*focus);
+            commands.entity(*child).insert(focus.clone());
+            queue.push((child, focus));
         }
     }
-    for (focus, children) in query2.iter() {
-        for child in children {
-            commands.entity(*child).insert(*focus);
-        }
-    }
-    for (focus, children) in query3.iter() {
-        for child in children {
-            let check: CheckButtonState = focus.get().into();
-            commands.entity(*child).insert(check);
-        }
-    }
-    for (radio, payload, children) in query4.iter() {
-        for child in children {
-            let check: CheckButtonState = (radio == payload).into();
-            commands.entity(*child).insert(check);
+    while !queue.is_empty() {
+        for (entity, focus) in mem::take(&mut queue) {
+            let Ok(children) = descendent.get(*entity) else {return};
+            for child in children {
+                commands.entity(*child).insert(focus.clone());
+                queue.push((child, focus));
+            }
         }
     }
 }
@@ -313,34 +314,59 @@ impl Payload {
     }
 }
 
-mod sealed {
-    use std::usize;
 
-    use super::RadioButton;
-
-    use crate::signals::{DataTransfer, DynamicSender};
-
-    pub trait ConstructRadioButtonSignal<const N: usize>: Sized {
-        fn construct(default: impl DataTransfer) -> Self;
-    }
-
-    impl<const N: usize> ConstructRadioButtonSignal<N> for [RadioButton; N] {
-        fn construct(default: impl DataTransfer) -> Self {
-            let (result, _) = RadioButton::new(default);
-            array_init::array_init(|_|result.clone())
-        }
-    }
-
-    impl<const N: usize> ConstructRadioButtonSignal<N> for ([RadioButton; N], DynamicSender) {
-        fn construct(default: impl DataTransfer) -> Self {
-            let (result, recv) = RadioButton::new(default);
-            (array_init::array_init(|_|result.clone()), recv)
-        }
-    }
-    
+pub trait ConstructRadioButton: Sized {
+    fn construct(default: impl DataTransfer) -> Self;
+    fn recv<T: DataTransfer>(&self) -> SignalBuilder<T>;
 }
 
-use sealed::ConstructRadioButtonSignal;    
+impl<const N: usize> ConstructRadioButton for [RadioButton; N] {
+    fn construct(default: impl DataTransfer) -> Self {
+        let result = RadioButton::new(default);
+        core::array::from_fn(|_|result.clone())
+    }
+    fn recv<T: DataTransfer>(&self) -> SignalBuilder<T> {
+        self[0].recv::<T>()
+    }
+}
+
+macro_rules! radio_button_create {
+    ($first: ident) => {
+        impl ConstructRadioButton for ($first,) {
+            fn construct(default: impl DataTransfer) -> Self {
+                (RadioButton::new(default), )
+            }
+            fn recv<T: DataTransfer>(&self) -> SignalBuilder<T> {
+                self.0.recv::<T>()
+            }
+        }
+    };
+    ($first: ident, $($receivers: ident),*) => {
+        impl ConstructRadioButton for ($($receivers),* , $first) {
+            fn construct(default: impl DataTransfer) -> Self {                    
+                let result = RadioButton::new(default);
+                (
+                    $({
+                        let btn: $receivers = result.clone();
+                        btn
+                    },)*
+                    result
+                )
+            }
+            fn recv<T: DataTransfer>(&self) -> SignalBuilder<T> {
+                self.0.recv::<T>()
+            }
+        }
+
+        radio_button_create!($($receivers),*);
+    };
+}
+
+radio_button_create!(RadioButton, 
+    RadioButton, RadioButton, RadioButton, RadioButton,
+    RadioButton, RadioButton, RadioButton, RadioButton,
+    RadioButton, RadioButton, RadioButton, RadioButton
+);  
 
 /// Construct an array of shared `RadioButton` contexts. 
 /// 
@@ -349,9 +375,9 @@ use sealed::ConstructRadioButtonSignal;
 /// use bevy_aoui::widgets::button::radio_button_group;
 /// let ([he_him, she_her, they_them], gender_sender) = radio_button_group("He/Him");
 /// // Construct 4 items as an array.
-/// let (colors, gender_sender) = radio_button_group::<_, 4>("Red");
+/// let colors = radio_button_group::<_, 4>("Red");
 /// ```
-pub fn radio_button_group<T: ConstructRadioButtonSignal<N>, const N: usize>(default: impl DataTransfer) -> T {
+pub fn radio_button_group<T: ConstructRadioButton>(default: impl DataTransfer) -> T {
     T::construct(default)
 }
 

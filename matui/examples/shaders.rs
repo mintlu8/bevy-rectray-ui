@@ -1,6 +1,6 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::{AouiPlugin, material_sprite};
-use bevy_matui::{MatuiPlugin, shapes::{CapsuleMaterial, CapsuleShadowMaterial, RoundedRectangleMaterial, RoundedShadowMaterial}};
+use bevy_matui::{MatuiPlugin, shapes::{RoundedRectangleMaterial, RoundedShadowMaterial}};
 
 pub fn main() {
     App::new()
@@ -33,10 +33,10 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     material_sprite!((commands, assets) {
         offset: size2!(0, 25%),
         dimension: size2!(20%, 20%),
-        material: CapsuleMaterial::from_image(assets.load("bricks.png"), color!(white)),
+        material: RoundedRectangleMaterial::capsule_image(assets.load("bricks.png"), color!(white)),
         child: material_sprite! {
             dimension: size2!(1 + 40 px, 1 + 40 px),
-            material: CapsuleShadowMaterial::new(color!(black), 20.0),
+            material: RoundedShadowMaterial::capsule(color!(black), 20.0),
             z: -1,
         }
     });
@@ -55,30 +55,30 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     material_sprite!((commands, assets) {
         dimension: size2!(20%, 20%),
-        material: CapsuleMaterial::new(color!(white)),
+        material: RoundedRectangleMaterial::capsule(color!(white)),
         child: material_sprite! {
             dimension: size2!(1 + 40 px, 1 + 40 px),
-            material: CapsuleShadowMaterial::new(color!(black), 20.0),
+            material: RoundedShadowMaterial::capsule(color!(black), 20.0),
             z: -1,
         }
     });
     material_sprite!((commands, assets) {
         offset: size2!(25%, 0),
         dimension: size2!(20%, 20%),
-        material: CapsuleMaterial::new(color!(white)),
+        material: RoundedRectangleMaterial::capsule(color!(white)),
         child: material_sprite! {
             dimension: size2!(1 + 10 px, 1 + 10 px),
-            material: CapsuleShadowMaterial::new(color!(black), 5.0),
+            material: RoundedShadowMaterial::capsule(color!(black), 5.0),
             z: -1,
         }
     });
     material_sprite!((commands, assets) {
         offset: size2!(-25%, 0),
         dimension: size2!(20%, 20%),
-        material: CapsuleMaterial::new(color!(green)).with_stroke((color!(blue), 5.0)),
+        material: RoundedRectangleMaterial::capsule(color!(green)).with_stroke((color!(blue), 5.0)),
         child: material_sprite! {
             dimension: size2!(1 + 10 px, 1 + 10 px),
-            material: CapsuleShadowMaterial::new(color!(black), 5.0),
+            material: RoundedShadowMaterial::capsule(color!(black), 5.0),
             z: -1,
         }
     });

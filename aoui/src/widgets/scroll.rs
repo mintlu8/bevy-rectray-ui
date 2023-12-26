@@ -1,31 +1,14 @@
 
-use bevy::{ecs::{system::{Query, Res, Resource, Commands, ResMut}, component::Component, query::Without}, hierarchy::Children, math::Vec2, log::warn};
-use crate::{Dimension, Transform2D, Anchor, AouiREM, signals::{Receiver, KeyStorage}, signals::types::SigScroll, events::{EvMouseWheel, Handlers, EvPositionFactor}};
+use bevy::{hierarchy::Children, math::{Vec2, IVec2}, log::warn};
+use bevy::ecs::{component::Component, query::Without};
+use bevy::ecs::system::{Query, Res, Commands, ResMut};
+use crate::{Dimension, Transform2D, Anchor, AouiREM, signals::types::SigScroll};
+use crate::layout::{Container, LayoutControl};
+use crate::events::{EvMouseWheel, Handlers, EvPositionFactor};
+use crate::signals::{Receiver, KeyStorage};
 
 use crate::events::MouseWheelAction;
 
-/// Resource that determines the direction and magnitude of mouse wheel scrolling.
-#[derive(Debug, Clone, Copy, Resource)]
-pub struct ScrollDirection(Vec2);
-
-impl ScrollDirection {
-    /// Normal scrolling.
-    pub const UNIT: Self = Self(Vec2::ONE);
-    /// Inverted scrolling, e.g. with a trackpad.
-    pub const INVERTED: Self = Self(Vec2::new(1.0, -1.0));
-    pub fn new(dir: Vec2) -> Self {
-        Self(dir)
-    }
-    pub fn inverted(dir: Vec2) -> Self {
-        Self(dir * Vec2::new(1.0, -1.0))
-    }
-    pub fn get(&self) -> Vec2 {
-        self.0
-    }
-    pub fn set(&mut self, value: Vec2) {
-        self.0 = value
-    }
-}
 
 /// Add size relative scrolling support.
 /// 
@@ -38,17 +21,17 @@ impl ScrollDirection {
 /// `Anchor::Center`, which acts as a container.
 /// * add children to that child.
 /// 
-/// # Signals
+/// # Events and Signals
 /// 
-/// * `SigChange`: Sends a value between `0..=1` corresponding to the entity's location.
-/// * `SigScroll`: If scrolling has no effect on the sprite's position, send it to another recipient.
+/// * `EvMouseWheel`: If scrolling has no effect on the sprite's position, send it to another recipient.
+/// * `SigScroll`: Receives `EvScrollWheel` and scrolls this widget.
+/// * `EvPositionFactor`: Sends a value between `0..=1` corresponding to the entity's location.
 /// When received, act if this entity is being scrolled upon.
 /// 
 /// # Limitations
 /// 
 /// * Does not detect rotation, will always use local space orientation.
 /// * Does not support `Interpolate`.
-/// * Piping `SigScroll` from `SigScroll` recipient is unspecified behavior.
 #[derive(Debug, Clone, Copy, Component)]
 pub struct Scrolling {
     pos_x: bool,
@@ -120,30 +103,28 @@ pub fn scrolling_system(
     mut commands: Commands,
     mut key_storage: ResMut<KeyStorage>,
     rem: Option<Res<AouiREM>>,
-    direction: Option<Res<ScrollDirection>>,
     scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Handlers<EvMouseWheel>>, Option<&Handlers<EvPositionFactor>>)>,
     sender: Query<(&MouseWheelAction, &Handlers<EvMouseWheel>), Without<Scrolling>>,
     receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Handlers<EvMouseWheel>>, Option<&Handlers<EvPositionFactor>>), Without<MouseWheelAction>>,
     mut child_query: Query<(&Dimension, &mut Transform2D, Option<&Children>)>,
 ) {
     let rem = rem.map(|x|x.get()).unwrap_or(16.0);
-    let direction = direction.map(|x|x.get()).unwrap_or(Vec2::ONE);
     for (action, signal) in sender.iter() {
-        signal.handle(&mut commands, &mut key_storage, action.get());
+        signal.handle(&mut commands, &mut key_storage, *action);
     }
     let iter = scroll.iter()
         .map(|(scroll, dimension, children, action, handler, fac)| 
-            (scroll, dimension, children, action.get(), handler, fac))
+            (scroll, dimension, children, *action, handler, fac))
         .chain(receiver.iter().filter_map(|(scroll, dimension, children, receiver, handler, fac)| 
             Some((scroll, dimension, children, receiver.poll()?, handler, fac))));
     for (scroll, dimension, children, delta, handler, fac) in iter {
         let size = dimension.size;
         let delta_scroll = match (scroll.x_scroll(), scroll.y_scroll()) {
-            (true, true) => delta,
-            (true, false) => Vec2::new(delta.x + delta.y, 0.0),
-            (false, true) => Vec2::new(0.0, delta.x + delta.y),
+            (true, true) => delta.pixels,
+            (true, false) => Vec2::new(delta.pixels.x + delta.pixels.y, 0.0),
+            (false, true) => Vec2::new(0.0, delta.pixels.x + delta.pixels.y),
             (false, false) => continue,
-        } * direction;
+        };
         if children.len() != 1 {
             warn!("Component 'Scrolling' requires exactly one child as a buffer.");
             continue;
@@ -202,5 +183,71 @@ pub fn scrolling_system(
                 }
             }
         }            
+    }
+}
+
+/// Marker component for making scrolling affect 
+/// the `range` value on a layout,
+/// 
+/// This implementation has the benefit of not requiring scrolling.
+#[derive(Debug, Clone, Copy, Component, Default)]
+pub struct ScrollDiscrete(IVec2);
+
+impl ScrollDiscrete {
+    pub fn new() -> Self {
+        Self(IVec2::ONE)
+    }
+
+    pub fn from_direction(direction: IVec2) -> Self {
+        Self(direction)
+    }
+}
+
+
+pub fn scrolling_discrete(
+    mut commands: Commands,
+    mut key_storage: ResMut<KeyStorage>,
+    mut scroll: Query<(&ScrollDiscrete, &mut Container, &Children, &MouseWheelAction, Option<&Handlers<EvPositionFactor>>)>,
+    mut receiver: Query<(&ScrollDiscrete, &mut Container, &Children, &Receiver<SigScroll>, Option<&Handlers<EvPositionFactor>>), Without<MouseWheelAction>>,
+    child_query: Query<&LayoutControl>,
+) {
+    let iter = scroll.iter_mut()
+        .map(|(scroll, container, children, action, fac)| 
+            (scroll, container, children, *action, fac))
+        .chain(receiver.iter_mut().filter_map(|(scroll, container, children, receiver, fac)| 
+            Some((scroll, container, children, receiver.poll()?, fac))));
+    
+    for (scroll, mut container, children, delta, fac) in iter {
+        let Some(range) = container.range.clone() else {
+            warn!("ScrollDiscrete requires a range in `Container`.");
+            continue;
+        };
+        let delta = delta.lines.dot(scroll.0);
+        let count = children.len() - child_query.iter_many(children).filter(|x| 
+             x == &&LayoutControl::IgnoreLayout
+        ).count();
+        let len = range.len();
+        if len > count {
+            container.range = Some(0..len);
+            continue;
+        }
+        let max = count - len;
+        let start = match delta {
+            ..=-1 => {
+                let start = range.start.saturating_sub((-delta) as usize).clamp(0, max);
+                container.range = Some(start..start + len);
+                start
+            }
+            1.. => {
+                let start = range.start.saturating_add(delta as usize).clamp(0, max);
+                container.range = Some(start..start + len);
+                start
+            } 
+            0 => continue,
+        };
+        if let Some(fac_handler) = fac {
+            let frac = start as f32 / max as f32;
+            fac_handler.handle(&mut commands, &mut key_storage, frac);
+        }
     }
 }

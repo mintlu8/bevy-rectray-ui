@@ -3,12 +3,11 @@ use std::sync::{OnceLock, Arc};
 use bevy::ecs::{component::Component, removal_detection::RemovedComponents};
 use bevy::ecs::query::{Without, With};
 use bevy::ecs::system::{SystemId, Query, Commands, ResMut};
-use bevy::math::Vec2;
 use smallvec::SmallVec;
 
 use crate::dsl::{DslFrom, DslInto};
 use crate::events::*;
-use crate::signals::{DataTransfer, Sender, DynamicSender, SignalMapper, SenderBuilder, KeyStorage, Object};
+use crate::signals::{DataTransfer, Sender, DynamicSender, SignalMapper, SignalBuilder, KeyStorage, Object};
 use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;
@@ -45,9 +44,9 @@ impl<T: EventHandling> DslFrom<Arc<OnceLock<SystemId>>> for Handler<T> {
     }
 }
 
-impl<T: EventHandling> DslFrom<SenderBuilder<T::Data>> for Handler<T> {
-    fn dfrom(value: SenderBuilder<T::Data>) -> Self {
-        Handler::Signal(value.build())
+impl<T: EventHandling> DslFrom<SignalBuilder<T::Data>> for Handler<T> {
+    fn dfrom(value: SignalBuilder<T::Data>) -> Self {
+        Handler::Signal(value.send())
     }
 }
 
@@ -80,9 +79,9 @@ impl<T: EventHandling> DslFrom<Arc<OnceLock<SystemId>>> for Handlers<T> {
     }
 }
 
-impl<T: EventHandling> DslFrom<SenderBuilder<T::Data>> for Handlers<T> {
-    fn dfrom(value: SenderBuilder<T::Data>) -> Self {
-        Handlers::new(value.build())
+impl<T: EventHandling> DslFrom<SignalBuilder<T::Data>> for Handlers<T> {
+    fn dfrom(value: SignalBuilder<T::Data>) -> Self {
+        Handlers::new(value.send())
     }
 }
 
@@ -227,7 +226,7 @@ mod sealed {
 }
 
 impl EventHandling for EvMouseWheel {
-    type Data = Vec2;
+    type Data = MouseWheelAction;
     type Context = ();
     fn new_context() -> Self::Context {}
 }

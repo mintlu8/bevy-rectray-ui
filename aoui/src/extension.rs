@@ -1,5 +1,5 @@
 use bevy::{window::CursorIcon, app::{App, Last}, ecs::system::Query, math::Vec2};
-use crate::{widgets::{button::CursorDefault, scroll::ScrollDirection}, events::{EventHandling, Handlers}, dsl::DslInto};
+use crate::{widgets::button::CursorDefault, events::{EventHandling, Handlers, ScrollScaling}, dsl::DslInto};
 
 /// Extension methods to `World` and `App`
 pub trait WorldExtension {
@@ -8,10 +8,7 @@ pub trait WorldExtension {
     fn register_cursor_default(&mut self, cursor: CursorIcon) -> &mut Self;
 
     /// Register mouse wheel scrolling speed.
-    fn register_scrolling_speed(&mut self, speed: impl DslInto<Vec2>) -> &mut Self;
-    
-    /// Register mouse wheel scrolling speed but inverted.
-    fn register_inverted_scrolling(&mut self, speed: impl DslInto<Vec2>) -> &mut Self;
+    fn register_scrolling_speed(&mut self, line_to_pixels: impl DslInto<Vec2>, speed: impl DslInto<Vec2>) -> &mut Self;
 
     /// Register an event which cleans up its associated signals.
     fn register_event<T: EventHandling + 'static>(&mut self) -> &mut Self;
@@ -24,12 +21,11 @@ impl WorldExtension for App {
         self
     }
     
-    fn register_scrolling_speed(&mut self, speed: impl DslInto<Vec2>) -> &mut Self {
-        self.insert_resource(ScrollDirection::new(speed.dinto()))
-    }
-
-    fn register_inverted_scrolling(&mut self, speed: impl DslInto<Vec2>) -> &mut Self {
-        self.insert_resource(ScrollDirection::inverted(speed.dinto()))
+    fn register_scrolling_speed(&mut self, line_to_pixels: impl DslInto<Vec2>, speed: impl DslInto<Vec2>) -> &mut Self {
+        self.insert_resource(ScrollScaling{
+            line_to_pixels: line_to_pixels.dinto(),
+            pixel_scale: speed.dinto(),
+        })
     }
 
     fn register_event<T: EventHandling>(&mut self) -> &mut Self {

@@ -15,7 +15,7 @@ pub fn main() {
         .add_systems(Startup, init)
         .add_plugins(AouiPlugin)
         .register_cursor_default(CursorIcon::Arrow)
-        .register_inverted_scrolling([0.5, 0.5])
+        .register_scrolling_speed([16, 16], [0.5, -0.5])
         .run();
 }
 
@@ -58,7 +58,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     on_change: send1,
                     child: text! {
                         text: "v",
-                        extra: recv13.map::<SigRotation>(|x: bool| if x {PI} else {0.0}),
+                        extra: recv13.map_recv::<SigRotation>(|x: bool| if x {PI} else {0.0}),
                         extra: transition! (Rotation 0.5 CubicInOut default PI)
                     },
                 }
@@ -69,15 +69,15 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 buffer: [800, 800],
                 scroll: Scrolling::Y,
                 scroll_send: scroll_send1,
-                extra: recv11.map::<SigDimensionY>(|x: bool| if x {400.0f32} else {0.0f32}),
+                extra: recv11.map_recv::<SigDimensionY>(|x: bool| if x {400.0f32} else {0.0f32}),
                 extra: transition! (Dimension 0.5 CubicInOut default [400, 400]),
                 layer: 1,
                 child: text! {
-                        anchor: TopLeft,
+                        anchor: Top,
                         bounds: [390, 999999],
                         color: color!(gold),
                         wrap: true,
-                        extra: recv12.map::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
+                        extra: recv12.map_recv::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
                         extra: transition! (Opacity 0.5 CubicInOut default 1.0),
                         extra: OpacityWriter,
                         text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris semper magna nibh, nec tincidunt metus fringilla id. Phasellus viverra elit volutpat orci lacinia, non suscipit odio egestas. Praesent urna ipsum, viverra non dui id, auctor sodales sem. Quisque ut mi sit amet quam ultricies cursus at vitae justo. Morbi egestas pulvinar dui id elementum. Aliquam non aliquam eros. Nam euismod in lectus sit amet blandit. Aenean mauris diam, auctor ut massa sed, convallis congue leo. Maecenas non nibh semper, tempor velit sit amet, facilisis lacus. Curabitur nec leo nisl. Proin vitae fringilla nisl. Sed vel hendrerit mi. Donec et cursus risus, at euismod justo.
@@ -99,7 +99,7 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
                     on_change: send2,
                     child: text! {
                         text: "v",
-                        extra: recv23.map::<SigRotation>(|x: bool| if x {PI} else {0.0}),
+                        extra: recv23.map_recv::<SigRotation>(|x: bool| if x {PI} else {0.0}),
                         extra: transition! (Rotation 0.5 CubicInOut default PI)
                     },
                 }
@@ -110,7 +110,7 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
                 buffer: [800, 800],
                 scroll: Scrolling::Y,
                 scroll_send: scroll_send2,
-                extra: recv21.map::<SigDimensionY>(|x: bool| if x {400.0f32} else {0.0f32}),
+                extra: recv21.map_recv::<SigDimensionY>(|x: bool| if x {400.0f32} else {0.0f32}),
                 extra: Interpolate::<Dimension>::ease(EaseFunction::CubicInOut, Vec2::new(400.0, 400.0), 0.5),
                 layer: 2,
                 child: text! {
@@ -118,7 +118,7 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
                     bounds: [390, 999999],
                     color: color!(gold),
                     wrap: true,
-                    extra: recv22.map::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
+                    extra: recv22.map_recv::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
                     extra: Interpolate::<Opacity>::ease(EaseFunction::CubicInOut, 1.0, 0.5),
                     extra: OpacityWriter,
                     text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris semper magna nibh, nec tincidunt metus fringilla id. Phasellus viverra elit volutpat orci lacinia, non suscipit odio egestas. Praesent urna ipsum, viverra non dui id, auctor sodales sem. Quisque ut mi sit amet quam ultricies cursus at vitae justo. Morbi egestas pulvinar dui id elementum. Aliquam non aliquam eros. Nam euismod in lectus sit amet blandit. Aenean mauris diam, auctor ut massa sed, convallis congue leo. Maecenas non nibh semper, tempor velit sit amet, facilisis lacus. Curabitur nec leo nisl. Proin vitae fringilla nisl. Sed vel hendrerit mi. Donec et cursus risus, at euismod justo.

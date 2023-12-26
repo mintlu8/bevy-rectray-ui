@@ -1,36 +1,107 @@
-
 use bevy::render::color::Color;
-use bevy::render::texture::{Image, BevyDefault};
-use bevy::render::render_resource::{Extent3d, TextureDimension};
+use bevy::render::texture::Image;
 use bevy::{hierarchy::BuildChildren, text::Font, transform::components::GlobalTransform};
-use bevy::sprite::{Sprite, Mesh2dHandle};
+use bevy::sprite::Mesh2dHandle;
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
-use bevy_aoui::{widget_extension, build_frame, Hitbox, size2, text, layout::{Container, CompactLayout, FlexDir}, sprite, bundles::BuildTransformBundle, BuildMeshTransform};
+use bevy_aoui::Opacity;
+use bevy_aoui::{widget_extension, build_frame, Hitbox, size2, text, layout::{Container, CompactLayout, FlexDir}, sprite, BuildMeshTransform};
 use bevy_aoui::anim::{Interpolate, Easing};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvButtonClick};
 use bevy_aoui::widgets::button::{PropagateFocus, Button, SetCursor, Payload};
 use bevy_aoui::dsl::{Widget, mesh_rectangle};
 use bevy_aoui::dsl::HandleOrString;
 use bevy_aoui::dsl::OptionX;
-use crate::{shadow, builders::Stroke};
-use crate::shapes::{CapsuleMaterial, RoundedRectangleMaterial};
+use crate::style::{Palette, WidgetStyle};
+use crate::shapes::{RoundedRectangleMaterial, StrokeColor};
 
-#[derive(Debug, Component, Clone, Copy, Default)]
+use super::util::{OptionM, ShadowInfo, StrokeColors, WidgetPalette};
+
+#[derive(Debug, Component, Clone, Copy)]
 pub struct ButtonColors {
     idle: Color,
     hover: Color,
-    click: Color,
+    pressed: Color,
+    disabled: Color,
 }
 
-pub fn btn_color_change(mut query: Query<(&ButtonColors, Option<&CursorFocus>, &mut Interpolate<Color>)>) {
-    query.par_iter_mut().for_each(|(colors, focus, mut color)| {
+impl Default for ButtonColors {
+    fn default() -> Self {
+        Self { 
+            idle: Color::NONE, 
+            hover: Color::NONE, 
+            pressed: Color::NONE, 
+            disabled: Color::NONE 
+        }
+    }
+}
+
+pub fn btn_color_change(mut query: Query<(&ButtonColors, &Opacity, Option<&CursorFocus>, &mut Interpolate<Color>)>) {
+    query.par_iter_mut().for_each(|(colors, opacity, focus, mut color)| {
+        if opacity.is_disabled() {
+            color.interpolate_to(colors.disabled);
+            return;
+        }
         match focus {
             Some(focus) if focus.is(EventFlags::Hover)=> color.interpolate_to(colors.hover),
-            Some(focus) if focus.is(EventFlags::LeftPressed)=> color.interpolate_to(colors.click),
+            Some(focus) if focus.is(EventFlags::LeftPressed)=> color.interpolate_to(colors.pressed),
             _ => color.interpolate_to(colors.idle),
         }
     })
+}
+
+
+pub fn btn_stroke_change(mut query: Query<(&StrokeColors<ButtonColors>, &Opacity, Option<&CursorFocus>, &mut Interpolate<StrokeColor>)>) {
+    query.par_iter_mut().for_each(|(colors, opacity, focus, mut color)| {
+        if opacity.is_disabled() {
+            color.interpolate_to(colors.disabled);
+            return;
+        }
+        match focus {
+            Some(focus) if focus.is(EventFlags::Hover)=> color.interpolate_to(colors.hover),
+            Some(focus) if focus.is(EventFlags::LeftPressed)=> color.interpolate_to(colors.pressed),
+            _ => color.interpolate_to(colors.idle),
+        }
+    })
+}
+
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ButtonStyle {
+    #[default]
+    Filled,
+    Tonal,
+    Outlined,
+    Text,
+}
+
+impl WidgetStyle for ButtonStyle {
+    type StyleType = WidgetPalette;
+
+    fn style(&self, style: Palette) -> Self::StyleType {
+        match self {
+            ButtonStyle::Filled => WidgetPalette {
+                background: style.main.background,
+                foreground: style.main.on_background,
+                stroke: Color::NONE,
+            },
+            ButtonStyle::Tonal => WidgetPalette {
+                background: style.main.container,
+                foreground: style.main.on_container,
+                stroke: Color::NONE,
+            },
+            ButtonStyle::Outlined => WidgetPalette {
+                background: style.surface.background,
+                foreground: style.main.background,
+                stroke: style.surface.on_background,
+            },
+            ButtonStyle::Text => WidgetPalette {
+                background: style.main.background,
+                foreground: Color::NONE,
+                stroke: Color::NONE,
+            },
+        }
+    }
 }
 
 #[derive(Debug, Component, Clone, Copy, Default)]
@@ -41,27 +112,22 @@ widget_extension!(
         pub cursor: Option<CursorIcon>,
         pub sprite: Option<HandleOrString<Image>>,
         /// This will set `color_pressed` if its not set
-        pub background: Option<Color>,
-        pub background_hover: Option<Color>,
-        pub background_pressed: Option<Color>,
-        pub foreground: Option<Color>,
-        pub foreground_hover: Option<Color>,
-        pub foreground_pressed: Option<Color>,
+        pub palette: WidgetPalette,
+        pub palette_hover: Option<WidgetPalette>,
+        pub palette_pressed: Option<WidgetPalette>,
+        pub palette_disabled: Option<WidgetPalette>,
         pub text: Option<String>,
         pub font: HandleOrString<Font>,
         pub texture: HandleOrString<Image>,
         pub icon: HandleOrString<Image>,
         pub icon_hover: HandleOrString<Image>,
         pub icon_pressed: HandleOrString<Image>,
-        pub stroke: Stroke,
+        pub stroke: f32,
         pub signal: Handlers<EvButtonClick>,
         pub payload: OptionX<Payload>,
         pub capsule: bool,
-        pub radius: Option<f32>,
-        pub shadow: Option<f32>,
-        pub shadow_color: Option<Color>,
-        pub shadow_z: Option<f32>,
-        pub foreground_z: f32,
+        pub radius: f32,
+        pub shadow: OptionM<ShadowInfo>,
     }
 );
 
@@ -70,23 +136,11 @@ impl Widget for MButtonBuilder {
         let mut frame = build_frame!(commands, self);
         let assets = assets.expect("Please pass in the AssetServer");
 
-        let background = self.background.unwrap_or(if self.texture.is_some() {
-            Color::WHITE
-        } else {
-            Color::NONE
-        });
-        let foreground = self.foreground.unwrap_or({
-            let [r, g, b, a] = background.as_linear_rgba_f32();
-            if r + g + b < 2.5 && a > 0.2 {
-                Color::WHITE
-            } else {
-                Color::BLACK
-            }
-        });
-        let no_background = self.background.is_none() 
-            && self.background_hover.is_none() 
-            && self.background_pressed.is_none()
-            && self.texture.is_none();
+        let style = self.palette;
+        let hover = self.palette_hover.unwrap_or(style);
+        let pressed = self.palette_pressed.unwrap_or(hover);
+        let disabled = self.palette_disabled.unwrap_or(style);
+
         frame.insert((
             PropagateFocus,
             Button,
@@ -98,16 +152,29 @@ impl Widget for MButtonBuilder {
             Container {
                 layout: Box::new(CompactLayout { direction: FlexDir::LeftToRight}),
                 margin: size2!(0.5 em, 1 em),
-                padding: if no_background {size2!(0)} else {size2!(1 em, 0.75 em)},
+                padding: size2!(1 em, 0.75 em),
+                range: None,
             },
             ButtonColors {
-                idle: background,
-                hover: self.background_hover.unwrap_or(background),
-                click: self.background_pressed.or(self.background_hover).unwrap_or(background),
+                idle: style.background,
+                hover: hover.background,
+                pressed: pressed.background,
+                disabled: disabled.background,
             },
+            StrokeColors(ButtonColors{
+                idle: style.stroke,
+                hover: hover.stroke,
+                pressed: pressed.stroke,
+                disabled: disabled.stroke,
+            }),
             Interpolate::<Color>::new(
                 Easing::Linear,
-                background, 
+                style.background, 
+                0.15
+            ),
+            Interpolate::<StrokeColor>::new(
+                Easing::Linear,
+                style.stroke, 
                 0.15
             ),
         ));
@@ -124,17 +191,17 @@ impl Widget for MButtonBuilder {
         if let Some(icon) = self.icon.try_get(assets) {
             let child = sprite!((commands, assets){
                 sprite: icon,
-                color: foreground,
+                z: 0.01,
                 dimension: size2!(1.2 em, 1.2 em),
-                z: self.foreground_z,
                 extra: ButtonColors { 
-                    idle: foreground, 
-                    hover: self.foreground_hover.unwrap_or(foreground), 
-                    click: self.foreground_pressed.or(self.foreground_hover).unwrap_or(foreground),
+                    idle: style.foreground,
+                    hover: hover.foreground,
+                    pressed: pressed.foreground,
+                    disabled: disabled.foreground,
                 },
                 extra: Interpolate::<Color>::new(
                     Easing::Linear,
-                    foreground, 
+                    style.foreground, 
                     0.15
                 ),
             });
@@ -148,17 +215,17 @@ impl Widget for MButtonBuilder {
         if let Some(text) = self.text {
             let child = text!((commands, assets){
                 text: text,
-                color: foreground,
+                z: 0.01,
                 font: self.font.get(assets),
-                z: self.foreground_z,
                 extra: ButtonColors { 
-                    idle: foreground, 
-                    hover: self.foreground_hover.unwrap_or(foreground), 
-                    click: self.foreground_pressed.or(self.foreground_hover).unwrap_or(foreground),
+                    idle: style.foreground,
+                    hover: hover.foreground,
+                    pressed: pressed.foreground,
+                    disabled: disabled.foreground,
                 },
                 extra: Interpolate::<Color>::new(
                     Easing::Linear,
-                    foreground, 
+                    style.foreground, 
                     0.15
                 ),
             });
@@ -168,64 +235,40 @@ impl Widget for MButtonBuilder {
             commands.entity(frame).push_children(&[child, right_pad]);
         }
 
-        match (self.capsule, self.radius, no_background) {
-            (.., true) => (frame, frame),
+        match (self.capsule, self.radius) {
             (true, ..) => {
                 let mat = if let Some(im) = self.texture.try_get(assets) {
-                    CapsuleMaterial::from_image(im, background)
+                    RoundedRectangleMaterial::capsule_image(im, style.background)
                 } else {
-                    CapsuleMaterial::new(background)
-                }.with_stroke(self.stroke);
+                    RoundedRectangleMaterial::capsule(style.background)
+                }.with_stroke((self.stroke, self.palette.stroke));
                 commands.entity(frame).insert((
                     assets.add(mat),
                     Mesh2dHandle(assets.add(mesh_rectangle())),
                     GlobalTransform::IDENTITY,
                     BuildMeshTransform,
                 ));
-                if let Some(shadow_size) = self.shadow {
-                    let shadow_color = self.shadow_color.unwrap_or(Color::BLACK);
-                    let shadow_z = self.shadow_z.unwrap_or(-0.01);
-
-                    let shadow = shadow!(commands, assets, shadow_color, shadow_size, shadow_z);
+                if let OptionM::Some(shadow) = self.shadow {
+                    let shadow = shadow.build_capsule(commands, assets);
                     commands.entity(frame).add_child(shadow);
                 }
                 (frame, frame)
             },
-            (_, Some(radius), ..) => {
+            (_, radius, ..) => {
                 let mat = if let Some(im) = self.texture.try_get(assets) {
-                    RoundedRectangleMaterial::from_image(im, background, radius)
+                    RoundedRectangleMaterial::from_image(im, style.background, radius)
                 } else {
-                    RoundedRectangleMaterial::new(background, radius)
-                }.with_stroke(self.stroke);
+                    RoundedRectangleMaterial::new(style.background, radius)
+                }.with_stroke((self.stroke, self.palette.stroke));
                 commands.entity(frame).insert((
                     assets.add(mat),
                     Mesh2dHandle(assets.add(mesh_rectangle())),
                     GlobalTransform::IDENTITY,
                     BuildMeshTransform,
                 ));
-                if let Some(shadow_size) = self.shadow {
-                    let shadow_color = self.shadow_color.unwrap_or(Color::BLACK);
-                    let shadow_z = self.shadow_z.unwrap_or(-0.01);
-                    let shadow = shadow!(commands, assets, shadow_color, radius, shadow_size, shadow_z);
+                if let OptionM::Some(shadow) = self.shadow {
+                    let shadow = shadow.build_rect(commands, assets, radius);
                     commands.entity(frame).add_child(shadow);
-                }
-                (frame, frame)
-            }
-            _ => {
-                let texture = Image::new(Extent3d {
-                    width: 1,
-                    height: 1,
-                    ..Default::default()
-                }, TextureDimension::D2, vec![255, 255, 255, 255], BevyDefault::bevy_default());
-                if let Some(shadow_size) = self.shadow {
-                    let shadow_color = self.shadow_color.unwrap_or(Color::BLACK);
-                    let shadow_z = self.shadow_z.unwrap_or(f32::EPSILON * 8.0);
-                    let shadow = shadow!(commands, assets, shadow_color, 0.0, shadow_size, shadow_z);
-                    commands.entity(frame).insert((
-                        Sprite::default(),
-                        assets.add(texture),
-                        BuildTransformBundle::default(),
-                    )).add_child(shadow);
                 }
                 (frame, frame)
             }
@@ -238,27 +281,6 @@ macro_rules! mbutton {
     ($ctx: tt {$($tt: tt)*}) => {
         $crate::aoui::meta_dsl!($ctx [$crate::widgets::MButtonBuilder] {
             $($tt)*
-        })
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! shadow {
-    ($commands: expr, $assets: expr, $color: expr, $radius: expr, $size: expr, $z: expr) => {
-        $crate::aoui::material_sprite!(($commands, $assets) {
-            dimension: $crate::aoui::size2![1 + {$size * 2.0} px, 1 + {$size * 2.0} px],
-            z: $z,
-            material: $crate::RoundedShadowMaterial::new($color, $radius, $size),
-            extra: $crate::aoui::layout::LayoutControl::IgnoreLayout,
-        })
-    };
-    ($commands: expr, $assets: expr, $color: expr, $size: expr, $z: expr) => {
-        $crate::aoui::material_sprite!(($commands, $assets) {
-            dimension: $crate::aoui::size2![1 + {$size * 2.0} px, 1 + {$size * 2.0} px],
-            z: $z,
-            material: $crate::CapsuleShadowMaterial::new($color, $size),
-            extra: $crate::aoui::layout::LayoutControl::IgnoreLayout,
         })
     };
 }

@@ -104,11 +104,11 @@ impl<T: Asset> HandleOrString<T> {
     }
 
     pub fn is_some(&self) -> bool{
-        matches!(self, HandleOrString::None)
+        !matches!(self, Self::None)
     }
 
     pub fn is_none(&self) -> bool{
-        !self.is_some()
+        matches!(self, Self::None)
     }
 }
 
@@ -196,6 +196,13 @@ impl<T: Asset> HandleOrAsset<T> {
         }
     }
 
+    pub fn is_some(&self) -> bool{
+        !matches!(self, Self::None)
+    }
+
+    pub fn is_none(&self) -> bool{
+        matches!(self, Self::None)
+    }
 }
 
 impl<T: Asset> DslFrom<Handle<T>> for HandleOrAsset<T>{

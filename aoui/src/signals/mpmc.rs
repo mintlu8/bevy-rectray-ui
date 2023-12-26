@@ -114,18 +114,18 @@ impl<F> SignalMapperFn for F where F: Fn(&mut Object) + Clone + Send + Sync + 's
 
 /// A signal sender
 #[derive(Component)]
-pub struct SenderBuilder<T: DataTransfer> {
+pub struct SignalBuilder<T: DataTransfer> {
     pub(super) signal: Signal,
     p: PhantomData<T>,
 }
 
-impl<T: DataTransfer> Clone for SenderBuilder<T> {
+impl<T: DataTransfer> Clone for SignalBuilder<T> {
     fn clone(&self) -> Self {
-        SenderBuilder { signal: self.signal.clone(), p: PhantomData }
+        SignalBuilder { signal: self.signal.clone(), p: PhantomData }
     }
 }
 
-impl<T: DataTransfer> SenderBuilder<T> {
+impl<T: DataTransfer> SignalBuilder<T> {
 
     pub(super) fn new(signal: Signal) -> Self {
         Self {
@@ -134,7 +134,7 @@ impl<T: DataTransfer> SenderBuilder<T> {
         }
     }
 
-    pub fn build(self) -> Sender<T>{
+    pub fn send(self) -> Sender<T>{
         Sender { 
             signal: self.signal, 
             map: SignalMapper::None, 
@@ -142,7 +142,7 @@ impl<T: DataTransfer> SenderBuilder<T> {
         }
     }
 
-    pub fn map<In: DataTransfer>(self, f: impl Fn(In) -> T + Clone + Send + Sync + 'static) -> Sender<In> {
+    pub fn map_send<In: DataTransfer>(self, f: impl Fn(In) -> T + Clone + Send + Sync + 'static) -> Sender<In> {
         Sender {
             signal: self.signal,
             map: signal_mapper!(In, f),
@@ -150,10 +150,36 @@ impl<T: DataTransfer> SenderBuilder<T> {
         }
     }
 
-    pub fn dynamic(self) -> DynamicSender {
+    pub fn dynamic_send(self) -> DynamicSender {
         DynamicSender {
             signal: self.signal,
             map: SignalMapper::None,
+        }
+    }
+
+
+    pub fn recv<Out: SignalReceiver<Type = T>>(self) -> Receiver<Out>{
+        Receiver { 
+            signal: self.signal, 
+            map: SignalMapper::None, 
+            p: PhantomData,
+        }
+    }
+
+    pub fn map_recv<Out: SignalReceiver>(self, f: impl Fn(T) -> Out::Type + Clone + Send + Sync + 'static) -> Receiver<Out> {
+        Receiver {
+            signal: self.signal,
+            map: signal_mapper!(T, f),
+            p: PhantomData,
+        }
+    }
+
+    /// Special receiver that maps `Some(_) => ()` regardless of type.
+    pub fn recv_any(self) -> Receiver<()> {
+        Receiver {
+            signal: self.signal,
+            map: SignalMapper::Function(Box::new(|obj: &mut Object| *obj = Object::new(()))),
+            p: PhantomData,
         }
     }
 }
@@ -171,55 +197,6 @@ pub struct Sender<T: DataTransfer> {
 impl<T: DataTransfer> Debug for Sender<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Signal as Debug>::fmt(&self.signal, f)
-    }
-}
-
-/// A signal sender
-#[derive(Component)]
-pub struct ReceiverBuilder<T: DataTransfer> {
-    pub(super) signal: Signal,
-    p: PhantomData<T>,
-}
-
-impl<T: DataTransfer> Clone for ReceiverBuilder<T> {
-    fn clone(&self) -> Self {
-        ReceiverBuilder { signal: self.signal.clone(), p: PhantomData }
-    }
-}
-
-
-impl<T: DataTransfer> ReceiverBuilder<T> {
-
-    pub(super) fn new(signal: Signal) -> Self {
-        Self {
-            signal,
-            p: PhantomData,
-        }
-    }
-
-    pub fn build<Out: SignalReceiver<Type = T>>(self) -> Receiver<Out>{
-        Receiver { 
-            signal: self.signal, 
-            map: SignalMapper::None, 
-            p: PhantomData,
-        }
-    }
-
-    pub fn map<Out: SignalReceiver>(self, f: impl Fn(T) -> Out::Type + Clone + Send + Sync + 'static) -> Receiver<Out> {
-        Receiver {
-            signal: self.signal,
-            map: signal_mapper!(T, f),
-            p: PhantomData,
-        }
-    }
-
-    /// Special receiver that maps `Some(_) => ()` regardless of type.
-    pub fn any(self) -> Receiver<()> {
-        Receiver {
-            signal: self.signal,
-            map: SignalMapper::Function(Box::new(|obj: &mut Object| *obj = Object::new(()))),
-            p: PhantomData,
-        }
     }
 }
 
@@ -249,8 +226,8 @@ impl<T: DataTransfer> Sender<T> {
     }
 
     /// Create a new receiver of the underlying signal.
-    pub fn new_receiver(&self) -> ReceiverBuilder<T> {
-        ReceiverBuilder { 
+    pub fn new_receiver(&self) -> SignalBuilder<T> {
+        SignalBuilder { 
             signal: self.signal.clone(), 
             p: PhantomData 
         }
@@ -310,8 +287,8 @@ impl DynamicSender{
     }
 
     /// Create a new receiver of the underlying signal.
-    pub fn new_receiver<T: DataTransfer>(&self) -> ReceiverBuilder<T> {
-        ReceiverBuilder { 
+    pub fn new_receiver<T: DataTransfer>(&self) -> SignalBuilder<T> {
+        SignalBuilder { 
             signal: self.signal.clone(), 
             p: PhantomData 
         }
@@ -326,14 +303,14 @@ impl DynamicSender{
     }
 }
 
-impl<T: SignalReceiver> DslFrom<ReceiverBuilder<T::Type>> for Option<Receiver<T>> {
-    fn dfrom(value: ReceiverBuilder<T::Type>) -> Self {
-        Some(value.build())
+impl<T: SignalReceiver> DslFrom<SignalBuilder<T::Type>> for Option<Receiver<T>> {
+    fn dfrom(value: SignalBuilder<T::Type>) -> Self {
+        Some(value.recv())
     }
 }
 
-impl<T: SignalReceiver> DslFrom<ReceiverBuilder<T::Type>> for Receiver<T> {
-    fn dfrom(value: ReceiverBuilder<T::Type>) -> Self {
-        value.build()
+impl<T: SignalReceiver> DslFrom<SignalBuilder<T::Type>> for Receiver<T> {
+    fn dfrom(value: SignalBuilder<T::Type>) -> Self {
+        value.recv()
     }
 }
