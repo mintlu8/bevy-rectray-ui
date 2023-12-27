@@ -16,6 +16,7 @@ mod mesh2d;
 mod atlas;
 mod interpolate;
 mod converters;
+//mod rich_text;
 
 pub use converters::*;
 

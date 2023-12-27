@@ -8,6 +8,7 @@ use smallvec::SmallVec;
 use crate::dsl::{DslFrom, DslInto};
 use crate::events::*;
 use crate::signals::{DataTransfer, Sender, DynamicSender, SignalMapper, SignalBuilder, KeyStorage, Object};
+use crate::util::CondVec;
 use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;
@@ -320,6 +321,12 @@ impl EventHandling for EvTextSubmit {
 
 impl EventHandling for EvPositionFactor {
     type Data = f32;
+    type Context = ();
+    fn new_context() -> Self::Context {}
+}
+
+impl EventHandling for EvPositionSync {
+    type Data = CondVec;
     type Context = ();
     fn new_context() -> Self::Context {}
 }

@@ -1,4 +1,4 @@
-//! Demo for the span based layouts.
+//! Demo for the `quote!` syntax.
 
 use bevy::prelude::*;
 use bevy_aoui::AouiPlugin;

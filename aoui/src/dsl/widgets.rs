@@ -4,7 +4,7 @@ use bevy::render::color::Color;
 use bevy::render::view::RenderLayers;
 use bevy::text::Font;
 use bevy::window::CursorIcon;
-use crate::widgets::button::{Payload, Button, CheckButton, RadioButton};
+use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel};
 use crate::widgets::scrollframe::ClippingBundle;
 use crate::{Dimension, Anchor, Size2, Hitbox, build_frame, Clipping};
 use crate::bundles::{AouiBundle, AouiSpriteBundle};
@@ -166,6 +166,8 @@ widget_extension!(
         pub cursor: Option<CursorIcon>,
         /// The context for the radio button's value.
         pub context: Option<RadioButton>,
+        /// If true, behave like a `CheckButton` and set context to `None` if already checked.
+        pub cancellable: bool,
         /// Discriminant for this button's value, must be comparable.
         pub value: OptionX<Payload>,
         /// Sends a signal whenever the button is clicked.
@@ -176,6 +178,7 @@ widget_extension!(
 impl Widget for RadioButtonBuilder {
     fn spawn_with(self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
         let mut entity = build_frame!(commands, self);
+
         entity.insert((
             PropagateFocus,
             SetCursor {
@@ -188,6 +191,9 @@ impl Widget for RadioButtonBuilder {
         ));
         if self.hitbox.is_none() {
             entity.insert(Hitbox::FULL);
+        }
+        if self.cancellable {
+            entity.insert(RadioButtonCancel);
         }
         if !self.on_click.is_empty()  {
             entity.insert(self.on_click);

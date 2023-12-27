@@ -33,6 +33,7 @@ pub use crate::events::{
     EvObtainFocus, EvLoseFocus,
     EvMouseDrag, EvTextChange, EvTextSubmit,
     EvPositionFactor,
+    EvPositionSync,
 };
 pub use crate::OpacityWriter;
 pub use crate::signals::{signal, fps_signal, Sender, Receiver, types::*};

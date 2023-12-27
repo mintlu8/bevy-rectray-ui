@@ -1,14 +1,16 @@
 
+use std::sync::Arc;
+
+use atomic::{Atomic, Ordering};
 use bevy::{hierarchy::Children, math::{Vec2, IVec2}, log::warn};
 use bevy::ecs::{component::Component, query::Without};
 use bevy::ecs::system::{Query, Res, Commands, ResMut};
-use crate::{Dimension, Transform2D, Anchor, AouiREM, signals::types::SigScroll};
+use crate::{Dimension, Transform2D, Anchor, AouiREM, signals::types::SigScroll, events::EvPositionSync, dsl::prelude::SigPositionSync, util::CondVec};
 use crate::layout::{Container, LayoutControl};
 use crate::events::{EvMouseWheel, Handlers, EvPositionFactor};
 use crate::signals::{Receiver, KeyStorage};
 
 use crate::events::MouseWheelAction;
-
 
 /// Add size relative scrolling support.
 /// 
@@ -101,23 +103,35 @@ impl Default for Scrolling {
 
 pub fn scrolling_system(
     mut commands: Commands,
-    mut key_storage: ResMut<KeyStorage>,
+    mut storage: ResMut<KeyStorage>,
     rem: Option<Res<AouiREM>>,
-    scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&Handlers<EvMouseWheel>>, Option<&Handlers<EvPositionFactor>>)>,
+    scroll: Query<(
+        &Scrolling, &Dimension, &Children, &MouseWheelAction,
+        Option<&Handlers<EvMouseWheel>>, 
+        Option<&Handlers<EvPositionFactor>>,
+        Option<&Handlers<EvPositionSync>>,
+    )>,
     sender: Query<(&MouseWheelAction, &Handlers<EvMouseWheel>), Without<Scrolling>>,
-    receiver: Query<(&Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&Handlers<EvMouseWheel>>, Option<&Handlers<EvPositionFactor>>), Without<MouseWheelAction>>,
+    receiver: Query<(
+        &Scrolling, &Dimension, &Children, 
+        Option<&Receiver<SigScroll>>, 
+        Option<&Receiver<SigPositionSync>>,
+        Option<&Handlers<EvMouseWheel>>, 
+        Option<&Handlers<EvPositionFactor>>,
+        Option<&Handlers<EvPositionSync>>,
+    ), Without<MouseWheelAction>>,
     mut child_query: Query<(&Dimension, &mut Transform2D, Option<&Children>)>,
 ) {
     let rem = rem.map(|x|x.get()).unwrap_or(16.0);
     for (action, signal) in sender.iter() {
-        signal.handle(&mut commands, &mut key_storage, *action);
+        signal.handle(&mut commands, &mut storage, *action);
     }
     let iter = scroll.iter()
-        .map(|(scroll, dimension, children, action, handler, fac)| 
-            (scroll, dimension, children, *action, handler, fac))
-        .chain(receiver.iter().filter_map(|(scroll, dimension, children, receiver, handler, fac)| 
-            Some((scroll, dimension, children, receiver.poll()?, handler, fac))));
-    for (scroll, dimension, children, delta, handler, fac) in iter {
+        .map(|(scroll, dimension, children, action, handler, fac, sync)| 
+            (scroll, dimension, children, *action, handler, fac, sync))
+        .chain(receiver.iter().filter_map(|(scroll, dimension, children, receiver, _, handler, fac, sync)| 
+            Some((scroll, dimension, children, receiver?.poll()?, handler, fac, sync))));
+    for (scroll, dimension, children, delta, handler, fac_handler, sync_handler) in iter {
         let size = dimension.size;
         let delta_scroll = match (scroll.x_scroll(), scroll.y_scroll()) {
             (true, true) => delta.pixels,
@@ -140,7 +154,7 @@ pub fn scrolling_system(
             let size_max = size * Anchor::TopRight;
             let mut min = Vec2::ZERO;
             let mut max = Vec2::ZERO;
-            for (dimension, transform, _) in child_query.iter_many(children) {
+            for (dimension, transform, ..) in child_query.iter_many(children) {
                 let anc = size * transform.get_parent_anchor();
                 let offset = transform.offset.as_pixels(size, dimension.em, rem);
                 let center = anc + offset - dimension.size * transform.anchor;
@@ -165,21 +179,38 @@ pub fn scrolling_system(
                 // If scrolled to the end pipe the scroll event to the parent.
                 if transform.offset == offset.into() {
                     if let Some(piping) = handler {
-                        piping.handle(&mut commands, &mut key_storage, delta);
+                        piping.handle(&mut commands, &mut storage, delta);
                     }
                 }
                 transform.offset = offset.into();
-                if let Some(fac_handler) = fac {
-                    let frac = (offset - clamp_min) / (clamp_max - clamp_min);
-                    let frac = match (scroll.x_scroll(), scroll.y_scroll()) {
-                        (true, false) => frac.x.clamp(0.0, 1.0),
-                        (false, true) => frac.y.clamp(0.0, 1.0),
-                        _ => {
-                            warn!("Failed sending 'Change<Scroll>', cannot compute fraction of 2D scrolling.");
-                            continue;
-                        },
-                    };
-                    fac_handler.handle(&mut commands, &mut key_storage, frac);
+                let fac = (offset - clamp_min) / (clamp_max - clamp_min);
+
+                match (scroll.x_scroll(), scroll.y_scroll()) {
+                    (true, false) => {
+                        let value = fac.x.clamp(0.0, 1.0);
+                        if let Some(signal) = fac_handler {
+                            signal.handle(&mut commands, &mut storage, value)
+                        }
+                        if let Some(signal) = sync_handler {
+                            signal.handle(&mut commands, &mut storage, CondVec::x(value))
+                        }
+                    },
+                    (false, true) => {
+                        let value = fac.y.clamp(0.0, 1.0);
+                        if let Some(signal) = fac_handler {
+                            signal.handle(&mut commands, &mut storage, value)
+                        }
+                        if let Some(signal) = sync_handler {
+                            signal.handle(&mut commands, &mut storage, CondVec::y(value))
+                        }
+                    },
+                    (true, true) => {
+                        let value = fac.clamp(Vec2::ZERO, Vec2::ONE);
+                        if let Some(signal) = sync_handler {
+                            signal.handle(&mut commands, &mut storage, value.into())
+                        }
+                    }
+                    _ => (),
                 }
             }
         }            
@@ -251,3 +282,23 @@ pub fn scrolling_discrete(
         }
     }
 }
+
+
+/// Offset based on a percentage ratio in the parent's
+/// bounding rectangle. This is different from `Size2::Percent` since this is 
+/// anchor agnostic and laid out against `parent_size - child_size`.
+/// 
+/// This value is required for scrolling and bounded dragging. This can also 
+/// be shared, i.e. scroll bar.
+#[derive(Debug, Component)]
+pub struct OffsetRatio(Arc<Atomic<Vec2>>);
+
+impl OffsetRatio {
+    pub fn get(&self) -> Vec2 {
+        self.0.load(Ordering::Relaxed)
+    }
+    pub fn set(&self, value: Vec2) {
+        self.0.store(value, Ordering::Relaxed)
+    }
+}
+

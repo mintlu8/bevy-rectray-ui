@@ -1,5 +1,5 @@
-use bevy::{math::Vec2, ecs::{system::{Query, Res, ResMut, Commands}, component::Component, query::{Without, With}, entity::Entity}, hierarchy::Parent, log::warn, window::{Window, PrimaryWindow}};
-use crate::{Transform2D, signals::{types::SigDrag, KeyStorage}, Dimension, Anchor, events::{Handlers, EvMouseDrag, EvPositionFactor}, anim::MaybeAnim};
+use bevy::{math::Vec2, ecs::{system::{Query, Res, ResMut, Commands}, component::Component, query::{Without, With}, entity::Entity}, hierarchy::Parent, window::{Window, PrimaryWindow}};
+use crate::{Transform2D, signals::{types::SigDrag, KeyStorage}, Dimension, Anchor, events::{Handlers, EvMouseDrag, EvPositionFactor, EvPositionSync}, anim::MaybeAnim, dsl::prelude::{SigPositionSync}, util::CondVec};
 use serde::{Serialize, Deserialize};
 
 use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::Offset};
@@ -53,7 +53,6 @@ impl DragSnapBack {
     fn set(&mut self, value: Vec2) {
         self.drag_start = Some(value)
     }
-
 }
 
 impl Draggable {
@@ -95,7 +94,7 @@ pub fn drag_start(
     send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Draggable>>,
     mut receive: Query<(&Receiver<SigDrag>, &mut Draggable, MaybeAnim<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut Draggable, MaybeAnim<Transform2D, Offset>, Option<&mut DragSnapBack>)>,
-    ) {
+) {
 
     for (focus, send) in send.iter() {
         if focus.intersects(EventFlags::LeftDown | EventFlags::MidDown | EventFlags:: RightDown)  {
@@ -150,7 +149,11 @@ pub fn dragging(
     mut receive: Query<(Entity, &Draggable, MaybeAnim<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorFocus>>,
     mut query: Query<(Entity, &CursorFocus, &Draggable, MaybeAnim<Transform2D, Offset>)>,
     parent_query: Query<&Dimension, (Without<Draggable>, Without<DragConstraint>)>,
-    constraint_query: Query<(Option<&Parent>, &Dimension, Option<&Handlers<EvPositionFactor>>), With<DragConstraint>>
+    constraint_query: Query<(Option<&Parent>, &Dimension, 
+        Option<&Receiver<SigPositionSync>>, 
+        Option<&Handlers<EvPositionFactor>>,
+        Option<&Handlers<EvPositionSync>>,
+    ), With<DragConstraint>>
 ) {
     let delta = state.cursor_position() - state.down_position();
 
@@ -187,7 +190,7 @@ pub fn dragging(
                 if drag.y {delta.y} else {0.0}, 
             )
         };
-        if let Ok((parent, dim, signal)) = constraint_query.get(entity) {
+        if let Ok((parent, dim, recv, signal, signal2d)) = constraint_query.get(entity) {
             let Some(dimension) = parent
                 .and_then(|p| parent_query.get(p.get()).ok())
                 .map(|x| x.size)
@@ -208,13 +211,35 @@ pub fn dragging(
             if drag.y && max.y >= min.y {
                 pos.y = pos.y.clamp(min.y, max.y);
             }
+            if let Some(fac) = recv.map(|x| x.poll()).flatten() {
+                pos = fac.cond(pos, (max - min) * fac + min);
+            }
             
-            if let Some(signal) = signal {
-                match (drag.x, drag.y) {
-                    (true, false) => signal.handle(&mut commands, &mut storage, (pos.x - min.x) / (max.x - min.x)),
-                    (false, true) => signal.handle(&mut commands, &mut storage, (pos.y - min.y) / (max.y - min.y)),
-                    _ => warn!("Cannot send `Changed` signal from 2d dragging."),
+            match (drag.x, drag.y) {
+                (true, false) => {
+                    let value = (pos.x - min.x) / (max.x - min.x);
+                    if let Some(signal) = signal {
+                        signal.handle(&mut commands, &mut storage, value)
+                    }
+                    if let Some(signal2d) = signal2d {
+                        signal2d.handle(&mut commands, &mut storage, CondVec::x(value))
+                    }
+                },
+                (false, true) => {
+                    let value = (pos.y - min.y) / (max.y - min.y);
+                    if let Some(signal) = signal {
+                        signal.handle(&mut commands, &mut storage, value)
+                    }
+                    if let Some(signal2d) = signal2d {
+                        signal2d.handle(&mut commands, &mut storage, CondVec::y(value))
+                    }
+                },
+                (true, true) => {
+                    if let Some(signal2d) = signal2d {
+                        signal2d.handle(&mut commands, &mut storage, (pos - min / max - min).into())
+                    }
                 }
+                _ => (),
             }
         }
 

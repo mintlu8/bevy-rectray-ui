@@ -39,6 +39,10 @@ impl Anchor {
         self.0
     }
 
+    pub fn as_unit(&self) -> Vec2 {
+        self.0 + Vec2::new(0.5, 0.5)
+    }
+
     pub fn x(&self) -> f32 {
         self.0.x
     }

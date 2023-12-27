@@ -1,6 +1,6 @@
 use std::{sync::{Mutex, Arc}, ops::Deref, mem};
 
-use bevy::{render::view::Visibility, hierarchy::Children, ecs::{entity::Entity, system::ResMut}};
+use bevy::{render::view::Visibility, hierarchy::Children, ecs::{entity::Entity, system::ResMut, query::Has}};
 use bevy::window::{Window, PrimaryWindow, CursorIcon};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
 use crate::{Opacity, dsl::prelude::signal, signals::KeyStorage};
@@ -113,6 +113,13 @@ impl From<bool> for CheckButton {
 pub struct RadioButton(Arc<Mutex<Object>>, DynamicSender);
 
 impl RadioButton {
+
+    /// Create an empty `RadioButton` context, usually unchecked by default.
+    pub fn new_empty() -> Self {
+        let (send,) = signal::<(), _>();
+        RadioButton(Arc::new(Mutex::new(Object::NONE)), send.clone().dynamic_send())
+    }
+
     pub fn new(default: impl DataTransfer) -> Self {
         let (send,) = signal::<(), _>();
         RadioButton(Arc::new(Mutex::new(Object::new(default))), send.clone().dynamic_send())
@@ -131,6 +138,12 @@ impl RadioButton {
     pub fn recv<T: DataTransfer>(&self) -> SignalBuilder<T> {
         self.1.new_receiver()
     }
+
+    pub fn clear(&self) {
+        let mut lock = self.0.lock().unwrap();
+        *lock = Object::NONE;
+        self.1.send_dyn(Object::NONE)
+    }
 }
 
 impl PartialEq<Payload> for RadioButton {
@@ -139,6 +152,10 @@ impl PartialEq<Payload> for RadioButton {
         lock.deref() == &other.0
     }
 }
+
+/// Component for making `RadioButton` behave like `CheckButton`.
+#[derive(Debug, Clone, Component)]
+pub struct RadioButtonCancel;
 
 pub fn button_on_click(
     mut commands: Commands,
@@ -180,10 +197,14 @@ pub fn check_button_on_click(
 pub fn radio_button_on_click(
     mut commands: Commands,
     mut key_storage: ResMut<KeyStorage>,
-    mut query: Query<(&CursorAction, &RadioButton, &Payload, Option<&Handlers<EvButtonClick>>)>
+    mut query: Query<(&CursorAction, &RadioButton, &Payload, Option<&Handlers<EvButtonClick>>, Has<RadioButtonCancel>)>
 ) {
-    for (action, state, payload, submit) in query.iter_mut() {
+    for (action, state, payload, submit, cancellable) in query.iter_mut() {
         if !action.is(EventFlags::LeftClick) { continue }
+        if cancellable && state == payload {
+            state.clear();
+            continue;
+        }
         state.set(payload);
         if let Some(signal) = submit {
             signal.handle_dyn(&mut commands, &mut key_storage, payload.0.clone());

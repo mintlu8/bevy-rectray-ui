@@ -2,21 +2,20 @@
 use super::{DataTransfer, Signal, mpmc::SignalBuilder};
 
 pub trait SignalCreate<T> {
-    fn new() -> Self;
+    fn new(signal: Signal) -> Self;
 }
 
 macro_rules! signal_create {
     ($first: ident) => {
         impl<T: DataTransfer> SignalCreate<T> for ($first<T>,) {
-            fn new() -> Self {
-                ($first::new(Signal::new()), )
+            fn new(signal: Signal) -> Self {
+                ($first::new(signal), )
             }
         }
     };
     ($first: ident, $($receivers: ident),*) => {
         impl<T: DataTransfer> SignalCreate<T> for ($($receivers<T>),* , $first<T>) {
-            fn new() -> Self {
-                let signal = Signal::new();
+            fn new(signal: Signal) -> Self {
                 (
                     $($receivers::new(signal.clone()),)*
                     $first::new(signal),
@@ -35,8 +34,7 @@ signal_create!(SignalBuilder,
 );
 
 impl<T: DataTransfer, const N: usize> SignalCreate<T> for [SignalBuilder<T>; N] {
-    fn new() -> Self {
-        let signal = Signal::new();
+    fn new(signal: Signal) -> Self {
         core::array::from_fn(|_|SignalBuilder::new(signal.clone()))
     }
 }
@@ -93,5 +91,5 @@ impl<T: DataTransfer, const N: usize> SignalCreate<T> for [SignalBuilder<T>; N] 
 /// # */
 /// ```
 pub fn signal<T, S: SignalCreate<T>>() -> S {
-    S::new()
+    S::new(Signal::new())
 }

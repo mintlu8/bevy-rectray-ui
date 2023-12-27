@@ -2,6 +2,7 @@ use bevy::math::Vec2;
 use bevy::render::color::Color;
 
 use crate::events::MouseWheelAction;
+use crate::util::CondVec;
 use crate::widgets::drag::DragState;
 
 #[macro_export]
@@ -37,9 +38,13 @@ signal_receivers!(
     /// This is useful for creating a draggable banner for a non-draggable parent sprite.
     SigDrag: DragState,
     /// Sent if being scrolled on, `Scroll` sprite will be scrolled if receiving this signal.
+    /// 
+    /// Also serves as emulated dragging input.
     SigScroll: MouseWheelAction,
 
-    /// Triggers some behavior when sent to another widget.
+    /// Synchronize position (drag/scroll) across widgets.
+    SigPositionSync: CondVec, 
+
     SigInvoke: (),
 
     /// Modifies the recipient's text.

@@ -1,4 +1,4 @@
-//! example for using richtext
+//! examples using richtext
 //! 
 //! Note this just compiles to bevy_text, nothing fancy here.
 

@@ -19,6 +19,8 @@ pub fn main() {
         .run();
 }
 
+static TEXT: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris semper magna nibh, nec tincidunt metus fringilla id. Phasellus viverra elit volutpat orci lacinia, non suscipit odio egestas. Praesent urna ipsum, viverra non dui id, auctor sodales sem. Quisque ut mi sit amet quam ultricies cursus at vitae justo. Morbi egestas pulvinar dui id elementum. Aliquam non aliquam eros. Nam euismod in lectus sit amet blandit. Aenean mauris diam, auctor ut massa sed, convallis congue leo. Maecenas non nibh semper, tempor velit sit amet, facilisis lacus. Curabitur nec leo nisl. Proin vitae fringilla nisl. Sed vel hendrerit mi. Donec et cursus risus, at euismod justo.
+Ut luctus tellus mi. Donec non lacus ex. Vivamus non rutrum quam. Curabitur in bibendum tellus. Fusce eu gravida massa. Ut viverra vestibulum convallis. Morbi ullamcorper gravida fringilla. Morbi ullamcorper sem eget eleifend sagittis. Mauris interdum odio eget luctus pretium. In non dapibus risus.";
 
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
@@ -30,16 +32,17 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         color: color!(gold),
         extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
     });
-    
-    let (send1, recv11, recv12, recv13) = signal();
-    let (send2, recv21, recv22, recv23) = signal();
+
+    let (first, second) = radio_button_group(0);
+    let sig = first.recv::<i32>();
 
     let (scroll_send1, scroll_recv) = signal();
     let scroll_send2 = scroll_send1.clone();
 
+    let (drag1_send, drag1_recv) = signal();
     clipping_layer!((commands, assets) {
         dimension: [400, 400],
-        scroll: Scrolling::Y,
+        scroll: Scrolling::POS_Y,
         scroll_recv: scroll_recv,
         buffer: [800, 800],
         layer: 3,
@@ -51,39 +54,57 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     anchor: Left,
                     text: "Accordion 1",
                 },
-                child: check_button! {
+                child: radio_button! {
                     anchor: Right,
+                    center: Center,
                     dimension: size2!(2 em, 2 em),
-                    checked: true,
-                    on_change: send1,
+                    context: first,
+                    cancellable: true,
+                    value: 0,
                     child: text! {
                         text: "v",
-                        extra: recv13.map_recv::<SigRotation>(|x: bool| if x {PI} else {0.0}),
+                        extra: sig.clone().cond_recv::<SigRotation>(0, PI, 0.0),
                         extra: transition! (Rotation 0.5 CubicInOut default PI)
                     },
                 }
             },
             child: clipping_layer! {
                 anchor: Top,
-                dimension: [400, 400],
+                dimension: [400, 200],
                 buffer: [800, 800],
                 scroll: Scrolling::Y,
                 scroll_send: scroll_send1,
-                extra: recv11.map_recv::<SigDimensionY>(|x: bool| if x {400.0f32} else {0.0f32}),
+                extra: sig.clone().cond_recv::<SigDimensionY>(0, 200.0, 0.0),
                 extra: transition! (Dimension 0.5 CubicInOut default [400, 400]),
+                extra: drag1_recv.recv::<SigPositionSync>(),
                 layer: 1,
                 child: text! {
-                        anchor: Top,
-                        bounds: [390, 999999],
-                        color: color!(gold),
-                        wrap: true,
-                        extra: recv12.map_recv::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
-                        extra: transition! (Opacity 0.5 CubicInOut default 1.0),
-                        extra: OpacityWriter,
-                        text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris semper magna nibh, nec tincidunt metus fringilla id. Phasellus viverra elit volutpat orci lacinia, non suscipit odio egestas. Praesent urna ipsum, viverra non dui id, auctor sodales sem. Quisque ut mi sit amet quam ultricies cursus at vitae justo. Morbi egestas pulvinar dui id elementum. Aliquam non aliquam eros. Nam euismod in lectus sit amet blandit. Aenean mauris diam, auctor ut massa sed, convallis congue leo. Maecenas non nibh semper, tempor velit sit amet, facilisis lacus. Curabitur nec leo nisl. Proin vitae fringilla nisl. Sed vel hendrerit mi. Donec et cursus risus, at euismod justo.
-Ut luctus tellus mi. Donec non lacus ex. Vivamus non rutrum quam. Curabitur in bibendum tellus. Fusce eu gravida massa. Ut viverra vestibulum convallis. Morbi ullamcorper gravida fringilla. Morbi ullamcorper sem eget eleifend sagittis. Mauris interdum odio eget luctus pretium. In non dapibus risus.
-Quisque id odio urna. Maecenas aliquam ullamcorper semper. Duis eu pulvinar magna, vel malesuada odio. Morbi lobortis porttitor metus sit amet pellentesque. In convallis feugiat sem, eget varius risus vulputate eget. Ut nec massa cursus, tempor quam nec, vulputate lorem. Nullam nec nisl et odio blandit vulputate. Morbi porta risus dui, nec efficitur sem euismod quis. Integer vel elit massa. Mauris ornare sollicitudin nunc venenatis laoreet. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean aliquet egestas ipsum.
-Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et placerat velit. Suspendisse vel risus leo. Aenean in justo nec mauris porta lobortis a vitae nisi. Fusce fermentum ipsum et aliquet varius. Proin vel aliquam risus, et ornare libero. Proin non luctus dui.",
+                    anchor: Top,
+                    offset: [-10, 0],
+                    bounds: [370, 999999],
+                    color: color!(gold),
+                    wrap: true,
+                    extra: sig.clone().cond_recv::<SigOpacity>(0, 1.0, 0.0),
+                    extra: transition! (Opacity 0.5 CubicInOut default 1.0),
+                    extra: OpacityWriter,
+                    text: TEXT,
+                }
+            },
+            child: rectangle! {
+                anchor: Right,
+                dimension: [20, 200],
+                color: color!(orange),
+                extra: IgnoreLayout,
+                child: rectangle! {
+                    anchor: Top,
+                    event: EventFlags::LeftDrag,
+                    dimension: [20, 40],
+                    color: color!(red),
+                    extra: DragY,
+                    extra: DragConstraint,
+                    extra: handler! {
+                        EvPositionSync => {drag1_send}
+                    }
                 }
             },
             child: hspan! {
@@ -92,39 +113,40 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
                     anchor: Left,
                     text: "Accordion 2",
                 },
-                child: check_button! {
+                child: radio_button! {
                     anchor: Right,
+                    center: Center,
                     dimension: size2!(2 em, 2 em),
-                    checked: true,
-                    on_change: send2,
+                    context: second,
+                    cancellable: true,
+                    value: 1,
                     child: text! {
                         text: "v",
-                        extra: recv23.map_recv::<SigRotation>(|x: bool| if x {PI} else {0.0}),
+                        rotation: PI,
+                        extra: sig.clone().cond_recv::<SigRotation>(1, PI, 0.0),
                         extra: transition! (Rotation 0.5 CubicInOut default PI)
                     },
                 }
             },
             child: clipping_layer! {
                 anchor: Top,
-                dimension: [400, 400],
+                dimension: [400, 0],
                 buffer: [800, 800],
                 scroll: Scrolling::Y,
                 scroll_send: scroll_send2,
-                extra: recv21.map_recv::<SigDimensionY>(|x: bool| if x {400.0f32} else {0.0f32}),
+                extra: sig.clone().cond_recv::<SigDimensionY>(1, 200.0, 0.0),
                 extra: Interpolate::<Dimension>::ease(EaseFunction::CubicInOut, Vec2::new(400.0, 400.0), 0.5),
                 layer: 2,
                 child: text! {
                     anchor: TopLeft,
                     bounds: [390, 999999],
                     color: color!(gold),
+                    opacity: 0.0,
                     wrap: true,
-                    extra: recv22.map_recv::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
+                    extra: sig.clone().cond_recv::<SigOpacity>(1, 1.0, 0.0),
                     extra: Interpolate::<Opacity>::ease(EaseFunction::CubicInOut, 1.0, 0.5),
                     extra: OpacityWriter,
-                    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris semper magna nibh, nec tincidunt metus fringilla id. Phasellus viverra elit volutpat orci lacinia, non suscipit odio egestas. Praesent urna ipsum, viverra non dui id, auctor sodales sem. Quisque ut mi sit amet quam ultricies cursus at vitae justo. Morbi egestas pulvinar dui id elementum. Aliquam non aliquam eros. Nam euismod in lectus sit amet blandit. Aenean mauris diam, auctor ut massa sed, convallis congue leo. Maecenas non nibh semper, tempor velit sit amet, facilisis lacus. Curabitur nec leo nisl. Proin vitae fringilla nisl. Sed vel hendrerit mi. Donec et cursus risus, at euismod justo.
-Ut luctus tellus mi. Donec non lacus ex. Vivamus non rutrum quam. Curabitur in bibendum tellus. Fusce eu gravida massa. Ut viverra vestibulum convallis. Morbi ullamcorper gravida fringilla. Morbi ullamcorper sem eget eleifend sagittis. Mauris interdum odio eget luctus pretium. In non dapibus risus.
-Quisque id odio urna. Maecenas aliquam ullamcorper semper. Duis eu pulvinar magna, vel malesuada odio. Morbi lobortis porttitor metus sit amet pellentesque. In convallis feugiat sem, eget varius risus vulputate eget. Ut nec massa cursus, tempor quam nec, vulputate lorem. Nullam nec nisl et odio blandit vulputate. Morbi porta risus dui, nec efficitur sem euismod quis. Integer vel elit massa. Mauris ornare sollicitudin nunc venenatis laoreet. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean aliquet egestas ipsum.
-Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et placerat velit. Suspendisse vel risus leo. Aenean in justo nec mauris porta lobortis a vitae nisi. Fusce fermentum ipsum et aliquet varius. Proin vel aliquam risus, et ornare libero. Proin non luctus dui.",
+                    text: TEXT
                 }
             },
         }

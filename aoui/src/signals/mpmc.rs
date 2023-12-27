@@ -3,7 +3,7 @@ use bevy::ecs::component::Component;
 
 use crate::dsl::DslFrom;
 
-use super::{dto::Object, DataTransfer, sig::Signal};
+use super::{dto::Object, DataTransfer, sig::Signal, create::SignalCreate};
 
 /// Marker trait for `Receiver` compatible signals.
 /// 
@@ -21,7 +21,8 @@ impl SignalReceiver for () {
 pub enum SignalMapper {
     #[default]
     None,
-    Function(Box<dyn SignalMapperFn>)
+    Function(Box<dyn SignalMapperFn>),
+    If(Object, Object, Object),
 }
 
 impl SignalMapper {
@@ -32,6 +33,9 @@ impl SignalMapper {
                 f.call(&mut obj);
                 obj
             },
+            SignalMapper::If(cond, then, el) => {
+                if &obj == cond {then.clone()} else {el.clone()}
+            }
         }
     }
 }
@@ -74,6 +78,14 @@ impl Signal {
                 f.call(&mut obj);
                 obj.get()
             },
+            SignalMapper::If(cond, a, b) => {
+                let obj = self.read_dyn();
+                if &obj == cond {
+                    a.get()
+                } else {
+                    b.get()
+                }
+            },
         }
     }
 }
@@ -83,6 +95,7 @@ impl Debug for SignalMapper{
         match self {
             Self::None => write!(f, "None"),
             Self::Function(_) => write!(f, "Function"),
+            Self::If(..) => write!(f, "If"),
         }
     }
 }
@@ -92,6 +105,7 @@ impl Clone for SignalMapper {
         match self {
             Self::None => Self::None,
             Self::Function(arg0) => Self::Function(arg0.dyn_clone()),
+            Self::If(a,b,c) => Self::If(a.clone(), b.clone(), c.clone()),
         }
     }
 }
@@ -150,6 +164,14 @@ impl<T: DataTransfer> SignalBuilder<T> {
         }
     }
 
+    pub fn cond_send<In: DataTransfer>(self, if_eq: impl DataTransfer, then: T, or_else: T) -> Sender<In> {
+        Sender {
+            signal: self.signal,
+            map: SignalMapper::If(Object::new(if_eq), Object::new(then), Object::new(or_else)),
+            p: PhantomData,
+        }
+    }
+
     pub fn dynamic_send(self) -> DynamicSender {
         DynamicSender {
             signal: self.signal,
@@ -174,6 +196,15 @@ impl<T: DataTransfer> SignalBuilder<T> {
         }
     }
 
+    pub fn cond_recv<Out: SignalReceiver>(self, if_eq: impl DataTransfer, then: Out::Type, or_else: Out::Type) -> Receiver<Out> {
+        Receiver {
+            signal: self.signal,
+            map: SignalMapper::If(Object::new(if_eq), Object::new(then), Object::new(or_else)),
+            p: PhantomData,
+        }
+    }
+
+
     /// Special receiver that maps `Some(_) => ()` regardless of type.
     pub fn recv_any(self) -> Receiver<()> {
         Receiver {
@@ -181,6 +212,10 @@ impl<T: DataTransfer> SignalBuilder<T> {
             map: SignalMapper::Function(Box::new(|obj: &mut Object| *obj = Object::new(()))),
             p: PhantomData,
         }
+    }
+
+    pub fn split<S: SignalCreate<T>>(&self) -> S {
+        S::new(self.signal.clone())
     }
 }
 
@@ -241,6 +276,10 @@ impl<T: DataTransfer> Sender<T> {
         self.signal.try_clean();
     }
 
+    pub fn split<S: SignalCreate<T>>(&self) -> S {
+        S::new(self.signal.clone())
+    }
+
 }
 
 
@@ -249,6 +288,10 @@ impl<M: SignalReceiver> Receiver<M> {
     /// Receives data from a signal.
     pub fn poll(&self) -> Option<M::Type> {
         self.signal.get_mapped(&self.map)
+    }
+
+    pub fn split<S: SignalCreate<M::Type>>(&self) -> S {
+        S::new(self.signal.clone())
     }
 }
 
@@ -300,6 +343,10 @@ impl DynamicSender{
     /// This simulates bevy's double buffered events.
     pub fn try_cleanup(&self) {
         self.signal.try_clean();
+    }
+
+    pub fn split<T, S: SignalCreate<T>>(&self) -> S {
+        S::new(self.signal.clone())
     }
 }
 
