@@ -34,6 +34,13 @@ pub struct MouseWheelAction{
     pub pixels: Vec2,
 }
 
+impl MouseWheelAction {
+    pub const ZERO: Self = Self {
+        lines: IVec2::ZERO,
+        pixels: Vec2::ZERO
+    };
+}
+
 pub fn mousewheel_event(
     mut commands: Commands,
     scaling: Res<ScrollScaling>,

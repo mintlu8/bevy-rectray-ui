@@ -180,6 +180,7 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .register_event::<EvMidDrag>()
             .register_event::<EvRightPressed>()
             .register_event::<EvRightDrag>()
+            .register_event::<EvMouseWheel>()
             .register_event::<EvMouseDrag>()
             .register_event::<EvObtainFocus>()
             .register_event::<EvLoseFocus>()

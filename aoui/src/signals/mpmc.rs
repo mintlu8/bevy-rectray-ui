@@ -126,8 +126,7 @@ impl<F> SignalMapperFn for F where F: Fn(&mut Object) + Clone + Send + Sync + 's
     }
 }
 
-/// A signal sender
-#[derive(Component)]
+#[derive(Debug)]
 pub struct SignalBuilder<T: DataTransfer> {
     pub(super) signal: Signal,
     p: PhantomData<T>,
@@ -243,6 +242,13 @@ pub struct Receiver<T: SignalReceiver>{
     pub(super) p: PhantomData<T>,
 }
 
+// This is needed for dsl semantics.
+impl<T: SignalReceiver> Default for Receiver<T> {
+    fn default() -> Self {
+        Self { signal: Signal::new(), map: SignalMapper::None, p: PhantomData}
+    }
+}
+
 impl<T: SignalReceiver> Debug for Receiver<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Signal as Debug>::fmt(&self.signal, f)
@@ -268,12 +274,13 @@ impl<T: DataTransfer> Sender<T> {
         }
     }
 
-    /// Try remove the underlying item if polled,
-    /// if not, set it as polled.
+    /// Try remove the underlying item if polled.
     /// 
     /// This simulates bevy's double buffered events.
-    pub fn try_cleanup(&self) {
-        self.signal.try_clean();
+    /// 
+    /// Drop flag is updated every frame to achieve a 'double_buffered' effect.
+    pub fn try_cleanup(&self, drop_flag: u8) {
+        self.signal.try_clean(drop_flag);
     }
 
     pub fn split<S: SignalCreate<T>>(&self) -> S {
@@ -337,12 +344,13 @@ impl DynamicSender{
         }
     }
 
-    /// Try remove the underlying item if polled,
-    /// if not, set it as polled.
+    /// Try remove the underlying item if polled.
     /// 
     /// This simulates bevy's double buffered events.
-    pub fn try_cleanup(&self) {
-        self.signal.try_clean();
+    /// 
+    /// Drop flag is updated every frame to achieve a 'double_buffered' effect.
+    pub fn try_cleanup(&self, drop_flag: u8) {
+        self.signal.try_clean(drop_flag);
     }
 
     pub fn split<T, S: SignalCreate<T>>(&self) -> S {

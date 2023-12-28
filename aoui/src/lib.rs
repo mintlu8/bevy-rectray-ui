@@ -269,8 +269,6 @@ pub mod schedule;
 mod extension;
 pub use extension::WorldExtension;
 
-pub mod util;
-
 pub use schedule::CorePlugin;
 
 /// Plugin for both widgets and events.

@@ -2,7 +2,6 @@ use bevy::math::Vec2;
 use bevy::render::color::Color;
 
 use crate::events::MouseWheelAction;
-use crate::util::CondVec;
 use crate::widgets::drag::DragState;
 
 #[macro_export]
@@ -42,9 +41,7 @@ signal_receivers!(
     /// Also serves as emulated dragging input.
     SigScroll: MouseWheelAction,
 
-    /// Synchronize position (drag/scroll) across widgets.
-    SigPositionSync: CondVec, 
-
+    /// Invoke with no data.
     SigInvoke: (),
 
     /// Modifies the recipient's text.

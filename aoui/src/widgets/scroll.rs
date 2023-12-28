@@ -1,16 +1,15 @@
-
-use std::sync::Arc;
-
-use atomic::{Atomic, Ordering};
-use bevy::{hierarchy::Children, math::{Vec2, IVec2}, log::warn};
+use bevy::{hierarchy::Children, math::{Vec2, IVec2}, log::warn, reflect::Reflect, ecs::{query::With, system::Res, bundle::Bundle}};
 use bevy::ecs::{component::Component, query::Without};
-use bevy::ecs::system::{Query, Res, Commands, ResMut};
-use crate::{Dimension, Transform2D, Anchor, AouiREM, signals::types::SigScroll, events::EvPositionSync, dsl::prelude::SigPositionSync, util::CondVec};
+use bevy::ecs::system::{Query, Commands};
+use crate::{Transform2D, signals::types::SigScroll, anim::Attr, dsl::{prelude::{Offset, EvPositionFactor}, DslInto}, Dimension, AouiREM, events::Handler};
 use crate::layout::{Container, LayoutControl};
-use crate::events::{EvMouseWheel, Handlers, EvPositionFactor};
+use crate::events::{EvMouseWheel, Handlers};
 use crate::signals::{Receiver, KeyStorage};
 
 use crate::events::MouseWheelAction;
+pub use super::constraints::ScrollConstraint;
+
+use super::constraints::SharedPosition;
 
 /// Add size relative scrolling support.
 /// 
@@ -34,12 +33,12 @@ use crate::events::MouseWheelAction;
 /// 
 /// * Does not detect rotation, will always use local space orientation.
 /// * Does not support `Interpolate`.
-#[derive(Debug, Clone, Copy, Component)]
+#[derive(Debug, Clone, Copy, Component, Reflect)]
 pub struct Scrolling {
-    pos_x: bool,
-    neg_x: bool,
-    pos_y: bool,
-    neg_y: bool,
+    pub pos_x: bool,
+    pub neg_x: bool,
+    pub pos_y: bool,
+    pub neg_y: bool,
 }
 
 impl Scrolling {
@@ -103,36 +102,23 @@ impl Default for Scrolling {
 
 pub fn scrolling_system(
     mut commands: Commands,
-    mut storage: ResMut<KeyStorage>,
     rem: Option<Res<AouiREM>>,
-    scroll: Query<(
-        &Scrolling, &Dimension, &Children, &MouseWheelAction,
-        Option<&Handlers<EvMouseWheel>>, 
-        Option<&Handlers<EvPositionFactor>>,
-        Option<&Handlers<EvPositionSync>>,
-    )>,
+    storage: Res<KeyStorage>,
+    mut scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&mut SharedPosition>)>,
     sender: Query<(&MouseWheelAction, &Handlers<EvMouseWheel>), Without<Scrolling>>,
-    receiver: Query<(
-        &Scrolling, &Dimension, &Children, 
-        Option<&Receiver<SigScroll>>, 
-        Option<&Receiver<SigPositionSync>>,
-        Option<&Handlers<EvMouseWheel>>, 
-        Option<&Handlers<EvPositionFactor>>,
-        Option<&Handlers<EvPositionSync>>,
-    ), Without<MouseWheelAction>>,
-    mut child_query: Query<(&Dimension, &mut Transform2D, Option<&Children>)>,
+    mut receiver: Query<( &Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&mut SharedPosition>), Without<MouseWheelAction>>,
+    mut child_query: Query<Attr<Transform2D, Offset>, With<Children>>,
 ) {
-    let rem = rem.map(|x|x.get()).unwrap_or(16.0);
+    let rem = rem.map(|x| x.get()).unwrap_or(16.0);
     for (action, signal) in sender.iter() {
-        signal.handle(&mut commands, &mut storage, *action);
+        signal.handle(&mut commands, &storage, *action);
     }
-    let iter = scroll.iter()
-        .map(|(scroll, dimension, children, action, handler, fac, sync)| 
-            (scroll, dimension, children, *action, handler, fac, sync))
-        .chain(receiver.iter().filter_map(|(scroll, dimension, children, receiver, _, handler, fac, sync)| 
-            Some((scroll, dimension, children, receiver?.poll()?, handler, fac, sync))));
-    for (scroll, dimension, children, delta, handler, fac_handler, sync_handler) in iter {
-        let size = dimension.size;
+    let iter = scroll.iter_mut()
+        .map(|(scroll, dim, children, action, shared)| 
+            (scroll, dim, children, *action, shared))
+        .chain(receiver.iter_mut().filter_map(|(scroll, dim, children, receiver, shared)| 
+            Some((scroll, dim, children, receiver.poll()?, shared))));
+    for (scroll, dim, children, delta, shared) in iter {
         let delta_scroll = match (scroll.x_scroll(), scroll.y_scroll()) {
             (true, true) => delta.pixels,
             (true, false) => Vec2::new(delta.pixels.x + delta.pixels.y, 0.0),
@@ -144,116 +130,61 @@ pub fn scrolling_system(
             continue;
         }
         let container = children[0];
-        if let Ok((_, transform, Some(children))) = child_query.get(container){
-            if transform.anchor != Anchor::Center {
-                warn!("Component 'Scrolling' requires its child to have Anchor::Center.");
-                continue;
-            }
-            let offset = transform.offset.raw() + delta_scroll;
-            let size_min = size * Anchor::BottomLeft;
-            let size_max = size * Anchor::TopRight;
-            let mut min = Vec2::ZERO;
-            let mut max = Vec2::ZERO;
-            for (dimension, transform, ..) in child_query.iter_many(children) {
-                let anc = size * transform.get_parent_anchor();
-                let offset = transform.offset.as_pixels(size, dimension.em, rem);
-                let center = anc + offset - dimension.size * transform.anchor;
-                let bl = center + dimension.size * Anchor::BottomLeft;
-                let tr = center + dimension.size * Anchor::TopRight;
-                min = min.min(bl);
-                max = max.max(tr);
-            }
-            let constraint_min = Vec2::new(
-                if scroll.neg_x {f32::MIN} else {0.0}, 
-                if scroll.neg_y {f32::MIN} else {0.0}, 
-            );
-            let constraint_max = Vec2::new(
-                if scroll.pos_x {f32::MAX} else {0.0}, 
-                if scroll.pos_y {f32::MAX} else {0.0}, 
-            );
-            let clamp_min = (size_min - min).min(size_max - max).min(Vec2::ZERO);
-            let clamp_max = (size_max - max).max(size_min - min).max(Vec2::ZERO);
-            if let Ok((_, mut transform, _)) = child_query.get_mut(container) {
-                let offset = offset.clamp(clamp_min, clamp_max);
-                let offset = offset.clamp(constraint_min, constraint_max);
-                // If scrolled to the end pipe the scroll event to the parent.
-                if transform.offset == offset.into() {
-                    if let Some(piping) = handler {
-                        piping.handle(&mut commands, &mut storage, delta);
-                    }
-                }
-                transform.offset = offset.into();
-                let fac = (offset - clamp_min) / (clamp_max - clamp_min);
-
-                match (scroll.x_scroll(), scroll.y_scroll()) {
-                    (true, false) => {
-                        let value = fac.x.clamp(0.0, 1.0);
-                        if let Some(signal) = fac_handler {
-                            signal.handle(&mut commands, &mut storage, value)
-                        }
-                        if let Some(signal) = sync_handler {
-                            signal.handle(&mut commands, &mut storage, CondVec::x(value))
-                        }
-                    },
-                    (false, true) => {
-                        let value = fac.y.clamp(0.0, 1.0);
-                        if let Some(signal) = fac_handler {
-                            signal.handle(&mut commands, &mut storage, value)
-                        }
-                        if let Some(signal) = sync_handler {
-                            signal.handle(&mut commands, &mut storage, CondVec::y(value))
-                        }
-                    },
-                    (true, true) => {
-                        let value = fac.clamp(Vec2::ZERO, Vec2::ONE);
-                        if let Some(signal) = sync_handler {
-                            signal.handle(&mut commands, &mut storage, value.into())
-                        }
-                    }
-                    _ => (),
-                }
-            }
-        }            
+        if let Ok(mut transform) = child_query.get_mut(container){
+            transform.force_set_pixels(transform.get_pixels(dim.size, dim.em, rem) + delta_scroll);
+        }
+        if let Some(mut shared) = shared {
+            shared.updated = true;
+        }
     }
 }
 
 /// Marker component for making scrolling affect 
-/// the `range` value on a layout,
+/// the `range` value on a layout.
 /// 
-/// This implementation has the benefit of not requiring scrolling.
-#[derive(Debug, Clone, Copy, Component, Default)]
-pub struct ScrollDiscrete(IVec2);
+/// This implementation has the benefit of not requiring clipping.
+#[derive(Debug, Clone, Copy, Component, Default, Reflect)]
+pub enum ScrollDiscrete {
+    XPos,
+    XNeg,
+    YPos,
+    #[default]
+    YNeg,
+}
 
 impl ScrollDiscrete {
     pub fn new() -> Self {
-        Self(IVec2::ONE)
+        Self::YNeg
     }
 
-    pub fn from_direction(direction: IVec2) -> Self {
-        Self(direction)
+    pub fn get(&self) -> IVec2 {
+        match self {
+            ScrollDiscrete::XPos => IVec2::new(1, 0),
+            ScrollDiscrete::XNeg => IVec2::new(-1, 0),
+            ScrollDiscrete::YPos => IVec2::new(0, 1),
+            ScrollDiscrete::YNeg => IVec2::new(0, -1),
+        }
     }
 }
 
 
 pub fn scrolling_discrete(
-    mut commands: Commands,
-    mut key_storage: ResMut<KeyStorage>,
-    mut scroll: Query<(&ScrollDiscrete, &mut Container, &Children, &MouseWheelAction, Option<&Handlers<EvPositionFactor>>)>,
-    mut receiver: Query<(&ScrollDiscrete, &mut Container, &Children, &Receiver<SigScroll>, Option<&Handlers<EvPositionFactor>>), Without<MouseWheelAction>>,
+    mut scroll: Query<(&ScrollDiscrete, &mut Container, &Children, &MouseWheelAction, Option<&mut SharedPosition>)>,
+    mut receiver: Query<(&ScrollDiscrete, &mut Container, &Children, &Receiver<SigScroll>, Option<&mut SharedPosition>), Without<MouseWheelAction>>,
     child_query: Query<&LayoutControl>,
 ) {
     let iter = scroll.iter_mut()
-        .map(|(scroll, container, children, action, fac)| 
-            (scroll, container, children, *action, fac))
-        .chain(receiver.iter_mut().filter_map(|(scroll, container, children, receiver, fac)| 
-            Some((scroll, container, children, receiver.poll()?, fac))));
+        .map(|(scroll, container, children, action, shared)| 
+            (scroll, container, children, *action, shared))
+        .chain(receiver.iter_mut().filter_map(|(scroll, container, children, receiver, shared)| 
+            Some((scroll, container, children, receiver.poll()?, shared))));
     
-    for (scroll, mut container, children, delta, fac) in iter {
+    for (scroll, mut container, children, delta, shared) in iter {
         let Some(range) = container.range.clone() else {
             warn!("ScrollDiscrete requires a range in `Container`.");
             continue;
         };
-        let delta = delta.lines.dot(scroll.0);
+        let delta = delta.lines.dot(scroll.get());
         let count = children.len() - child_query.iter_many(children).filter(|x| 
              x == &&LayoutControl::IgnoreLayout
         ).count();
@@ -263,42 +194,55 @@ pub fn scrolling_discrete(
             continue;
         }
         let max = count - len;
-        let start = match delta {
+        match delta {
             ..=-1 => {
                 let start = range.start.saturating_sub((-delta) as usize).clamp(0, max);
                 container.range = Some(start..start + len);
-                start
             }
             1.. => {
                 let start = range.start.saturating_add(delta as usize).clamp(0, max);
                 container.range = Some(start..start + len);
-                start
             } 
             0 => continue,
         };
-        if let Some(fac_handler) = fac {
-            let frac = start as f32 / max as f32;
-            fac_handler.handle(&mut commands, &mut key_storage, frac);
+        if let Some(mut shared) = shared {
+            shared.updated = true
         }
     }
 }
 
 
-/// Offset based on a percentage ratio in the parent's
-/// bounding rectangle. This is different from `Size2::Percent` since this is 
-/// anchor agnostic and laid out against `parent_size - child_size`.
-/// 
-/// This value is required for scrolling and bounded dragging. This can also 
-/// be shared, i.e. scroll bar.
-#[derive(Debug, Component)]
-pub struct OffsetRatio(Arc<Atomic<Vec2>>);
+pub trait IntoScrollingBuilder: Bundle + Default {
 
-impl OffsetRatio {
-    pub fn get(&self) -> Vec2 {
-        self.0.load(Ordering::Relaxed)
+    fn with_constraints(self) -> impl IntoScrollingBuilder {
+        (ScrollConstraint, self)
     }
-    pub fn set(&self, value: Vec2) {
-        self.0.store(value, Ordering::Relaxed)
+
+    fn with_shared_position(self, position: impl DslInto<SharedPosition>) -> impl IntoScrollingBuilder {
+        (self.with_constraints(), position.dinto())
+    }
+
+    fn with_handler(self, handler: impl DslInto<Handlers<EvPositionFactor>>) -> impl IntoScrollingBuilder {
+        (self.with_constraints(), handler.dinto())
+    }
+
+    fn with_send(self, handler: impl DslInto<Handlers<EvMouseWheel>>) -> impl IntoScrollingBuilder {
+        (self.with_constraints(), handler.dinto())
+    }
+
+    fn with_recv(self, handler: impl DslInto<Receiver<SigScroll>>) -> impl IntoScrollingBuilder {
+        (self.with_constraints(), handler.dinto())
     }
 }
 
+impl IntoScrollingBuilder for Scrolling {}
+
+impl<T, A> IntoScrollingBuilder for (T, A) where T: IntoScrollingBuilder, A: Bundle + Default {
+    fn with_constraints(self) -> impl IntoScrollingBuilder { 
+        (T::with_constraints(self.0), self.1)
+    }
+}
+
+impl<T> IntoScrollingBuilder for (ScrollConstraint, T) where T: IntoScrollingBuilder {
+    fn with_constraints(self) -> impl IntoScrollingBuilder { self }
+}

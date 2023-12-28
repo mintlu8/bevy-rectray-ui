@@ -1,6 +1,6 @@
 use std::{sync::{Mutex, Arc}, ops::Deref, mem};
 
-use bevy::{render::view::Visibility, hierarchy::Children, ecs::{entity::Entity, system::ResMut, query::Has}};
+use bevy::{render::view::Visibility, hierarchy::Children, ecs::{entity::Entity, query::Has}};
 use bevy::window::{Window, PrimaryWindow, CursorIcon};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
 use crate::{Opacity, dsl::prelude::signal, signals::KeyStorage};
@@ -128,7 +128,7 @@ impl RadioButton {
     pub fn set(&self, payload: &Payload) {
         let mut lock = self.0.lock().unwrap();
         *lock = payload.0.clone();
-        self.1.send_dyn(payload.0.clone())
+        self.1.send_dyn(dbg!(payload).0.clone())
     }
 
     pub fn get<T: DataTransfer>(&self) -> Option<T> {
@@ -159,36 +159,36 @@ pub struct RadioButtonCancel;
 
 pub fn button_on_click(
     mut commands: Commands,
-    mut key_storage: ResMut<KeyStorage>,
+    key_storage: Res<KeyStorage>,
     query: Query<(&CursorAction, &Handlers<EvButtonClick>, Option<&Payload>), With<Button>>
 ) {
     for (action, submit, payload) in query.iter() {
         if !action.is(EventFlags::LeftClick) { continue }
         if let Some(payload) = payload {
-            submit.handle_dyn(&mut commands, &mut key_storage, payload.0.clone());
+            submit.handle_dyn(&mut commands, &key_storage, payload.0.clone());
         } else {
-            submit.handle_dyn(&mut commands, &mut key_storage, Object::new(()));
+            submit.handle_dyn(&mut commands, &key_storage, Object::new(()));
         }
     }
 }
 
 pub fn check_button_on_click(
     mut commands: Commands,
-    mut key_storage: ResMut<KeyStorage>,
+    key_storage: Res<KeyStorage>,
     mut query: Query<(&CursorAction, &mut CheckButton, Option<&Handlers<EvToggleChange>>, Option<&Handlers<EvButtonClick>>, Option<&Payload>)>
 ) {
     for (action, mut state, change, submit, payload) in query.iter_mut() {
         if !action.is(EventFlags::LeftClick) { continue }
         let state = state.rev();
         if let Some(signal) = change {
-            signal.handle(&mut commands, &mut key_storage, state);
+            signal.handle(&mut commands, &key_storage, state);
         }
         if !state {continue;}
         if let Some(signal) = submit {
             if let Some(payload) = payload {
-                signal.handle_dyn(&mut commands, &mut key_storage, payload.0.clone());
+                signal.handle_dyn(&mut commands, &key_storage, payload.0.clone());
             } else {
-                signal.handle_dyn(&mut commands, &mut key_storage, Object::new(()));
+                signal.handle_dyn(&mut commands, &key_storage, Object::new(()));
             }
         }
     }
@@ -196,18 +196,20 @@ pub fn check_button_on_click(
 
 pub fn radio_button_on_click(
     mut commands: Commands,
-    mut key_storage: ResMut<KeyStorage>,
+    key_storage: Res<KeyStorage>,
     mut query: Query<(&CursorAction, &RadioButton, &Payload, Option<&Handlers<EvButtonClick>>, Has<RadioButtonCancel>)>
 ) {
     for (action, state, payload, submit, cancellable) in query.iter_mut() {
         if !action.is(EventFlags::LeftClick) { continue }
-        if cancellable && state == payload {
-            state.clear();
+        if state == payload {
+            if cancellable{
+                state.clear();
+            }
             continue;
         }
         state.set(payload);
         if let Some(signal) = submit {
-            signal.handle_dyn(&mut commands, &mut key_storage, payload.0.clone());
+            signal.handle_dyn(&mut commands, &key_storage, payload.0.clone());
         }
     }
 }

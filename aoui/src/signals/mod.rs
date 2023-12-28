@@ -59,7 +59,10 @@ mod globals;
 mod systems;
 mod storage;
 mod sig;
-use bevy::{app::{Plugin, Update, PreUpdate}, ecs::schedule::IntoSystemConfigs};
+use std::sync::atomic::AtomicU8;
+
+use atomic::Ordering;
+use bevy::{app::{Plugin, Update, PreUpdate, Last}, ecs::{schedule::IntoSystemConfigs, system::{Resource, ResMut}}};
 pub use create::signal;
 pub use globals::*;
 pub use dto::{DataTransfer, Object};
@@ -67,61 +70,70 @@ pub use mpmc::*;
 pub use storage::KeyStorage;
 use sig::Signal;
 
-use crate::schedule::AouiEventSet;
+use crate::schedule::{AouiEventSet, AouiCleanupSet};
 
 //use self::types::{SigSubmit, SigChange, SigDrag, SigScroll};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct SignalsPlugin;
 
-// /// Duplicates a signal input to many targets.
-// #[derive(Debug, Component)]
-// pub struct SignalDuplicator {
-//     pub input: Receiver,
-//     pub senders: Vec<Sender>
-// }
 
-// fn duplicate_signals(mut query: Query<&SignalDuplicator>) {
-//     query.par_iter_mut().for_each(|x| {
-//         let value = x.input.poll_dyn();
-//         if value.is_some() {
-//             for sender in x.senders.iter() {
-//                 sender.send_object(value.clone())
-//             }
-//         }
-//     })
-// } 
+/// Flags for making signals live for 2 frames.
+#[derive(Debug, Resource)]
+pub struct DropFlag(AtomicU8);
+
+impl DropFlag {
+    pub fn get(&self) -> u8 {
+        self.0.load(Ordering::Relaxed)
+    }
+
+    pub fn incr(&mut self) {
+        let v = self.0.get_mut();
+        *v = 3 - *v;
+    }
+
+    pub fn system_incr(mut res: ResMut<DropFlag>) {
+        res.incr()
+    }
+}
+
+impl Default for DropFlag {
+    fn default() -> Self {
+        Self(AtomicU8::new(1))
+    }
+}
 
 impl Plugin for SignalsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         use systems::*;
         app
-            // .register_signal::<()>()
-            // .register_signal::<SigSubmit>()
-            // .register_signal::<SigChange>()
-            // .register_signal::<SigDrag>()
-            // .register_signal::<SigScroll>()
             .init_resource::<KeyStorage>()
+            .init_resource::<DropFlag>()
             .add_systems(PreUpdate, globals::send_fps.in_set(AouiEventSet))
             //.add_systems(PreUpdate, duplicate_signals.after(AouiWidgetEventSet))
-            .add_systems(Update, signal_receive_text)
-            .add_systems(Update, signal_receive_offset)
-            .add_systems(Update, signal_receive_offset_x)
-            .add_systems(Update, signal_receive_offset_y)
-            .add_systems(Update, signal_receive_rotation)
-            .add_systems(Update, signal_receive_scale)
-            .add_systems(Update, signal_receive_scale_x)
-            .add_systems(Update, signal_receive_scale_y)
-            .add_systems(Update, signal_receive_dimension)
-            .add_systems(Update, signal_receive_dimension_x)
-            .add_systems(Update, signal_receive_dimension_y)
-            .add_systems(Update, signal_receive_opacity)
-            .add_systems(Update, signal_receive_disable)
-            .add_systems(Update, signal_receive_opacity_disable)
-            .add_systems(Update, signal_receive_color_sprite)
-            .add_systems(Update, signal_receive_color_atlas)
-            .add_systems(Update, signal_receive_color_text)
-            .add_systems(Update, signal_receive_color_interpolate)
+            .add_systems(Update, (
+                signal_receive_text,
+                signal_receive_text,
+                signal_receive_offset,
+                signal_receive_offset_x,
+                signal_receive_offset_y,
+                signal_receive_rotation,
+                signal_receive_scale,
+                signal_receive_scale_x,
+                signal_receive_scale_y,
+                signal_receive_dimension,
+                signal_receive_dimension_x,
+                signal_receive_dimension_y,
+                signal_receive_opacity,
+                signal_receive_disable,
+                signal_receive_opacity_disable,
+                signal_receive_color_sprite,
+                signal_receive_color_atlas,
+                signal_receive_color_text,
+                signal_receive_color_interpolate,
+            ))
+            .add_systems(Last, DropFlag::system_incr.before(AouiCleanupSet))
+            .add_systems(Last, KeyStorage::system_reset_changed_status)
         ;
     }
 }

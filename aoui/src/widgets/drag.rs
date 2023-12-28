@@ -1,9 +1,12 @@
-use bevy::{math::Vec2, ecs::{system::{Query, Res, ResMut, Commands}, component::Component, query::{Without, With}, entity::Entity}, hierarchy::Parent, window::{Window, PrimaryWindow}};
-use crate::{Transform2D, signals::{types::SigDrag, KeyStorage}, Dimension, Anchor, events::{Handlers, EvMouseDrag, EvPositionFactor, EvPositionSync}, anim::MaybeAnim, dsl::prelude::{SigPositionSync}, util::CondVec};
+use bevy::{math::Vec2, ecs::{system::{Query, Res, Commands}, component::Component, query::Without, bundle::Bundle}};
+use crate::{Transform2D, signals::{types::SigDrag, KeyStorage},events::{Handlers, EvMouseDrag}, anim::Attr, dsl::{DslInto, prelude::EvPositionFactor}};
 use serde::{Serialize, Deserialize};
 
 use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::Offset};
 use crate::signals::Receiver;
+
+use super::SharedPosition;
+pub use super::constraints::DragConstraint;
 
 
 /// A component that enables dragging and dropping. 
@@ -35,26 +38,6 @@ pub struct Draggable {
     drag_start: Vec2,
 }
 
-impl Default for Draggable {
-    fn default() -> Self {
-        Self::BOTH
-    }
-}
-
-/// Component that moves the sprite back to its original position if dropped. 
-#[derive(Debug, Clone, Copy, Component)]
-pub struct DragSnapBack {
-    drag_start: Option<Vec2>,
-}
-
-impl DragSnapBack {
-    pub const DEFAULT: Self = Self { drag_start: None };
-
-    fn set(&mut self, value: Vec2) {
-        self.drag_start = Some(value)
-    }
-}
-
 impl Draggable {
     pub const X: Self = Self { 
         x: true,
@@ -79,26 +62,38 @@ impl Draggable {
     }
 }
 
+impl Default for Draggable {
+    fn default() -> Self {
+        Self::BOTH
+    }
+}
 
-/// This component prevents `Draggable` from going over its parent bounds,
-/// giving it similar property to `Scrolling`.
-/// 
-/// If not specified, dragging is unbounded.
-#[derive(Debug, Clone, Copy, Component)]
-pub struct DragConstraint;
+/// Component that moves the sprite back to its original position if dropped. 
+#[derive(Debug, Clone, Copy, Component, Default)]
+pub struct DragSnapBack {
+    drag_start: Option<Vec2>,
+}
+
+impl DragSnapBack {
+    pub const DEFAULT: Self = Self { drag_start: None };
+
+    fn set(&mut self, value: Vec2) {
+        self.drag_start = Some(value)
+    }
+}
 
 
 pub fn drag_start(
     mut commands: Commands,
-    mut storage: ResMut<KeyStorage>,
+    storage: Res<KeyStorage>,
     send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Draggable>>,
-    mut receive: Query<(&Receiver<SigDrag>, &mut Draggable, MaybeAnim<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
-    mut query: Query<(&CursorAction, &mut Draggable, MaybeAnim<Transform2D, Offset>, Option<&mut DragSnapBack>)>,
+    mut receive: Query<(&Receiver<SigDrag>, &mut Draggable, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
+    mut query: Query<(&CursorAction, &mut Draggable, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>)>,
 ) {
 
     for (focus, send) in send.iter() {
         if focus.intersects(EventFlags::LeftDown | EventFlags::MidDown | EventFlags:: RightDown)  {
-            send.handle(&mut commands, &mut storage, DragState::Start);
+            send.handle(&mut commands, &storage, DragState::Start);
         }
     }
 
@@ -142,18 +137,11 @@ pub enum DragState {
 
 pub fn dragging(
     mut commands: Commands,
-    mut storage: ResMut<KeyStorage>,
-    window: Query<&Window, With<PrimaryWindow>>,
+    storage: Res<KeyStorage>,
     state: Res<CursorState>,
     send: Query<(&CursorFocus, &Handlers<EvMouseDrag>), Without<Draggable>>,
-    mut receive: Query<(Entity, &Draggable, MaybeAnim<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorFocus>>,
-    mut query: Query<(Entity, &CursorFocus, &Draggable, MaybeAnim<Transform2D, Offset>)>,
-    parent_query: Query<&Dimension, (Without<Draggable>, Without<DragConstraint>)>,
-    constraint_query: Query<(Option<&Parent>, &Dimension, 
-        Option<&Receiver<SigPositionSync>>, 
-        Option<&Handlers<EvPositionFactor>>,
-        Option<&Handlers<EvPositionSync>>,
-    ), With<DragConstraint>>
+    mut query: Query<(&CursorFocus, &Draggable, Attr<Transform2D, Offset>, Option<&mut SharedPosition>)>,
+    mut receive: Query<(&Draggable, Attr<Transform2D, Offset>, &Receiver<SigDrag>, Option<&mut SharedPosition>), Without<CursorFocus>>,
 ) {
     let delta = state.cursor_position() - state.down_position();
 
@@ -161,105 +149,47 @@ pub fn dragging(
         if !focus.intersects(EventFlags::LeftDrag | EventFlags::MidDrag | EventFlags:: RightDrag)  {
             continue;
         }
-        send.handle(&mut commands, &mut storage, DragState::Dragging);
+        send.handle(&mut commands, &storage, DragState::Dragging);
     }
 
     let iter = query.iter_mut()
-        .filter_map(|(entity, focus, drag, transform)| {
-            if focus.intersects(EventFlags::LeftDrag | EventFlags::MidDrag | EventFlags:: RightDrag) {
-                Some((entity, drag, transform))
-            } else {
-                None
-            }
+        .filter_map(|(focus, drag, transform, shared)| {
+            focus.intersects(EventFlags::LeftDrag | EventFlags::MidDrag | EventFlags:: RightDrag)
+                .then(||(drag, transform, shared))
         }).chain(receive.iter_mut()
-        .filter_map(|(entity, drag, transform, recv)|{
-            if recv.poll() == Some(DragState::Dragging) {
-                Some((entity, drag, transform))
-            } else {
-                None
-            }
-        }));
+        .filter_map(|(drag, transform, recv, shared)|
+            (recv.poll() == Some(DragState::Dragging)).then(||(drag, transform, shared))
+        ));
 
-    let window_size = window.get_single().map(|x| Vec2::new(x.width(), x.height())).ok();
-
-    for (entity, drag, mut transform) in iter {
+    for (drag, mut transform, shared) in iter {
         if !(drag.x || drag.y) { continue; }
-        let mut pos = drag.last_drag_start() + {
+        let pos = drag.last_drag_start() + {
             Vec2::new(
                 if drag.x {delta.x} else {0.0}, 
                 if drag.y {delta.y} else {0.0}, 
             )
         };
-        if let Ok((parent, dim, recv, signal, signal2d)) = constraint_query.get(entity) {
-            let Some(dimension) = parent
-                .and_then(|p| parent_query.get(p.get()).ok())
-                .map(|x| x.size)
-                .or(window_size)
-                else {continue};
-                
-            let min = dimension * Anchor::BottomLeft;
-            let max = dimension * Anchor::TopRight;
-            let origin = dimension * transform.component.get_parent_anchor() 
-                - dim.size * transform.component.anchor;
-            let min = min + dim.size / 2.0 - origin;
-            let max = max - dim.size / 2.0 - origin;
-            let (min, max) = (min.min(max), min.max(max));
-
-            if drag.x && max.x >= min.x {
-                pos.x = pos.x.clamp(min.x, max.x);
-            }
-            if drag.y && max.y >= min.y {
-                pos.y = pos.y.clamp(min.y, max.y);
-            }
-            if let Some(fac) = recv.map(|x| x.poll()).flatten() {
-                pos = fac.cond(pos, (max - min) * fac + min);
-            }
-            
-            match (drag.x, drag.y) {
-                (true, false) => {
-                    let value = (pos.x - min.x) / (max.x - min.x);
-                    if let Some(signal) = signal {
-                        signal.handle(&mut commands, &mut storage, value)
-                    }
-                    if let Some(signal2d) = signal2d {
-                        signal2d.handle(&mut commands, &mut storage, CondVec::x(value))
-                    }
-                },
-                (false, true) => {
-                    let value = (pos.y - min.y) / (max.y - min.y);
-                    if let Some(signal) = signal {
-                        signal.handle(&mut commands, &mut storage, value)
-                    }
-                    if let Some(signal2d) = signal2d {
-                        signal2d.handle(&mut commands, &mut storage, CondVec::y(value))
-                    }
-                },
-                (true, true) => {
-                    if let Some(signal2d) = signal2d {
-                        signal2d.handle(&mut commands, &mut storage, (pos - min / max - min).into())
-                    }
-                }
-                _ => (),
-            }
-        }
-
         transform.force_set(pos);
+        if let Some(mut shared) = shared {
+            shared.updated = true
+        }
     }
 }
 
 
+
 pub fn drag_end(
     mut commands: Commands,
-    mut storage: ResMut<KeyStorage>,
+    storage: Res<KeyStorage>,
     send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Draggable>>,
-    mut receive: Query<(&mut DragSnapBack, MaybeAnim<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorAction>>,
-    mut query: Query<(&CursorAction, &mut DragSnapBack, MaybeAnim<Transform2D, Offset>)>
+    mut receive: Query<(&mut DragSnapBack, Attr<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorAction>>,
+    mut query: Query<(&CursorAction, &mut DragSnapBack, Attr<Transform2D, Offset>)>
 ) {
     for (focus, send) in send.iter() {
         if !focus.intersects(EventFlags::DragEnd)  {
             continue;
         }
-        send.handle(&mut commands, &mut storage, DragState::End);
+        send.handle(&mut commands, &storage, DragState::End);
     }
     
     let iter = query.iter_mut()
@@ -283,4 +213,42 @@ pub fn drag_end(
             transform.set(orig)
         }
     }
+}
+pub trait IntoDraggingBuilder: Bundle + Default {
+
+    fn with_constraints(self) -> impl IntoDraggingBuilder {
+        (self, DragConstraint)
+    }
+    
+    fn with_snap_back(self) -> impl IntoDraggingBuilder {
+        (DragSnapBack::DEFAULT, self)
+    }
+
+    fn with_position(self, position: impl DslInto<SharedPosition>) -> impl IntoDraggingBuilder {
+        (self.with_constraints(), position.dinto())
+    }
+
+    fn with_handler(self, handler: impl DslInto<Handlers<EvPositionFactor>>) -> impl IntoDraggingBuilder {
+        (self.with_constraints(), handler.dinto())
+    }
+
+    fn with_send(self, handler: impl DslInto<Handlers<EvMouseDrag>>) -> impl IntoDraggingBuilder {
+        (self.with_constraints(), handler.dinto())
+    }
+
+    fn with_recv(self, handler: impl DslInto<Receiver<SigDrag>>) -> impl IntoDraggingBuilder {
+        (self.with_constraints(), handler.dinto())
+    }
+}
+
+impl IntoDraggingBuilder for Draggable {}
+
+impl<T> IntoDraggingBuilder for (DragSnapBack, T) where T: IntoDraggingBuilder {
+    fn with_constraints(self) -> impl IntoDraggingBuilder { 
+        (self.0, T::with_constraints(self.1)) 
+    }
+}
+
+impl<T, A> IntoDraggingBuilder for (T, A) where T: IntoDraggingBuilder, A: Bundle + Default {
+    fn with_constraints(self) -> impl IntoDraggingBuilder { self }
 }

@@ -1,4 +1,3 @@
-use bevy::ecs::system::ResMut;
 use bevy::hierarchy::Children;
 use bevy::asset::{Handle, Assets};
 use bevy::input::{keyboard::KeyCode, Input};
@@ -476,7 +475,7 @@ pub fn text_on_click_outside(
 pub fn inputbox_keyboard(
     mut commands: Commands,
     fonts: Res<Assets<Font>>,
-    mut storage: ResMut<KeyStorage>,
+    storage: Res<KeyStorage>,
     mut query: Query<(&mut InputBox, &Dimension, &Handle<Font>, Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>, Option<&Receiver<SigInvoke>>, ActiveDetection)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
@@ -544,7 +543,7 @@ pub fn inputbox_keyboard(
                     '\t' => (),
                     '\r'|'\n' => {
                         if let Some(submit) = submit {
-                            submit.handle(&mut commands, &mut storage, inputbox.get().to_owned())
+                            submit.handle(&mut commands, &storage, inputbox.get().to_owned())
                         }
                     },
                     '\x08'|'\x7f' => inputbox.backspace(),
@@ -574,13 +573,13 @@ pub fn inputbox_keyboard(
         if let Some(invoke) = invoke {
             if invoke.poll().is_some() {
                 if let Some(submit) = submit {
-                    submit.handle(&mut commands, &mut storage, inputbox.get().to_owned())
+                    submit.handle(&mut commands, &storage, inputbox.get().to_owned())
                 }
             }
         }
         if changed {
             if let Some(change) = change {
-                change.handle(&mut commands, &mut storage, inputbox.get().to_owned())
+                change.handle(&mut commands, &storage, inputbox.get().to_owned())
             }
         }
     }

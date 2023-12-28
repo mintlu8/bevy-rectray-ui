@@ -36,14 +36,14 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let (first, second) = radio_button_group(0);
     let sig = first.recv::<i32>();
 
-    let (scroll_send1, scroll_recv) = signal();
-    let scroll_send2 = scroll_send1.clone();
+    let (scroll_send1, scroll_send2, scroll_recv) = signal();
 
-    let (drag1_send, drag1_recv) = signal();
+    let (text1, scroll1) = SharedPosition::many();
+
     clipping_layer!((commands, assets) {
         dimension: [400, 400],
-        scroll: Scrolling::POS_Y,
-        scroll_recv: scroll_recv,
+        scroll: Scrolling::POS_Y
+            .with_recv(scroll_recv),
         buffer: [800, 800],
         layer: 3,
         child: vbox! {
@@ -72,11 +72,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 anchor: Top,
                 dimension: [400, 200],
                 buffer: [800, 800],
-                scroll: Scrolling::Y,
-                scroll_send: scroll_send1,
+                scroll: Scrolling::Y
+                    .with_shared_position(text1)
+                    .with_send(scroll_send1),
                 extra: sig.clone().cond_recv::<SigDimensionY>(0, 200.0, 0.0),
                 extra: transition! (Dimension 0.5 CubicInOut default [400, 400]),
-                extra: drag1_recv.recv::<SigPositionSync>(),
                 layer: 1,
                 child: text! {
                     anchor: Top,
@@ -92,19 +92,17 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             },
             child: rectangle! {
                 anchor: Right,
-                dimension: [20, 200],
+                dimension: [20, 199],
                 color: color!(orange),
                 extra: IgnoreLayout,
+                layer: 1,
                 child: rectangle! {
                     anchor: Top,
                     event: EventFlags::LeftDrag,
                     dimension: [20, 40],
                     color: color!(red),
-                    extra: DragY,
-                    extra: DragConstraint,
-                    extra: handler! {
-                        EvPositionSync => {drag1_send}
-                    }
+                    layer: 1,
+                    extra: DragY.with_position(scroll1.flip(false, true)),
                 }
             },
             child: hspan! {
@@ -132,8 +130,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 anchor: Top,
                 dimension: [400, 0],
                 buffer: [800, 800],
-                scroll: Scrolling::Y,
-                scroll_send: scroll_send2,
+                scroll: Scrolling::Y
+                    .with_send(scroll_send2),
                 extra: sig.clone().cond_recv::<SigDimensionY>(1, 200.0, 0.0),
                 extra: Interpolate::<Dimension>::ease(EaseFunction::CubicInOut, Vec2::new(400.0, 400.0), 0.5),
                 layer: 2,

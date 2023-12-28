@@ -1,5 +1,5 @@
-use bevy::{window::CursorIcon, app::{App, Last}, ecs::system::Query, math::Vec2};
-use crate::{widgets::button::CursorDefault, events::{EventHandling, Handlers, ScrollScaling}, dsl::DslInto};
+use bevy::{window::CursorIcon, app::{App, Last}, ecs::system::{Query, Res}, math::Vec2};
+use crate::{widgets::button::CursorDefault, events::{EventHandling, Handlers, ScrollScaling}, dsl::DslInto, signals::DropFlag, schedule::AouiCleanupSet};
 
 /// Extension methods to `World` and `App`
 pub trait WorldExtension {
@@ -29,10 +29,14 @@ impl WorldExtension for App {
     }
 
     fn register_event<T: EventHandling>(&mut self) -> &mut Self {
-        fn event_cleanup<T: EventHandling>(mut query: Query<&mut Handlers<T>>) {
-            query.iter_mut().for_each(|x| x.cleanup());
+        use bevy::prelude::IntoSystemConfigs;
+        fn event_cleanup<T: EventHandling>(
+            drop_flag: Res<DropFlag>,
+            mut query: Query<&mut Handlers<T>>
+        ) {
+            query.iter_mut().for_each(|x| x.cleanup(drop_flag.get()));
         }
-        self.add_systems(Last, event_cleanup::<T>);
+        self.add_systems(Last, event_cleanup::<T>.in_set(AouiCleanupSet));
         self
     }
 }

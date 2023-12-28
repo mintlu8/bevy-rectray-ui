@@ -154,8 +154,3 @@ pub enum EvTextSubmit{}
 /// the position of a sprite, via either scrolling or dragging.
 #[derive(Debug)]
 pub enum EvPositionFactor{}
-
-/// An event that sends a vec2 based on 
-/// the position of a sprite, for synchronization purpose.
-#[derive(Debug)]
-pub enum EvPositionSync{}

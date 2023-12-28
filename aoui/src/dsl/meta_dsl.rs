@@ -504,69 +504,7 @@ macro_rules! dimension {
 macro_rules! widget_extension {
     (
         $(#[$($parent_attr:tt)*])*
-        $vis0: vis struct $name: ident { $($fields: tt)* }
-        // Due to macro_rules, this shadows self.
-    ) => {
-        $crate::frame_extension! {
-            $(#[$($parent_attr:tt)*])*
-            $vis0 struct $name { $($fields)* }
-        }
-    };
-    (
-        $(#[$($parent_attr:tt)*])*
-        $vis0: vis struct $name: ident: Sprite { $($fields: tt)* }
-    ) => {
-        $crate::frame_extension! {
-            $(#[$($parent_attr:tt)*])*
-            $vis0 struct $name { 
-                /// Handle of the image asset.
-                pub sprite: $crate::dsl::HandleOrString<bevy::prelude::Image>,
-                /// Size of the image.
-                pub size: Option<$crate::bevy::prelude::Vec2>,
-                /// Color of the image.
-                pub color: Option<$crate::bevy::prelude::Color>,
-                /// Atlas rectangle of the image.
-                pub rect: Option<$crate::bevy::prelude::Rect>,
-                /// Flips the image.
-                pub flip: [bool; 2],
-                $($fields)* 
-            }
-        }
-    };
-    (
-        $(#[$($parent_attr:tt)*])*
-        $vis0: vis struct $name: ident: Text { $($fields: tt)* }
-    ) => {
-        $crate::frame_extension! {
-            $(#[$($parent_attr:tt)*])*
-            $vis0 struct $name { 
-                /// The text string.
-                pub text: String,
-                /// Handle of the font asset.
-                pub font: $crate::dsl::HandleOrString<bevy::prelude::Font>,
-                /// Bounds of the text, should not be set most of the time.
-                ///
-                /// If not specified this is `UNBOUNDED`.
-                pub bounds: Option<bevy::prelude::Vec2>,
-                /// Color of the text.
-                pub color: Option<bevy::prelude::Color>,
-                /// Sets if the text wraps.
-                pub wrap: bool,
-                /// Break line on, maybe use wrap instead.
-                pub break_line_on: Option<bevy::text::BreakLineOn>,
-                $($fields)* 
-            }
-        }
-    };
-}
-
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! frame_extension {
-    (
-        $(#[$($parent_attr:tt)*])*
-        $vis0: vis struct $name: ident {
+        $vis0: vis struct $name: ident $([$($generics: tt)*])? {
             $(
                 $(#[$($attr:tt)*])*
                 $vis: vis $field: ident: $ty: ty
@@ -575,7 +513,7 @@ macro_rules! frame_extension {
     ) => {
         #[derive(Debug, Default)]
         $(#[$($parent_attr)*])*
-        $vis0 struct $name {
+        $vis0 struct $name $(<$($generics)*>)? {
             /// Anchor of the sprite.
             pub anchor: $crate::Anchor,
             /// Matched parent anchor of the sprite, default is `anchor`.

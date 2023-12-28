@@ -6,13 +6,15 @@ pub mod richtext;
 pub mod scroll;
 pub mod scrollframe;
 pub mod button;
+mod constraints;
 mod atlas;
 pub use atlas::DeferredAtlasBuilder;
+pub use constraints::SharedPosition;
 use bevy::{ecs::schedule::IntoSystemConfigs, app::{Plugin, PreUpdate, Update, PostUpdate, Last}};
 
 use crate::{schedule::{AouiButtonEventSet, AouiWidgetEventSet, AouiLoadInputSet, AouiStoreOutputSet, AouiCleanupSet, AouiEventSet}, events::{CursorAction, CursorFocus}};
 
-use self::{drag::drag_start, button::CheckButtonState};
+use self::button::CheckButtonState;
 
 pub(crate) struct WidgetsPlugin;
 
@@ -27,6 +29,7 @@ impl Plugin for WidgetsPlugin {
             .add_systems(PreUpdate, (
                 button::generate_check_button_state,
             ).in_set(AouiEventSet))
+            .add_systems(PreUpdate, constraints::clear_position_update.before(AouiWidgetEventSet))
             .add_systems(PreUpdate, (
                 inputbox::text_on_mouse_down,
                 inputbox::text_on_click_outside,
@@ -37,11 +40,16 @@ impl Plugin for WidgetsPlugin {
                 button::propagate_focus::<CheckButtonState>,
                 drag::drag_start,
                 drag::drag_end,
-                drag::dragging.after(drag_start),
+                drag::dragging.after(drag::drag_start),
                 scroll::scrolling_system,
                 scroll::scrolling_discrete.after(scroll::scrolling_system),
                 scrollframe::clipping_layer,
             ).in_set(AouiWidgetEventSet))
+            .add_systems(PreUpdate, (
+                constraints::scroll_constraint,
+                constraints::drag_constraint,
+                constraints::discrete_scroll_sync,
+            ).after(AouiWidgetEventSet))
             .add_systems(Update, (
                 inputbox::update_inputbox_cursor,
                 button::set_cursor,

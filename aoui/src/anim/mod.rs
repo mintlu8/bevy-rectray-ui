@@ -67,7 +67,7 @@ pub use ::interpolation::EaseFunction;
 mod interpolation;
 pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Index};
 mod assoc;
-pub use assoc::{MaybeAnim, InterpolateAssociation};
+pub use assoc::{Attr, InterpolateAssociation};
 
 use crate::{Dimension, Opacity, Transform2D};
 //mod state_machine;

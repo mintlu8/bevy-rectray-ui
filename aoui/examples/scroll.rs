@@ -43,9 +43,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [-200, 200],
         hitbox: Rect(1),
         sprite: assets.load("square.png"),
-        extra: EventFlags::MouseWheel,
-        extra: Scrolling::X,
-        extra: handler! { EvPositionFactor => { send1 }},
+        event: EventFlags::MouseWheel,
+        extra: Scrolling::X.with_handler(send1),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {
@@ -60,8 +59,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [0, 200],
         hitbox: Rect(1),
         sprite: assets.load("square.png"),
-        extra: EventFlags::MouseWheel,
-        extra: Scrolling::BOTH,
+        event: EventFlags::MouseWheel,
+        extra: Scrolling::BOTH.with_constraints(),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {
@@ -76,8 +75,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [200, 200],
         hitbox: Rect(1),
         sprite: assets.load("square.png"),
-        extra: EventFlags::MouseWheel,
-        extra: Scrolling::X,
+        event: EventFlags::MouseWheel,
+        extra: Scrolling::X.with_constraints(),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {
@@ -92,8 +91,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [-200, 0],
         hitbox: Rect(1),
         sprite: assets.load("square.png"),
-        extra: EventFlags::MouseWheel,
-        extra: Scrolling::BOTH,
+        event: EventFlags::MouseWheel,
+        extra: Scrolling::BOTH.with_constraints(),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {
@@ -107,8 +106,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         dimension: [200, 200],
         hitbox: Rect(1),
         sprite: assets.load("square.png"),
-        extra: EventFlags::MouseWheel,
-        extra: Scrolling::BOTH,
+        event: EventFlags::MouseWheel,
+        extra: Scrolling::BOTH.with_constraints(),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {
@@ -137,7 +136,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         hitbox: Rect(1),
         sprite: assets.load("square.png"),
         extra: EventFlags::MouseWheel,
-        extra: Scrolling::BOTH,
+        extra: Scrolling::BOTH.with_constraints(),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {
@@ -163,9 +162,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [-200, -200],
         hitbox: Rect(1),
         sprite: assets.load("square.png"),
-        extra: EventFlags::MouseWheel,
-        extra: Scrolling::Y,
-        extra: handler! { EvPositionFactor => { send2 }},
+        event: EventFlags::MouseWheel,
+        extra: Scrolling::Y.with_handler(send2),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {
@@ -181,8 +179,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [0, -200],
         hitbox: Rect(1),
         sprite: assets.load("square.png"),
-        extra: EventFlags::MouseWheel,
-        extra: Scrolling::BOTH,
+        event: EventFlags::MouseWheel,
+        extra: Scrolling::BOTH.with_constraints(),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {
@@ -198,8 +196,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [200, -200],
         hitbox: Rect(1),
         sprite: assets.load("square.png"),
-        extra: EventFlags::MouseWheel,
-        extra: Scrolling::Y,
+        event: EventFlags::MouseWheel,
+        extra: Scrolling::Y.with_constraints(),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {

@@ -1,4 +1,4 @@
-use bevy::{ecs::{component::Component, query::WorldQuery, system::Query}, sprite::{TextureAtlasSprite, Sprite}, render::color::Color, text::Text};
+use bevy::{ecs::{component::Component, query::WorldQuery, system::Query}, sprite::{TextureAtlasSprite, Sprite}, render::color::Color, text::Text, math::Vec2};
 
 use crate::{Transform2D, Dimension, Opacity};
 
@@ -140,15 +140,18 @@ impl InterpolateAssociation for (Text, Color) {
     }
 }
 
+/// Query for either setting a field or setting its associated interpolation.
 #[derive(Debug, WorldQuery)]
 #[world_query(mutable)]
-pub struct MaybeAnim<A: Component, B: Interpolation> where (A, B): InterpolateAssociation {
+pub struct Attr<A: Component, B: Interpolation> where (A, B): InterpolateAssociation<Comp = A, Inter = B> {
     pub component: &'static mut A,
     pub interpolate: Option<&'static mut Interpolate<B>>,
 }
 
-impl<A: Component, B: Interpolation> MaybeAnimItem<'_, A, B> 
+impl<A: Component, B: Interpolation> AttrItem<'_, A, B> 
         where (A, B): InterpolateAssociation<Comp = A, Inter = B> {
+
+    /// Set the value or move the interpolation.
     pub fn set(&mut self, value: B::FrontEnd) {
         if let Some(interpolate) = &mut self.interpolate {
             interpolate.interpolate_to(value);
@@ -178,6 +181,47 @@ impl<A: Component, B: Interpolation> MaybeAnimItem<'_, A, B>
             interpolate.take_target()
         } else {
             <(A, B)>::get(&self.component)
+        }
+    }
+}
+
+
+impl<A: Component, B: Interpolation> AttrReadOnlyItem<'_, A, B> 
+        where (A, B): InterpolateAssociation<Comp = A, Inter = B> {
+
+    pub fn get(&self) -> B::FrontEnd {
+        if let Some(interpolate) = &self.interpolate {
+            interpolate.get()
+        } else {
+            <(A, B)>::get(&self.component)
+        }
+    }
+}
+
+
+impl AttrItem<'_, Transform2D, Offset> {
+    pub fn get_pixels(&self, parent: Vec2, em: f32, rem: f32) -> Vec2 {
+        if let Some(interpolate) = &self.interpolate {
+            interpolate.get()
+        } else {
+            self.component.offset.as_pixels(parent, em, rem)
+        }
+    }
+
+    pub fn force_set_pixels(&mut self, value: Vec2) {
+        if let Some(interpolate) = &mut self.interpolate {
+            interpolate.set(value);
+        }
+        self.component.offset = value.into()
+    }
+}
+
+impl AttrReadOnlyItem<'_, Transform2D, Offset> {
+    pub fn get_pixels(&self, parent: Vec2, em: f32, rem: f32) -> Vec2 {
+        if let Some(interpolate) = &self.interpolate {
+            interpolate.get()
+        } else {
+            self.component.offset.as_pixels(parent, em, rem)
         }
     }
 }

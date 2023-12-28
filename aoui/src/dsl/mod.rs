@@ -11,7 +11,6 @@ mod widgets;
 mod oneshot;
 mod meta_dsl;
 mod context;
-mod shapes;
 mod mesh2d;
 mod atlas;
 mod interpolate;
@@ -34,13 +33,12 @@ pub use convert::{DslFrom, DslInto};
 pub use context::{get_layer, is_using_opacity, apply_marker};
 
 pub mod builders {
-    pub use super::core::{FrameBuilder, SpriteBuilder, TextBuilder};
+    pub use super::core::{FrameBuilder, SpriteBuilder, RectangleBuilder, TextBuilder};
 
     pub use super::atlas::AtlasBuilder;
 
     pub use super::layouts::{PaddingBuilder, SpanContainerBuilder, GridContainerBuilder};
     pub use super::widgets::{InputBoxBuilder, CheckButtonBuilder, RadioButtonBuilder, ButtonBuilder, ClippingFrameBuilder};
-    pub use super::shapes::RectangleBuilder;
     pub use super::mesh2d::{MaterialSpriteBuilder, MaterialMeshBuilder};
 }
 

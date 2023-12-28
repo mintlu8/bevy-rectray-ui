@@ -5,19 +5,17 @@ use bevy::render::view::RenderLayers;
 use bevy::text::Font;
 use bevy::window::CursorIcon;
 use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel};
+use crate::widgets::scroll::IntoScrollingBuilder;
 use crate::widgets::scrollframe::ClippingBundle;
 use crate::{Dimension, Anchor, Size2, Hitbox, build_frame, Clipping};
 use crate::bundles::{AouiBundle, AouiSpriteBundle};
 use crate::dsl::prelude::{PropagateFocus, SetCursor};
-use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit, EvMouseWheel};
-use crate::widgets::scroll::Scrolling;
+use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit};
 use crate::widget_extension;
-use crate::signals::Receiver;
 use crate::widgets::inputbox::{TextColor, InputOverflow};
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea, InputBoxText};
 
 use super::context::with_layer;
-use super::prelude::SigScroll;
 use super::{Widget, get_layer, HandleOrString};
 use super::converters::OptionX;
 
@@ -234,13 +232,9 @@ macro_rules! radio_button {
 }
 
 widget_extension!(
-    pub struct ClippingFrameBuilder {
+    pub struct ClippingFrameBuilder[B: IntoScrollingBuilder] {
         /// If set, configure scrolling for this widget.
-        pub scroll: Option<Scrolling>,
-        /// If set, send the scrolling input to another widget if scrolled to the end.
-        pub scroll_send: Handlers<EvMouseWheel>,
-        /// If set, receive the scrolling input from a signal.
-        pub scroll_recv: Option<Receiver<SigScroll>>,
+        pub scroll: Option<B>,
         /// Set the size of the buffer this is rendered to, won't be resized dynamically.
         pub buffer: [u32; 2],
         /// Layer of the render target, uses scoped layer if not specified. 
@@ -250,7 +244,7 @@ widget_extension!(
     }
 );
 
-impl Widget for ClippingFrameBuilder {
+impl<B: IntoScrollingBuilder> Widget for ClippingFrameBuilder<B> {
     fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (Entity, Entity) {
         if self.buffer[0] == 0 || self.buffer[1] == 0 {
             panic!("Buffer size cannot be 0.")
@@ -287,16 +281,10 @@ impl Widget for ClippingFrameBuilder {
                     ..Default::default()
                 },
                 EventFlags::MouseWheel,
-                scroll,
+                scroll.with_constraints(),
                 Hitbox::FULL,
             ));
             frame.add_child(container);
-            if !self.scroll_send.is_empty() {
-                frame.insert(self.scroll_send);
-            }
-            if let Some(signal) = self.scroll_recv {
-                frame.insert(signal);
-            }
             let frame = frame.id();
             commands.entity(entity).push_children(&[camera, render_target, frame]);
             container

@@ -52,12 +52,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             stroke: Color::BLACK
         },
         event: EventFlags::Hover|EventFlags::LeftDrag,
-        extra: DragBoth,
+        extra: DragBoth.with_snap_back(),
         extra: SetCursor { 
             flags: EventFlags::Hover|EventFlags::LeftDrag, 
             icon: CursorIcon::Hand,
         },
-        extra: DragSnapBack,
         extra: transition!(Offset 4.0 BounceOut default Vec2::ZERO),
     });
 
@@ -68,16 +67,14 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [0, 100],
         child: rectangle! {
             dimension: [50, 50],
-            anchor: Left,
+            anchor: Right,
             color: color!(aqua),
             event: EventFlags::Hover|EventFlags::LeftDrag,
             extra: SetCursor { 
                 flags: EventFlags::Hover|EventFlags::LeftDrag, 
                 icon: CursorIcon::Hand,
             },
-            extra: DragX,
-            extra: DragConstraint,
-            extra: handler! {EvPositionFactor => {send1}} 
+            extra: DragX.with_handler(send1),
         }
     });
 
@@ -98,10 +95,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             dimension: [50, 50],
             anchor: Left,
             color: color!(aqua),
-            extra: DragX,
-            extra: DragConstraint,
-            extra: recv2.recv::<SigDrag>(),
-            extra: handler! {EvPositionFactor => {send3}} 
+            extra: DragX
+                .with_recv(recv2)
+                .with_handler(send3),
         }
     });
 
@@ -118,7 +114,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             flags: EventFlags::Hover|EventFlags::LeftDrag, 
             icon: CursorIcon::Hand,
         },
-        //extra: DragBoth,
         extra: handler! {EvMouseDrag => {send2}} ,
     });
 

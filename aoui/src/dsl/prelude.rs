@@ -33,17 +33,17 @@ pub use crate::events::{
     EvObtainFocus, EvLoseFocus,
     EvMouseDrag, EvTextChange, EvTextSubmit,
     EvPositionFactor,
-    EvPositionSync,
 };
 pub use crate::OpacityWriter;
 pub use crate::signals::{signal, fps_signal, Sender, Receiver, types::*};
 pub use bevy::window::CursorIcon;
+pub use crate::widgets::SharedPosition;
 pub use crate::widgets::button::{
     PropagateFocus, DisplayIf, SetCursor, CheckButtonState, radio_button_group,
-    CheckButton, RadioButton, ConstructRadioButton,
+    CheckButton, RadioButton, ConstructRadioButton
 };
-pub use crate::widgets::scroll::Scrolling;
-pub use crate::widgets::drag::DragConstraint;
+pub use crate::widgets::scroll::{Scrolling, IntoScrollingBuilder};
+pub use crate::widgets::drag::IntoDraggingBuilder;
 
 pub const FlipX: [bool; 2] = [true, false];
 pub const FlipY: [bool; 2] = [false, true];

@@ -2,13 +2,12 @@ use std::sync::{OnceLock, Arc};
 
 use bevy::ecs::{component::Component, removal_detection::RemovedComponents};
 use bevy::ecs::query::{Without, With};
-use bevy::ecs::system::{SystemId, Query, Commands, ResMut};
+use bevy::ecs::system::{SystemId, Query, Commands};
 use smallvec::SmallVec;
 
 use crate::dsl::{DslFrom, DslInto};
 use crate::events::*;
 use crate::signals::{DataTransfer, Sender, DynamicSender, SignalMapper, SignalBuilder, KeyStorage, Object};
-use crate::util::CondVec;
 use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;
@@ -117,7 +116,7 @@ impl<T: EventHandling> Handlers<T> {
         self.handlers.is_empty()
     }
 
-    pub fn handle(&self, commands: &mut Commands, keys: &mut KeyStorage, data: T::Data) {
+    pub fn handle(&self, commands: &mut Commands, keys: &KeyStorage, data: T::Data) {
         for handler in self.handlers.iter() {
             match handler {
                 Handler::OneShotSystem(system) => {
@@ -138,7 +137,7 @@ impl<T: EventHandling> Handlers<T> {
         }
     }
 
-    pub fn handle_dyn(&self, commands: &mut Commands, keys: &mut KeyStorage, data: Object) {
+    pub fn handle_dyn(&self, commands: &mut Commands, keys: &KeyStorage, data: Object) {
         for handler in self.handlers.iter() {
             match handler {
                 Handler::OneShotSystem(system) => {
@@ -159,11 +158,11 @@ impl<T: EventHandling> Handlers<T> {
         }
     }
 
-    pub fn cleanup(&self){ 
+    pub fn cleanup(&self, drop_flag: u8){ 
         self.handlers.iter().for_each(|x| match x {
             Handler::OneShotSystem(_) => (),
-            Handler::Signal(sig) => sig.try_cleanup(),
-            Handler::DynamicSignal(sig) => sig.try_cleanup(),
+            Handler::Signal(sig) => sig.try_cleanup(drop_flag),
+            Handler::DynamicSignal(sig) => sig.try_cleanup(drop_flag),
             Handler::GlobalKey(_, _) => (),
         })
     }
@@ -179,12 +178,12 @@ pub trait EventHandling: 'static {
 /// Register a `type<T>` that can handle certain events.
 pub fn event_handle<T: EventQuery + Send + Sync + 'static> (
     mut commands: Commands,
-    mut keys: ResMut<KeyStorage>,
+    keys: Res<KeyStorage>,
     query: Query<(&T::Component, &Handlers<T>)>,
 ) {
     for (action, system) in query.iter() {
         if T::validate(&system.context, action) {
-            system.handle(&mut commands, &mut keys, T::get_data(&system.context, action));
+            system.handle(&mut commands, &keys, T::get_data(&system.context, action));
         }
     }
 }
@@ -325,22 +324,16 @@ impl EventHandling for EvPositionFactor {
     fn new_context() -> Self::Context {}
 }
 
-impl EventHandling for EvPositionSync {
-    type Data = CondVec;
-    type Context = ();
-    fn new_context() -> Self::Context {}
-}
-
 pub fn obtain_focus_detection(
     mut commands: Commands,
-    mut keys: ResMut<KeyStorage>,
+    keys: Res<KeyStorage>,
     mut focused: Query<&mut Handlers<EvObtainFocus>, With<CursorFocus>>,
     mut unfocused: Query<&mut Handlers<EvObtainFocus>, Without<CursorFocus>>,
 ) {
     for mut handlers in focused.iter_mut() {
         if handlers.context { continue; }
         handlers.context = true;
-        handlers.handle(&mut commands, &mut keys, ());
+        handlers.handle(&mut commands, &keys, ());
     }
     for mut handlers in unfocused.iter_mut() {
         handlers.context = false;
@@ -349,11 +342,11 @@ pub fn obtain_focus_detection(
 
 pub fn lose_focus_detection(
     mut commands: Commands,
-    mut keys: ResMut<KeyStorage>,
+    keys: Res<KeyStorage>,
     mut removed: RemovedComponents<CursorFocus>,
     actions: Query<&Handlers<EvLoseFocus>, Without<CursorFocus>>,
 ) {
     for handlers in actions.iter_many(removed.read()) {
-        handlers.handle(&mut commands, &mut keys, ());
+        handlers.handle(&mut commands, &keys, ());
     }
 }
