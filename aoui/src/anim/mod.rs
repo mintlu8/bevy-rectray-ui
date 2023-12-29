@@ -82,6 +82,7 @@ pub enum Easing {
     Bezier([f32; 4]),
 }
 
+/// Sets whether the animation repeats or not.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum Playback {
     #[default]
