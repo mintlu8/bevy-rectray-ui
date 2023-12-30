@@ -499,7 +499,9 @@ macro_rules! dimension {
     }
 }
 
-/// Create a widget builder based on the definition of a primitive widget.
+/// Create a widget builder based on the definition of a primitive widget `Frame`.
+/// 
+/// Use [`build_frame!`] to utilize this definition.
 #[macro_export]
 macro_rules! widget_extension {
     (
@@ -554,6 +556,14 @@ macro_rules! widget_extension {
             pub hitbox: Option<$crate::Hitbox>,
             /// The render layer of the sprite.
             pub layer: Option<$crate::bevy::render::view::RenderLayers>,
+            /// Layout of the widget's children.
+            pub layout: Option<Box<dyn $crate::layout::Layout>>,
+            /// Margin of the widget's layout, has no effect if widget has no layout.
+            pub margin: $crate::dsl::OneOrTwo<$crate::Size2>,
+            /// Margin of the widget's layout, has no effect if widget has no layout.
+            pub padding: $crate::dsl::OneOrTwo<$crate::Size2>,
+            /// Displayed range of children, default is all.
+            pub children_range: Option<::std::ops::Range<usize>>,
             $($(#[$($attr)*])* $vis $field: $ty),*
         }
     };
@@ -581,6 +591,10 @@ macro_rules! build_frame {
                 layer: $this.layer,
                 aspect: $this.aspect,
                 clipping: $this.clipping,
+                layout: $this.layout,
+                margin: $this.margin,
+                padding: $this.padding,
+                children_range: $this.children_range,
             }, $commands);
             $commands.entity(entity.0)
         }

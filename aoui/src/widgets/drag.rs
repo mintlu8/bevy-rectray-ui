@@ -1,11 +1,11 @@
-use bevy::{math::Vec2, ecs::{system::{Query, Res, Commands}, component::Component, query::Without, bundle::Bundle}};
+use bevy::{math::Vec2, ecs::{system::{Query, Res, Commands}, component::Component, query::Without, bundle::Bundle, entity::Entity}};
 use crate::{Transform2D, signals::{types::SigDrag, KeyStorage},events::{Handlers, EvMouseDrag}, anim::Attr, dsl::{DslInto, prelude::EvPositionFactor}};
 use serde::{Serialize, Deserialize};
 
 use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::Offset};
 use crate::signals::Receiver;
 
-use super::SharedPosition;
+use super::{SharedPosition, constraints::PositionChanged};
 pub use super::constraints::DragConstraint;
 
 
@@ -13,46 +13,43 @@ pub use super::constraints::DragConstraint;
 /// By default the sprite can be dragged anywhere with no restriction.
 /// 
 /// This works with all mouse buttons as long as
-/// you add the corresponding event flags.
+/// you add the corresponding `EventFlags`.
 /// 
 /// # Supporting components
 /// 
 /// * [`EventFlags`]: Requires `Drag` to be set.
 /// * [`DragConstraint`]: If specified, the sprite cannot go over bounds of its parent.
-/// * [`DragSnapBack`]: Move the sprite back to its original position if dropped. 
-/// Uses `Transition` if applicable.
-/// * [`Sender<Changed>`]: A signal that sends a value in `0..=1` in its constraints when being dragged.
-/// * [`SigDrag`]: 
-/// Sent by a non-draggable sprite with a drag event handler, 
-/// and received by a draggable sprite without an event handler.
-/// This is useful for creating a small draggable area, like a banner.
+/// * [`DragSnapBack`]: Move the sprite back to its original position when dropped.
+/// * [`Handlers<EvMouseDrag>`]: A signal that transfers the `being dragged` status onto another entity.
+/// * [`Receiver<SigDrag>`]: 
+///     Receives `EvMouseDrag` on a draggable sprite with no event listener.
+///     This is useful for creating a small draggable area, like a banner.
+/// * [`SharedPosition`]: Shares relative position in its parent's bounds with another widget. 
+///     For example synchronizing scrollbar with a textbox.
+/// * [`Handlers<EvPositionFac>`]: A signal that sends a value in `0..=1` in its constraints when being dragged.
 
-/// 
-/// # Panics
-/// 
-/// If offset is not in `px`.
 #[derive(Debug, Clone, Copy, Component)]
-pub struct Draggable {
+pub struct Dragging {
     pub x: bool,
     pub y: bool,
     drag_start: Vec2,
 }
 
-impl Draggable {
+impl Dragging {
     pub const X: Self = Self { 
         x: true,
         y: false,
-        drag_start: Vec2::ZERO 
+        drag_start: Vec2::ZERO
     };
     pub const Y: Self = Self { 
         x: false,
         y: true,
-        drag_start: Vec2::ZERO 
+        drag_start: Vec2::ZERO
     };
     pub const BOTH: Self = Self { 
         x: true,
         y: true,
-        drag_start: Vec2::ZERO 
+        drag_start: Vec2::ZERO
     };
     pub fn last_drag_start(&self) -> Vec2 {
         self.drag_start
@@ -62,7 +59,7 @@ impl Draggable {
     }
 }
 
-impl Default for Draggable {
+impl Default for Dragging {
     fn default() -> Self {
         Self::BOTH
     }
@@ -86,9 +83,9 @@ impl DragSnapBack {
 pub fn drag_start(
     mut commands: Commands,
     storage: Res<KeyStorage>,
-    send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Draggable>>,
-    mut receive: Query<(&Receiver<SigDrag>, &mut Draggable, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
-    mut query: Query<(&CursorAction, &mut Draggable, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>)>,
+    send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Dragging>>,
+    mut receive: Query<(&Receiver<SigDrag>, &mut Dragging, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
+    mut query: Query<(&CursorAction, &mut Dragging, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>)>,
 ) {
 
     for (focus, send) in send.iter() {
@@ -127,6 +124,7 @@ pub fn drag_start(
     }
 }
 
+/// State used to transfer the dragging event.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DragState {
     #[default]
@@ -139,9 +137,9 @@ pub fn dragging(
     mut commands: Commands,
     storage: Res<KeyStorage>,
     state: Res<CursorState>,
-    send: Query<(&CursorFocus, &Handlers<EvMouseDrag>), Without<Draggable>>,
-    mut query: Query<(&CursorFocus, &Draggable, Attr<Transform2D, Offset>, Option<&mut SharedPosition>)>,
-    mut receive: Query<(&Draggable, Attr<Transform2D, Offset>, &Receiver<SigDrag>, Option<&mut SharedPosition>), Without<CursorFocus>>,
+    send: Query<(&CursorFocus, &Handlers<EvMouseDrag>), Without<Dragging>>,
+    mut query: Query<(Entity, &CursorFocus, &Dragging, Attr<Transform2D, Offset>)>,
+    mut receive: Query<(Entity, &Dragging, Attr<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorFocus>>,
 ) {
     let delta = state.cursor_position() - state.down_position();
 
@@ -153,15 +151,15 @@ pub fn dragging(
     }
 
     let iter = query.iter_mut()
-        .filter_map(|(focus, drag, transform, shared)| {
+        .filter_map(|(entity, focus, drag, transform)| {
             focus.intersects(EventFlags::LeftDrag | EventFlags::MidDrag | EventFlags:: RightDrag)
-                .then(||(drag, transform, shared))
+                .then_some((entity, drag, transform))
         }).chain(receive.iter_mut()
-        .filter_map(|(drag, transform, recv, shared)|
-            (recv.poll() == Some(DragState::Dragging)).then(||(drag, transform, shared))
+        .filter_map(|(entity, drag, transform, recv)|
+            (recv.poll() == Some(DragState::Dragging)).then_some((entity, drag, transform))
         ));
 
-    for (drag, mut transform, shared) in iter {
+    for (entity, drag, mut transform) in iter {
         if !(drag.x || drag.y) { continue; }
         let pos = drag.last_drag_start() + {
             Vec2::new(
@@ -170,9 +168,7 @@ pub fn dragging(
             )
         };
         transform.force_set(pos);
-        if let Some(mut shared) = shared {
-            shared.updated = true
-        }
+        commands.entity(entity).insert(PositionChanged);
     }
 }
 
@@ -181,7 +177,7 @@ pub fn dragging(
 pub fn drag_end(
     mut commands: Commands,
     storage: Res<KeyStorage>,
-    send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Draggable>>,
+    send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Dragging>>,
     mut receive: Query<(&mut DragSnapBack, Attr<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut DragSnapBack, Attr<Transform2D, Offset>)>
 ) {
@@ -214,6 +210,8 @@ pub fn drag_end(
         }
     }
 }
+
+/// Builder trait for a draggable widget.
 pub trait IntoDraggingBuilder: Bundle + Default {
 
     fn with_constraints(self) -> impl IntoDraggingBuilder {
@@ -241,7 +239,7 @@ pub trait IntoDraggingBuilder: Bundle + Default {
     }
 }
 
-impl IntoDraggingBuilder for Draggable {}
+impl IntoDraggingBuilder for Dragging {}
 
 impl<T> IntoDraggingBuilder for (DragSnapBack, T) where T: IntoDraggingBuilder {
     fn with_constraints(self) -> impl IntoDraggingBuilder { 

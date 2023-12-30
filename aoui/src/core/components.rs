@@ -232,7 +232,7 @@ impl Dimension {
                 size
             }
             DimensionSize::Owned(v) => {
-                let mut size = v.as_pixels(parent, self.em, rem);
+                let mut size = v.as_pixels(parent, em, rem);
                 if v.units().0 == SizeUnit::Percent {
                     size.x = self.reliable_size.x;
                 }
@@ -323,7 +323,8 @@ pub struct Transform2D{
     pub parent_anchor: Anchor,
     /// Center of `rotation` and `scale`.
     ///
-    /// By default this is the same as `anchor`.
+    /// By default this is `Center`, 
+    /// If set to `Inherit`, would be the same as `anchor`.
     pub center: Anchor,
     /// Offset from parent's anchor.
     pub offset: Size2,
@@ -348,7 +349,7 @@ impl Transform2D {
 
     pub const UNIT: Self = Self {
         anchor: Anchor::Center,
-        parent_anchor: Anchor::Inherit,
+        parent_anchor: Anchor::Center,
         center: Anchor::Inherit,
         offset: Size2::ZERO,
         rotation: 0.0,
@@ -388,7 +389,7 @@ impl Transform2D {
 
     /// Set parent anchor.
     ///  
-    /// Discouraged in idiomatic use, unless doing skeletal animation.
+    /// This is discouraged in idiomatic use.
     pub fn with_parent_anchor(mut self, anchor: Anchor) -> Self {
         self.parent_anchor = anchor;
         self
@@ -468,6 +469,7 @@ impl Opacity {
         }
     }
 
+    /// If not, the event pipeline will ignore this entity.
     pub fn is_active(&self) -> bool {
         !self.computed_disabled && !self.occluded && !self.disabled && self.computed_opacity > 0.0
     }
@@ -475,6 +477,7 @@ impl Opacity {
     pub fn is_disabled(&self) -> bool {
         self.computed_disabled
     }
+
     pub fn get(&self) -> f32 {
         if self.occluded {
             0.0
@@ -494,7 +497,7 @@ impl Default for Opacity {
 /// 
 /// This behavior is opt-in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
-pub struct OpacityWriter;
+pub struct SetAlpha;
 
 /// Data related to clipping.
 #[derive(Debug, Component, Default)]

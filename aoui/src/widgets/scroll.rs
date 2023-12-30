@@ -1,4 +1,4 @@
-use bevy::{hierarchy::Children, math::{Vec2, IVec2}, log::warn, reflect::Reflect, ecs::{query::With, system::Res, bundle::Bundle}};
+use bevy::{hierarchy::Children, math::{Vec2, IVec2}, log::warn, reflect::Reflect, ecs::{query::With, system::Res, bundle::Bundle, entity::Entity}};
 use bevy::ecs::{component::Component, query::Without};
 use bevy::ecs::system::{Query, Commands};
 use crate::{Transform2D, signals::types::SigScroll, anim::Attr, anim::Offset, events::EvPositionFactor, Dimension, AouiREM};
@@ -10,12 +10,12 @@ use crate::dsl::DslInto;
 use crate::events::MouseWheelAction;
 pub use super::constraints::ScrollConstraint;
 
-use super::constraints::SharedPosition;
+use super::constraints::{SharedPosition, PositionChanged};
 
-/// Add size relative scrolling support.
+/// Add mouse wheel scrolling support.
 /// 
-/// This component works out of the box for both smaller
-/// and larger objects relative to the parent.
+/// This component moves children in this sprites
+/// bounding area.
 /// 
 /// # Setup Requirements
 /// 
@@ -23,17 +23,19 @@ use super::constraints::SharedPosition;
 /// `Anchor::Center`, which acts as a container.
 /// * add children to that child.
 /// 
-/// # Events and Signals
+/// # Supporting components
 /// 
-/// * `EvMouseWheel`: If scrolling has no effect on the sprite's position, send it to another recipient.
-/// * `SigScroll`: Receives `EvScrollWheel` and scrolls this widget.
-/// * `EvPositionFactor`: Sends a value between `0..=1` corresponding to the entity's location.
-/// When received, act if this entity is being scrolled upon.
-/// 
-/// # Limitations
-/// 
-/// * Does not detect rotation, will always use local space orientation.
-/// * Does not support `Interpolate`.
+/// * [`EventFlags`](crate::events::EventFlags): Requires `MouseWheel` to be set.
+/// * [`ScrollConstraint`]: If specified, the sprite cannot go over bounds of its parent.
+/// * [`Handlers<EvMouseWheel>`]: 
+///     A signal that transfers the `being scrolled` status onto another entity.
+///     This will trigger if either scrolled to the end or not scrollable to begin with.
+/// * [`Receiver<SigScroll>`]: 
+///     Receives `EvMouseWheel` on another scrollable sprite.
+/// * [`SharedPosition`]: Shares relative position in its parent's bounds with another widget. 
+///     For example synchronizing a scrollbar with a textbox.
+/// * [`Handlers<EvPositionFac>`]: A signal that sends a value 
+///     in `0..=1` in its constraints when being scrolled.
 #[derive(Debug, Clone, Copy, Component, Reflect)]
 pub struct Scrolling {
     pub pos_x: bool,
@@ -105,9 +107,9 @@ pub fn scrolling_system(
     mut commands: Commands,
     rem: Option<Res<AouiREM>>,
     storage: Res<KeyStorage>,
-    mut scroll: Query<(&Scrolling, &Dimension, &Children, &MouseWheelAction, Option<&mut SharedPosition>)>,
+    mut scroll: Query<(Entity, &Scrolling, &Dimension, &Children, &MouseWheelAction)>,
     sender: Query<(&MouseWheelAction, &Handlers<EvMouseWheel>), Without<Scrolling>>,
-    mut receiver: Query<( &Scrolling, &Dimension, &Children, &Receiver<SigScroll>, Option<&mut SharedPosition>), Without<MouseWheelAction>>,
+    mut receiver: Query<(Entity, &Scrolling, &Dimension, &Children, &Receiver<SigScroll>), Without<MouseWheelAction>>,
     mut child_query: Query<Attr<Transform2D, Offset>, With<Children>>,
 ) {
     let rem = rem.map(|x| x.get()).unwrap_or(16.0);
@@ -115,11 +117,11 @@ pub fn scrolling_system(
         signal.handle(&mut commands, &storage, *action);
     }
     let iter = scroll.iter_mut()
-        .map(|(scroll, dim, children, action, shared)| 
-            (scroll, dim, children, *action, shared))
-        .chain(receiver.iter_mut().filter_map(|(scroll, dim, children, receiver, shared)| 
-            Some((scroll, dim, children, receiver.poll()?, shared))));
-    for (scroll, dim, children, delta, shared) in iter {
+        .map(|(entity, scroll, dim, children, action)| 
+            (entity, scroll, dim, children, *action))
+        .chain(receiver.iter_mut().filter_map(|(entity, scroll, dim, children, receiver)| 
+            Some((entity, scroll, dim, children, receiver.poll()?))));
+    for (entity, scroll, dim, children, delta) in iter {
         let delta_scroll = match (scroll.x_scroll(), scroll.y_scroll()) {
             (true, true) => delta.pixels,
             (true, false) => Vec2::new(delta.pixels.x + delta.pixels.y, 0.0),
@@ -134,9 +136,7 @@ pub fn scrolling_system(
         if let Ok(mut transform) = child_query.get_mut(container){
             transform.force_set_pixels(transform.get_pixels(dim.size, dim.em, rem) + delta_scroll);
         }
-        if let Some(mut shared) = shared {
-            shared.updated = true;
-        }
+        commands.entity(entity).insert(PositionChanged);
     }
 }
 
@@ -170,17 +170,18 @@ impl ScrollDiscrete {
 
 
 pub fn scrolling_discrete(
-    mut scroll: Query<(&ScrollDiscrete, &mut Container, &Children, &MouseWheelAction, Option<&mut SharedPosition>)>,
-    mut receiver: Query<(&ScrollDiscrete, &mut Container, &Children, &Receiver<SigScroll>, Option<&mut SharedPosition>), Without<MouseWheelAction>>,
+    mut commands: Commands,
+    mut scroll: Query<(Entity, &ScrollDiscrete, &mut Container, &Children, &MouseWheelAction)>,
+    mut receiver: Query<(Entity, &ScrollDiscrete, &mut Container, &Children, &Receiver<SigScroll>), Without<MouseWheelAction>>,
     child_query: Query<&LayoutControl>,
 ) {
     let iter = scroll.iter_mut()
-        .map(|(scroll, container, children, action, shared)| 
-            (scroll, container, children, *action, shared))
-        .chain(receiver.iter_mut().filter_map(|(scroll, container, children, receiver, shared)| 
-            Some((scroll, container, children, receiver.poll()?, shared))));
+        .map(|(entity, scroll, container, children, action)| 
+            (entity, scroll, container, children, *action))
+        .chain(receiver.iter_mut().filter_map(|(entity, scroll, container, children, receiver)| 
+            Some((entity, scroll, container, children, receiver.poll()?))));
     
-    for (scroll, mut container, children, delta, shared) in iter {
+    for (entity, scroll, mut container, children, delta) in iter {
         let Some(range) = container.range.clone() else {
             warn!("ScrollDiscrete requires a range in `Container`.");
             continue;
@@ -206,9 +207,7 @@ pub fn scrolling_discrete(
             } 
             0 => continue,
         };
-        if let Some(mut shared) = shared {
-            shared.updated = true
-        }
+        commands.entity(entity).insert(PositionChanged);
     }
 }
 

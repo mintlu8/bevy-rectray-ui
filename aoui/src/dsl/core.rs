@@ -1,6 +1,6 @@
 use bevy::{ecs::{system::Commands, entity::Entity}, asset::AssetServer, sprite::Sprite, text::{Text, TextSection, TextStyle, BreakLineOn, Text2dBounds, TextLayoutInfo, Font}, render::{color::Color, texture::{Image, BevyDefault}, render_resource::{Extent3d, TextureDimension}}, math::{Vec2, Rect}};
 
-use crate::{widget_extension, transform2d, dimension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, OpacityWriter, build_frame};
+use crate::{widget_extension, transform2d, dimension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, SetAlpha, build_frame, layout::Container};
 
 use super::{Widget, DslInto, apply_marker, get_layer, is_using_opacity, HandleOrString};
 
@@ -76,8 +76,16 @@ impl Widget for FrameBuilder {
         } else if let Some(layer) = get_layer() {
             base.insert(layer);
         }
+        if let Some(layout) = self.layout {
+            base.insert(Container {
+                layout,
+                margin: self.margin.0,
+                padding: self.padding.0,
+                range: self.children_range,
+            });
+        }
         if is_using_opacity() {
-            base.insert(OpacityWriter);
+            base.insert(SetAlpha);
         }
         let base = base.id();
         (base, base)

@@ -1,36 +1,49 @@
 use std::sync::Arc;
 use atomic::{Atomic, Ordering};
-use bevy::{math::{Vec2, IVec2}, reflect::Reflect, hierarchy::{Children, Parent}, log::warn, ecs::query::With, window::{Window, PrimaryWindow}};
+use bevy::ecs::entity::Entity;
+use bevy::ecs::query::Has;
+use bevy::{reflect::Reflect, log::warn, ecs::query::With};
+use bevy::window::{Window, PrimaryWindow};
+use bevy::math::{Vec2, IVec2};
+use bevy::hierarchy::{Children, Parent};
 use bevy::ecs::{component::Component, system::{Commands, Res, Query}};
-use crate::{signals::KeyStorage, AouiREM, Dimension, Transform2D, Anchor, dsl::prelude::{EvPositionFactor, Offset}, anim::Attr, layout::Container};
-use crate::events::{Handlers, EvMouseWheel, MouseWheelAction};
+use crate::{signals::KeyStorage, AouiREM, Dimension, Transform2D, Anchor, anim::Attr, layout::Container};
+use crate::anim::Offset;
+use crate::events::{Handlers, EvMouseWheel, MouseWheelAction, EvPositionFactor};
 use self::sealed::BuildSharedPosition;
 
-use super::{scroll::{Scrolling, ScrollDiscrete}, drag::Draggable};
+use super::{scroll::{Scrolling, ScrollDiscrete}, drag::Dragging};
 
-pub fn clear_position_update(mut q: Query<&mut SharedPosition>) {
-    q.par_iter_mut().for_each(|mut x| x.updated = false)
-}
-
-pub fn filter_nan(v: Vec2) -> Vec2 {
+fn filter_nan(v: Vec2) -> Vec2 {
     Vec2::new(
         if v.x.is_nan() {0.0} else {v.x}, 
         if v.y.is_nan() {0.0} else {v.y},
     )
 }
 
-pub fn flip_vec(v: Vec2, [x, y]: &[bool; 2]) -> Vec2 {
+fn flip_vec(v: Vec2, [x, y]: &[bool; 2]) -> Vec2 {
     Vec2::new(
         if *x {v.x} else {1.0 - v.x}, 
         if *y {v.y} else {1.0 - v.y}, 
     )
 }
 
+/// A marker component for denoting position changed via dragging or scrolling this frame.
+#[derive(Debug, Clone, Component, Reflect)]
+#[component(storage="SparseSet")]
+pub struct PositionChanged;
+
+/// Remove [`PositionChanged`].
+pub fn remove_position_changed(mut commands: Commands, 
+    query: Query<Entity, With<PositionChanged>>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).remove::<PositionChanged>();
+    }
+}
 /// A shared percentage based position.
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct SharedPosition{
-    /// If set, read from `Transform2D` else write to `Transform2D`.
-    pub updated: bool,
     #[reflect(ignore)]
     pub position: Arc<Atomic<Vec2>>,
     pub flip: [bool; 2],
@@ -46,7 +59,6 @@ impl SharedPosition {
 impl Default for SharedPosition {
     fn default() -> Self {
         Self {
-            updated: false,
             position: Arc::new(Atomic::new(Vec2::NAN)),
             flip: [false; 2],
         }
@@ -99,7 +111,6 @@ impl SharedPosition {
 
     pub fn new() -> Self {
         Self {
-            updated: false,
             position: Arc::new(Atomic::new(Vec2::NAN)),
             flip: [false; 2],
         }
@@ -125,12 +136,13 @@ pub fn scroll_constraint(
     rem: Option<Res<AouiREM>>,
     query: Query<(&Scrolling, &Dimension, Option<&SharedPosition>, &Children, 
         Option<&Handlers<EvMouseWheel>>,
-        Option<&Handlers<EvPositionFactor>>
+        Option<&Handlers<EvPositionFactor>>,
+        Has<PositionChanged>,
     ), With<ScrollConstraint>>,
     mut child_query: Query<(&Dimension, Attr<Transform2D, Offset>, Option<&Children>)>,
 ) {
     let rem = rem.map(|x|x.get()).unwrap_or(16.0);
-    for (scroll, dimension, shared, children, scroll_handler, fac_handler) in query.iter() {
+    for (scroll, dimension, shared, children, scroll_handler, fac_handler, changed) in query.iter() {
         let size = dimension.size;
         
         if children.len() != 1 {
@@ -171,11 +183,31 @@ pub fn scroll_constraint(
             );
             let Ok(mut transform) = child_query.get_mut(container).map(|(_, t, _)| t) else {continue};
             let offset = offset.clamp(min, max);
+            transform.force_set(offset);
             match shared {
-                None => {
-                    transform.force_set(offset);
+                None if changed => {
+                    let fac = filter_nan((offset - min) / (max - min));
+                    match (scroll.x_scroll(), scroll.y_scroll()) {
+                        (true, false) => {
+                            let value = fac.x.clamp(0.0, 1.0);
+                            if let Some(signal) = fac_handler {
+                                signal.handle(&mut commands, &storage, value)
+                            }
+                        },
+                        (false, true) => {
+                            let value = fac.y.clamp(0.0, 1.0);
+                            if let Some(signal) = fac_handler {
+                                signal.handle(&mut commands, &storage, value)
+                            }
+                        },
+                        (true, true) if fac_handler.is_some() => {
+                            warn!("Warning: Cannot Send `SigPositionFactor` with 2d scrolling.")
+                        }
+                        _ => (),
+                    }
                 },
-                Some(SharedPosition{updated: true, position, flip }) => {
+                None => (),
+                Some(SharedPosition{ position, flip }) if changed => {
                     // If scrolled to the end pipe the scroll event to the parent.
                     if let Some(piping) = scroll_handler {
                         let delta = offset - transform.get();
@@ -187,7 +219,6 @@ pub fn scroll_constraint(
                             piping.handle(&mut commands, &storage, action);
                         }
                     }
-                    transform.force_set(offset);
                     let fac = filter_nan((offset - min) / (max - min));
                     position.store(flip_vec(fac, flip), Ordering::Relaxed);
     
@@ -210,7 +241,7 @@ pub fn scroll_constraint(
                         _ => (),
                     }
                 },
-                Some(SharedPosition{updated: false, position, flip }) => {
+                Some(SharedPosition{ position, flip }) => {
                     let fac = flip_vec(position.load(Ordering::Relaxed), flip);
                     if fac.is_nan() { continue; }
                     transform.force_set((max - min) * fac + min);
@@ -225,17 +256,18 @@ pub fn drag_constraint(
     window: Query<&Window, With<PrimaryWindow>>,
     storage: Res<KeyStorage>,
     rem: Option<Res<AouiREM>>,
-    mut query: Query<(&Draggable, Attr<Transform2D, Offset>, &Dimension, 
+    mut query: Query<(&Dragging, Attr<Transform2D, Offset>, &Dimension, 
         Option<&SharedPosition>,
         Option<&Parent>, 
-        Option<&Handlers<EvPositionFactor>>
+        Option<&Handlers<EvPositionFactor>>,
+        Has<PositionChanged>,
     ), With<DragConstraint>>,
     parent_query: Query<&Dimension>,
 ) {
     let window_size = window.get_single().map(|x| Vec2::new(x.width(), x.height())).ok();
     let rem = rem.map(|x| x.get()).unwrap_or(16.0);
 
-    for (drag, mut transform, dim, shared, parent, fac_handler) in query.iter_mut() {
+    for (drag, mut transform, dim, shared, parent, fac_handler, changed) in query.iter_mut() {
         let Some(dimension) = parent
             .and_then(|p| parent_query.get(p.get()).ok())
             .map(|x| x.size)
@@ -259,14 +291,9 @@ pub fn drag_constraint(
             pos.y = pos.y.clamp(min.y, max.y);
         }
         let fac = filter_nan((pos - min) / (max - min));
-
+        transform.force_set(pos);
         match shared {
-            None => {
-                transform.force_set(pos);
-            },
-            Some(SharedPosition { updated: true, position, flip }) => {
-                position.store(flip_vec(fac, flip), Ordering::Relaxed);
-                transform.force_set(pos);
+            None if changed => {
                 match (drag.x, drag.y) {
                     (true, false) => {
                         let value = fac.x.clamp(0.0, 1.0);
@@ -286,7 +313,29 @@ pub fn drag_constraint(
                     _ => (),
                 }
             },
-            Some(SharedPosition { updated: false, position, flip }) => {
+            None => (),
+            Some(SharedPosition { position, flip }) if changed => {
+                position.store(flip_vec(fac, flip), Ordering::Relaxed);
+                match (drag.x, drag.y) {
+                    (true, false) => {
+                        let value = fac.x.clamp(0.0, 1.0);
+                        if let Some(signal) = fac_handler {
+                            signal.handle(&mut commands, &storage, value)
+                        }
+                    },
+                    (false, true) => {
+                        let value = fac.y.clamp(0.0, 1.0);
+                        if let Some(signal) = fac_handler {
+                            signal.handle(&mut commands, &storage, value)
+                        }
+                    },
+                    (true, true) if fac_handler.is_some() => {
+                        warn!("Warning: Cannot Send `SigPositionFactor` with 2d dragging.")
+                    }
+                    _ => (),
+                }
+            },
+            Some(SharedPosition { position, flip }) => {
                 let fac = flip_vec(position.load(Ordering::Relaxed), flip);
                 if fac.is_nan() { continue; }
                 if drag.x {
@@ -295,7 +344,7 @@ pub fn drag_constraint(
                 if drag.y {
                     pos.y = (max.y - min.y) * fac.y + min.y;
                 }
-                transform.force_set(pos.into())
+                transform.force_set(pos)
             },
         }
     }
@@ -307,15 +356,16 @@ pub fn discrete_scroll_sync(
     storage: Res<KeyStorage>,
     mut query: Query<(&ScrollDiscrete, &mut Container, &Children,
         Option<&SharedPosition>,
-        Option<&Handlers<EvPositionFactor>>
+        Option<&Handlers<EvPositionFactor>>,
+        Has<PositionChanged>,
     )>,
 ) {
-    for (scroll, mut container, children, shared, fac_handler) in query.iter_mut() {
+    for (scroll, mut container, children, shared, fac_handler, changed) in query.iter_mut() {
         let Some(range) = container.range.as_mut() else {continue};
         let len = children.len() - range.end;
         let fac = if len == 0 {0.0} else {range.start as f32 / len as f32};
         match shared {
-            Some(SharedPosition{ updated: true, position, flip }) => {
+            Some(SharedPosition{ position, flip }) if changed => {
                 let mut fac2 = fac * scroll.get().as_vec2();
                 if fac2.x < 0.0 || fac2.y < 0.0 {
                     fac2 += Vec2::ONE;
@@ -325,7 +375,7 @@ pub fn discrete_scroll_sync(
                     signal.handle(&mut commands, &storage, fac)
                 }
             },
-            Some(SharedPosition{ updated: false, position, flip }) => {
+            Some(SharedPosition{ position, flip }) => {
                 let fac = flip_vec(position.load(Ordering::Relaxed), flip);
                 if fac.is_nan() { continue; }
                 let mut pos = (fac / scroll.get().as_vec2()).dot(Vec2::ONE);

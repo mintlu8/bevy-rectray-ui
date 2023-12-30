@@ -128,7 +128,7 @@ impl RadioButton {
     pub fn set(&self, payload: &Payload) {
         let mut lock = self.0.lock().unwrap();
         *lock = payload.0.clone();
-        self.1.send_dyn(dbg!(payload).0.clone())
+        self.1.send_dyn(payload.0.clone())
     }
 
     pub fn get<T: DataTransfer>(&self) -> Option<T> {

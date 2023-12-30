@@ -26,13 +26,34 @@ pub fn remove_focus(mut commands: Commands,
     }
 }
 
+trait OptionDo<T> {
+    fn exec(self, f: impl FnOnce());
+    fn exec_with(self, f: impl FnOnce(T));
+}
+
+impl<T> OptionDo<T> for Option<T> {
+    fn exec(self, f: impl FnOnce()) {
+        if self.is_some() {
+            f()
+        }
+    }
+    fn exec_with(self, f: impl FnOnce(T)) {
+        if let Some(val) = self {
+            f(val)
+        }
+    }
+}
+
+trait End: Sized {
+    fn end(self) {}
+}
+
+impl<T> End for T {}
 
 /// We hand out component [`CursorFocus`] for persistant states,
 /// [`CursorAction`] for active events.
 /// and [`CursorClickOutside`] for cancelling.
 /// These should be handled on this frame during [`Update`].
-#[allow(clippy::too_many_arguments)]
-#[allow(clippy::option_map_unit_fn)]
 pub fn mouse_button_input(
     mut commands: Commands,
     mut state: ResMut<CursorState>,
@@ -44,7 +65,6 @@ pub fn mouse_button_input(
     unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<AouiCamera>, Without<CameraClip>)>,
     query: Query<(Entity, &EventFlags, CursorDetection, ActiveDetection)>,
 ) {
-    fn drop<T>(_: T) {}
     let iter = |f: EventFlags|query.iter().filter_map(move |(entity, flag, cursor, detection)| {
         if detection.is_active() && flag.intersects(f) {
             Some((entity, flag, cursor))
@@ -52,7 +72,7 @@ pub fn mouse_button_input(
             None
         }
     });
-    state.catched = false;
+    state.caught = false;
     if state.blocked { return; }
     let(camera, camera_transform) = match marked_camera.get_single() {
         Ok((cam, transform)) => (cam, transform),
@@ -67,14 +87,16 @@ pub fn mouse_button_input(
         .map(|ray| ray.origin.truncate()) else {return;};
     state.cursor_pos = mouse_pos;
     if state.dragging {
-        state.catched = true;
+        state.caught = true;
         if let Some(mut entity) = state.drag_target(&mut commands) {
             if !buttons.pressed(state.drag_button) {
                 if state.drag_dbl_click && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
                     entity.insert(CursorAction(EventFlags::DoubleClick));
+                    entity.insert(CursorFocus(EventFlags::Hover));
                     state.clear_dbl_click();
                 } else {
                     entity.insert(CursorAction(EventFlags::DragEnd));
+                    entity.insert(CursorFocus(EventFlags::Hover));
                 }
                 state.dragging = false;
                 state.drag_target = None;
@@ -82,11 +104,11 @@ pub fn mouse_button_input(
                 iter(EventFlags::Drop)
                     .filter(|(.., hitbox)| hitbox.contains(mouse_pos))
                     .max_by(|(.., a), (.., b)| a.z().total_cmp(&b.z()))
-                    .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::Drop))));
+                    .exec_with(|(entity, ..)| commands.entity(entity).insert(CursorAction(EventFlags::Drop)).end());
                 iter(EventFlags::ClickOutside)
                     .filter(|(e, ..)| e != &dragged_id)
                     .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-                    .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
+                    .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
             } else {
                 if state.drag_button != MouseButton::Left && buttons.just_pressed(MouseButton::Left) {
                     entity.insert(CursorAction(EventFlags::LeftDown));
@@ -107,7 +129,7 @@ pub fn mouse_button_input(
             state.drag_target = None;
             iter(EventFlags::ClickOutside)
             .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-            .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
+            .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         }
     } else if buttons.pressed(MouseButton::Left) {
         if buttons.just_pressed(MouseButton::Left) { 
@@ -120,7 +142,7 @@ pub fn mouse_button_input(
                 .max_by(|(.., a), (.., b)| a.compare(b))
                 .map(|(entity, flags, _)| (entity, flags)
             ) {
-            state.catched = true;
+            state.caught = true;
             if buttons.just_pressed(MouseButton::Left) {
                 commands.entity(entity).insert(CursorAction(EventFlags::LeftDown));
                 if flag.contains(EventFlags::LeftDrag) {
@@ -145,7 +167,7 @@ pub fn mouse_button_input(
             .max_by(|(.., a), (.., b)| a.compare(b))
             .map(|(entity, flags, _)| (entity, flags)
         ) {
-            state.catched = true;
+            state.caught = true;
             if buttons.just_pressed(MouseButton::Right) {
                 commands.entity(entity).insert(CursorAction(EventFlags::RightDown));
                 if flag.contains(EventFlags::RightDrag) {
@@ -169,7 +191,7 @@ pub fn mouse_button_input(
             .max_by(|(.., a), (.., b)| a.compare(b))
             .map(|(entity, flags, _)| (entity, flags)
         ) {
-            state.catched = true;
+            state.caught = true;
             if buttons.just_pressed(MouseButton::Middle) {
                 state.down_pos = mouse_pos;
                 commands.entity(entity).insert(CursorAction(EventFlags::MidDown));
@@ -199,35 +221,35 @@ pub fn mouse_button_input(
                         commands.entity(entity).insert(CursorAction(EventFlags::LeftClick));
                     }
                 )
-                .map(|_| state.catched = true);
+                .exec(|| state.caught = true);
             iter(EventFlags::ClickOutside)
                 .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-                .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
+                .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         } else if buttons.just_released(MouseButton::Right) {
             let down = state.down_pos;
             iter(EventFlags::RightClick)
                 .filter(|(.., hitbox)| hitbox.contains(mouse_pos) && hitbox.contains(down))
                 .max_by(|(.., a), (.., b)| a.compare(b))
-                .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::RightClick))))
-                .map(|_| state.catched = true);
+                .map(|(entity, ..)| commands.entity(entity).insert(CursorAction(EventFlags::RightClick)).end())
+                .exec(|| state.caught = true);
             iter(EventFlags::ClickOutside)
                 .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-                .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
+                .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         } else if buttons.just_released(MouseButton::Middle) {
             let down = state.down_pos;
             iter(EventFlags::MidClick)
                 .filter(|(.., hitbox)| hitbox.contains(mouse_pos) && hitbox.contains(down))
                 .max_by(|(.., a), (.., b)| a.compare(b))
-                .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorAction(EventFlags::MidClick))))
-                .map(|_| state.catched = true);
+                .map(|(entity, ..)| commands.entity(entity).insert(CursorAction(EventFlags::MidClick)).end())
+                .exec(|| state.caught = true);
             iter(EventFlags::ClickOutside)
                 .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-                .for_each(|(entity, ..)| drop(commands.entity(entity).insert(CursorClickOutside)));
+                .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         }
         iter(EventFlags::Hover)
             .filter(|(.., hitbox)| hitbox.contains(mouse_pos))
             .max_by(|(.., a), (.., b)| a.compare(b))
-            .map(|(entity, ..)| drop(commands.entity(entity).insert(CursorFocus(EventFlags::Hover))))
-            .map(|_| state.catched = true);
+            .map(|(entity, ..)| commands.entity(entity).insert(CursorFocus(EventFlags::Hover)).end())
+            .exec(|| state.caught = true);
     }   
 }

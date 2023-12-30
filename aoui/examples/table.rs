@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AouiPlugin, dsl::DslInto, Anchor, material_sprite};
+use bevy_aoui::{AouiPlugin, dsl::DslInto, Anchor, material_sprite, layout::TableLayout};
 
 pub fn main() {
     App::new()
@@ -52,11 +52,19 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             text: "5 columns of 20%, 10%, 20%, 30%, 20%" 
         },
     });
-    table! ((commands, assets) {
+    frame! ((commands, assets) {
         anchor: Center,
         dimension: [700, 100],
-        columns: [(SizeUnit::Percent, 0.2), (SizeUnit::Percent, 0.1), (SizeUnit::Percent, 0.2), (SizeUnit::Percent, 0.3), (SizeUnit::Percent, 0.2)],
         z: 1,
+        layout: TableLayout::from_columns(
+            [
+                (SizeUnit::Percent, 0.2), 
+                (SizeUnit::Percent, 0.1), 
+                (SizeUnit::Percent, 0.2), 
+                (SizeUnit::Percent, 0.3), 
+                (SizeUnit::Percent, 0.2)
+            ]
+        ),
         extra: Sprite::default(),
         child: rectangle! {
             dimension: size2!(100%, 100%),

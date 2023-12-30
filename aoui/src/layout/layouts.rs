@@ -83,13 +83,18 @@ impl Layout for FitLayout {
     }
 }
 
-/// A size agnostic mono-directional compact HBox or VBox.
+/// A size agnostic mono-directional container.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct CompactLayout {
     pub direction: FlexDir,
 }
 
-/// A fix-sized mono-directional HBox or VBox.
+impl CompactLayout {
+    pub const HBOX: Self = Self { direction: FlexDir::LeftToRight };
+    pub const VBOX: Self = Self { direction: FlexDir::TopToBottom };
+}
+
+/// A fix-sized mono-directional container.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct SpanLayout {
     /// The axis, horizontal or vertical.
@@ -98,7 +103,12 @@ pub struct SpanLayout {
     pub stretch: bool,
 }
 
-/// A fix-sized mono-directional HBox or VBox.
+impl SpanLayout {
+    pub const HSPAN: Self = Self { direction: FlexDir::LeftToRight, stretch: false };
+    pub const VSPAN: Self = Self { direction: FlexDir::TopToBottom, stretch: false };
+}
+
+/// A fix-sized mono-directional container.
 /// 
 /// The width is dynamic compared to `SpanLayout`
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
@@ -128,6 +138,16 @@ pub struct ParagraphLayout {
     pub stack: FlexDir,
     /// If specified, try increase the margin to fill the span.
     pub stretch: bool,
+}
+
+impl Default for ParagraphLayout {
+    fn default() -> Self {
+        Self {
+            direction: FlexDir::LeftToRight,
+            stack: FlexDir::TopToBottom,
+            stretch: false,
+        }
+    }
 }
 
 /// A 2D grid wih even pre-subdivided cells.
@@ -202,4 +222,15 @@ pub struct TableLayout {
     pub column_dir: FlexDir,
     /// If specified, adjust row margin to fill the table.
     pub stretch: bool,
+}
+
+impl TableLayout {
+    pub fn from_columns(columns: impl Into<Vec<(SizeUnit, f32)>>) -> Self {
+        Self {
+            columns: columns.into(),
+            row_dir: FlexDir::LeftToRight,
+            column_dir: FlexDir::TopToBottom,
+            stretch: false,
+        }
+    }
 }

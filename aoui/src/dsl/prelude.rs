@@ -34,7 +34,7 @@ pub use crate::events::{
     EvMouseDrag, EvTextChange, EvTextSubmit,
     EvPositionFactor,
 };
-pub use crate::OpacityWriter;
+pub use crate::SetAlpha;
 pub use crate::signals::{signal, fps_signal, Sender, Receiver, types::*};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::SharedPosition;
@@ -49,9 +49,9 @@ pub const FlipX: [bool; 2] = [true, false];
 pub const FlipY: [bool; 2] = [false, true];
 pub const FlipBoth: [bool; 2] = [true, true];
 
-pub const DragX: crate::widgets::drag::Draggable = crate::widgets::drag::Draggable::X;
-pub const DragY: crate::widgets::drag::Draggable = crate::widgets::drag::Draggable::Y;
-pub const DragBoth: crate::widgets::drag::Draggable = crate::widgets::drag::Draggable::BOTH;
+pub const DragX: crate::widgets::drag::Dragging = crate::widgets::drag::Dragging::X;
+pub const DragY: crate::widgets::drag::Dragging = crate::widgets::drag::Dragging::Y;
+pub const DragBoth: crate::widgets::drag::Dragging = crate::widgets::drag::Dragging::BOTH;
 pub const DragSnapBack: crate::widgets::drag::DragSnapBack = crate::widgets::drag::DragSnapBack::DEFAULT;
 
 pub const ScrollX: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::X;
@@ -71,8 +71,7 @@ pub use super::Aspect::Preserve;
 pub use crate::{frame, sprite, text, atlas};
 pub use crate::{material_sprite, material_mesh};
 pub use crate::{one_shot, handler};
-pub use crate::{padding, compact, paragraph, span, hbox, vbox, hspan, vspan};
-pub use crate::{linebreak, table, flex_table, fixed_grid, sized_grid,};
+pub use crate::{padding, paragraph, hbox, vbox, hspan, vspan, linebreak};
 pub use crate::{inputbox, button, check_button, radio_button, clipping_layer};
 pub use crate::rectangle;
 
@@ -82,7 +81,7 @@ use bevy::ecs::bundle::Bundle;
 use bevy::transform::components::GlobalTransform;
 
 /// Build transform at an anchor.
-pub fn transform_at(anc: Anchor) -> impl Bundle {
+pub fn build_transform_at(anc: Anchor) -> impl Bundle {
     (
         BuildTransform(anc),
         GlobalTransform::default()

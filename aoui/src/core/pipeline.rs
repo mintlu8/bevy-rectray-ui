@@ -61,7 +61,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
 
             let range = layout.range.clone().unwrap_or(0..usize::MAX);
             // SAFETY: safe since double mut access is gated by the hierarchy check
-            if let Ok((_, child_dim, child_transform, ..)) = unsafe { mut_query.get_unchecked(*child) } {
+            if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { mut_query.get_unchecked(*child) } {
                 match control_query.get(*child) {
                     Ok(LayoutControl::IgnoreLayout) => other_entities.push((
                         *child, 
@@ -69,12 +69,13 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
                     )),
                     control => {
                         if range.contains(&index) {
+                            let _ = child_dim.update(dimension, em, rem);
                             args.push(LayoutItem {
                                 entity: *child,
                                 anchor: child_transform.get_parent_anchor(),
                                 dimension: child_dim.estimate(dimension, em, rem),
                                 control: control.copied().unwrap_or_default(),
-                            })
+                            });
                         }
                         index += 1;
                     }

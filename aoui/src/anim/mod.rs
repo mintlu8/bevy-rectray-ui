@@ -7,7 +7,7 @@
 //! # /*
 //! text! (commands {
 //!     text: "I'm Spinning!",
-//!     extra: OpacityWriter,
+//!     extra: SetAlpha,
 //!     extra: transition!(
 //!         Offset 2 Linear default Vec2::new(-200.0, 0.0);
 //!         Opacity 0.5 CubicOut init (0.0, 1.0);

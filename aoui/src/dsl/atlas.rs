@@ -64,7 +64,7 @@ widget_extension!(pub struct AtlasBuilder {
     /// Index of the atlas.
     pub index: usize,
     /// Padding of the atlas.
-    pub padding: Option<Vec2>,
+    pub atlas_padding: Option<Vec2>,
 });
 
 impl Widget for AtlasBuilder {
@@ -133,7 +133,7 @@ impl Widget for AtlasBuilder {
                     _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
                 };
                 let [x, y] = count;
-                let atlas = TextureAtlas::from_grid(image, size, y, x, self.padding, Some(offset));
+                let atlas = TextureAtlas::from_grid(image, size, y, x, self.atlas_padding, Some(offset));
                 commands.entity(entity).insert((
                     sprite,
                     assets().add(atlas),
@@ -149,7 +149,7 @@ impl Widget for AtlasBuilder {
                     sprite,
                     DeferredAtlasBuilder::Subdivide { 
                         image,
-                        padding: self.padding,
+                        padding: self.atlas_padding,
                         count: slices, 
                     },
                 ));

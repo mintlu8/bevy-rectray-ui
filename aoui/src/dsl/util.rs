@@ -1,4 +1,5 @@
 use bevy::math::Vec2;
+use crate::layout::Layout;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit};
 use crate::{Size2, FontSize, layout::Alignment, layout::FlexDir};
 
@@ -50,6 +51,12 @@ impl DslFrom<i32> for Aspect {
 impl DslFrom<f32> for Aspect {
     fn dfrom(value: f32) -> Self {
         Aspect::Owned(value)
+    }
+}
+
+impl<T> DslFrom<T> for Option<Box<dyn Layout>> where T: Layout {
+    fn dfrom(value: T) -> Self {
+        Some(Box::new(value))
     }
 }
 

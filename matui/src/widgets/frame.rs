@@ -9,9 +9,9 @@ use bevy_aoui::layout::Axis;
 use bevy_aoui::signals::signal;
 use bevy_aoui::signals::types::SigDrag;
 use bevy_aoui::widgets::button::SetCursor;
-use bevy_aoui::{material_sprite, Size2, Hitbox, vbox};
-use bevy_aoui::widgets::drag::{Draggable, DragConstraint};
-use bevy_aoui::{widget_extension, build_frame, size2, layout::{Container, CompactLayout, FlexDir}, BuildMeshTransform};
+use bevy_aoui::{material_sprite, Hitbox, vbox};
+use bevy_aoui::widgets::drag::{Dragging, DragConstraint};
+use bevy_aoui::{widget_extension, build_frame, size2, layout::CompactLayout, BuildMeshTransform};
 use bevy_aoui::events::{EventFlags, Handlers, EvMouseDrag};
 use bevy_aoui::dsl::{Widget, mesh_rectangle};
 use bevy_aoui::dsl::HandleOrString;
@@ -83,14 +83,13 @@ widget_extension!(
         pub radius: f32,
         pub shadow: OptionM<ShadowInfo>,
         pub banner: Option<Entity>,
-        pub margin: f32,
-        pub padding: f32,
     }
 );
 
 impl Widget for MWindowBuilder {
     fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
         self.z += 0.01;
+        self.layout = Some(Box::new(CompactLayout::VBOX));
         let frame = build_frame!(commands, self);
         let assets = assets.expect("Please pass in the AssetServer");
         let style = self.palette;
@@ -101,18 +100,12 @@ impl Widget for MWindowBuilder {
             RoundedRectangleMaterial::new(style.background, self.radius)
         }.with_stroke((self.stroke, self.palette.stroke));
         commands.entity(frame).insert((
-            Draggable::BOTH,
+            Dragging::BOTH,
             DragConstraint,
             assets.add(mat),
             Mesh2dHandle(assets.add(mesh_rectangle())),
             GlobalTransform::IDENTITY,
             BuildMeshTransform,
-            Container {
-                layout: Box::new(CompactLayout { direction: FlexDir::TopToBottom}),
-                margin: Size2::em(0.0, self.margin),
-                padding: Size2::em(0.0, 0.0),
-                range: None,
-            },
         ));
         if let OptionM::Some(shadow) = self.shadow {
             let shadow = shadow.build_rect(commands, assets, self.radius);

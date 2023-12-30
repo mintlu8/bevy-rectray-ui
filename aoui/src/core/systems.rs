@@ -4,7 +4,7 @@ use bevy::text::{TextLayoutInfo, Text2dBounds};
 use bevy::prelude::*;
 
 use bevy::sprite::Anchor as BevyAnchor;
-use crate::{RotatedRect, BuildTransform, Dimension, DimensionSize, Transform2D, Opacity, OpacityWriter, BuildMeshTransform, Anchor};
+use crate::{RotatedRect, BuildTransform, Dimension, DimensionSize, Transform2D, Opacity, SetAlpha, BuildMeshTransform, Anchor};
 
 
 /// Copy our `anchor` component's value to the `Anchor` component
@@ -116,21 +116,21 @@ pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFont
 }
 
 /// Copy opacity as text alpha.
-pub fn sync_opacity_text(mut query: Query<(&Opacity, &mut Text), With<OpacityWriter>>) {
+pub fn sync_opacity_text(mut query: Query<(&Opacity, &mut Text), With<SetAlpha>>) {
     query.par_iter_mut().for_each(|(opacity, mut text)| {
         text.sections.iter_mut().for_each(|x| {x.style.color.set_a(opacity.get());} )
     })
 }
 
 /// Copy opacity as sprite alpha.
-pub fn sync_opacity_sprite(mut query: Query<(&Opacity, &mut Sprite), With<OpacityWriter>>) {
+pub fn sync_opacity_sprite(mut query: Query<(&Opacity, &mut Sprite), With<SetAlpha>>) {
     query.par_iter_mut().for_each(|(opacity, mut sprite)| {
         sprite.color.set_a(opacity.get());
     })
 }
 
 /// Copy opacity as atlas alpha.
-pub fn sync_opacity_atlas(mut query: Query<(&Opacity, &mut TextureAtlasSprite), With<OpacityWriter>>) {
+pub fn sync_opacity_atlas(mut query: Query<(&Opacity, &mut TextureAtlasSprite), With<SetAlpha>>) {
     query.par_iter_mut().for_each(|(opacity, mut sprite)| {
         sprite.color.set_a(opacity.computed_opacity);
     })

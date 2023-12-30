@@ -51,7 +51,7 @@ pub fn get_layer() -> Option<RenderLayers> {
     })
 }
 
-/// Run a closure, entities spawned inside auto inserts `OpacityWriter`.
+/// Run a closure, entities spawned inside auto inserts `SetAlpha`.
 pub fn use_opacity<T>(f: impl FnOnce() -> T) -> T{
     USE_OPACITY.with(|x| {
         let orig = x.replace(true);
@@ -61,7 +61,7 @@ pub fn use_opacity<T>(f: impl FnOnce() -> T) -> T{
     })
 }
 
-/// Obtain whether auto insert `OpacityWriter` or not.
+/// Obtain whether auto insert `SetAlpha` or not.
 pub fn is_using_opacity() -> bool {
     USE_OPACITY.with(|x| x.get())
 }

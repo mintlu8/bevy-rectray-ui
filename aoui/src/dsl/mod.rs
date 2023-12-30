@@ -20,8 +20,6 @@ mod converters;
 pub use converters::*;
 
 #[doc(hidden)]
-pub use layouts::{SpanContainerNames, GridContainerNames};
-#[doc(hidden)]
 pub use util::{OneOrTwo, Aspect};
 #[doc(hidden)]
 pub use itertools::izip;
@@ -37,7 +35,7 @@ pub mod builders {
 
     pub use super::atlas::AtlasBuilder;
 
-    pub use super::layouts::{PaddingBuilder, SpanContainerBuilder, GridContainerBuilder};
+    pub use super::layouts::PaddingBuilder;
     pub use super::widgets::{InputBoxBuilder, CheckButtonBuilder, RadioButtonBuilder, ButtonBuilder, ClippingFrameBuilder};
     pub use super::mesh2d::{MaterialSpriteBuilder, MaterialMeshBuilder};
 }

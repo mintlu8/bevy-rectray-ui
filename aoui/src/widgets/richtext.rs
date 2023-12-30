@@ -63,12 +63,13 @@
 
 use std::{collections::HashMap, hash::{Hash, BuildHasher}, num::ParseFloatError};
 use bevy::render::view::RenderLayers;
-use bevy::{asset::{Handle, Assets}, text::Font, render::color::Color, math::Vec2, hierarchy::BuildChildren};
-use bevy::ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component, query::Changed};
-use crate::{Transform2D, Anchor, FontSize, Dimension, Size2};
+use bevy::{asset::{Handle, Assets}, text::Font, render::color::Color, hierarchy::BuildChildren};
+use bevy::ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component};
+use crate::{Transform2D, Anchor, FontSize, Dimension, Size2, DimensionSize};
 use crate::layout::{Container, CompactLayout, FlexDir};
 use crate::bundles::AouiBundle;
 use crate::layout::LayoutControl;
+use crate::frame;
 
 /// This widget always has the width of a space and line height of a widget.
 #[derive(Debug, Clone, Component)]
@@ -76,14 +77,14 @@ pub struct GlyphSpace {
     font: Handle<Font>
 }
 
-pub fn synchronize_glyph_spaces(mut query: Query<(&GlyphSpace, &mut Dimension), Changed<Dimension>>, fonts: Res<Assets<Font>> ){
+pub fn synchronize_glyph_spaces(mut query: Query<(&GlyphSpace, &mut Dimension)>, fonts: Res<Assets<Font>> ){
     use ab_glyph::{Font, ScaleFont};
     query.par_iter_mut().for_each(|(font, mut dimension)| {
         if let Some(font) = fonts.get(&font.font) {
             let font = font.font.as_scaled(dimension.em);
             let width = font.h_advance(font.glyph_id(' '));
             let height = font.height();
-            dimension.size = Vec2::new(width, height)
+            dimension.dim = DimensionSize::Owned(Size2::pixels(width, height));
         }
     }) 
 }
@@ -456,23 +457,14 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
             () => {
                 if self.buffer.len() != last_space { 
                     last_space = self.buffer.len() + 1;
-                    let entity = self.commands.spawn((
-                        AouiBundle{
-                            transform: Transform2D {
-                                anchor: self.anchor(),
-                                ..Default::default()
-                            },
-                            dimension: Dimension {
-                                set_em: self.size(),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        GlyphSpace {
+                    let entity = frame!((self.commands) {
+                        anchor: self.anchor(),
+                        font_size: self.size(),
+                        extra: GlyphSpace {
                             font: self.font.get(self.font(), self.style),
                         },
-                        LayoutControl::WhiteSpace,
-                    )).id();
+                        extra: LayoutControl::WhiteSpace,
+                    });
                     if let Some(zip) = &mut self.zip {
                         zip.push(entity);
                     } else {

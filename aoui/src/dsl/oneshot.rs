@@ -24,7 +24,7 @@ macro_rules! one_shot {
     ($commands: expr => fn $($name: ident)? $(<$($generic: ident$(: $ty: ident)?),*>)? ($($arg:tt)*){$($tt:tt)*}) => {
         {
             use ::std::sync::{Arc, OnceLock};
-            use ::bevy::ecs::system::SystemId;
+            use $crate::bevy::ecs::system::SystemId;
             #[derive(Debug, Default)]
             struct InsertSystem $(<$($generic$(: $ty)?),*>)? (
                 Arc<OnceLock<SystemId>>

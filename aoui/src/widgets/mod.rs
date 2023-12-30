@@ -29,7 +29,6 @@ impl Plugin for WidgetsPlugin {
             .add_systems(PreUpdate, (
                 button::generate_check_button_state,
             ).in_set(AouiEventSet))
-            .add_systems(PreUpdate, constraints::clear_position_update.before(AouiWidgetEventSet))
             .add_systems(PreUpdate, (
                 inputbox::text_on_mouse_down,
                 inputbox::text_on_click_outside,
@@ -45,11 +44,11 @@ impl Plugin for WidgetsPlugin {
                 scroll::scrolling_discrete.after(scroll::scrolling_system),
                 scrollframe::clipping_layer,
             ).in_set(AouiWidgetEventSet))
-            .add_systems(PreUpdate, (
+            .add_systems(Update, (
                 constraints::scroll_constraint,
                 constraints::drag_constraint,
                 constraints::discrete_scroll_sync,
-            ).after(AouiWidgetEventSet))
+            ))
             .add_systems(Update, (
                 inputbox::update_inputbox_cursor,
                 button::set_cursor,
@@ -60,6 +59,7 @@ impl Plugin for WidgetsPlugin {
             .add_systems(PostUpdate, richtext::synchronize_glyph_spaces.in_set(AouiLoadInputSet))
             .add_systems(PostUpdate, inputbox::sync_em_inputbox.in_set(AouiStoreOutputSet))
             .add_systems(Last, button::remove_check_button_state.in_set(AouiCleanupSet))
+            .add_systems(Last, constraints::remove_position_changed.in_set(AouiCleanupSet))
         ;
     }
 }

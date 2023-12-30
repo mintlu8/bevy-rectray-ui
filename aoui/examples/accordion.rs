@@ -86,7 +86,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     wrap: true,
                     extra: sig.clone().cond_recv::<SigOpacity>(0, 1.0, 0.0),
                     extra: transition! (Opacity 0.5 CubicInOut default 1.0),
-                    extra: OpacityWriter,
+                    extra: SetAlpha,
                     text: TEXT,
                 }
             },
@@ -143,7 +143,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     wrap: true,
                     extra: sig.clone().cond_recv::<SigOpacity>(1, 1.0, 0.0),
                     extra: Interpolate::<Opacity>::ease(EaseFunction::CubicInOut, 1.0, 0.5),
-                    extra: OpacityWriter,
+                    extra: SetAlpha,
                     text: TEXT
                 }
             },

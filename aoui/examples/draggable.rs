@@ -1,7 +1,7 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::AouiPlugin;
+use bevy_aoui::{AouiPlugin, WorldExtension};
 
 pub fn main() {
     App::new()
@@ -16,6 +16,7 @@ pub fn main() {
         .add_systems(Startup, init)
         .add_plugins(AouiPlugin)
         .add_plugins(Material2dPlugin::<Circle>::default())
+        .register_cursor_default(CursorIcon::Arrow)
         .run();
 }
 

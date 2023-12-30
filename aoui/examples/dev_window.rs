@@ -1,7 +1,7 @@
 // This tries to be egui
 
 use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
-use bevy_aoui::{AouiPlugin, widgets::drag::Draggable, WorldExtension};
+use bevy_aoui::{AouiPlugin, widgets::drag::Dragging, WorldExtension};
 
 pub fn main() {
     App::new()
@@ -33,10 +33,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     });
 
     let (send, recv) = signal();
-    compact!((commands, assets) {
-        direction: TopToBottom,
+    vbox!((commands, assets) {
         hitbox: Rect(1),
-        extra: Draggable::BOTH,
+        extra: Dragging::BOTH,
         extra: recv.recv::<SigDrag>(),
         child: rectangle! {
             z: -1,

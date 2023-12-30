@@ -37,7 +37,7 @@ pub fn init(mut commands: Commands) {
         dimension: [200, 60],
         hitbox: Rect(1),
         event: EventFlags::MouseWheel,
-        range: 0..5,
+        children_range: 0..5,
         font_size: em(4),
         extra: ScrollDiscrete::new(),
         child: #text! {

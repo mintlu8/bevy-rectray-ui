@@ -27,7 +27,7 @@ pub struct CursorState{
     pub(super) up_pos: Vec2,
     pub(super) down_pos: Vec2,
     pub(super) blocked: bool,
-    pub(super) catched: bool,
+    pub(super) caught: bool,
     pub(super) dragging: bool,
     pub(super) drag_button: MouseButton,
     pub(super) drag_target: Option<Entity>,
@@ -45,7 +45,7 @@ impl Default for CursorState {
             dragging: false, 
             drag_button: MouseButton::Left, 
             drag_target: None, 
-            catched: false,
+            caught: false,
             drag_dbl_click: false,
         }
     }
@@ -53,12 +53,12 @@ impl Default for CursorState {
 
 impl CursorState {
 
-    /// Check if mouse event is catched by Aoui this frame.
-    pub fn catched(&self) -> bool {
-        self.catched
+    /// Check if mouse event is handled by us this frame.
+    pub fn is_handled_this_frame(&self) -> bool {
+        self.caught
     }
 
-    /// Call if some external system catched mouse events this frame before this.
+    /// Call if some external system caught mouse events this frame before this.
     /// 
     /// Does not cancel dragging.
     pub fn block(&mut self) {
@@ -68,7 +68,9 @@ impl CursorState {
         }
     }
 
-    /// Call if some external system catched mouse events this frame before this.
+    /// Call if some external system caught mouse events this frame before this.
+    /// 
+    /// Force dragging to end.
     pub fn block_force(&mut self) {
         self.last_lmb_down_time = [0.0, 0.0];
         self.blocked = true;
@@ -86,7 +88,7 @@ impl CursorState {
         self.last_lmb_down_time = [0.0, 0.0];
     }
 
-    /// This guarantees the existance of the entity.
+    /// This guarantees the existence of the entity.
     pub fn drag_target<'w, 's, 't>(&self, commands: &'t mut Commands<'w, 's>) -> Option<EntityCommands<'w, 's, 't>> {
         commands.get_entity(self.drag_target?)
     }

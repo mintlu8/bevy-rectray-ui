@@ -193,7 +193,7 @@ impl<A: Component, B: Interpolation> AttrReadOnlyItem<'_, A, B>
         if let Some(interpolate) = &self.interpolate {
             interpolate.get()
         } else {
-            <(A, B)>::get(&self.component)
+            <(A, B)>::get(self.component)
         }
     }
 }
