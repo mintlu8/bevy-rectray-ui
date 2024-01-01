@@ -1,7 +1,7 @@
 use bevy::math::Vec2;
 use crate::layout::Layout;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit};
-use crate::{Size2, FontSize, layout::Alignment, layout::FlexDir};
+use crate::{Size2, FontSize, layout::Alignment, layout::LayoutDir};
 
 
 use super::DslFrom;
@@ -175,25 +175,25 @@ impl DslInto<Option<Alignment>> for AouiSpacialConsts {
     }
 }
 
-impl DslInto<FlexDir> for AouiSpacialConsts {
-    fn dinto(self) -> FlexDir {
+impl DslInto<LayoutDir> for AouiSpacialConsts {
+    fn dinto(self) -> LayoutDir {
         match self {
-            AouiSpacialConsts::LeftToRight => FlexDir::LeftToRight,
-            AouiSpacialConsts::RightToLeft => FlexDir::RightToLeft,
-            AouiSpacialConsts::TopToBottom => FlexDir::TopToBottom,
-            AouiSpacialConsts::BottomToTop => FlexDir::BottomToTop,
+            AouiSpacialConsts::LeftToRight => LayoutDir::LeftToRight,
+            AouiSpacialConsts::RightToLeft => LayoutDir::RightToLeft,
+            AouiSpacialConsts::TopToBottom => LayoutDir::TopToBottom,
+            AouiSpacialConsts::BottomToTop => LayoutDir::BottomToTop,
             c => panic!("{:?} is not an FlexDir.", c),
         }
     }
 }
 
-impl DslInto<Option<FlexDir>> for AouiSpacialConsts {
-    fn dinto(self) -> Option<FlexDir> {
+impl DslInto<Option<LayoutDir>> for AouiSpacialConsts {
+    fn dinto(self) -> Option<LayoutDir> {
         Some(match self {
-            AouiSpacialConsts::LeftToRight => FlexDir::LeftToRight,
-            AouiSpacialConsts::RightToLeft => FlexDir::RightToLeft,
-            AouiSpacialConsts::TopToBottom => FlexDir::TopToBottom,
-            AouiSpacialConsts::BottomToTop => FlexDir::BottomToTop,
+            AouiSpacialConsts::LeftToRight => LayoutDir::LeftToRight,
+            AouiSpacialConsts::RightToLeft => LayoutDir::RightToLeft,
+            AouiSpacialConsts::TopToBottom => LayoutDir::TopToBottom,
+            AouiSpacialConsts::BottomToTop => LayoutDir::BottomToTop,
             c => panic!("{:?} is not an FlexDir.", c),
         })
     }

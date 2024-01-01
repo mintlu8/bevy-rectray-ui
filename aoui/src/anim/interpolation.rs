@@ -4,7 +4,7 @@ use std::ops::{Add, Mul};
 use bevy::{render::color::Color, time::Time};
 use bevy::ecs::{component::Component, system::{Query, Res}};
 use bevy::math::{Vec2, Vec4};
-use crate::{Dimension, Opacity};
+use crate::{Opacity, Dimension};
 use interpolation::EaseFunction;
 use smallvec::SmallVec;
 
@@ -227,7 +227,6 @@ impl<T: Interpolation> Interpolate<T> {
     }
     
     /// Interpolate to a target, overwriting default time, 
-    /// and using the current position as range[0].
     pub fn interpolate_with_time(&mut self, range: impl IntoInterpolate<T>, time: f32) {
         let mut range = range.into_interpolate();
         let pos = self.get_data();

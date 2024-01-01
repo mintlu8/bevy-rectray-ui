@@ -1,5 +1,10 @@
-use bevy::{math::Vec2, ecs::{system::{Query, Res, Commands}, component::Component, query::Without, bundle::Bundle, entity::Entity}};
-use crate::{Transform2D, signals::{types::SigDrag, KeyStorage},events::{Handlers, EvMouseDrag}, anim::Attr, dsl::{DslInto, prelude::EvPositionFactor}};
+use bevy::math::Vec2;
+use bevy::ecs::{component::Component, query::Without, bundle::Bundle, entity::Entity};
+use bevy::ecs::system::{Query, Res, Commands};
+use crate::dsl::DslInto;
+use crate::{Transform2D, anim::Attr};
+use crate::events::{Handlers, EvMouseDrag, EvPositionFactor};
+use crate::signals::{types::SigDrag, KeyStorage};
 use serde::{Serialize, Deserialize};
 
 use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::Offset};
@@ -83,12 +88,12 @@ impl DragSnapBack {
 pub fn drag_start(
     mut commands: Commands,
     storage: Res<KeyStorage>,
-    send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Dragging>>,
+    send: Query<(Entity, &CursorAction, &Handlers<EvMouseDrag>), Without<Dragging>>,
     mut receive: Query<(&Receiver<SigDrag>, &mut Dragging, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut Dragging, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>)>,
 ) {
-
-    for (focus, send) in send.iter() {
+    for (entity, focus, send) in send.iter() {
+        let mut commands = commands.entity(entity);
         if focus.intersects(EventFlags::LeftDown | EventFlags::MidDown | EventFlags:: RightDown)  {
             send.handle(&mut commands, &storage, DragState::Start);
         }
@@ -137,13 +142,14 @@ pub fn dragging(
     mut commands: Commands,
     storage: Res<KeyStorage>,
     state: Res<CursorState>,
-    send: Query<(&CursorFocus, &Handlers<EvMouseDrag>), Without<Dragging>>,
+    send: Query<(Entity, &CursorFocus, &Handlers<EvMouseDrag>), Without<Dragging>>,
     mut query: Query<(Entity, &CursorFocus, &Dragging, Attr<Transform2D, Offset>)>,
     mut receive: Query<(Entity, &Dragging, Attr<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorFocus>>,
 ) {
     let delta = state.cursor_position() - state.down_position();
 
-    for (focus, send) in send.iter() {
+    for (entity, focus, send) in send.iter() {
+        let mut commands = commands.entity(entity);
         if !focus.intersects(EventFlags::LeftDrag | EventFlags::MidDrag | EventFlags:: RightDrag)  {
             continue;
         }
@@ -177,11 +183,12 @@ pub fn dragging(
 pub fn drag_end(
     mut commands: Commands,
     storage: Res<KeyStorage>,
-    send: Query<(&CursorAction, &Handlers<EvMouseDrag>), Without<Dragging>>,
+    send: Query<(Entity, &CursorAction, &Handlers<EvMouseDrag>), Without<Dragging>>,
     mut receive: Query<(&mut DragSnapBack, Attr<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut DragSnapBack, Attr<Transform2D, Offset>)>
 ) {
-    for (focus, send) in send.iter() {
+    for (entity, focus, send) in send.iter() {
+        let mut commands = commands.entity(entity);
         if !focus.intersects(EventFlags::DragEnd)  {
             continue;
         }

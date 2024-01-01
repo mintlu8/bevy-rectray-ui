@@ -86,26 +86,26 @@ impl Layout for FitLayout {
 /// A size agnostic mono-directional container.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct CompactLayout {
-    pub direction: FlexDir,
+    pub direction: LayoutDir,
 }
 
 impl CompactLayout {
-    pub const HBOX: Self = Self { direction: FlexDir::LeftToRight };
-    pub const VBOX: Self = Self { direction: FlexDir::TopToBottom };
+    pub const HBOX: Self = Self { direction: LayoutDir::LeftToRight };
+    pub const VBOX: Self = Self { direction: LayoutDir::TopToBottom };
 }
 
 /// A fix-sized mono-directional container.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct SpanLayout {
     /// The axis, horizontal or vertical.
-    pub direction: FlexDir,
+    pub direction: LayoutDir,
     /// If specified, try increase the margin to fill the span.
     pub stretch: bool,
 }
 
 impl SpanLayout {
-    pub const HSPAN: Self = Self { direction: FlexDir::LeftToRight, stretch: false };
-    pub const VSPAN: Self = Self { direction: FlexDir::TopToBottom, stretch: false };
+    pub const HSPAN: Self = Self { direction: LayoutDir::LeftToRight, stretch: false };
+    pub const VSPAN: Self = Self { direction: LayoutDir::TopToBottom, stretch: false };
 }
 
 /// A fix-sized mono-directional container.
@@ -114,7 +114,7 @@ impl SpanLayout {
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct DynamicSpanLayout {
     /// The axis, horizontal or vertical.
-    pub direction: FlexDir,
+    pub direction: LayoutDir,
     /// If specified, try increase the margin to fill the span.
     pub stretch: bool,
 }
@@ -133,9 +133,9 @@ pub struct DynamicSpanLayout {
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct ParagraphLayout {
     /// The primary axis, horizontal or vertical
-    pub direction: FlexDir,
+    pub direction: LayoutDir,
     /// The order of which lines are placed.
-    pub stack: FlexDir,
+    pub stack: LayoutDir,
     /// If specified, try increase the margin to fill the span.
     pub stretch: bool,
 }
@@ -143,8 +143,8 @@ pub struct ParagraphLayout {
 impl Default for ParagraphLayout {
     fn default() -> Self {
         Self {
-            direction: FlexDir::LeftToRight,
-            stack: FlexDir::TopToBottom,
+            direction: LayoutDir::LeftToRight,
+            stack: LayoutDir::TopToBottom,
             stretch: false,
         }
     }
@@ -160,9 +160,9 @@ pub struct SizedGridLayout {
     /// Determines the size of a cell.
     pub cell_size: Size2,
     /// The order of which continuous items are placed.
-    pub row_dir: FlexDir,
+    pub row_dir: LayoutDir,
     /// The order of which rows are placed.
-    pub column_dir: FlexDir,
+    pub column_dir: LayoutDir,
     /// How items in a incomplete row are aligned.
     /// 
     /// Significant when an early linebreak occurs.
@@ -181,9 +181,9 @@ pub struct FixedGridLayout {
     /// Determines the number of cells
     pub cells: UVec2,
     /// The order of which continuous items are placed.
-    pub row_dir: FlexDir,
+    pub row_dir: LayoutDir,
     /// The order of which rows are placed.
-    pub column_dir: FlexDir,
+    pub column_dir: LayoutDir,
     /// How items in a incomplete row are aligned.
     /// 
     /// Significant when an early linebreak occurs.
@@ -200,9 +200,9 @@ pub struct DynamicTableLayout {
     /// Determines the number of columns, use a large number for infinite.
     pub columns: usize,
     /// The order of which continuous items are placed.
-    pub row_dir: FlexDir,
+    pub row_dir: LayoutDir,
     /// The order of which rows are placed.
-    pub column_dir: FlexDir,
+    pub column_dir: LayoutDir,
     /// If specified, adjust row margin to fill the table.
     pub stretch: bool,
 }
@@ -217,9 +217,9 @@ pub struct TableLayout {
     /// Determines the number and size of columns
     pub columns: Vec<(SizeUnit, f32)>,
     /// The order of which continuous items are placed.
-    pub row_dir: FlexDir,
+    pub row_dir: LayoutDir,
     /// The order of which rows are placed.
-    pub column_dir: FlexDir,
+    pub column_dir: LayoutDir,
     /// If specified, adjust row margin to fill the table.
     pub stretch: bool,
 }
@@ -228,8 +228,8 @@ impl TableLayout {
     pub fn from_columns(columns: impl Into<Vec<(SizeUnit, f32)>>) -> Self {
         Self {
             columns: columns.into(),
-            row_dir: FlexDir::LeftToRight,
-            column_dir: FlexDir::TopToBottom,
+            row_dir: LayoutDir::LeftToRight,
+            column_dir: LayoutDir::TopToBottom,
             stretch: false,
         }
     }

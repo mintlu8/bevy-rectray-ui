@@ -493,7 +493,7 @@ macro_rules! dimension {
             match $this.aspect {
                 $crate::dsl::Aspect::None => dimension,
                 $crate::dsl::Aspect::Preserve => dimension.with_preserve_aspect(true),
-                $crate::dsl::Aspect::Owned(aspect) =>  dimension.with_aspect(aspect),
+                $crate::dsl::Aspect::Owned(_) => dimension.with_preserve_aspect(true),
             }
         }
     }
@@ -501,7 +501,7 @@ macro_rules! dimension {
 
 /// Create a widget builder based on the definition of a primitive widget `Frame`.
 /// 
-/// Use [`build_frame!`] to utilize this definition.
+/// Use `build_frame!` to utilize this definition.
 #[macro_export]
 macro_rules! widget_extension {
     (

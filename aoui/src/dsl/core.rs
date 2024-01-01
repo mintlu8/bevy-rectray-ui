@@ -135,6 +135,7 @@ impl Widget for RectangleBuilder {
 }
 
 
+/// Create a rectangle sprite with uniform color.
 #[macro_export]
 macro_rules! rectangle {
     {$commands: tt {$($tt:tt)*}} => 

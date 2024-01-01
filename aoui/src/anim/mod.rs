@@ -69,7 +69,7 @@ pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Ind
 mod assoc;
 pub use assoc::{Attr, InterpolateAssociation};
 
-use crate::{Dimension, Opacity, Transform2D};
+use crate::{Opacity, Transform2D, Dimension};
 //mod state_machine;
 //pub use state_machine::WidgetState;
 

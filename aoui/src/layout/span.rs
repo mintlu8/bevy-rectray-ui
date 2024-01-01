@@ -9,10 +9,10 @@ impl Layout for CompactLayout {
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
         let margin = parent.margin;
         match self.direction {
-            FlexDir::LeftToRight => compact(margin, entities, posx, posy),
-            FlexDir::RightToLeft => compact(margin, entities, negx, posy),
-            FlexDir::BottomToTop => compact(margin, entities, posy, posx),
-            FlexDir::TopToBottom => compact(margin, entities, negy, posx),
+            LayoutDir::LeftToRight => compact(margin, entities, posx, posy),
+            LayoutDir::RightToLeft => compact(margin, entities, negx, posy),
+            LayoutDir::BottomToTop => compact(margin, entities, posy, posx),
+            LayoutDir::TopToBottom => compact(margin, entities, negy, posx),
         }.normalized()
     }
 
@@ -26,10 +26,10 @@ impl Layout for SpanLayout {
         let margin = parent.margin;
         let dimension = parent.dimension;
         let entity_anchors = match self.direction{
-            FlexDir::LeftToRight => span::<false>(dimension, margin, self.stretch, entities, hbucket, posx, posy),
-            FlexDir::RightToLeft => span::<true>(dimension, margin, self.stretch, entities, hbucket, posx, posy),
-            FlexDir::BottomToTop => span::<false>(dimension, margin, self.stretch, entities, vbucket, posy, posx),
-            FlexDir::TopToBottom => span::<true>(dimension, margin, self.stretch, entities, vbucket, posy, posx),
+            LayoutDir::LeftToRight => span::<false>(dimension, margin, self.stretch, entities, hbucket, posx, posy),
+            LayoutDir::RightToLeft => span::<true>(dimension, margin, self.stretch, entities, hbucket, posx, posy),
+            LayoutDir::BottomToTop => span::<false>(dimension, margin, self.stretch, entities, vbucket, posy, posx),
+            LayoutDir::TopToBottom => span::<true>(dimension, margin, self.stretch, entities, vbucket, posy, posx),
         };
         LayoutOutput { entity_anchors, dimension }.normalized()
     }
@@ -51,10 +51,10 @@ impl Layout for DynamicSpanLayout {
             },
         };
         let entity_anchors = match self.direction{
-            FlexDir::LeftToRight => span::<false>(line_size, margin, self.stretch, entities, hbucket, posx, posy),
-            FlexDir::RightToLeft => span::<true>(line_size, margin, self.stretch, entities, hbucket, posx, posy),
-            FlexDir::BottomToTop => span::<false>(line_size, margin, self.stretch, entities, vbucket, posy, posx),
-            FlexDir::TopToBottom => span::<true>(line_size, margin, self.stretch, entities, vbucket, posy, posx),
+            LayoutDir::LeftToRight => span::<false>(line_size, margin, self.stretch, entities, hbucket, posx, posy),
+            LayoutDir::RightToLeft => span::<true>(line_size, margin, self.stretch, entities, hbucket, posx, posy),
+            LayoutDir::BottomToTop => span::<false>(line_size, margin, self.stretch, entities, vbucket, posy, posx),
+            LayoutDir::TopToBottom => span::<true>(line_size, margin, self.stretch, entities, vbucket, posy, posx),
         };
         LayoutOutput { entity_anchors, dimension: line_size }.normalized()
     }
@@ -64,10 +64,10 @@ impl Layout for ParagraphLayout {
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
         let margin = parent.margin;
         let dim = parent.dimension;
-        const R: FlexDir = FlexDir::LeftToRight;
-        const L: FlexDir = FlexDir::RightToLeft;
-        const T: FlexDir = FlexDir::BottomToTop;
-        const B: FlexDir = FlexDir::TopToBottom;
+        const R: LayoutDir = LayoutDir::LeftToRight;
+        const L: LayoutDir = LayoutDir::RightToLeft;
+        const T: LayoutDir = LayoutDir::BottomToTop;
+        const B: LayoutDir = LayoutDir::TopToBottom;
         let stretch = self.stretch;
         match (self.direction, self.stack) {
             (R, B) => paragraph::<false>(dim, margin, stretch, entities, hbucket, posx, negy),

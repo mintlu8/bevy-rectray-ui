@@ -190,12 +190,8 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             extra: DisplayIf(EventFlags::LeftPressed),
             z: 0.1
         },
-        extra: handler!{EvLeftClick => {
-            fn (){ println!("Clicked"); },
-            send,
-        }},
-        extra: handler!{EvHover => {
-            fn (){ println!("Hovering"); },
-        }},
+        extra: Handlers::<EvLeftClick>::oneshot(&mut commands, ||println!("Clicked"))
+            .and(send),
+        extra: Handlers::<EvHover>::oneshot(&mut commands, ||println!("Hovering")),
     });
 }

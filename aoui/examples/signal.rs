@@ -24,7 +24,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let (submit_sender, recv_s1, recv_s2) = signal();
     let (change_sender, recv_c1, recv_c2) = signal();
     inputbox! ((commands, assets) {
-        dimension: size2!(400, 1 em),
+        dimension: size2!(800, 1 em),
         offset: [0, 200],
         font_size: em(4),
         hitbox: Rect(1),
@@ -38,14 +38,14 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
         cursor_area: rectangle! {
             color: color!(green) * 0.5,
-            z: -0.2,
+            z: -0.1,
             dimension: size2!(12, 1 em),
         },
         on_submit: submit_sender,
         on_change: change_sender,
         child: rectangle! {
             dimension: Size2::FULL,
-            color: color!(red950),
+            color: color!(darkgrey),
             z: -0.2
         }
     });

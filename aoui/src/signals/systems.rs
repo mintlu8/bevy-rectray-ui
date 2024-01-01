@@ -1,6 +1,6 @@
 use bevy::{ecs::{system::Query, query::Without}, text::Text, log::warn, render::color::Color, sprite::{Sprite, TextureAtlasSprite}, math::Vec2};
 
-use crate::{Transform2D, Dimension, Opacity, dsl::prelude::{Interpolate, Rotation, Offset, Scale}};
+use crate::{Transform2D, Opacity, dsl::prelude::{Interpolate, Rotation, Offset, Scale}, dimension::DimensionMut, Dimension};
 
 use super::{Receiver, types::*};
 
@@ -97,7 +97,7 @@ pub fn signal_receive_scale_y(mut query: Query<(&Receiver<SigScaleY>, &mut Trans
     })
 }
 
-pub fn signal_receive_dimension(mut query: Query<(&Receiver<SigDimension>, &mut Dimension, Option<&mut Interpolate<Dimension>>)>) {
+pub fn signal_receive_dimension(mut query: Query<(&Receiver<SigDimension>, DimensionMut, Option<&mut Interpolate<Dimension>>)>) {
     query.par_iter_mut().for_each(|(sig, mut dimension, interpolate)| {
         let Some(dim) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
@@ -108,7 +108,7 @@ pub fn signal_receive_dimension(mut query: Query<(&Receiver<SigDimension>, &mut 
     })
 }
 
-pub fn signal_receive_dimension_x(mut query: Query<(&Receiver<SigDimensionX>, &mut Dimension, Option<&mut Interpolate<Dimension>>)>) {
+pub fn signal_receive_dimension_x(mut query: Query<(&Receiver<SigDimensionX>, DimensionMut, Option<&mut Interpolate<Dimension>>)>) {
     query.par_iter_mut().for_each(|(sig, mut dimension, interpolate)| {
         let Some(dim) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {
@@ -120,7 +120,7 @@ pub fn signal_receive_dimension_x(mut query: Query<(&Receiver<SigDimensionX>, &m
     })
 }
 
-pub fn signal_receive_dimension_y(mut query: Query<(&Receiver<SigDimensionY>, &mut Dimension, Option<&mut Interpolate<Dimension>>)>) {
+pub fn signal_receive_dimension_y(mut query: Query<(&Receiver<SigDimensionY>, DimensionMut, Option<&mut Interpolate<Dimension>>)>) {
     query.par_iter_mut().for_each(|(sig, mut dimension, interpolate)| {
         let Some(dim) = sig.poll() else {return};
         if let Some(mut interpolate) = interpolate {

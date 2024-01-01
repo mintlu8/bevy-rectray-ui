@@ -1,5 +1,5 @@
 use bevy::{prelude::{Component, Vec2}, reflect::Reflect, ecs::{query::Changed, system::Query}};
-use bevy_aoui::{Transform2D, Dimension, Anchor};
+use bevy_aoui::{Transform2D, Anchor, DimensionData};
 use bevy_prototype_lyon::prelude::{GeometryBuilder, Path};
 use bevy_prototype_lyon::shapes::*;
 
@@ -79,7 +79,7 @@ impl Shapes {
 }
 
 
-pub fn sync_shape_size(mut query: Query<(&Transform2D, &Dimension, &mut ShapeDimension)>) {
+pub fn sync_shape_size(mut query: Query<(&Transform2D, &DimensionData, &mut ShapeDimension)>) {
     for (transform, dimension, mut shape) in query.iter_mut() {
         if transform.anchor != shape.as_ref().anchor {
             shape.anchor = transform.anchor

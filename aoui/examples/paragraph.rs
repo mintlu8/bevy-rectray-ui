@@ -72,7 +72,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
 
 pub fn egui_window(mut ctx: EguiContexts, 
-    mut container: Query<(&mut Container, &mut Transform2D, &mut Dimension)>,
+    mut container: Query<(&mut Container, &mut Transform2D, DimensionMut)>,
     mut spawned: Query<&mut Transform2D, (Without<Container>, With<Text>)>,
 ) {
     let (mut container, mut transform, mut dimension) = container.single_mut();
@@ -123,53 +123,53 @@ pub fn egui_window(mut ctx: EguiContexts,
         spawned.iter_mut().for_each(|mut x| x.anchor = result_anchor);
 
 
-        let font_size = dimension.set_em.raw_mut();
+        let font_size = dimension.source.font_size.raw_mut();
         ui.add(Slider::new(font_size, 0.0..=12.0).text("font size (em)"));
 
         let Some(ParagraphLayout { direction, stack, stretch }) = container.layout.downcast_mut() else {return};
 
         ComboBox::from_label("Direction")
             .selected_text(match direction {
-                FlexDir::LeftToRight => "left to right",
-                FlexDir::RightToLeft => "right to left",
-                FlexDir::BottomToTop => "bottom to top",
-                FlexDir::TopToBottom => "top to bottom",
+                LayoutDir::LeftToRight => "left to right",
+                LayoutDir::RightToLeft => "right to left",
+                LayoutDir::BottomToTop => "bottom to top",
+                LayoutDir::TopToBottom => "top to bottom",
             })
             .show_ui(ui, |ui| {
-                ui.selectable_value(direction, FlexDir::LeftToRight, "left to right");
-                ui.selectable_value(direction, FlexDir::RightToLeft, "right to left");
-                ui.selectable_value(direction, FlexDir::BottomToTop, "bottom to top");
-                ui.selectable_value(direction, FlexDir::TopToBottom, "top to bottom");
+                ui.selectable_value(direction, LayoutDir::LeftToRight, "left to right");
+                ui.selectable_value(direction, LayoutDir::RightToLeft, "right to left");
+                ui.selectable_value(direction, LayoutDir::BottomToTop, "bottom to top");
+                ui.selectable_value(direction, LayoutDir::TopToBottom, "top to bottom");
             });
         match direction {
-            FlexDir::LeftToRight|FlexDir::RightToLeft => {
+            LayoutDir::LeftToRight|LayoutDir::RightToLeft => {
                 ComboBox::from_label("Stack")
                     .selected_text(match stack {
-                        FlexDir::BottomToTop => "bottom to top",
-                        FlexDir::TopToBottom => "top to bottom",
+                        LayoutDir::BottomToTop => "bottom to top",
+                        LayoutDir::TopToBottom => "top to bottom",
                         _ => {
-                            *stack = FlexDir::TopToBottom;
+                            *stack = LayoutDir::TopToBottom;
                             "bottom to top"
                         }
                     })
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(stack, FlexDir::BottomToTop, "bottom to top");
-                        ui.selectable_value(stack, FlexDir::TopToBottom, "top to bottom");
+                        ui.selectable_value(stack, LayoutDir::BottomToTop, "bottom to top");
+                        ui.selectable_value(stack, LayoutDir::TopToBottom, "top to bottom");
                     });
             },
-            FlexDir::BottomToTop|FlexDir::TopToBottom => {
+            LayoutDir::BottomToTop|LayoutDir::TopToBottom => {
                 ComboBox::from_label("Stack")
                     .selected_text(match stack {
-                        FlexDir::LeftToRight => "left to right",
-                        FlexDir::RightToLeft => "right to left",
+                        LayoutDir::LeftToRight => "left to right",
+                        LayoutDir::RightToLeft => "right to left",
                         _ => {
-                            *stack = FlexDir::LeftToRight;
+                            *stack = LayoutDir::LeftToRight;
                             "left to right"
                         }
                     })
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(stack, FlexDir::LeftToRight, "left to right");
-                        ui.selectable_value(stack, FlexDir::RightToLeft, "right to left");
+                        ui.selectable_value(stack, LayoutDir::LeftToRight, "left to right");
+                        ui.selectable_value(stack, LayoutDir::RightToLeft, "right to left");
                     });
             },
         }

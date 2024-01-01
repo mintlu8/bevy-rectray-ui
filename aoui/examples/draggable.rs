@@ -115,7 +115,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             flags: EventFlags::Hover|EventFlags::LeftDrag, 
             icon: CursorIcon::Hand,
         },
-        extra: handler! {EvMouseDrag => {send2}} ,
+        extra: Handlers::<EvMouseDrag>::new(send2),
     });
 
     text! ((commands, assets) {

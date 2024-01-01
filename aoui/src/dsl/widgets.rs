@@ -7,7 +7,7 @@ use bevy::window::CursorIcon;
 use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel, SetCursor, PropagateFocus};
 use crate::widgets::scroll::IntoScrollingBuilder;
 use crate::widgets::scrollframe::ClippingBundle;
-use crate::{Dimension, Anchor, Size2, Hitbox, build_frame, Clipping};
+use crate::{Anchor, Size2, Hitbox, build_frame, Clipping, Dimension};
 use crate::bundles::{AouiBundle, AouiSpriteBundle};
 use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit};
 use crate::widget_extension;
@@ -201,22 +201,29 @@ impl Widget for RadioButtonBuilder {
 
 /// Construct a button.
 /// 
+/// See [`ButtonBuilder`].
+/// 
 /// This doesn't do a whole lot by itself, these are what `button` does:
 /// 
 /// * Add a event listener for `Hover` and `Click`
-/// * If `cursor` is set, change cursor icon when hovering or pressing.
-/// * If `signal` is set, change cursor icon when hovering or pressing.
+/// * Change cursor icon when hovering or pressing.
 /// * Propagate its status `Down`, `Click`, `Hover`, `Pressed` to its direct children.
+/// * Allow usage of `EvButtonClick` event.
 /// 
-/// You can use the `extra: handler!(Click => fn name() {..})` pattern to handle clicks
-/// and use [`DisplayIf`](crate::widgets::DisplayIf) for simple UI interaction.
+/// You can use [`Handlers`] to handle clicks
+/// and use [`DisplayIf`](crate::widgets::button::DisplayIf) 
+/// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
 #[macro_export]
 macro_rules! button {
     {$commands: tt {$($tt:tt)*}} => 
         {$crate::meta_dsl!($commands [$crate::dsl::builders::ButtonBuilder] {$($tt)*})};
 }
 
-
+/// Construct a check button
+/// 
+/// See [`CheckButtonBuilder`].
+/// 
+/// On top of [`button`], this stores an internal boolean representation.
 #[macro_export]
 macro_rules! check_button {
     {$commands: tt {$($tt:tt)*}} => 
@@ -224,6 +231,11 @@ macro_rules! check_button {
 }
 
 
+/// Construct a radio button
+/// 
+/// See [`RadioButtonBuilder`].
+/// 
+/// On top of [`button`], this stores an internal [`Payload`] value.
 #[macro_export]
 macro_rules! radio_button {
     {$commands: tt {$($tt:tt)*}} => 
@@ -303,6 +315,13 @@ impl<B: IntoScrollingBuilder> Widget for ClippingFrameBuilder<B> {
     }
 }
 
+
+/// Constructs a layer that clips its inner content.
+/// 
+/// See [`ClippingFrameBuilder`].
+/// 
+/// This spawns a camera, uses a new render layer
+/// and renders to a new render target. 
 #[macro_export]
 macro_rules! clipping_layer {
     {$commands: tt {$($tt:tt)*}} => 

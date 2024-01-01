@@ -68,7 +68,11 @@ impl InterpolateAssociation for (Dimension, Dimension) {
     }
 
     fn get(component: &Self::Comp) -> <Self::Inter as Interpolation>::FrontEnd {
-        component.raw()
+        match component.dimension {
+            crate::DimensionSize::Copied => 
+                panic!("Cannot interpolate `copied` dimension."),
+            crate::DimensionSize::Owned(v) => v.raw(),
+        }
     }
 }
 

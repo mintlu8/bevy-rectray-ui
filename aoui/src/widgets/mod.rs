@@ -1,4 +1,8 @@
-//! Building blocks for creating widgets.
+//! Widget primitives for `bevy_aoui`
+//! 
+//! 
+//! 
+//! # Feature Matrix
 
 pub mod inputbox;
 pub mod drag;

@@ -8,7 +8,7 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::*;
+use bevy_aoui::{*, DimensionMut};
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox, Ui}, EguiPlugin};
 
@@ -78,8 +78,8 @@ fn anchor_ui(ui: &mut Ui, anchor: &mut Anchor, name: &str) {
 
 
 pub fn egui_window(mut ctx: EguiContexts, 
-    mut root: Query<(&mut Transform2D, &mut Dimension), (With<A>, Without<B>)>,
-    mut child: Query<(&mut Transform2D, &mut Dimension), (With<B>, Without<A>)>,
+    mut root: Query<(&mut Transform2D, DimensionMut), (With<A>, Without<B>)>,
+    mut child: Query<(&mut Transform2D, DimensionMut), (With<B>, Without<A>)>,
 ) {
     let (mut root, mut root_dim) = root.single_mut();
     let (mut child, mut child_dim) = child.single_mut();

@@ -1,8 +1,8 @@
-use std::sync::{OnceLock, Arc};
+use std::fmt::Debug;
 
 use bevy::ecs::{component::Component, removal_detection::RemovedComponents};
 use bevy::ecs::query::{Without, With};
-use bevy::ecs::system::{SystemId, Query, Commands};
+use bevy::ecs::system::{Query, Commands, EntityCommands};
 use smallvec::SmallVec;
 
 use crate::dsl::{DslFrom, DslInto};
@@ -12,6 +12,8 @@ use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;
 
+use super::mutation::Mutation;
+use super::oneshot::OneShot;
 use super::{EvLoseFocus, EvObtainFocus, EvButtonClick, EvTextSubmit, EvTextChange, EvToggleChange, EvMouseDrag, EvPositionFactor};
 
 /// Event handlers.
@@ -32,14 +34,20 @@ impl<T: EventHandling> Default for Handlers<T> {
 
 #[derive(Debug)]
 pub enum Handler<T: EventHandling> {
-    OneShotSystem(Arc<OnceLock<SystemId>>),
+    /// Run a oneshot system, currently characterized by being agnostic to the caller.
+    OneShotSystem(OneShot),
+    /// Mutate a component associated with this entity.
+    Mutation(Mutation),
+    /// Send a signal with the associated data.
     Signal(Sender<T::Data>),
+    /// Send a signal with unchecked type.
     DynamicSignal(DynamicSender),
+    /// Set a key-value pair in a [storage](crate::signals::KeyStorage).
     GlobalKey(String, SignalMapper),
 }
 
-impl<T: EventHandling> DslFrom<Arc<OnceLock<SystemId>>> for Handler<T> {
-    fn dfrom(value: Arc<OnceLock<SystemId>>) -> Self {
+impl<T: EventHandling> DslFrom<OneShot> for Handler<T> {
+    fn dfrom(value: OneShot) -> Self {
         Handler::OneShotSystem(value)
     }
 }
@@ -73,8 +81,8 @@ impl<T: EventHandling> DslFrom<&str> for Handler<T> {
     }
 }
 
-impl<T: EventHandling> DslFrom<Arc<OnceLock<SystemId>>> for Handlers<T> {
-    fn dfrom(value: Arc<OnceLock<SystemId>>) -> Self {
+impl<T: EventHandling> DslFrom<OneShot> for Handlers<T> {
+    fn dfrom(value: OneShot) -> Self {
         Handlers::new(value)
     }
 }
@@ -103,27 +111,51 @@ impl<T: EventHandling> Handlers<T> {
         Self { context: T::new_context(), handlers: SmallVec::new_const() }
     }
 
-    pub fn with(mut self, handler: impl DslInto<Handler<T>>) -> Self {
+    pub fn new(handler: impl DslInto<Handler<T>>) -> Self {
+        Self { context: T::new_context(), handlers: SmallVec::from_const([handler.dinto()]) }
+    }
+
+    pub fn and(mut self, handler: impl DslInto<Handler<T>>) -> Self {
         self.handlers.push(handler.dinto());
         self
     }
 
-    pub fn new(handler: impl DslInto<Handler<T>>) -> Self {
-        Self { context: T::new_context(), handlers: SmallVec::from_const([handler.dinto()]) }
+    pub fn oneshot<M: Send + Sync + 'static>(
+        commands: &mut Commands, 
+        handler: impl IntoSystem<(), (), M> + Send + Sync + 'static
+    ) -> Self {
+        Self {
+            context: T::new_context(), handlers: SmallVec::from_const([
+                OneShot::new(commands, handler).dinto()
+            ])
+        }
     }
+
+    pub fn and_oneshot<M: Send + Sync + 'static>(
+        mut self,
+        commands: &mut Commands, 
+        handler: impl IntoSystem<(), (), M> + Send + Sync + 'static
+    ) -> Self {
+        self.handlers.push(OneShot::new(commands, handler).dinto());
+        self
+    }
+
 
     pub fn is_empty(&self) -> bool {
         self.handlers.is_empty()
     }
 
-    pub fn handle(&self, commands: &mut Commands, keys: &KeyStorage, data: T::Data) {
+    pub fn handle(&self, commands: &mut EntityCommands, keys: &KeyStorage, data: T::Data) {
         for handler in self.handlers.iter() {
             match handler {
                 Handler::OneShotSystem(system) => {
                     if let Some(system) = system.get() {
-                        commands.run_system(*system)
+                        commands.commands().run_system(system)
                     }
                 },
+                Handler::Mutation(mutation) => {
+                    mutation.exec(commands);
+                }
                 Handler::Signal(signal) => {
                     signal.send(data.clone());
                 },
@@ -137,14 +169,17 @@ impl<T: EventHandling> Handlers<T> {
         }
     }
 
-    pub fn handle_dyn(&self, commands: &mut Commands, keys: &KeyStorage, data: Object) {
+    pub fn handle_dyn(&self, commands: &mut EntityCommands, keys: &KeyStorage, data: Object) {
         for handler in self.handlers.iter() {
             match handler {
                 Handler::OneShotSystem(system) => {
                     if let Some(system) = system.get() {
-                        commands.run_system(*system)
+                        commands.commands().run_system(system)
                     }
                 },
+                Handler::Mutation(mutation) => {
+                    mutation.exec(commands);
+                }
                 Handler::Signal(signal) => {
                     signal.send_dyn(data.clone())
                 },
@@ -161,6 +196,7 @@ impl<T: EventHandling> Handlers<T> {
     pub fn cleanup(&self, drop_flag: u8){ 
         self.handlers.iter().for_each(|x| match x {
             Handler::OneShotSystem(_) => (),
+            Handler::Mutation(_) => (),
             Handler::Signal(sig) => sig.try_cleanup(drop_flag),
             Handler::DynamicSignal(sig) => sig.try_cleanup(drop_flag),
             Handler::GlobalKey(_, _) => (),
@@ -179,9 +215,10 @@ pub trait EventHandling: 'static {
 pub fn event_handle<T: EventQuery + Send + Sync + 'static> (
     mut commands: Commands,
     keys: Res<KeyStorage>,
-    query: Query<(&T::Component, &Handlers<T>)>,
+    query: Query<(Entity, &T::Component, &Handlers<T>)>,
 ) {
-    for (action, system) in query.iter() {
+    for (entity, action, system) in query.iter() {
+        let mut commands = commands.entity(entity);
         if T::validate(&system.context, action) {
             system.handle(&mut commands, &keys, T::get_data(&system.context, action));
         }
@@ -327,12 +364,13 @@ impl EventHandling for EvPositionFactor {
 pub fn obtain_focus_detection(
     mut commands: Commands,
     keys: Res<KeyStorage>,
-    mut focused: Query<&mut Handlers<EvObtainFocus>, With<CursorFocus>>,
+    mut focused: Query<(Entity, &mut Handlers<EvObtainFocus>), With<CursorFocus>>,
     mut unfocused: Query<&mut Handlers<EvObtainFocus>, Without<CursorFocus>>,
 ) {
-    for mut handlers in focused.iter_mut() {
+    for (entity, mut handlers) in focused.iter_mut() {
         if handlers.context { continue; }
         handlers.context = true;
+        let mut commands = commands.entity(entity);
         handlers.handle(&mut commands, &keys, ());
     }
     for mut handlers in unfocused.iter_mut() {
@@ -344,9 +382,10 @@ pub fn lose_focus_detection(
     mut commands: Commands,
     keys: Res<KeyStorage>,
     mut removed: RemovedComponents<CursorFocus>,
-    actions: Query<&Handlers<EvLoseFocus>, Without<CursorFocus>>,
+    actions: Query<(Entity, &Handlers<EvLoseFocus>), Without<CursorFocus>>,
 ) {
-    for handlers in actions.iter_many(removed.read()) {
+    for (entity, handlers) in actions.iter_many(removed.read()) {
+        let mut commands = commands.entity(entity);
         handlers.handle(&mut commands, &keys, ());
     }
 }

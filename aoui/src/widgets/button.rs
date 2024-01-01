@@ -160,10 +160,11 @@ pub struct RadioButtonCancel;
 pub fn button_on_click(
     mut commands: Commands,
     key_storage: Res<KeyStorage>,
-    query: Query<(&CursorAction, &Handlers<EvButtonClick>, Option<&Payload>), With<Button>>
+    query: Query<(Entity, &CursorAction, &Handlers<EvButtonClick>, Option<&Payload>), With<Button>>
 ) {
-    for (action, submit, payload) in query.iter() {
+    for (entity, action, submit, payload) in query.iter() {
         if !action.is(EventFlags::LeftClick) { continue }
+        let mut commands = commands.entity(entity);
         if let Some(payload) = payload {
             submit.handle_dyn(&mut commands, &key_storage, payload.0.clone());
         } else {
@@ -175,11 +176,12 @@ pub fn button_on_click(
 pub fn check_button_on_click(
     mut commands: Commands,
     key_storage: Res<KeyStorage>,
-    mut query: Query<(&CursorAction, &mut CheckButton, Option<&Handlers<EvToggleChange>>, Option<&Handlers<EvButtonClick>>, Option<&Payload>)>
+    mut query: Query<(Entity, &CursorAction, &mut CheckButton, Option<&Handlers<EvToggleChange>>, Option<&Handlers<EvButtonClick>>, Option<&Payload>)>
 ) {
-    for (action, mut state, change, submit, payload) in query.iter_mut() {
+    for (entity, action, mut state, change, submit, payload) in query.iter_mut() {
         if !action.is(EventFlags::LeftClick) { continue }
         let state = state.rev();
+        let mut commands = commands.entity(entity);
         if let Some(signal) = change {
             signal.handle(&mut commands, &key_storage, state);
         }
@@ -197,9 +199,10 @@ pub fn check_button_on_click(
 pub fn radio_button_on_click(
     mut commands: Commands,
     key_storage: Res<KeyStorage>,
-    mut query: Query<(&CursorAction, &RadioButton, &Payload, Option<&Handlers<EvButtonClick>>, Has<RadioButtonCancel>)>
+    mut query: Query<(Entity, &CursorAction, &RadioButton, &Payload, Option<&Handlers<EvButtonClick>>, Has<RadioButtonCancel>)>
 ) {
-    for (action, state, payload, submit, cancellable) in query.iter_mut() {
+    for (entity, action, state, payload, submit, cancellable) in query.iter_mut() {
+        let mut commands = commands.entity(entity);
         if !action.is(EventFlags::LeftClick) { continue }
         if state == payload {
             if cancellable{
@@ -250,14 +253,18 @@ pub fn set_cursor(
     mut window: Query<&mut Window, With<PrimaryWindow>>,
     query: Query<(&SetCursor, &CursorFocus)>,
 ){
-    if let Some(icon) = default_cursor{
-        window.single_mut().cursor.icon = icon.0;
-    }
     for (cursor, focus) in query.iter() {
         if cursor.flags.contains(focus.flags()) {
-            window.single_mut().cursor.icon = cursor.icon;
-            break;
+            if let Ok(mut window) = window.get_single_mut() {
+                window.cursor.icon = cursor.icon;
+            }
+            return;
         }
+    }
+    if let Some(icon) = default_cursor{
+        if let Ok(mut window) = window.get_single_mut() {
+            window.cursor.icon = icon.0;
+        }    
     }
 }
 

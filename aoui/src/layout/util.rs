@@ -21,60 +21,60 @@ impl From<bool> for Axis {
 }
 
 
-/// Order items are laid out in a [`Container`](crate::Container).
+/// Order items are laid out in a [`Container`](crate::layout::Container).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-pub enum FlexDir {
+pub enum LayoutDir {
     LeftToRight, RightToLeft,
     BottomToTop, TopToBottom,
 }
 
-impl FlexDir {
+impl LayoutDir {
     pub fn is_reversed(&self) -> bool {
         matches!(self, Self::RightToLeft|Self::TopToBottom)
     }
 
     pub fn flip(&self) -> Self {
         match self {
-            FlexDir::LeftToRight => FlexDir::RightToLeft,
-            FlexDir::RightToLeft => FlexDir::LeftToRight,
-            FlexDir::BottomToTop => FlexDir::TopToBottom,
-            FlexDir::TopToBottom => FlexDir::BottomToTop,
+            LayoutDir::LeftToRight => LayoutDir::RightToLeft,
+            LayoutDir::RightToLeft => LayoutDir::LeftToRight,
+            LayoutDir::BottomToTop => LayoutDir::TopToBottom,
+            LayoutDir::TopToBottom => LayoutDir::BottomToTop,
         }
     }
 
     pub fn transpose(&self) -> Self {
         match self {
-            FlexDir::LeftToRight => FlexDir::BottomToTop,
-            FlexDir::RightToLeft => FlexDir::TopToBottom,
-            FlexDir::BottomToTop => FlexDir::LeftToRight,
-            FlexDir::TopToBottom => FlexDir::RightToLeft,
+            LayoutDir::LeftToRight => LayoutDir::BottomToTop,
+            LayoutDir::RightToLeft => LayoutDir::TopToBottom,
+            LayoutDir::BottomToTop => LayoutDir::LeftToRight,
+            LayoutDir::TopToBottom => LayoutDir::RightToLeft,
         }
     }
 }
 
-impl From<FlexDir> for Axis {
-    fn from(value: FlexDir) -> Self {
+impl From<LayoutDir> for Axis {
+    fn from(value: LayoutDir) -> Self {
         match value {
-            FlexDir::LeftToRight => Axis::Horizontal,
-            FlexDir::RightToLeft => Axis::Horizontal,
-            FlexDir::BottomToTop => Axis::Vertical,
-            FlexDir::TopToBottom => Axis::Vertical,
+            LayoutDir::LeftToRight => Axis::Horizontal,
+            LayoutDir::RightToLeft => Axis::Horizontal,
+            LayoutDir::BottomToTop => Axis::Vertical,
+            LayoutDir::TopToBottom => Axis::Vertical,
         }
     }
 }
 
-impl From<&FlexDir> for Axis {
-    fn from(value: &FlexDir) -> Self {
+impl From<&LayoutDir> for Axis {
+    fn from(value: &LayoutDir) -> Self {
         match value {
-            FlexDir::LeftToRight => Axis::Horizontal,
-            FlexDir::RightToLeft => Axis::Horizontal,
-            FlexDir::BottomToTop => Axis::Vertical,
-            FlexDir::TopToBottom => Axis::Vertical,
+            LayoutDir::LeftToRight => Axis::Horizontal,
+            LayoutDir::RightToLeft => Axis::Horizontal,
+            LayoutDir::BottomToTop => Axis::Vertical,
+            LayoutDir::TopToBottom => Axis::Vertical,
         }
     }
 }
 
-/// Where items are aligned to in a [`Container`](crate::Container).
+/// Where items are aligned to in a [`Container`](crate::layout::Container).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum Alignment {
     Center, Bottom, Top, Left, Right
@@ -99,20 +99,20 @@ pub(crate) enum Binary {
     Lo, Hi
 }
 
-impl From<FlexDir> for Binary {
-    fn from(value: FlexDir) -> Self {
+impl From<LayoutDir> for Binary {
+    fn from(value: LayoutDir) -> Self {
         match value {
-            FlexDir::RightToLeft|FlexDir::TopToBottom => Self::Lo,
-            FlexDir::LeftToRight|FlexDir::BottomToTop => Self::Hi,
+            LayoutDir::RightToLeft|LayoutDir::TopToBottom => Self::Lo,
+            LayoutDir::LeftToRight|LayoutDir::BottomToTop => Self::Hi,
         }
     }
 }
 
-impl From<&FlexDir> for Binary {
-    fn from(value: &FlexDir) -> Self {
+impl From<&LayoutDir> for Binary {
+    fn from(value: &LayoutDir) -> Self {
         match value {
-            FlexDir::RightToLeft|FlexDir::TopToBottom => Self::Lo,
-            FlexDir::LeftToRight|FlexDir::BottomToTop => Self::Hi,
+            LayoutDir::RightToLeft|LayoutDir::TopToBottom => Self::Lo,
+            LayoutDir::LeftToRight|LayoutDir::BottomToTop => Self::Hi,
         }
     }
 }

@@ -19,7 +19,8 @@ impl ChangeDetectObject {
     }
 }
 
-/// A resource that contains 
+/// A resource that contains keys with dynamic objects,
+/// while offering change detection per frame.
 #[derive(Debug, Resource, Default)]
 pub struct KeyStorage(RwLock<HashMap<String, ChangeDetectObject>>);
 
@@ -156,13 +157,13 @@ impl KeyStorage {
             .and_then(|x| x.value.get())
     }
 
-    /// Set all `changed` values to false.
+    /// Sets all `changed` values to false.
     pub fn reset_changed_status(&mut self) {
         self.0.get_mut().unwrap().iter_mut().for_each(|(_, v)| v.changed = false )
     }
 
 
-    /// Set all `changed` values to false.
+    /// A system that sets all `changed` values to false.
     pub fn system_reset_changed_status(mut res: ResMut<Self>) {
         res.reset_changed_status()
     }

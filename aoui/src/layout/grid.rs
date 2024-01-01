@@ -4,12 +4,12 @@ use itertools::Itertools;
 
 use crate::layout::{LayoutItem, LayoutControl};
 
-use super::{Layout, FixedGridLayout, Binary, Trinary, FlexDir, Axis, LayoutOutput, posx, posy, negx, negy, SizedGridLayout, LayoutInfo, TableLayout, DynamicTableLayout};
+use super::{Layout, FixedGridLayout, Binary, Trinary, LayoutDir, Axis, LayoutOutput, posx, posy, negx, negy, SizedGridLayout, LayoutInfo, TableLayout, DynamicTableLayout};
 
-const R: FlexDir = FlexDir::LeftToRight;
-const L: FlexDir = FlexDir::RightToLeft;
-const T: FlexDir = FlexDir::BottomToTop;
-const B: FlexDir = FlexDir::TopToBottom;
+const R: LayoutDir = LayoutDir::LeftToRight;
+const L: LayoutDir = LayoutDir::RightToLeft;
+const T: LayoutDir = LayoutDir::BottomToTop;
+const B: LayoutDir = LayoutDir::TopToBottom;
 
 impl Layout for FixedGridLayout {
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {

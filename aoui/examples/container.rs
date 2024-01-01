@@ -43,7 +43,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         ..Default::default()
     }, Container {
         layout: Box::new(SpanLayout {
-            direction: FlexDir::LeftToRight,
+            direction: LayoutDir::LeftToRight,
             stretch: false,
         }),
         margin: Size2::pixels(2.0, 2.0),
@@ -57,7 +57,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             ..Default::default()
         },
         dimension: Dimension { 
-            dim: DimensionSize::Owned(Size2::pixels(600.0, 100.0)), 
+            dimension: DimensionSize::Owned(Size2::pixels(600.0, 100.0)), 
             ..Default::default()
         },
         texture: texture.clone(),
@@ -93,7 +93,7 @@ pub fn spawn(commands: &mut Commands, anchor: Anchor, size: Vec2, flexbox: Entit
 pub struct ChildSize(Vec2);
 
 pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts, 
-    mut root: Query<(&mut Transform2D, &mut Dimension), With<Root>>, 
+    mut root: Query<(&mut Transform2D, DimensionMut), With<Root>>, 
     mut container: Query<(Entity, &mut Container, &mut Transform2D), (With<RootFlex>, Without<Root>)>,
     spawned: Query<Entity, (With<Transform2D>,  Without<Root>, Without<RootFlex>)>, 
     assets: Res<AssetServer>,
@@ -169,20 +169,20 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                 if let Some(CompactLayout { direction }) = container.layout.downcast_mut() {
                     ComboBox::from_label("Direction")
                     .selected_text(match direction {
-                        FlexDir::LeftToRight => "left to right",
-                        FlexDir::RightToLeft => "right to left",
-                        FlexDir::BottomToTop => "bottom to top",
-                        FlexDir::TopToBottom => "top to bottom",
+                        LayoutDir::LeftToRight => "left to right",
+                        LayoutDir::RightToLeft => "right to left",
+                        LayoutDir::BottomToTop => "bottom to top",
+                        LayoutDir::TopToBottom => "top to bottom",
                     })
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(direction, FlexDir::LeftToRight, "left to right");
-                        ui.selectable_value(direction, FlexDir::RightToLeft, "right to left");
-                        ui.selectable_value(direction, FlexDir::BottomToTop, "bottom to top");
-                        ui.selectable_value(direction, FlexDir::TopToBottom, "top to bottom");
+                        ui.selectable_value(direction, LayoutDir::LeftToRight, "left to right");
+                        ui.selectable_value(direction, LayoutDir::RightToLeft, "right to left");
+                        ui.selectable_value(direction, LayoutDir::BottomToTop, "bottom to top");
+                        ui.selectable_value(direction, LayoutDir::TopToBottom, "top to bottom");
                     });
                 } else {
                     container.layout = Box::new(CompactLayout { 
-                        direction: FlexDir::LeftToRight
+                        direction: LayoutDir::LeftToRight
                     })
                 }
             }
@@ -190,21 +190,21 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                 if let Some(SpanLayout { direction, stretch }) = container.layout.downcast_mut() {
                     ComboBox::from_label("Direction")
                     .selected_text(match direction {
-                        FlexDir::LeftToRight => "left to right",
-                        FlexDir::RightToLeft => "right to left",
-                        FlexDir::BottomToTop => "bottom to top",
-                        FlexDir::TopToBottom => "top to bottom",
+                        LayoutDir::LeftToRight => "left to right",
+                        LayoutDir::RightToLeft => "right to left",
+                        LayoutDir::BottomToTop => "bottom to top",
+                        LayoutDir::TopToBottom => "top to bottom",
                     })
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(direction, FlexDir::LeftToRight, "left to right");
-                        ui.selectable_value(direction, FlexDir::RightToLeft, "right to left");
-                        ui.selectable_value(direction, FlexDir::BottomToTop, "bottom to top");
-                        ui.selectable_value(direction, FlexDir::TopToBottom, "top to bottom");
+                        ui.selectable_value(direction, LayoutDir::LeftToRight, "left to right");
+                        ui.selectable_value(direction, LayoutDir::RightToLeft, "right to left");
+                        ui.selectable_value(direction, LayoutDir::BottomToTop, "bottom to top");
+                        ui.selectable_value(direction, LayoutDir::TopToBottom, "top to bottom");
                     });
                     ui.checkbox(stretch, "Stretch");
                 } else {
                     container.layout = Box::new(SpanLayout { 
-                        direction: FlexDir::LeftToRight, 
+                        direction: LayoutDir::LeftToRight, 
                         stretch: false 
                     })
                 }
@@ -213,54 +213,54 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                 if let Some(ParagraphLayout { direction, stack, stretch }) = container.layout.downcast_mut() {
                     ComboBox::from_label("Direction")
                         .selected_text(match direction {
-                            FlexDir::LeftToRight => "left to right",
-                            FlexDir::RightToLeft => "right to left",
-                            FlexDir::BottomToTop => "bottom to top",
-                            FlexDir::TopToBottom => "top to bottom",
+                            LayoutDir::LeftToRight => "left to right",
+                            LayoutDir::RightToLeft => "right to left",
+                            LayoutDir::BottomToTop => "bottom to top",
+                            LayoutDir::TopToBottom => "top to bottom",
                         })
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(direction, FlexDir::LeftToRight, "left to right");
-                            ui.selectable_value(direction, FlexDir::RightToLeft, "right to left");
-                            ui.selectable_value(direction, FlexDir::BottomToTop, "bottom to top");
-                            ui.selectable_value(direction, FlexDir::TopToBottom, "top to bottom");
+                            ui.selectable_value(direction, LayoutDir::LeftToRight, "left to right");
+                            ui.selectable_value(direction, LayoutDir::RightToLeft, "right to left");
+                            ui.selectable_value(direction, LayoutDir::BottomToTop, "bottom to top");
+                            ui.selectable_value(direction, LayoutDir::TopToBottom, "top to bottom");
                         });
                     match direction {
-                        FlexDir::LeftToRight|FlexDir::RightToLeft => {
+                        LayoutDir::LeftToRight|LayoutDir::RightToLeft => {
                             ComboBox::from_label("Stack")
                                 .selected_text(match stack {
-                                    FlexDir::BottomToTop => "bottom to top",
-                                    FlexDir::TopToBottom => "top to bottom",
+                                    LayoutDir::BottomToTop => "bottom to top",
+                                    LayoutDir::TopToBottom => "top to bottom",
                                     _ => {
-                                        *stack = FlexDir::TopToBottom;
+                                        *stack = LayoutDir::TopToBottom;
                                         "bottom to top"
                                     }
                                 })
                                 .show_ui(ui, |ui| {
-                                    ui.selectable_value(stack, FlexDir::BottomToTop, "bottom to top");
-                                    ui.selectable_value(stack, FlexDir::TopToBottom, "top to bottom");
+                                    ui.selectable_value(stack, LayoutDir::BottomToTop, "bottom to top");
+                                    ui.selectable_value(stack, LayoutDir::TopToBottom, "top to bottom");
                                 });
                         },
-                        FlexDir::BottomToTop|FlexDir::TopToBottom => {
+                        LayoutDir::BottomToTop|LayoutDir::TopToBottom => {
                             ComboBox::from_label("Stack")
                                 .selected_text(match stack {
-                                    FlexDir::LeftToRight => "left to right",
-                                    FlexDir::RightToLeft => "right to left",
+                                    LayoutDir::LeftToRight => "left to right",
+                                    LayoutDir::RightToLeft => "right to left",
                                     _ => {
-                                        *stack = FlexDir::LeftToRight;
+                                        *stack = LayoutDir::LeftToRight;
                                         "left to right"
                                     }
                                 })
                                 .show_ui(ui, |ui| {
-                                    ui.selectable_value(stack, FlexDir::LeftToRight, "left to right");
-                                    ui.selectable_value(stack, FlexDir::RightToLeft, "right to left");
+                                    ui.selectable_value(stack, LayoutDir::LeftToRight, "left to right");
+                                    ui.selectable_value(stack, LayoutDir::RightToLeft, "right to left");
                                 });
                         },
                     }
                     ui.checkbox(stretch, "Stretch");
                 } else {
                     container.layout = Box::new(ParagraphLayout { 
-                        direction: FlexDir::LeftToRight, 
-                        stack: FlexDir::TopToBottom, 
+                        direction: LayoutDir::LeftToRight, 
+                        stack: LayoutDir::TopToBottom, 
                         stretch: false
                     })
                 }
@@ -272,31 +272,31 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                     ui.add(Slider::new(y, 0.0..=200.0).text("height"));
                     ComboBox::from_label("Row Direction")
                         .selected_text(match row_dir {
-                            FlexDir::LeftToRight => "left to right",
-                            FlexDir::RightToLeft => "right to left",
-                            FlexDir::BottomToTop => "bottom to top",
-                            FlexDir::TopToBottom => "top to bottom",
+                            LayoutDir::LeftToRight => "left to right",
+                            LayoutDir::RightToLeft => "right to left",
+                            LayoutDir::BottomToTop => "bottom to top",
+                            LayoutDir::TopToBottom => "top to bottom",
                         })
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(row_dir, FlexDir::LeftToRight, "left to right");
-                            ui.selectable_value(row_dir, FlexDir::RightToLeft, "right to left");
-                            ui.selectable_value(row_dir, FlexDir::BottomToTop, "bottom to top");
-                            ui.selectable_value(row_dir, FlexDir::TopToBottom, "top to bottom");
+                            ui.selectable_value(row_dir, LayoutDir::LeftToRight, "left to right");
+                            ui.selectable_value(row_dir, LayoutDir::RightToLeft, "right to left");
+                            ui.selectable_value(row_dir, LayoutDir::BottomToTop, "bottom to top");
+                            ui.selectable_value(row_dir, LayoutDir::TopToBottom, "top to bottom");
                         });
                     match row_dir {
-                        FlexDir::LeftToRight|FlexDir::RightToLeft => {
+                        LayoutDir::LeftToRight|LayoutDir::RightToLeft => {
                             ComboBox::from_label("Column Direction")
                                 .selected_text(match column_dir {
-                                    FlexDir::TopToBottom => "top to bottom",
-                                    FlexDir::BottomToTop => "bottom to top",
+                                    LayoutDir::TopToBottom => "top to bottom",
+                                    LayoutDir::BottomToTop => "bottom to top",
                                     _ => {
-                                        *column_dir = FlexDir::TopToBottom;
+                                        *column_dir = LayoutDir::TopToBottom;
                                         "top to bottom"
                                     }
                                 })
                                 .show_ui(ui, |ui| {
-                                    ui.selectable_value(column_dir, FlexDir::TopToBottom, "top to bottom");
-                                    ui.selectable_value(column_dir, FlexDir::BottomToTop, "bottom to top");
+                                    ui.selectable_value(column_dir, LayoutDir::TopToBottom, "top to bottom");
+                                    ui.selectable_value(column_dir, LayoutDir::BottomToTop, "bottom to top");
                                 });
                             ComboBox::from_label("Row Alignment")
                                 .selected_text(match alignment {
@@ -314,19 +314,19 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                                     ui.selectable_value(alignment, Alignment::Right, "right");
                                 });
                         }
-                        FlexDir::BottomToTop|FlexDir::TopToBottom => {
+                        LayoutDir::BottomToTop|LayoutDir::TopToBottom => {
                             ComboBox::from_label("Column Direction")
                                 .selected_text(match column_dir {
-                                    FlexDir::LeftToRight => "left to right",
-                                    FlexDir::RightToLeft => "right to left",
+                                    LayoutDir::LeftToRight => "left to right",
+                                    LayoutDir::RightToLeft => "right to left",
                                     _ => {
-                                        *column_dir = FlexDir::LeftToRight;
+                                        *column_dir = LayoutDir::LeftToRight;
                                         "left to right"
                                     }
                                 })
                                 .show_ui(ui, |ui| {
-                                    ui.selectable_value(column_dir, FlexDir::LeftToRight, "left to right");
-                                    ui.selectable_value(column_dir, FlexDir::RightToLeft, "right to left");
+                                    ui.selectable_value(column_dir, LayoutDir::LeftToRight, "left to right");
+                                    ui.selectable_value(column_dir, LayoutDir::RightToLeft, "right to left");
                                 });
                             ComboBox::from_label("Row Alignment")
                                 .selected_text(match alignment {
@@ -350,8 +350,8 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                 } else {
                     container.layout = Box::new(SizedGridLayout { 
                         cell_size: Vec2::splat(40.0).into(),
-                        row_dir: FlexDir::LeftToRight, 
-                        column_dir: FlexDir::TopToBottom, 
+                        row_dir: LayoutDir::LeftToRight, 
+                        column_dir: LayoutDir::TopToBottom, 
                         alignment: Alignment::Left,
                         stretch: false, 
                     })
@@ -364,31 +364,31 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                     ui.add(Slider::new(y, 1..=50).text("height"));
                     ComboBox::from_label("Row Direction")
                         .selected_text(match row_dir {
-                            FlexDir::LeftToRight => "left to right",
-                            FlexDir::RightToLeft => "right to left",
-                            FlexDir::BottomToTop => "bottom to top",
-                            FlexDir::TopToBottom => "top to bottom",
+                            LayoutDir::LeftToRight => "left to right",
+                            LayoutDir::RightToLeft => "right to left",
+                            LayoutDir::BottomToTop => "bottom to top",
+                            LayoutDir::TopToBottom => "top to bottom",
                         })
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(row_dir, FlexDir::LeftToRight, "left to right");
-                            ui.selectable_value(row_dir, FlexDir::RightToLeft, "right to left");
-                            ui.selectable_value(row_dir, FlexDir::BottomToTop, "bottom to top");
-                            ui.selectable_value(row_dir, FlexDir::TopToBottom, "top to bottom");
+                            ui.selectable_value(row_dir, LayoutDir::LeftToRight, "left to right");
+                            ui.selectable_value(row_dir, LayoutDir::RightToLeft, "right to left");
+                            ui.selectable_value(row_dir, LayoutDir::BottomToTop, "bottom to top");
+                            ui.selectable_value(row_dir, LayoutDir::TopToBottom, "top to bottom");
                         });
                     match row_dir {
-                        FlexDir::LeftToRight|FlexDir::RightToLeft => {
+                        LayoutDir::LeftToRight|LayoutDir::RightToLeft => {
                             ComboBox::from_label("Column Direction")
                                 .selected_text(match column_dir {
-                                    FlexDir::TopToBottom => "top to bottom",
-                                    FlexDir::BottomToTop => "bottom to top",
+                                    LayoutDir::TopToBottom => "top to bottom",
+                                    LayoutDir::BottomToTop => "bottom to top",
                                     _ => {
-                                        *column_dir = FlexDir::TopToBottom;
+                                        *column_dir = LayoutDir::TopToBottom;
                                         "top to bottom"
                                     }
                                 })
                                 .show_ui(ui, |ui| {
-                                    ui.selectable_value(column_dir, FlexDir::TopToBottom, "top to bottom");
-                                    ui.selectable_value(column_dir, FlexDir::BottomToTop, "bottom to top");
+                                    ui.selectable_value(column_dir, LayoutDir::TopToBottom, "top to bottom");
+                                    ui.selectable_value(column_dir, LayoutDir::BottomToTop, "bottom to top");
                                 });
                             ComboBox::from_label("Row Alignment")
                                 .selected_text(match alignment {
@@ -406,19 +406,19 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                                     ui.selectable_value(alignment, Alignment::Right, "right");
                                 });
                         }
-                        FlexDir::BottomToTop|FlexDir::TopToBottom => {
+                        LayoutDir::BottomToTop|LayoutDir::TopToBottom => {
                             ComboBox::from_label("Column Direction")
                                 .selected_text(match column_dir {
-                                    FlexDir::LeftToRight => "left to right",
-                                    FlexDir::RightToLeft => "right to left",
+                                    LayoutDir::LeftToRight => "left to right",
+                                    LayoutDir::RightToLeft => "right to left",
                                     _ => {
-                                        *column_dir = FlexDir::LeftToRight;
+                                        *column_dir = LayoutDir::LeftToRight;
                                         "left to right"
                                     }
                                 })
                                 .show_ui(ui, |ui| {
-                                    ui.selectable_value(column_dir, FlexDir::LeftToRight, "left to right");
-                                    ui.selectable_value(column_dir, FlexDir::RightToLeft, "right to left");
+                                    ui.selectable_value(column_dir, LayoutDir::LeftToRight, "left to right");
+                                    ui.selectable_value(column_dir, LayoutDir::RightToLeft, "right to left");
                                 });
                             ComboBox::from_label("Row Alignment")
                                 .selected_text(match alignment {
@@ -440,8 +440,8 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                     } else {
                     container.layout = Box::new(FixedGridLayout  { 
                         cells: UVec2 { x: 5, y: 5 }, 
-                        row_dir: FlexDir::LeftToRight, 
-                        column_dir: FlexDir::TopToBottom, 
+                        row_dir: LayoutDir::LeftToRight, 
+                        column_dir: LayoutDir::TopToBottom, 
                         alignment: Alignment::Left,
                     })
                 }
@@ -453,46 +453,46 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                     ui.add(Slider::new(columns, 1..=20).text("columns"));
                     ComboBox::from_label("Row Direction")
                         .selected_text(match row_dir {
-                            FlexDir::LeftToRight => "left to right",
-                            FlexDir::RightToLeft => "right to left",
-                            FlexDir::BottomToTop => "bottom to top",
-                            FlexDir::TopToBottom => "top to bottom",
+                            LayoutDir::LeftToRight => "left to right",
+                            LayoutDir::RightToLeft => "right to left",
+                            LayoutDir::BottomToTop => "bottom to top",
+                            LayoutDir::TopToBottom => "top to bottom",
                         })
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(row_dir, FlexDir::LeftToRight, "left to right");
-                            ui.selectable_value(row_dir, FlexDir::RightToLeft, "right to left");
-                            ui.selectable_value(row_dir, FlexDir::BottomToTop, "bottom to top");
-                            ui.selectable_value(row_dir, FlexDir::TopToBottom, "top to bottom");
+                            ui.selectable_value(row_dir, LayoutDir::LeftToRight, "left to right");
+                            ui.selectable_value(row_dir, LayoutDir::RightToLeft, "right to left");
+                            ui.selectable_value(row_dir, LayoutDir::BottomToTop, "bottom to top");
+                            ui.selectable_value(row_dir, LayoutDir::TopToBottom, "top to bottom");
                         });
                     match row_dir {
-                        FlexDir::LeftToRight|FlexDir::RightToLeft => {
+                        LayoutDir::LeftToRight|LayoutDir::RightToLeft => {
                             ComboBox::from_label("Column Direction")
                                 .selected_text(match column_dir {
-                                    FlexDir::TopToBottom => "top to bottom",
-                                    FlexDir::BottomToTop => "bottom to top",
+                                    LayoutDir::TopToBottom => "top to bottom",
+                                    LayoutDir::BottomToTop => "bottom to top",
                                     _ => {
-                                        *column_dir = FlexDir::TopToBottom;
+                                        *column_dir = LayoutDir::TopToBottom;
                                         "top to bottom"
                                     }
                                 })
                                 .show_ui(ui, |ui| {
-                                    ui.selectable_value(column_dir, FlexDir::TopToBottom, "top to bottom");
-                                    ui.selectable_value(column_dir, FlexDir::BottomToTop, "bottom to top");
+                                    ui.selectable_value(column_dir, LayoutDir::TopToBottom, "top to bottom");
+                                    ui.selectable_value(column_dir, LayoutDir::BottomToTop, "bottom to top");
                                 });
                         }
-                        FlexDir::BottomToTop|FlexDir::TopToBottom => {
+                        LayoutDir::BottomToTop|LayoutDir::TopToBottom => {
                             ComboBox::from_label("Column Direction")
                                 .selected_text(match column_dir {
-                                    FlexDir::LeftToRight => "left to right",
-                                    FlexDir::RightToLeft => "right to left",
+                                    LayoutDir::LeftToRight => "left to right",
+                                    LayoutDir::RightToLeft => "right to left",
                                     _ => {
-                                        *column_dir = FlexDir::LeftToRight;
+                                        *column_dir = LayoutDir::LeftToRight;
                                         "left to right"
                                     }
                                 })
                                 .show_ui(ui, |ui| {
-                                    ui.selectable_value(column_dir, FlexDir::LeftToRight, "left to right");
-                                    ui.selectable_value(column_dir, FlexDir::RightToLeft, "right to left");
+                                    ui.selectable_value(column_dir, LayoutDir::LeftToRight, "left to right");
+                                    ui.selectable_value(column_dir, LayoutDir::RightToLeft, "right to left");
                                 });
                         }
                     }
@@ -500,8 +500,8 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                 } else {
                     container.layout = Box::new(DynamicTableLayout{ 
                         columns: 5, 
-                        row_dir: FlexDir::LeftToRight, 
-                        column_dir: FlexDir::TopToBottom, 
+                        row_dir: LayoutDir::LeftToRight, 
+                        column_dir: LayoutDir::TopToBottom, 
                         stretch: false, 
                     })
                 }

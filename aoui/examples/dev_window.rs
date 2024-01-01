@@ -1,6 +1,6 @@
 // This tries to be egui
 
-use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
+use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::{AouiPlugin, widgets::drag::Dragging, WorldExtension};
 
 pub fn main() {
@@ -13,10 +13,9 @@ pub fn main() {
             ..Default::default()
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
-        .add_plugins(LogDiagnosticsPlugin::default())
         .add_systems(Startup, init)
         .add_plugins(AouiPlugin)
-        .register_cursor_default(CursorIcon::Hand)
+        .register_cursor_default(CursorIcon::Arrow)
         .run();
 }
 
@@ -45,12 +44,12 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
         child: text! {
             text: "Egui? Just kidding!",
-            event: EventFlags::LeftDrag,
+            event: EventFlags::LeftDrag | EventFlags::Hover,
             extra: SetCursor { 
                 flags: EventFlags::Hover|EventFlags::LeftDrag, 
                 icon: CursorIcon::Hand,
             },
-            extra: handler!{EvMouseDrag => {send}},
+            extra: Handlers::<EvMouseDrag>::new(send),
         },
         child: text! {
             text: "Checkbox",

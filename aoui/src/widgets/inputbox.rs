@@ -6,8 +6,10 @@ use bevy::render::color::Color;
 use bevy::window::{Window, PrimaryWindow, ReceivedCharacter};
 use bevy::text::{Text, Font};
 use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
+use crate::{DimensionData, Dimension};
+use crate::dimension::DimensionMut;
 use crate::signals::KeyStorage;
-use crate::{RotatedRect, Transform2D, Dimension, bundles::AouiTextBundle};
+use crate::{RotatedRect, Transform2D, bundles::AouiTextBundle};
 use crate::signals::{Receiver, types::SigInvoke};
 use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction, ActiveDetection, EvTextChange, EvTextSubmit, Handlers};
 use ab_glyph::Font as FontTrait;
@@ -337,11 +339,11 @@ pub fn measure_string<F: ab_glyph::Font>(font: &impl ab_glyph::ScaleFont<F>, str
 pub fn update_inputbox_cursor(
     mut commands: Commands,
     fonts: Res<Assets<Font>>,
-    query: Query<(Entity, &InputBox, &Dimension, &Handle<Font>, &TextColor, ActiveDetection), (Changed<InputBox>, Without<InputBoxCursorArea>, Without<Text>)>,
+    query: Query<(Entity, &InputBox, &DimensionData, &Handle<Font>, &TextColor, ActiveDetection), (Changed<InputBox>, Without<InputBoxCursorArea>, Without<Text>)>,
     mut text: Query<(Entity, &Parent, Option<&Children>), (With<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>, Without<Text>, Without<InputBox>)>,
     mut bar: Query<(&Parent, &mut Transform2D, &mut Visibility), (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<Text>, Without<InputBox>)>,
-    mut area: Query<(&Parent, &mut Transform2D, &mut Dimension, &mut Visibility), (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<Text>, Without<InputBox>)>,
-    mut letters: Query<(Entity, &mut Transform2D, &mut Dimension, &mut Text, &mut Visibility), (Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>
+    mut area: Query<(&Parent, &mut Transform2D, DimensionMut, &mut Visibility), (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<Text>, Without<InputBox>)>,
+    mut letters: Query<(Entity, &mut Transform2D, DimensionMut, &mut Text, &mut Visibility), (Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>
 ) {
     use ab_glyph::ScaleFont as FontTrait;
     use bevy::prelude::*;
@@ -476,11 +478,12 @@ pub fn inputbox_keyboard(
     mut commands: Commands,
     fonts: Res<Assets<Font>>,
     storage: Res<KeyStorage>,
-    mut query: Query<(&mut InputBox, &Dimension, &Handle<Font>, Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>, Option<&Receiver<SigInvoke>>, ActiveDetection)>,
+    mut query: Query<(Entity, &mut InputBox, &DimensionData, &Handle<Font>, Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>, Option<&Receiver<SigInvoke>>, ActiveDetection)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {
-    for (mut inputbox, dimension, font_handle, change, submit, invoke, active) in query.iter_mut().filter(|(input, ..)| input.has_focus()) {
+    for (entity, mut inputbox, dimension, font_handle, change, submit, invoke, active) in query.iter_mut().filter(|(_, input, ..)| input.has_focus()) {
+        let mut commands = commands.entity(entity);
         if !active.is_active() {
             inputbox.focus = false;
             continue;
@@ -587,7 +590,7 @@ pub fn inputbox_keyboard(
 
 
 /// Copy em as text size.
-pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &Dimension)>) {
+pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &DimensionData)>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
         if sp.as_ref().em != dimension.em {
             sp.em = dimension.em;

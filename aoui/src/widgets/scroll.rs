@@ -1,7 +1,7 @@
 use bevy::{hierarchy::Children, math::{Vec2, IVec2}, log::warn, reflect::Reflect, ecs::{query::With, system::Res, bundle::Bundle, entity::Entity}};
 use bevy::ecs::{component::Component, query::Without};
 use bevy::ecs::system::{Query, Commands};
-use crate::{Transform2D, signals::types::SigScroll, anim::Attr, anim::Offset, events::EvPositionFactor, Dimension, AouiREM};
+use crate::{Transform2D, signals::types::SigScroll, anim::Attr, anim::Offset, events::EvPositionFactor, AouiREM, DimensionData};
 use crate::layout::{Container, LayoutControl};
 use crate::events::{EvMouseWheel, Handlers};
 use crate::signals::{Receiver, KeyStorage};
@@ -107,14 +107,14 @@ pub fn scrolling_system(
     mut commands: Commands,
     rem: Option<Res<AouiREM>>,
     storage: Res<KeyStorage>,
-    mut scroll: Query<(Entity, &Scrolling, &Dimension, &Children, &MouseWheelAction)>,
-    sender: Query<(&MouseWheelAction, &Handlers<EvMouseWheel>), Without<Scrolling>>,
-    mut receiver: Query<(Entity, &Scrolling, &Dimension, &Children, &Receiver<SigScroll>), Without<MouseWheelAction>>,
+    mut scroll: Query<(Entity, &Scrolling, &DimensionData, &Children, &MouseWheelAction)>,
+    sender: Query<(Entity, &MouseWheelAction, &Handlers<EvMouseWheel>), Without<Scrolling>>,
+    mut receiver: Query<(Entity, &Scrolling, &DimensionData, &Children, &Receiver<SigScroll>), Without<MouseWheelAction>>,
     mut child_query: Query<Attr<Transform2D, Offset>, With<Children>>,
 ) {
     let rem = rem.map(|x| x.get()).unwrap_or(16.0);
-    for (action, signal) in sender.iter() {
-        signal.handle(&mut commands, &storage, *action);
+    for (entity, action, signal) in sender.iter() {
+        signal.handle(&mut commands.entity(entity), &storage, *action);
     }
     let iter = scroll.iter_mut()
         .map(|(entity, scroll, dim, children, action)| 

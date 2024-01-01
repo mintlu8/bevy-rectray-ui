@@ -40,7 +40,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
         child: rectangle! {
             dimension: Size2::FULL,
-            color: color!(red900),
+            color: color!(darkgray),
             z: -0.2
         }
     });
@@ -66,7 +66,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
         child: rectangle! {
             dimension: Size2::FULL,
-            color: color!(red900),
+            color: color!(darkgray),
             z: -0.2
         }
     });

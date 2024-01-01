@@ -7,7 +7,8 @@ use bevy::window::{Window, PrimaryWindow};
 use bevy::math::{Vec2, IVec2};
 use bevy::hierarchy::{Children, Parent};
 use bevy::ecs::{component::Component, system::{Commands, Res, Query}};
-use crate::{signals::KeyStorage, AouiREM, Dimension, Transform2D, Anchor, anim::Attr, layout::Container};
+use crate::DimensionData;
+use crate::{signals::KeyStorage, AouiREM, Transform2D, Anchor, anim::Attr, layout::Container};
 use crate::anim::Offset;
 use crate::events::{Handlers, EvMouseWheel, MouseWheelAction, EvPositionFactor};
 use self::sealed::BuildSharedPosition;
@@ -134,17 +135,17 @@ pub fn scroll_constraint(
     mut commands: Commands,
     storage: Res<KeyStorage>,
     rem: Option<Res<AouiREM>>,
-    query: Query<(&Scrolling, &Dimension, Option<&SharedPosition>, &Children, 
+    query: Query<(Entity, &Scrolling, &DimensionData, Option<&SharedPosition>, &Children, 
         Option<&Handlers<EvMouseWheel>>,
         Option<&Handlers<EvPositionFactor>>,
         Has<PositionChanged>,
     ), With<ScrollConstraint>>,
-    mut child_query: Query<(&Dimension, Attr<Transform2D, Offset>, Option<&Children>)>,
+    mut child_query: Query<(&DimensionData, Attr<Transform2D, Offset>, Option<&Children>)>,
 ) {
     let rem = rem.map(|x|x.get()).unwrap_or(16.0);
-    for (scroll, dimension, shared, children, scroll_handler, fac_handler, changed) in query.iter() {
+    for (entity, scroll, dimension, shared, children, scroll_handler, fac_handler, changed) in query.iter() {
         let size = dimension.size;
-        
+        let mut commands = commands.entity(entity);
         if children.len() != 1 {
             warn!("Component 'Scrolling' requires exactly one child as a buffer.");
             continue;
@@ -256,18 +257,19 @@ pub fn drag_constraint(
     window: Query<&Window, With<PrimaryWindow>>,
     storage: Res<KeyStorage>,
     rem: Option<Res<AouiREM>>,
-    mut query: Query<(&Dragging, Attr<Transform2D, Offset>, &Dimension, 
+    mut query: Query<(Entity, &Dragging, Attr<Transform2D, Offset>, &DimensionData, 
         Option<&SharedPosition>,
         Option<&Parent>, 
         Option<&Handlers<EvPositionFactor>>,
         Has<PositionChanged>,
     ), With<DragConstraint>>,
-    parent_query: Query<&Dimension>,
+    parent_query: Query<&DimensionData>,
 ) {
     let window_size = window.get_single().map(|x| Vec2::new(x.width(), x.height())).ok();
     let rem = rem.map(|x| x.get()).unwrap_or(16.0);
 
-    for (drag, mut transform, dim, shared, parent, fac_handler, changed) in query.iter_mut() {
+    for (entity, drag, mut transform, dim, shared, parent, fac_handler, changed) in query.iter_mut() {
+        let mut commands = commands.entity(entity);
         let Some(dimension) = parent
             .and_then(|p| parent_query.get(p.get()).ok())
             .map(|x| x.size)
@@ -354,13 +356,14 @@ pub fn drag_constraint(
 pub fn discrete_scroll_sync(
     mut commands: Commands,
     storage: Res<KeyStorage>,
-    mut query: Query<(&ScrollDiscrete, &mut Container, &Children,
+    mut query: Query<(Entity, &ScrollDiscrete, &mut Container, &Children,
         Option<&SharedPosition>,
         Option<&Handlers<EvPositionFactor>>,
         Has<PositionChanged>,
     )>,
 ) {
-    for (scroll, mut container, children, shared, fac_handler, changed) in query.iter_mut() {
+    for (entity, scroll, mut container, children, shared, fac_handler, changed) in query.iter_mut() {
+        let mut commands = commands.entity(entity);
         let Some(range) = container.range.as_mut() else {continue};
         let len = children.len() - range.end;
         let fac = if len == 0 {0.0} else {range.start as f32 / len as f32};

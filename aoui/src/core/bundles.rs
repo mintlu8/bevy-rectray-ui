@@ -9,7 +9,7 @@ use bevy::{
     text::{Text2dBounds, TextLayoutInfo}
 };
 
-use crate::{Transform2D, RotatedRect, BuildTransform, Hitbox, layout::LayoutControl, Dimension, Size2, Opacity, Anchor, Clipping};
+use crate::{Transform2D, RotatedRect, BuildTransform, Hitbox, layout::LayoutControl, Size2, Opacity, Anchor, Clipping, DimensionData, Dimension};
 
 
 /// The minimal bundle required for Aoui to function.
@@ -19,6 +19,7 @@ use crate::{Transform2D, RotatedRect, BuildTransform, Hitbox, layout::LayoutCont
 pub struct AouiBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
+    pub dimension_data: DimensionData,
     pub rect: RotatedRect,
     pub clipping: Clipping,
     pub opacity: Opacity,
@@ -65,7 +66,7 @@ impl LinebreakBundle {
         Self {
             bundle: AouiBundle { 
                 dimension: Dimension {
-                    dim: crate::DimensionSize::Owned(size.into()),
+                    dimension: crate::DimensionSize::Owned(size.into()),
                     ..Default::default()
                 }, 
                 ..Default::default()
@@ -78,7 +79,7 @@ impl LinebreakBundle {
         Self {
             bundle: AouiBundle { 
                 dimension: Dimension {
-                    dim: crate::DimensionSize::Owned(Size2::em(size.x, size.y)),
+                    dimension: crate::DimensionSize::Owned(Size2::em(size.x, size.y)),
                     ..Default::default()
                 }, 
                 ..Default::default()
@@ -99,6 +100,7 @@ impl Default for LinebreakBundle {
 pub struct AouiSpriteBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
+    pub dimension_data: DimensionData,
     pub rect: RotatedRect,
     pub build: BuildTransform,
     pub sprite: Sprite,
@@ -114,6 +116,7 @@ pub struct AouiSpriteBundle {
 pub struct AouiSpriteSheetBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
+    pub dimension_data: DimensionData,
     pub rect: RotatedRect,
     pub build: BuildTransform,
     pub sprite: TextureAtlasSprite,
@@ -130,6 +133,7 @@ pub struct AouiSpriteSheetBundle {
 pub struct AouiTextBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
+    pub dimension_data: DimensionData,
     pub rect: RotatedRect,
     pub build: BuildTransform,
     pub hitbox: Hitbox,
@@ -149,6 +153,7 @@ pub struct AouiTextBundle {
 pub struct AouiMaterialMesh2dBundle<M: Material2d>{
     pub transform: Transform2D,
     pub dimension: Dimension,
+    pub dimension_data: DimensionData,
     pub rect: RotatedRect,
     pub build: BuildTransform,
     pub mesh: Mesh2dHandle,

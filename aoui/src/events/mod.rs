@@ -28,12 +28,12 @@
 //! They should be safe to use in `Update` and `PostUpdate` like signals.
 //! 
 //! * `CursorFocus`: Stores a persistent state like `Hover` or `Pressed`, this
-//! can be used with the [`With`] constraint. The [`DisplayIf`](widgets::button::DisplayIf)
+//! can be used with the [`With`] constraint. The [`DisplayIf`](crate::widgets::button::DisplayIf)
 //! component can be used to change visibility status based on [`CursorFocus`]
 //! 
 //! * `CursorAction`: Stores a single frame event like `Click` or `Down`.
 //! * `CursorClickOutside`: Mouse up outside of the sprite's boundary.
-//! * `MouseWheelAction`: Mouse wheel scrolling. Unlike others this receives data from scrolling.
+//! * `MouseWheelAction`: Stores the value of mouse wheel scrolling.
 //! 
 //! # Event Handlers
 //! 
@@ -73,6 +73,8 @@ mod event;
 mod handler;
 mod wheel;
 mod cursor;
+mod mutation;
+mod oneshot;
 
 pub use event::*;
 pub use state::*;
@@ -80,6 +82,8 @@ use systems::*;
 pub use handler::*;
 pub use wheel::{MouseWheelAction, ScrollScaling};
 pub use cursor::CustomCursor;
+pub use mutation::Mutation;
+pub use oneshot::OneShot;
 
 use self::cursor::custom_cursor_controller;
 

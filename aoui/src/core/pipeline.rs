@@ -1,16 +1,17 @@
 use bevy::{prelude::*, window::PrimaryWindow, ecs::query::{ReadOnlyWorldQuery, WorldQuery}, math::Affine2};
-use float_next_after::NextAfter;
 
-use crate::{*, layout::*};
+use crate::{*, layout::*, dimension::DimensionMut};
 
 type AouiEntity<'t> = (
     Entity,
-    &'t mut Dimension,
+    DimensionMut,
     &'t Transform2D,
     &'t mut RotatedRect,
     &'t mut Opacity,
     &'t mut Clipping,
 );
+
+const Z_INCREMENT: f32 = 0.01;
 
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::needless_pass_by_ref_mut)]
@@ -93,11 +94,11 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         if !fac.is_nan() {
             entity_anchors.iter_mut().for_each(|(_, anc)| *anc *= fac);
         }
-        dim.size = size;
+        dim.dynamic.size = size;
         if layout.dimension_agnostic() {
-            dim.reliable_size = size;
+            dim.dynamic.reliable_size = size;
         } else {
-            dim.reliable_size = Vec2::ZERO;
+            dim.dynamic.reliable_size = Vec2::ZERO;
         }
         let rect = RotatedRect::construct(
             &parent,
@@ -111,7 +112,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             if transform.z != 0.0 {
                 parent.rect.z + transform.z
             } else {
-                parent.rect.z.next_after(f32::INFINITY)
+                parent.rect.z + Z_INCREMENT
             }        
         );
 
@@ -135,7 +136,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         }
         return;
     }
-    dim.reliable_size = Vec2::ZERO;
+    dim.dynamic.reliable_size = Vec2::ZERO;
 
     let rect = RotatedRect::construct(
         &parent,
@@ -149,7 +150,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         if transform.z != 0.0 {
             parent.rect.z + transform.z
         } else {
-            parent.rect.z.next_after(f32::INFINITY)
+            parent.rect.z + Z_INCREMENT
         }
     );
     

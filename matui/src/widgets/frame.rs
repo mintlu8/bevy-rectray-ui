@@ -19,7 +19,6 @@ use crate::shapes::RoundedRectangleMaterial;
 
 #[derive(Debug, Default)]
 pub struct Divider {
-    /// Leave
     pub inset: f32,
     pub axis: Axis,
     pub color: Color,

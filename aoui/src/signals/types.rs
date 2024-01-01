@@ -4,6 +4,7 @@ use bevy::render::color::Color;
 use crate::events::MouseWheelAction;
 use crate::widgets::drag::DragState;
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! signal_receivers {
     ($($(#[$($attr:tt)*])* $name: ident: $ty: ty),* $(,)?) => {

@@ -1,4 +1,4 @@
-//! Bevy Aoui is a 2D and UI solution for the bevy engine.
+//! Bevy Aoui is an ECS based 2D and UI solution for the bevy engine.
 //! 
 //!
 //! # Getting Started
@@ -64,6 +64,39 @@
 //! # */
 //! ```
 //! 
+//! # How this works?
+//! 
+//! `bevy_aoui` is all about rectangles!
+//! 
+//! Each sprite is a rectangle, and placed relative to the parent
+//! rectangle.
+//! 
+//! You might want to
+//! 
+//! ```js
+//! Place a sprite to the center right of the parent sprite,
+//! move left by 10 px, 
+//! with 20% of parent's width as width
+//! 2x font size as height
+//! and rotate by 45 degrees.
+//! ```
+//! 
+//! In `aoui` this is incredibly simple:
+//! 
+//! ```
+//! # /*
+//! sprite!(commands {
+//!     anchor: Right,
+//!     offset: [-10, 0],
+//!     dimension: size2!(20 %, 2 em),
+//!     rotation: degrees(45),
+//!     ...
+//! })
+//! # */
+//! ```
+//! 
+//! Use [`Transform2D`] and [`Dimension`] to manipulate `aoui` widgets directly.
+//! 
 //! # What `bevy_aoui` provides:
 //! 
 //! * Fine grained low level anchor-offset layout system.
@@ -96,28 +129,6 @@
 //!     
 //!     `bevy_aoui` uses rust code for a lot of things, including events and reactivity, 
 //!     serializing the UI might be difficult.
-//! 
-//! # The Anchor-Offset Layout System
-//!
-//! Aoui offers a refreshingly different paradigm from traditional CSS based UI layout.
-//! 
-//! The core attributes of this system include:
-//! * [anchor](Transform2D::anchor)
-//! * [center](Transform2D::center)
-//! * [offset](Transform2D::offset)
-//! * [rotation](Transform2D::rotation)
-//! * [scale](Transform2D::scale)
-//! * [dimension](Dimension::dim)
-//! 
-//! Sprites are rectangles, they are connected to parent sprites via one of the parent's anchors `anchor`
-//! and translated by `offset`. Then they are scaled and rotated around the sprite's `center`,
-//! which can be different from `anchor`.
-//! 
-//! In the case of parentless sprites, they are anchored to the window's rectangle.
-//! 
-//! Dimension determines the size of the rectangle.
-//! Our relative size system allows dimension to be based on various sources:
-//! fixed pixels, sprite/text size, font size, parent size, sprite aspect ratio, etc.
 //! 
 //! # Container
 //! 
@@ -165,7 +176,7 @@
 //! much nicer, right?
 //! 
 //! `commands` is the context, if `AssetServer` is needed 
-//! we can put `commands` there.
+//! we can put `(commands, assets)` there.
 //!
 //! # DSL Syntax
 //! 

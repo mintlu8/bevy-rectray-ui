@@ -4,7 +4,7 @@ use bevy::asset::{Asset, Handle, Assets};
 use bevy::math::{Vec2, Vec4};
 use bevy::render::{color::Color, texture::Image};
 use bevy::render::render_resource::{AsBindGroup, ShaderRef, Shader};
-use bevy_aoui::{Dimension, anim::{Interpolate, Interpolation}, dsl::DslInto};
+use bevy_aoui::{anim::{Interpolate, Interpolation}, dsl::DslInto, DimensionData};
 
 use crate::builders::Stroke;
 
@@ -162,7 +162,7 @@ impl Material2d for RoundedRectangleMaterial {
 }
 
 pub fn sync_rounded_rect(
-    query: Query<(&Handle<RoundedRectangleMaterial>, &Dimension)>,
+    query: Query<(&Handle<RoundedRectangleMaterial>, &DimensionData)>,
     mut assets: ResMut<Assets<RoundedRectangleMaterial>>
 ){
     for (handle, dimension) in query.iter() {
@@ -172,7 +172,7 @@ pub fn sync_rounded_rect(
 }
 
 pub fn sync_rounded_shadow(
-    query: Query<(&Handle<RoundedShadowMaterial>, &Dimension)>, 
+    query: Query<(&Handle<RoundedShadowMaterial>, &DimensionData)>, 
     mut assets: ResMut<Assets<RoundedShadowMaterial>>
 ){
     for (handle, dimension) in query.iter() {

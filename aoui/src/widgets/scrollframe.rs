@@ -6,7 +6,7 @@ use bevy::render::render_resource::{Extent3d, TextureUsages, TextureDescriptor, 
 use bevy::render::view::{VisibleEntities, RenderLayers};
 use bevy::render::camera::{Camera, CameraRenderGraph, OrthographicProjection, RenderTarget, ScalingMode};
 use bevy::core_pipeline::{core_2d::Camera2d, tonemapping::{Tonemapping, DebandDither}, clear_color::ClearColorConfig};
-use crate::{Dimension, BuildTransform, Anchor};
+use crate::{BuildTransform, Anchor, DimensionData};
 
 use crate::dsl::DslInto;
 
@@ -111,7 +111,7 @@ impl ClippingBundle {
 }
 
 pub fn clipping_layer(
-    mut query: Query<(&Dimension, &mut OrthographicProjection), With<CameraClip>>,
+    mut query: Query<(&DimensionData, &mut OrthographicProjection), With<CameraClip>>,
 ) {
     for (dimension, mut proj) in query.iter_mut() {
         proj.scaling_mode = ScalingMode::Fixed { 

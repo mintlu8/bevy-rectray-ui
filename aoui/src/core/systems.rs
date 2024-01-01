@@ -4,7 +4,8 @@ use bevy::text::{TextLayoutInfo, Text2dBounds};
 use bevy::prelude::*;
 
 use bevy::sprite::Anchor as BevyAnchor;
-use crate::{RotatedRect, BuildTransform, Dimension, DimensionSize, Transform2D, Opacity, SetAlpha, BuildMeshTransform, Anchor};
+use crate::dimension::DimensionMut;
+use crate::{RotatedRect, BuildTransform, Transform2D, Opacity, SetAlpha, BuildMeshTransform, Anchor, DimensionData, Dimension};
 
 
 /// Copy our `anchor` component's value to the `Anchor` component
@@ -13,13 +14,10 @@ pub fn copy_anchor(mut query: Query<(&mut BevyAnchor, &Transform2D)>) {
 }
 
 /// Copy evaluated `TextLayoutInfo` value to our `Dimension::Copied` value
-pub fn copy_dimension_text(mut query: Query<(&TextLayoutInfo, &mut Dimension)>) {
+pub fn copy_dimension_text(mut query: Query<(&TextLayoutInfo, DimensionMut)>) {
     //let scale_factor = window.get_single().map(|x| x.scale_factor() as f32).unwrap_or(1.0);
     query.par_iter_mut().for_each(|(text, mut dim)| {
-        match dim.dim {
-            DimensionSize::Copied => dim.size = text.logical_size,
-            _ => (),
-        }
+        dim.update_size(|| text.logical_size)
     })
 }
 
@@ -31,7 +29,7 @@ pub fn copy_anchor_sprite(mut query: Query<(&mut Sprite, &Transform2D)>) {
 }
 
 /// Synchonize size between `Sprite` and `Dimension`
-pub fn copy_dimension_sprite(mut query: Query<(&Sprite, &Handle<Image>, &mut Dimension)>, assets: Res<Assets<Image>>) {
+pub fn copy_dimension_sprite(mut query: Query<(&Sprite, &Handle<Image>, DimensionMut)>, assets: Res<Assets<Image>>) {
     query.par_iter_mut().for_each(|(sp, im, mut dimension)| {
         dimension.update_size(|| {
             match sp.custom_size {
@@ -53,7 +51,7 @@ pub fn copy_anchor_atlas(mut query: Query<(&mut TextureAtlasSprite, &Transform2D
 }
 
 /// copy size between `TextureAtlasSprite` to `Dimension`
-pub fn copy_dimension_atlas(mut query: Query<(&TextureAtlasSprite, &Handle<TextureAtlas>, &mut Dimension)>, assets: Res<Assets<TextureAtlas>>) {
+pub fn copy_dimension_atlas(mut query: Query<(&TextureAtlasSprite, &Handle<TextureAtlas>, DimensionMut)>, assets: Res<Assets<TextureAtlas>>) {
     query.par_iter_mut().for_each(|(sp, im, mut dimension)| {
         dimension.update_size(|| {
             match sp.custom_size {
@@ -68,18 +66,33 @@ pub fn copy_dimension_atlas(mut query: Query<(&TextureAtlasSprite, &Handle<Textu
 }
 
 /// Synchonize size from `Dimension` to `Sprite`
-pub fn sync_dimension_sprite(mut query: Query<(&mut Sprite, &Dimension)>) {
-    query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        dimension.run_if_owned(|size| sp.custom_size = Some(size))
+pub fn sync_dimension_sprite(mut query: Query<(&mut Sprite, &Dimension, &DimensionData)>) {
+    query.par_iter_mut().for_each(|(mut sp, dimension, data)| {
+        if dimension.is_owned() {
+            sp.custom_size = Some(data.size)
+        }
     })
 }
 
 /// Synchonize size from `Dimension` to `TextureAtlasSprite`
-pub fn sync_dimension_atlas(mut query: Query<(&mut TextureAtlasSprite, &Dimension)>) {
-    query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        dimension.run_if_owned(|size| sp.custom_size = Some(size))
+pub fn sync_dimension_atlas(mut query: Query<(&mut TextureAtlasSprite, &Dimension, &DimensionData)>) {
+    query.par_iter_mut().for_each(|(mut sp, dimension, data)| {
+        if dimension.is_owned() {
+            sp.custom_size = Some(data.size)
+        }
     })
 }
+
+/// Copy owned dimension as text bounds. 
+pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimension, &DimensionData), Without<OptOutTextBoundsSync>>) {
+    query.par_iter_mut().for_each(|(mut sp, dimension, data)| {
+        if dimension.is_owned() && sp.as_ref().size != data.size {
+            sp.size = data.size
+        }
+    })
+}
+
+
 
 /// Opts out of synchronizing text bounds.
 #[derive(Debug, Component)]
@@ -90,24 +103,13 @@ pub struct OptOutTextBoundsSync;
 pub struct OptOutFontSizeSync;
 
 
-/// Copy owned dimension as text bounds. 
-pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimension), Without<OptOutTextBoundsSync>>) {
-    query.par_iter_mut().for_each(|(mut sp, dimension)| {
-        if sp.as_ref().size != dimension.size {
-            dimension.run_if_owned(|size| sp.size = size)
-        }
-    })
-}
-
-
-
 /// Copy em as text size.
 pub fn set_occluded(mut query: Query<&mut Opacity>) {
     query.par_iter_mut().for_each(|mut op| { op.occluded = true })
 }
 
 /// Copy em as text size.
-pub fn sync_em_text(mut query: Query<(&mut Text, &Dimension), Without<OptOutFontSizeSync>>) {
+pub fn sync_em_text(mut query: Query<(&mut Text, &DimensionData), Without<OptOutFontSizeSync>>) {
     query.par_iter_mut().for_each(|(mut sp, dimension)| {
         if sp.as_ref().sections.iter().any(|x| x.style.font_size != dimension.em) {
             sp.sections.iter_mut().for_each(|x| x.style.font_size = dimension.em)
@@ -137,7 +139,7 @@ pub fn sync_opacity_atlas(mut query: Query<(&Opacity, &mut TextureAtlasSprite), 
 }
 
 pub fn build_mesh_2d_global_transform(
-    mut query: Query<(&RotatedRect, &Dimension, &mut GlobalTransform), With<BuildMeshTransform>>
+    mut query: Query<(&RotatedRect, &DimensionData, &mut GlobalTransform), With<BuildMeshTransform>>
 ) {
     query.iter_mut().for_each(|(rect, dim, mut transform)| 
         *transform = Affine3A::from_scale_rotation_translation(

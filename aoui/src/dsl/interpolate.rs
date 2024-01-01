@@ -51,6 +51,7 @@ macro_rules! transition {
     };
 }
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! easing {
     (Linear) => {$crate::anim::Easing::Linear};
@@ -62,6 +63,7 @@ macro_rules! easing {
         $d as f32,
     ])};
 }
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! transition_impl {
