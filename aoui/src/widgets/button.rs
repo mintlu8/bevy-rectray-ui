@@ -1,18 +1,23 @@
 use std::{sync::{Mutex, Arc}, ops::Deref, mem};
 
-use bevy::{render::view::Visibility, hierarchy::Children, ecs::{entity::Entity, query::Has}};
+use bevy::{hierarchy::Children, ecs::{entity::Entity, query::Has}};
 use bevy::window::{Window, PrimaryWindow, CursorIcon};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
-use crate::{Opacity, dsl::prelude::signal, signals::KeyStorage};
+use crate::{dsl::prelude::signal, signals::KeyStorage, anim::VisibilityToggle};
 use crate::signals::{Object, DynamicSender, SignalBuilder};
 use crate::events::{Handlers, EvButtonClick, EvToggleChange};
-use crate::{signals::DataTransfer, dsl::prelude::Interpolate};
+use crate::signals::DataTransfer;
 use crate::events::{EventFlags, CursorFocus, CursorAction};
 
 
-/// Set cursor if [`CursorFocus`] is some [`EventFlags`].
+/// Set the window's [cursor](bevy::window::Window::cursor) value 
+/// if the sprite has obtained [`CursorFocus`]
+/// and the `CursorFocus` is some [`EventFlags`].
 ///
-/// Call `register_cursor_default` on the `App` if your cursor does not revert.
+/// Call [`register_cursor_default`](crate::WorldExtension::register_cursor_default) 
+/// on the `App` if your cursor does not revert. 
+/// On the other hand, try remove the [`CursorDefault`] resource
+/// if you want to have more control over cursor logic.
 #[derive(Debug, Clone, Copy, Component)]
 pub struct SetCursor {
     pub flags: EventFlags,
@@ -30,23 +35,28 @@ pub struct SetCursor {
 #[derive(Debug, Clone, Copy, Component)]
 pub struct DisplayIf<T>(pub T);
 
-pub fn event_conditional_visibility(mut query: Query<(&DisplayIf<EventFlags>, Option<&CursorFocus>, &mut Visibility, Option<&mut Interpolate<Opacity>>)>){
-    query.par_iter_mut().for_each(|(display_if, focus, mut vis, mut opacity)| {
+pub fn event_conditional_visibility(mut query: Query<(&DisplayIf<EventFlags>, Option<&CursorFocus>, VisibilityToggle)>){
+    query.par_iter_mut().for_each(|(display_if, focus, mut vis)| {
         if focus.is_some() && display_if.0.contains(focus.unwrap().flags()) 
             || focus.is_none() && display_if.0.contains(EventFlags::Idle) {
-            if let Some(opacity) = opacity.as_mut() {
-                opacity.interpolate_to(1.0);
-            } else {
-                *vis = Visibility::Inherited;
-            }
-        } else if let Some(opacity) = opacity.as_mut() {
-            opacity.interpolate_to(0.0);
+            vis.set_visible(true)
         } else {
-            *vis = Visibility::Hidden;
+            vis.set_visible(false)
         }
     })
 }
 
+pub fn check_conditional_visibility(
+    mut query: Query<(&DisplayIf<CheckButtonState>, &CheckButtonState, VisibilityToggle)>
+) {
+    query.par_iter_mut().for_each(|(display_if, state, mut vis)| {
+        if &display_if.0 == state {
+            vis.set_visible(true)
+        } else {
+            vis.set_visible(false)
+        }
+    })
+}
 /// Marker for sending the `Submit` signal on click.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component)]
 pub struct Button;
@@ -60,7 +70,7 @@ pub enum CheckButton{
 }
 
 /// State of a CheckButton or a RadioButton, 
-/// this propagates to children and can be used in `DisplayIf`
+/// this propagates to children and can be used in [`DisplayIf`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
 pub enum CheckButtonState{
     Unchecked,
@@ -106,9 +116,10 @@ impl From<bool> for CheckButton {
         }
     }
 }
-/// Component for `RadioButton`, contains the shared state.
+
+/// Component of `radio_button` containing the shared state.
 /// 
-/// Discriminant is the `Payload` component.
+/// Discriminant is the [`Payload`] component.
 #[derive(Debug, Clone, Component)]
 pub struct RadioButton(Arc<Mutex<Object>>, DynamicSender);
 
@@ -217,24 +228,6 @@ pub fn radio_button_on_click(
     }
 }
 
-pub fn check_conditional_visibility(
-    mut query: Query<(&DisplayIf<CheckButtonState>, &CheckButtonState, &mut Visibility, Option<&mut Interpolate<Opacity>>)>
-) {
-    query.par_iter_mut().for_each(|(display_if, state, mut vis, mut opacity)| {
-        if &display_if.0 == state {
-            if let Some(opacity) = opacity.as_mut() {
-                opacity.interpolate_to(1.0);
-            } else {
-                *vis = Visibility::Inherited;
-            }
-        } else if let Some(opacity) = opacity.as_mut() {
-            opacity.interpolate_to(0.0);
-        } else {
-            *vis = Visibility::Hidden;
-        }
-    })
-}
-
 /// If set, we set the cursor to a default value every frame.
 /// 
 /// Not a part of the standard plugin, but
@@ -321,16 +314,18 @@ pub fn remove_check_button_state(mut commands: Commands,
 }
 
 
+/// A dynamic piece of data.
 /// When attached to a widget in the button family,
-/// the submit signal will send the containing data.
+/// the [`EvButtonClick`] signals will send the containing data.
 /// 
-/// # Submit signal behavior:
+/// This component is required in `radio_button` as its discriminant.
 /// 
-/// * Button OnClick: sends `Payload` or `()`.
-/// * RadioButton OnClick: sends `Payload` or `()`.
-/// * CheckButton OnClick: If `true`, sends `Payload` or `()`.
+/// # Signal Behavior
 /// 
-/// Also serves as the `RadioButton`'s discriminant.
+/// * `button` `EvButtonClick`: sends `Payload` or `()`.
+/// * `radio_button` `EvButtonClick`: sends `Payload`, which is required.
+/// * `check_button` `EvButtonClick`: If `true`, sends `Payload` or `()`.
+/// 
 #[derive(Debug, Clone, PartialEq, Component)] 
 pub struct Payload(Object);
 
@@ -341,6 +336,12 @@ impl Payload {
 
     pub fn new(value: impl DataTransfer + Clone) -> Self {
         Self(Object::new(value))
+    }
+
+    /// Mutate the payload.
+    pub fn mut_dyn<A: DataTransfer, B: DataTransfer>(&mut self, f: impl Fn(&A) -> B) {
+        let Some(value) = self.0.get_ref().map(f) else {return};
+        self.0.set(value)
     }
 }
 

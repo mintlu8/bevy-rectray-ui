@@ -15,9 +15,9 @@ impl Layout for CompactLayout {
             LayoutDir::TopToBottom => compact(margin, entities, negy, posx),
         }.normalized()
     }
-
-    fn dimension_agnostic(&self) -> bool {
-        true
+    
+    fn reliable_dimension(&self, computed_size: Vec2) -> Vec2 {
+        computed_size
     }
 }
 

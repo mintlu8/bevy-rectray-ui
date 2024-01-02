@@ -8,7 +8,7 @@ pub mod inputbox;
 pub mod drag;
 pub mod richtext;
 pub mod scroll;
-pub mod scrollframe;
+pub mod clipping;
 pub mod button;
 mod constraints;
 mod atlas;
@@ -46,7 +46,7 @@ impl Plugin for WidgetsPlugin {
                 drag::dragging.after(drag::drag_start),
                 scroll::scrolling_system,
                 scroll::scrolling_discrete.after(scroll::scrolling_system),
-                scrollframe::clipping_layer,
+                clipping::clipping_layer,
             ).in_set(AouiWidgetEventSet))
             .add_systems(Update, (
                 constraints::scroll_constraint,

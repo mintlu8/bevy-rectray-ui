@@ -45,18 +45,12 @@ use super::Widget;
 
 
 widget_extension! {
-    pub struct PaddingBuilder {
-        pub x: Option<bool>,
-        pub y: Option<bool>,
-    }
+    pub struct PaddingBuilder {}
 }
 
 impl Widget for PaddingBuilder {
     fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
-        self.layout = Some(Box::new(FitLayout { 
-            x: self.x.unwrap_or(true), 
-            y: self.y.unwrap_or(true), 
-        }));
+        self.layout = Some(Box::new(BoundsLayout::PADDING));
         let entity = build_frame!(commands, self).id();
         (entity, entity)
     }
@@ -72,7 +66,7 @@ macro_rules! padding {
     };
 }
 
-/// Construct a horizotal left to right compact layout.
+/// Construct a horizontal left to right compact layout.
 #[macro_export]
 macro_rules! hbox {
     {$commands: tt {$($tt:tt)*}} => {
@@ -94,7 +88,7 @@ macro_rules! vbox {
     };
 }
 
-/// Construct a horizotal left to right compact layout.
+/// Construct a horizotal left to right layout with fixed dimension.
 #[macro_export]
 macro_rules! hspan {
     {$commands: tt {$($tt:tt)*}} => {
@@ -105,7 +99,7 @@ macro_rules! hspan {
     };
 }
 
-/// Construct a vertical top to bottom compact layout.
+/// Construct a vertical top to bottom layout with fixed dimension.
 #[macro_export]
 macro_rules! vspan {
     {$commands: tt {$($tt:tt)*}} => {
@@ -116,7 +110,7 @@ macro_rules! vspan {
     };
 }
 
-/// Construct a paragtaph layout.
+/// Construct a paragraph layout.
 #[macro_export]
 macro_rules! paragraph {
     {$commands: tt {$($tt:tt)*}} => {

@@ -95,11 +95,7 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             entity_anchors.iter_mut().for_each(|(_, anc)| *anc *= fac);
         }
         dim.dynamic.size = size;
-        if layout.dimension_agnostic() {
-            dim.dynamic.reliable_size = size;
-        } else {
-            dim.dynamic.reliable_size = Vec2::ZERO;
-        }
+        dim.dynamic.reliable_size = layout.reliable_dimension(size);
         let rect = RotatedRect::construct(
             &parent,
             transform.parent_anchor,

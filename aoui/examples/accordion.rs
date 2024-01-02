@@ -40,11 +40,21 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     let (text1, scroll1) = SharedPosition::many();
 
-    clipping_layer!((commands, assets) {
+    let main_target = render_target(&assets, [800, 800]);
+    camera_frame!((commands, assets){
+        dimension: [400, 400],
+        render_target: main_target,
+        layer: 1,
+        child: sprite! {
+            dimension: Size2::FULL,
+            sprite: main_target,
+        }
+    });
+
+    scrolling!((commands, assets) {
         dimension: [400, 400],
         scroll: Scrolling::POS_Y
             .with_recv(scroll_recv),
-        buffer: [800, 800],
         layer: 3,
         child: vbox! {
             anchor: Top,

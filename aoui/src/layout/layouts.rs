@@ -23,9 +23,9 @@ const _: Option<Box<dyn Layout>> = None;
 pub trait Layout: Downcast + Debug + Send + Sync + 'static {
     /// Place sprites in the layout.
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput;
-    /// If specified, dimension is considered reliable 
-    /// even if `Dimension` is a percentage of parent's.
-    fn dimension_agnostic(&self) -> bool { false }
+    /// Returns a reliable minimum size for percentage base dimension.
+    #[allow(unused_variables)]
+    fn reliable_dimension(&self, computed_size: Vec2) -> Vec2 { Vec2::ZERO }
 }
 
 impl_downcast!(Layout);
@@ -44,42 +44,70 @@ impl LayoutOutput {
     }
 }
 
-/// Dynamic layout perfectly containing its child, best used with padding.
+/// A dynamic dimensioned `Frame` that by default have size equal
+/// to the maximum of its children, this is subject to constraints.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
-pub struct FitLayout {
-    pub x: bool,
-    pub y: bool,
+pub struct BoundsLayout {
+    /// If set, use `Dimension` on that axis.
+    pub fixed: [bool; 2],
+    /// Minimum bounds.
+    pub min: Vec2,
+    /// Maximum bounds.
+    pub max: Vec2,
 }
 
-impl FitLayout {
-    pub const XY: Self = Self { x: true, y: true };
-    pub const X: Self = Self { x: true, y: false };
-    pub const Y: Self = Self { x: false, y: true };
-}
+impl BoundsLayout {
+    /// Ignore constraints and use `BoundsLayout` as padding.
+    pub const PADDING: Self = Self {
+        fixed: [false; 2],
+        min: Vec2::ZERO, 
+        max: Vec2::MAX
+    };
 
-impl Default for FitLayout {
-    fn default() -> Self {
-        FitLayout { x: true, y: true }
+    pub const fn from_max(max: Vec2) -> Self{
+        BoundsLayout {
+            fixed: [false; 2],
+            min: Vec2::ZERO,
+            max,
+        }
+    }
+
+    pub const fn from_min(min: Vec2) -> Self{
+        BoundsLayout {
+            fixed: [false; 2],
+            min,
+            max: Vec2::MAX
+        }
     }
 }
 
-impl Layout for FitLayout {
+impl Default for BoundsLayout {
+    fn default() -> Self {
+        Self::PADDING
+    }
+}
+
+impl Layout for BoundsLayout {
     fn place(&self, info: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
         let mut max = Vec2::ZERO;
         let entity_anchors: Vec<_> = entities.into_iter().map(|x| {
             max = max.max(x.dimension);
             (x.entity, x.anchor.as_vec())
         }).collect();
+        let dim = max.clamp(self.min, self.max);
 
         let dimension = Vec2::new(
-            if self.x {max.x} else {info.dimension.x},
-            if self.y {max.y} else {info.dimension.y},
+            if !self.fixed[0] {dim.x} else {info.dimension.x},
+            if !self.fixed[1] {dim.y} else {info.dimension.y},
         );
         LayoutOutput { entity_anchors, dimension }
     }
 
-    fn dimension_agnostic(&self) -> bool {
-        true
+    fn reliable_dimension(&self, computed_size: Vec2) -> Vec2 {
+        Vec2::new(
+            if self.fixed[0] {0.0} else {computed_size.x},
+            if self.fixed[1] {0.0} else {computed_size.y},
+        )
     }
 }
 

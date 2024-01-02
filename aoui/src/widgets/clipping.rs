@@ -45,7 +45,7 @@ pub struct CameraClip;
 /// ```
 #[derive(Bundle)]
 #[non_exhaustive]
-pub struct ClippingBundle {
+pub struct ScopedCameraBundle {
     pub clip: CameraClip,
     pub camera: Camera,
     pub camera_render_graph: CameraRenderGraph,
@@ -60,37 +60,45 @@ pub struct ClippingBundle {
     pub global: GlobalTransform,
 }
 
-impl ClippingBundle {
+
+/// Create an image suitable as render target.
+pub fn new_render_target(assets: &AssetServer, [width, height]: [u32; 2]) -> Handle<Image> {
+    assets.add(Image {
+        texture_descriptor: TextureDescriptor {
+            label: None,
+            size: Extent3d {
+                width,
+                height,
+                ..Default::default()
+            },
+            dimension: TextureDimension::D2,
+            format: TextureFormat::Bgra8UnormSrgb,
+            mip_level_count: 1,
+            sample_count: 1,
+            usage: TextureUsages::TEXTURE_BINDING
+                | TextureUsages::COPY_DST
+                | TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        },
+        data: vec![0; width as usize * height as usize * 4],
+        ..Default::default()
+    })
+}
+
+impl ScopedCameraBundle {
 
     /// Create a camera and its render target. 
     /// 
     /// You have to set the size of the target image here, which will not be resized.
     /// This might change in the future.
-    pub fn new(asset_server: &AssetServer, [width, height]: [u32; 2], layer: impl DslInto<RenderLayers>) -> (Self, Handle<Image>) {
-    
-        let image = Image {
-            texture_descriptor: TextureDescriptor {
-                label: None,
-                size: Extent3d {
-                    width,
-                    height,
-                    ..Default::default()
-                },
-                dimension: TextureDimension::D2,
-                format: TextureFormat::Bgra8UnormSrgb,
-                mip_level_count: 1,
-                sample_count: 1,
-                usage: TextureUsages::TEXTURE_BINDING
-                    | TextureUsages::COPY_DST
-                    | TextureUsages::RENDER_ATTACHMENT,
-                view_formats: &[],
-            },
-            data: vec![0; 1024 * 1024 * 4],
-            ..Default::default()
-        };
-        let target = asset_server.add(image);
+    pub fn new(assets: &AssetServer, dimension: [u32; 2], layer: impl DslInto<RenderLayers>) -> (Self, Handle<Image>) {
+        let target = new_render_target(assets, dimension);
+        (Self::from_image(target.clone(), layer), target)
+    }
+
+    pub fn from_image(target: Handle<Image>, layer: impl DslInto<RenderLayers>) -> Self {
         let bun = Camera2dBundle::default();
-        (Self { 
+        Self { 
             clip: CameraClip, 
             camera: Camera { 
                 target: RenderTarget::Image(target.clone()),
@@ -106,7 +114,7 @@ impl ClippingBundle {
             render_layer: layer.dinto(),
             build: BuildTransform(Anchor::Center),
             global: GlobalTransform::default(),
-        }, target)
+        }
     }
 }
 

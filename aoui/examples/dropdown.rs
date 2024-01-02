@@ -38,43 +38,46 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     let text_ctx = radio_button_group::<[_; 4]>("");
     let text_recv = text_ctx.recv();
-    check_button!((commands, assets){
+    frame!((commands, assets){
         dimension: size2!(22 em, 2 em),
-        on_change: send,
-        child: hspan! {
-            dimension: size2!(22 em, 2 em),
-            font_size: em(2),
-            child: text! {
-                anchor: Left,
-                text: "Selected Element:",
-                font: "ComicNeue-Bold.ttf",
+        child: check_button! {
+            dimension: Size2::FULL,
+            on_change: send,
+            child: hspan! {
+                dimension: size2!(22 em, 2 em),
+                font_size: em(2),
+                child: text! {
+                    anchor: Left,
+                    text: "Selected Element:",
+                    font: "ComicNeue-Bold.ttf",
+                },
+                child: text! {
+                    anchor: Left,
+                    text: "",
+                    font: "ComicNeue-Bold.ttf",
+                    extra: text_recv.map_recv::<SigText>(|x: &str| x.to_string())
+                },
             },
             child: text! {
-                anchor: Left,
-                text: "",
-                font: "ComicNeue-Bold.ttf",
-                extra: text_recv.map_recv::<SigText>(|x: &str| x.to_string())
+                font_size: em(2),
+                anchor: Right,
+                center: Center,
+                rotation: degrees(90),
+                text: "v",
+                extra: recv_rot.map_recv::<SigRotation>(|x: bool| if x {0.0} else {PI/2.0}),
+                extra: transition! (Rotation 0.5 CubicInOut default PI/2.0)
             },
         },
-        child: text! {
-            font_size: em(2),
-            anchor: Right,
-            center: Center,
-            rotation: degrees(90),
-            text: "v",
-            extra: recv_rot.map_recv::<SigRotation>(|x: bool| if x {0.0} else {PI/2.0}),
-            extra: transition! (Rotation 0.5 CubicInOut default PI)
-        },
-        child: clipping_layer! {
+        child: scrolling! {
             anchor: TopRight,
             parent_anchor: BottomRight,
             layer: 1,
-            buffer: [800, 800],
             scroll: Scrolling::Y,
+            clipping: false,
             extra: fold_recv.map_recv::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
             extra: transition! (Opacity 0.5 Linear default 0.0),
             dimension: size2!(14 em, 4 em),
-            child: use_opacity(|| vbox!((commands, assets){
+            child: vbox! {
                 anchor: Top,
                 child: #radio_button! {
                     dimension: size2!(14 em, 2 em),
@@ -98,7 +101,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                         text: #elements,
                     },
                 },
-            })),
+            },
         }
     });
 }

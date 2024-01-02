@@ -68,11 +68,9 @@ impl Default for Opacity {
     }
 }
 
-/// Writes opacity to the associated alpha value of sprite, text, etc.
-/// 
-/// This behavior is opt-in.
+/// Ignores writing opacity to the associated alpha value of sprite, text, etc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
-pub struct SetAlpha;
+pub struct IgnoreAlpha;
 
 /// Data related to clipping.
 #[derive(Debug, Component, Default)]

@@ -384,16 +384,14 @@ macro_rules! meta_dsl {
         {$($out:ident)?}
     ) => {
         {
-            use $crate::dsl::{DslInto, AouiCommands, Widget};
+            use $crate::dsl::{DslInto, AouiCommands};
             #[allow(clippy::needless_update)]
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()
             };
             let extras = ($($extras),*);
-            let children = entity.scope_fn(||
-                $crate::parse_children!(($commands) _children {$($child_type: $children),*} {})
-            );
+            let children = $crate::parse_children!(($commands) _children {$($child_type: $children),*} {});
             let out = $commands.spawn_aoui((
                 entity,
                 extras,
@@ -411,16 +409,14 @@ macro_rules! meta_dsl {
         {$($out:ident)?}
     ) => {
         {
-            use $crate::dsl::{DslInto, AouiCommands, Widget};
+            use $crate::dsl::{DslInto, AouiCommands};
             #[allow(clippy::needless_update)]
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()
             };
             let extras = ($($extras),*);
-            let children = entity.scope_fn(||
-                $crate::parse_children!(($commands,$assets) _children {$($child_type: $children),*} {})
-            );
+            let children = $crate::parse_children!(($commands,$assets) _children {$($child_type: $children),*} {});
             let out = $commands.spawn_aoui_with_assets(
                 &$assets, (
                     entity,
@@ -440,17 +436,14 @@ macro_rules! meta_dsl {
         {$($out:ident)?}
     ) => {
         {
-            use $crate::dsl::{DslInto, AouiCommands, Widget};
+            use $crate::dsl::{DslInto, AouiCommands};
             #[allow(clippy::needless_update)]
             let entity = $($path)* {
                 $($field: ($expr).dinto(),)*
                 ..Default::default()
             };
             let extras = ($($extras),*);
-            let children = entity.scope_fn(||
-                $crate::parse_children!($commands _children {$($child_type: $children),*} {})
-            );
-
+            let children = $crate::parse_children!($commands _children {$($child_type: $children),*} {});
             let out = $commands.spawn_aoui((
                 entity,
                 extras,
@@ -536,7 +529,7 @@ macro_rules! widget_extension {
             /// Z depth of the sprite.
             pub z: f32,
             /// If true, clips its children, requires no rotation to function properly
-            pub clipping: bool,
+            pub clipping: Option<bool>,
             /// Owned dimension of the sprite.
             /// 
             /// If not set, size is fetched dynamically from various sources.

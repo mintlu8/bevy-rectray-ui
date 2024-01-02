@@ -1,8 +1,13 @@
-use bevy::{ecs::{system::Commands, entity::Entity}, asset::AssetServer, sprite::Sprite, text::{Text, TextSection, TextStyle, BreakLineOn, Text2dBounds, TextLayoutInfo, Font}, render::{color::Color, texture::{Image, BevyDefault}, render_resource::{Extent3d, TextureDimension}}, math::{Vec2, Rect}};
+use bevy::{asset::AssetServer, sprite::Sprite};
+use bevy::ecs::{system::Commands, entity::Entity};
+use bevy::math::{Vec2, Rect};
+use bevy::text::{Text, TextSection, TextStyle, BreakLineOn, Text2dBounds, TextLayoutInfo, Font};
+use bevy::render::{color::Color, texture::{Image, BevyDefault}};
+use bevy::render::render_resource::{Extent3d, TextureDimension};
 
-use crate::{widget_extension, transform2d, dimension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, SetAlpha, build_frame, layout::Container};
+use crate::{widget_extension, transform2d, dimension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
 
-use super::{Widget, DslInto, apply_marker, get_layer, is_using_opacity, HandleOrString};
+use super::{Widget, DslInto, HandleOrString};
 
 widget_extension!(pub struct FrameBuilder {});
 widget_extension!(
@@ -58,11 +63,10 @@ impl Widget for FrameBuilder {
                 dimension: dimension!(self),
                 opacity: self.opacity,
                 vis: self.visible.dinto(),
-                clipping: Clipping::new(self.clipping),
+                clipping: Clipping::new(self.clipping.unwrap_or(false)),
                 ..Default::default()
             }
         );
-        apply_marker(&mut base);
         if let Some(event) = self.event {
             base.insert(event);
         }
@@ -73,8 +77,6 @@ impl Widget for FrameBuilder {
         }
         if let Some(layer) = self.layer {
             base.insert(layer);
-        } else if let Some(layer) = get_layer() {
-            base.insert(layer);
         }
         if let Some(layout) = self.layout {
             base.insert(Container {
@@ -83,9 +85,6 @@ impl Widget for FrameBuilder {
                 padding: self.padding.0,
                 range: self.children_range,
             });
-        }
-        if is_using_opacity() {
-            base.insert(SetAlpha);
         }
         let base = base.id();
         (base, base)

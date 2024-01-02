@@ -1,22 +1,29 @@
 use bevy::ecs::entity::Entity;
 use bevy::hierarchy::BuildChildren;
 use bevy::render::color::Color;
-use bevy::render::view::RenderLayers;
 use bevy::text::Font;
 use bevy::window::CursorIcon;
 use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel, SetCursor, PropagateFocus};
-use crate::widgets::scroll::IntoScrollingBuilder;
-use crate::widgets::scrollframe::ClippingBundle;
-use crate::{Anchor, Size2, Hitbox, build_frame, Clipping, Dimension};
-use crate::bundles::{AouiBundle, AouiSpriteBundle};
+use crate::{build_frame, Dimension};
+use crate::bundles::AouiBundle;
 use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit};
 use crate::widget_extension;
 use crate::widgets::inputbox::{TextColor, InputOverflow};
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea, InputBoxText};
 
-use super::context::with_layer;
-use super::{Widget, get_layer, HandleOrString};
+use super::{Widget, HandleOrString};
 use super::converters::OptionX;
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! inject_event {
+    ($this: expr, $flags: expr) => {
+        match &mut $this {
+            Some(event) => *event = *event | $flags,
+            None => $this = Some($flags),
+        }
+    };
+}
 
 widget_extension!(
     pub struct InputBoxBuilder {
@@ -32,17 +39,14 @@ widget_extension!(
 );
 
 impl Widget for InputBoxBuilder {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+        inject_event!(self.event, EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside);
         let mut entity = build_frame!(commands, self);
         entity.insert((
             InputBox::new(&self.text, self.overflow),
             TextColor(self.color.expect("color is required.")),
             self.font.get(assets),
-            self.event.unwrap_or(EventFlags::LeftDrag)|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside,
         ));
-        if self.hitbox.is_none() {
-            entity.insert(Hitbox::FULL);
-        }
         if !self.on_submit.is_empty()  {
             entity.insert(self.on_submit);
         }
@@ -88,7 +92,8 @@ widget_extension!(
 );
 
 impl Widget for ButtonBuilder {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftPressed);
         let mut entity = build_frame!(commands, self);
         entity.insert((
             PropagateFocus,
@@ -97,11 +102,7 @@ impl Widget for ButtonBuilder {
                 flags: EventFlags::Hover|EventFlags::LeftPressed,
                 icon: self.cursor.unwrap_or(CursorIcon::Hand),
             },
-            self.event.unwrap_or(EventFlags::LeftClick) | EventFlags::LeftClick | EventFlags::Hover,
         ));
-        if self.hitbox.is_none() {
-            entity.insert(Hitbox::FULL);
-        }
         if !self.on_click.is_empty()  {
             entity.insert(self.on_click);
         }
@@ -130,7 +131,8 @@ widget_extension!(
 );
 
 impl Widget for CheckButtonBuilder {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftPressed);
         let mut  entity = build_frame!(commands, self);
         entity.insert((
             PropagateFocus,
@@ -139,11 +141,7 @@ impl Widget for CheckButtonBuilder {
                 flags: EventFlags::Hover|EventFlags::LeftPressed,
                 icon: self.cursor.unwrap_or(CursorIcon::Hand),
             },
-            self.event.unwrap_or(EventFlags::LeftClick) | EventFlags::LeftClick | EventFlags::Hover,
         ));
-        if self.hitbox.is_none() {
-            entity.insert(Hitbox::FULL);
-        }
         if !self.on_checked.is_empty() {
             entity.insert(self.on_checked);
         }
@@ -173,7 +171,8 @@ widget_extension!(
 );
 
 impl Widget for RadioButtonBuilder {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftPressed);
         let mut entity = build_frame!(commands, self);
 
         entity.insert((
@@ -184,11 +183,7 @@ impl Widget for RadioButtonBuilder {
             },
             self.context.expect("Expected RadioButton context."),
             self.value.expect("Expected RadioButton value."),
-            self.event.unwrap_or(EventFlags::LeftClick) | EventFlags::LeftClick | EventFlags::Hover,
         ));
-        if self.hitbox.is_none() {
-            entity.insert(Hitbox::FULL);
-        }
         if self.cancellable {
             entity.insert(RadioButtonCancel);
         }
@@ -199,20 +194,29 @@ impl Widget for RadioButtonBuilder {
     }
 }
 
-/// Construct a button.
+/// Construct a button. The underlying struct is [`ButtonBuilder`].
 /// 
-/// See [`ButtonBuilder`].
+/// # Features
 /// 
-/// This doesn't do a whole lot by itself, these are what `button` does:
+/// `button` is a widget primitive with no default look. You need to nest
+/// `sprite` or `text` as children to make `button` function properly.
 /// 
-/// * Add a event listener for `Hover` and `Click`
+/// These are what `button` does compared to `frame`:
+/// 
+/// * Add event listeners for `Hover` and `Click`
 /// * Change cursor icon when hovering or pressing.
-/// * Propagate its status `Down`, `Click`, `Hover`, `Pressed` to its direct children.
-/// * Allow usage of `EvButtonClick` event.
+/// * Propagate its status `Down`, `Click`, `Hover`, `Pressed` to its descendants.
+/// * Allow usage of `EvButtonClick` event. Which uses the button's [`Payload`].
 /// 
 /// You can use [`Handlers`] to handle clicks
 /// and use [`DisplayIf`](crate::widgets::button::DisplayIf) 
 /// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
+/// 
+/// # Common Pitfall
+/// 
+/// Do not nest `button`, `check_button` or `radio_button` inside a button.
+/// Button propagates its state to all its descendants and can inject unwanted state.
+/// Introduce a common parent instead.
 #[macro_export]
 macro_rules! button {
     {$commands: tt {$($tt:tt)*}} => 
@@ -240,90 +244,4 @@ macro_rules! check_button {
 macro_rules! radio_button {
     {$commands: tt {$($tt:tt)*}} => 
         {$crate::meta_dsl!($commands [$crate::dsl::builders::RadioButtonBuilder] {$($tt)*})};
-}
-
-widget_extension!(
-    pub struct ClippingFrameBuilder[B: IntoScrollingBuilder] {
-        /// If set, configure scrolling for this widget.
-        pub scroll: Option<B>,
-        /// Set the size of the buffer this is rendered to, won't be resized dynamically.
-        pub buffer: [u32; 2],
-        /// Layer of the render target, uses scoped layer if not specified. 
-        pub original_layer: Option<RenderLayers>,
-        /// Sets the viewport of the camera, note default is `Inherit`, which is dynamic.
-        pub camera_dimension: Option<Size2>,
-    }
-);
-
-impl<B: IntoScrollingBuilder> Widget for ClippingFrameBuilder<B> {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (Entity, Entity) {
-        if self.buffer[0] == 0 || self.buffer[1] == 0 {
-            panic!("Buffer size cannot be 0.")
-        };
-        let entity = build_frame!(commands, self).id();
-        commands.entity(entity).insert(Clipping::new(true));
-        let (clip, image) = ClippingBundle::new(
-            assets.expect("Please pass in the asset server."), 
-            self.buffer, 
-            self.layer.expect("Please specify a render layer.")
-        );
-        let camera = commands.spawn((
-            AouiBundle::empty(Anchor::Center, self.camera_dimension.unwrap_or(Size2::FULL)),
-            clip
-        )).id();
-        let mut render_target = commands.spawn(AouiSpriteBundle {
-            dimension: Dimension::INHERIT,
-            texture: image,
-            ..Default::default()
-        });
-        if let Some(layer) = self.original_layer {
-            render_target.insert(layer);
-        } else if let Some(layer) = get_layer(){
-            render_target.insert(layer);
-        }
-        let render_target = render_target.id();
-        let container = if let Some(scroll) = self.scroll {
-            let container = commands.spawn(AouiBundle {
-                dimension: Dimension::INHERIT,
-                ..Default::default()
-            }).id();
-            let mut frame = commands.spawn((AouiBundle {
-                    dimension: Dimension::INHERIT,
-                    ..Default::default()
-                },
-                EventFlags::MouseWheel,
-                scroll.with_constraints(),
-                Hitbox::FULL,
-            ));
-            frame.add_child(container);
-            let frame = frame.id();
-            commands.entity(entity).push_children(&[camera, render_target, frame]);
-            container
-        } else {
-            let container = commands.spawn(AouiBundle {
-                dimension: Dimension::INHERIT,
-                ..Default::default()
-            }).id();
-            commands.entity(entity).push_children(&[camera, render_target, container]);
-            container
-        };
-        (entity, container)
-    }
-
-    fn scope_fn<T>(&self, f: impl FnOnce() -> T) -> T {
-        with_layer(self.layer.expect("Expected layer"), f)
-    }
-}
-
-
-/// Constructs a layer that clips its inner content.
-/// 
-/// See [`ClippingFrameBuilder`].
-/// 
-/// This spawns a camera, uses a new render layer
-/// and renders to a new render target. 
-#[macro_export]
-macro_rules! clipping_layer {
-    {$commands: tt {$($tt:tt)*}} => 
-        {$crate::meta_dsl!($commands [$crate::dsl::builders::ClippingFrameBuilder] {$($tt)*})};
 }

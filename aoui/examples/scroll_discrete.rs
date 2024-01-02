@@ -33,7 +33,7 @@ pub fn init(mut commands: Commands) {
 
     let s = "abcdefghijklmnopqrstuvwxyz".chars();
     
-    use_opacity(||vbox! (commands {
+    vbox! (commands {
         dimension: [200, 60],
         hitbox: Rect(1),
         event: EventFlags::MouseWheel,
@@ -43,7 +43,7 @@ pub fn init(mut commands: Commands) {
         child: #text! {
             text: #s
         }
-    }));
+    });
 }
 
     

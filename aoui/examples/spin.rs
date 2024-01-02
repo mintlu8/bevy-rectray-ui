@@ -35,7 +35,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         text: "I'm Spinning!",
         font: "ComicNeue-Bold.ttf",
         color: color!(cyan),
-        extra: SetAlpha,
         extra: transition!(
             Opacity 5 CubicOut init (0.0, 1.0);
             Offset 2 Linear loop (Vec2::new(-200.0, 0.0), Vec2::new(200.0, 0.0));

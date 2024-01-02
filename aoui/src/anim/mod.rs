@@ -60,7 +60,7 @@
 //! * If target is the source of current animation, reverse.
 //! * Otherwise interpolate to the target.
 
-use bevy::{ecs::schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, app::{Update, Plugin}, render::color::Color, sprite::{Sprite, TextureAtlasSprite}, text::Text};
+use bevy::{ecs::{schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, query::WorldQuery}, app::{Update, Plugin}, render::{color::Color, view::Visibility}, sprite::{Sprite, TextureAtlasSprite}, text::Text};
 
 use ::interpolation::Ease;
 pub use ::interpolation::EaseFunction;
@@ -115,6 +115,32 @@ pub struct InterpolationSet;
 /// SystemSet for time update of interpolation.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, SystemSet)]
 pub struct InterpolationUpdateSet;
+
+#[derive(Debug, WorldQuery)]
+#[world_query(mutable)]
+pub struct VisibilityToggle {
+    pub visibility: &'static mut Visibility,
+    pub opacity: &'static mut Opacity,
+    pub interpolate: Option<&'static mut Interpolate<Opacity>>,
+}
+
+impl VisibilityToggleItem<'_> {
+    pub fn set_visible(&mut self, value: bool) {
+        match &mut self.interpolate {
+            Some(inter) => {
+                self.opacity.disabled = value;
+                inter.interpolate_to(if value {1.0} else {0.0});
+            },
+            None => {
+                self.opacity.disabled = value;
+                *self.visibility = match value {
+                    true => Visibility::Inherited,
+                    false => Visibility::Hidden,
+                }
+            },
+        }
+    }
+}
 
 pub(crate) struct AnimationPlugin;
 

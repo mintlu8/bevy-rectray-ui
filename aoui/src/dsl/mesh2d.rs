@@ -7,12 +7,14 @@ use crate::{BuildMeshTransform, build_frame, widget_extension};
 use super::{Widget, converters::HandleOrAsset};
 
 widget_extension!(
-    /// A `MaterialMesh2D` with a rectangle mesh.
+    /// Construct a sprite with a custom [`Material2d`](bevy::sprite::Material2d).
     pub struct MaterialSpriteBuilder[M: Material2d] {
+        /// Material of the sprite.
         pub material: HandleOrAsset<M>,
     }
 );
 
+/// Construct a mesh rectangle use in `material_sprite!`.
 pub fn mesh_rectangle() -> Mesh {
     Mesh::new(PrimitiveTopology::TriangleList)
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, 
@@ -46,7 +48,9 @@ impl<M: Material2d> Widget for MaterialSpriteBuilder<M> {
 }
 
 
-/// Construct a compact layout.
+/// Construct a sprite with a custom [`Material2d`](bevy::sprite::Material2d).
+/// 
+/// See [`MaterialSpriteBuilder`].
 #[macro_export]
 macro_rules! material_sprite {
     {$commands: tt {$($tt:tt)*}} => {
@@ -57,8 +61,11 @@ macro_rules! material_sprite {
 }
 
 widget_extension!(
+    /// Construct a [`Mesh2d`](bevy::sprite::Mesh2d) with a custom [`Material2d`](bevy::sprite::Material2d).
     pub struct MaterialMeshBuilder[M: Material2d] {
+        /// Mesh of the sprite.
         pub mesh: HandleOrAsset<Mesh>,
+        /// Material of the sprite.
         pub material: HandleOrAsset<M>,
     }
 );
@@ -77,7 +84,10 @@ impl<M: Material2d> Widget for MaterialMeshBuilder<M> {
 }
 
 
-/// Construct a compact layout.
+
+/// Construct a [`Mesh2d`](bevy::sprite::Mesh2d) with a custom [`Material2d`](bevy::sprite::Material2d).
+/// 
+/// See [`MaterialMeshBuilder`].
 #[macro_export]
 macro_rules! material_mesh{
     {$commands: tt {$($tt:tt)*}} => {

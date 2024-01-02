@@ -71,6 +71,10 @@ impl Object {
         self.0.as_ref().and_then(|x| x.dyn_clone().downcast().ok().map(|x| *x))
     }
 
+    pub fn get_ref<T: DataTransfer>(&self) -> Option<&T> {
+        self.0.as_ref().and_then(|x| x.downcast_ref())
+    }
+
     pub fn clean(&mut self) {
         self.0.take();
     }

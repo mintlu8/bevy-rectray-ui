@@ -1,4 +1,4 @@
-use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
+use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder};
 
 pub fn main() {
@@ -11,7 +11,6 @@ pub fn main() {
             ..Default::default()
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
-        .add_plugins(LogDiagnosticsPlugin::default())
         .add_systems(Startup, init)
         .add_plugins(AouiPlugin)
         .run();
@@ -21,12 +20,34 @@ pub fn main() {
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    clipping_layer!(commands {
+
+    text!(commands {
+        anchor: TopRight,
+        text: "FPS: 0.00",
+        color: color!(gold),
+        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+    });
+    
+    let target = render_target(&assets, [800, 800]);
+
+    camera_frame!((commands, assets) {
         dimension: [400, 400],
         offset: [-200, 0],
-        buffer: [800, 800],
-        scroll: Scrolling::Y,
+        render_target: target.clone(),
         layer: 1,
+    });
+
+    sprite!((commands, assets) {
+        dimension: [400, 400],
+        offset: [-200, 0],
+        sprite: target
+    });
+    
+
+    scrolling!(commands {
+        dimension: [400, 400],
+        offset: [-200, 0],
+        scroll: Scrolling::Y,
         child: text! {
             anchor: TopLeft,
             bounds: [390, 999999],
@@ -40,15 +61,27 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
         }
     });
 
+    let target = render_target(&assets, [800, 800]);
+    
+    camera_frame!((commands, assets) {
+        dimension: [400, 400],
+        offset: [200, 0],
+        render_target: target.clone(),
+        layer: 1,
+    });
 
-    // This showcases bulk inserting multiple entities with the `with_layer` scope.
-    // This will changed the default layer of all macros invoked in the closure.
-    // For the `clipped_frame` widget, only `original_layer` is affected by this.
-    let entity = with_layer(2, || {
+    sprite!((commands, assets) {
+        dimension: [400, 400],
+        offset: [200, 0],
+        sprite: target
+    });
+    
+
+    let entity = {
         let mut builder = RichTextBuilder::new(&mut commands, assets.load("ComicNeue-Regular.ttf"))
             .configure_size(assets.load("ComicNeue-Regular.ttf"), 32.0)
-            .with_color(Color::WHITE);
-            // `.with_layer(2)` also works, but we are showcasing bulk insertion here.
+            .with_color(Color::WHITE)
+            .with_layer(1);
 
         builder.push_str(r#"{red:Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris semper magna nibh, nec tincidunt metus fringilla id. Phasellus viverra elit volutpat orci lacinia, non suscipit odio egestas. Praesent urna ipsum, viverra non dui id, auctor sodales sem. Quisque ut mi sit amet quam ultricies cursus at vitae justo. Morbi egestas pulvinar dui id elementum. Aliquam non aliquam eros. Nam euismod in lectus sit amet blandit. Aenean mauris diam, auctor ut massa sed, convallis congue leo. Maecenas non nibh semper, tempor velit sit amet, facilisis lacus. Curabitur nec leo nisl. Proin vitae fringilla nisl. Sed vel hendrerit mi. Donec et cursus risus, at euismod justo.}
         
@@ -64,11 +97,10 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
             dimension: [400, 400],
         });
         commands.entity(para).push_children(&children).id()
-    });
-    clipping_layer!(commands {
+    };
+    scrolling!(commands {
         dimension: [400, 400],
         offset: [200, 0],
-        buffer: [800, 800],
         scroll: Scrolling::Y,
         layer: 2,
         child: entity

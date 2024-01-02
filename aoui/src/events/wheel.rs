@@ -1,7 +1,7 @@
 use bevy::{input::mouse::{MouseWheel, MouseScrollUnit}, math::{Vec2, IVec2}, window::{Window, PrimaryWindow}, render::camera::Camera, transform::components::GlobalTransform, ecs::{component::Component, system::{Resource, Local, Res}}};
 use bevy::ecs::{system::{Query, Commands}, event::EventReader, query::{With, Without}, entity::Entity};
 
-use crate::widgets::scrollframe::CameraClip;
+use crate::widgets::clipping::CameraClip;
 
 use super::{EventFlags, AouiCamera, CursorDetection, ActiveDetection};
 

@@ -1,4 +1,4 @@
-//! Bevy Aoui is an ECS based 2D and UI solution for the bevy engine.
+//! Bevy Aoui is an component based 2D and UI solution for the bevy engine.
 //! 
 //!
 //! # Getting Started
@@ -24,7 +24,7 @@
 //! # */
 //! ```
 //! 
-//! If you don't like the DSL you can try using our [bundles] or [widget builders](crate::dsl::builders).;
+//! If you don't like the DSL you can use our [bundles] or [widget builders](crate::dsl::builders).;
 //! 
 //! Create a sprite:
 //! 
@@ -40,7 +40,8 @@
 //! ```
 //! 
 //! This spawns a "Ferris.png" to the center left of the screen,
-//! moved to the right by 40 px, with dimension 200 px * 200 px.
+//! moved to the right by 40 px, with dimension 200 px * 200 px,
+//! and returns an [`Entity`](bevy::ecs::entity::Entity).
 //! 
 //! Create a stack of words:
 //! 

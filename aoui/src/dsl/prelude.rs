@@ -35,7 +35,6 @@ pub use crate::events::{
     EvPositionFactor,
     Handlers, Handler, OneShot, Mutation
 };
-pub use crate::SetAlpha;
 pub use crate::signals::{signal, fps_signal, Sender, Receiver, types::*};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::SharedPosition;
@@ -45,6 +44,7 @@ pub use crate::widgets::button::{
 };
 pub use crate::widgets::scroll::{Scrolling, IntoScrollingBuilder};
 pub use crate::widgets::drag::IntoDraggingBuilder;
+pub use crate::widgets::clipping::new_render_target as render_target;
 
 pub const FlipX: [bool; 2] = [true, false];
 pub const FlipY: [bool; 2] = [false, true];
@@ -73,10 +73,8 @@ pub use crate::{frame, sprite, text, atlas};
 pub use crate::{material_sprite, material_mesh};
 //pub use crate::{one_shot, handler};
 pub use crate::{padding, paragraph, hbox, vbox, hspan, vspan, linebreak};
-pub use crate::{inputbox, button, check_button, radio_button, clipping_layer};
+pub use crate::{inputbox, button, check_button, radio_button, camera_frame, scrolling};
 pub use crate::rectangle;
-
-pub use crate::dsl::context::{with_layer, use_opacity, with_marker};
 
 use bevy::ecs::bundle::Bundle;
 use bevy::transform::components::GlobalTransform;

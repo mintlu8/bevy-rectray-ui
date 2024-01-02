@@ -2,7 +2,7 @@ use bevy::{math::Vec2, ecs::{system::Query, query::{With, Without}, component::C
 use bevy::window::{CursorIcon, Window, PrimaryWindow};
 use crate::Transform2D;
 
-use crate::widgets::scrollframe::CameraClip;
+use crate::widgets::clipping::CameraClip;
 
 use super::AouiCamera;
 

@@ -1,6 +1,6 @@
 use bevy::{prelude::*, window::{Window, PrimaryWindow}};
 
-use crate::widgets::scrollframe::CameraClip;
+use crate::widgets::clipping::CameraClip;
 
 use super::*;
 

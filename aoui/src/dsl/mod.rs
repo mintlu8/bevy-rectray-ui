@@ -1,3 +1,5 @@
+//! `bevy_aoui`'s DSL.
+
 mod convert;
 mod util;
 mod core;
@@ -10,11 +12,11 @@ mod layouts;
 mod widgets;
 mod oneshot;
 mod meta_dsl;
-mod context;
 mod mesh2d;
 mod atlas;
 mod interpolate;
 mod converters;
+mod clipping;
 //mod rich_text;
 
 pub use converters::*;
@@ -28,7 +30,6 @@ pub use mesh2d::mesh_rectangle;
 
 pub mod prelude;
 pub use convert::{DslFrom, DslInto};
-pub use context::{get_layer, is_using_opacity, apply_marker};
 
 pub mod builders {
     pub use super::core::{FrameBuilder, SpriteBuilder, RectangleBuilder, TextBuilder};
@@ -36,8 +37,9 @@ pub mod builders {
     pub use super::atlas::AtlasBuilder;
 
     pub use super::layouts::PaddingBuilder;
-    pub use super::widgets::{InputBoxBuilder, CheckButtonBuilder, RadioButtonBuilder, ButtonBuilder, ClippingFrameBuilder};
+    pub use super::widgets::{InputBoxBuilder, CheckButtonBuilder, RadioButtonBuilder, ButtonBuilder};
     pub use super::mesh2d::{MaterialSpriteBuilder, MaterialMeshBuilder};
+    pub use super::clipping::{CameraFrameBuilder, ScrollingFrameBuilder};
 }
 
 /// Construct an empty sprite.
@@ -98,10 +100,6 @@ pub trait Widget: Sized {
     }
     /// This function should panic if assets is needed but is `None`.
     fn spawn_with(self, commands: &mut Commands, assets: Option<&AssetServer>) -> (Entity, Entity);
-
-    fn scope_fn<T>(&self, f: impl FnOnce() -> T) -> T{
-        f()
-    }
 }
 
 /// Construct marker components by name.
