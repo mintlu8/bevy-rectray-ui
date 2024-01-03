@@ -19,7 +19,7 @@ use super::converters::OptionX;
 macro_rules! inject_event {
     ($this: expr, $flags: expr) => {
         match &mut $this {
-            Some(event) => *event = *event | $flags,
+            Some(event) => *event |= $flags,
             None => $this = Some($flags),
         }
     };
@@ -35,17 +35,23 @@ widget_extension!(
         pub on_change: Handlers<EvTextChange>,
         pub on_submit: Handlers<EvTextSubmit>,
         pub overflow: InputOverflow,
+        /// Sets the CursorIcon when hovering this button, default is `Text`
+        pub cursor_icon: Option<CursorIcon>,
     }
 );
 
 impl Widget for InputBoxBuilder {
     fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
-        inject_event!(self.event, EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside);
+        inject_event!(self.event, EventFlags::Hover|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside);
         let mut entity = build_frame!(commands, self);
         entity.insert((
             InputBox::new(&self.text, self.overflow),
             TextColor(self.color.expect("color is required.")),
             self.font.get(assets),
+            SetCursor {
+                flags: EventFlags::Hover|EventFlags::LeftDrag,
+                icon: self.cursor_icon.unwrap_or(CursorIcon::Text),
+            },
         ));
         if !self.on_submit.is_empty()  {
             entity.insert(self.on_submit);
@@ -73,7 +79,7 @@ impl Widget for InputBoxBuilder {
         (entity, entity)
     }
 }
-/// Construct a textbox.
+/// Construct a `input_box`. The underlying struct is [`InputBoxBuilder`].
 #[macro_export]
 macro_rules! inputbox {
     {$commands: tt {$($tt:tt)*}} => 
@@ -93,7 +99,7 @@ widget_extension!(
 
 impl Widget for ButtonBuilder {
     fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
-        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftPressed);
+        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftClick);
         let mut entity = build_frame!(commands, self);
         entity.insert((
             PropagateFocus,
@@ -132,7 +138,7 @@ widget_extension!(
 
 impl Widget for CheckButtonBuilder {
     fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
-        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftPressed);
+        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftClick);
         let mut  entity = build_frame!(commands, self);
         entity.insert((
             PropagateFocus,
@@ -172,7 +178,7 @@ widget_extension!(
 
 impl Widget for RadioButtonBuilder {
     fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
-        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftPressed);
+        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftClick);
         let mut entity = build_frame!(commands, self);
 
         entity.insert((
@@ -223,11 +229,32 @@ macro_rules! button {
         {$crate::meta_dsl!($commands [$crate::dsl::builders::ButtonBuilder] {$($tt)*})};
 }
 
-/// Construct a check button
+
+/// Construct a `check_button`. The underlying struct is [`CheckButtonBuilder`].
 /// 
-/// See [`CheckButtonBuilder`].
+/// # Features
 /// 
-/// On top of [`button`], this stores an internal boolean representation.
+/// `check_button` is a widget primitive with no default look. You need to nest
+/// `sprite` or `text` as children to make `check_button` function properly.
+/// 
+/// These are what `check_button` does compared to `frame`:
+/// 
+/// * Add event listeners for `Hover` and `Click`
+/// * Change cursor icon when hovering or pressing.
+/// * Propagate its status `Down`, `Click`, `Hover`, `Pressed` to its descendants.
+/// * Hold a boolean context value for if the button is checked or not. 
+/// * Generate `CheckButtonState` based on the context. 
+/// * Allow usage of `EvButtonClick` event. Which uses the button's [`Payload`].
+/// 
+/// You can use [`Handlers`] to handle clicks
+/// and use [`DisplayIf`](crate::widgets::button::DisplayIf) 
+/// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
+/// 
+/// # Common Pitfall
+/// 
+/// Do not nest `button`, `check_button` or `radio_button` inside a button.
+/// Button propagates its state to all its descendants and can inject unwanted state.
+/// Introduce a common parent instead.
 #[macro_export]
 macro_rules! check_button {
     {$commands: tt {$($tt:tt)*}} => 
@@ -235,11 +262,34 @@ macro_rules! check_button {
 }
 
 
-/// Construct a radio button
+/// Construct a `radio_button`. The underlying struct is [`RadioButtonBuilder`].
 /// 
-/// See [`RadioButtonBuilder`].
+/// This is in fact very versatile and can be used for any exclusive UI elements
+/// like a dropdown select or an accordion.
 /// 
-/// On top of [`button`], this stores an internal [`Payload`] value.
+/// # Features
+/// 
+/// `radio_button` is a widget primitive with no default look. You need to nest
+/// `sprite` or `text` as children to make `radio_button` function properly.
+/// 
+/// These are what `radio_button` does compared to `frame`:
+/// 
+/// * Add event listeners for `Hover` and `Click`
+/// * Change cursor icon when hovering or pressing.
+/// * Propagate its status `Down`, `Click`, `Hover`, `Pressed` to its descendants.
+/// * Hold a [`Payload`] value as a discriminant. 
+/// * Generate `CheckButtonState` based on the context and payload. 
+/// * Send payload value through `EvButtonClick`.
+/// 
+/// You can use [`Handlers`] to handle clicks
+/// and use [`DisplayIf`](crate::widgets::button::DisplayIf) 
+/// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
+/// 
+/// # Common Pitfall
+/// 
+/// Do not nest `button`, `check_button` or `radio_button` inside a button.
+/// Button propagates its state to all its descendants and can inject unwanted state.
+/// Introduce a common parent instead.
 #[macro_export]
 macro_rules! radio_button {
     {$commands: tt {$($tt:tt)*}} => 

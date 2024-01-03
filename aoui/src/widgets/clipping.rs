@@ -14,35 +14,7 @@ use crate::dsl::DslInto;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Component)]
 pub struct CameraClip;
 
-/// Allow a frame to clip its out-of-bounds children.
-/// 
-/// This spawns a camera that draws its enclosed rectangle, which uses a new render layer.
-/// you are responsible to ensure the render layers used don't overlap.
-/// 
-/// The entity this bundle is attached to should not be rendered, since the entity
-/// has to use `Anchor::Center` as its `GlobalTransform`
-/// and hold it's children's `RenderLayers` for the camera.
-/// 
-/// In idiomatic usage, attach the generated `Handle<Image>` to a child `Sprite` on the 
-/// main render layer `0` with dimension `[100%, 100%]`
-/// and add children to it on a new render layer.
-/// 
-/// ```
-/// # /*
-/// let (clip, sprite) = ClippingBundle::new(&assets, [800, 800], 1);
-/// frame!(commands {
-///     dimension: [400, 400],
-///     extra: clip,
-///     child: sprite! {
-///         sprite: sprite,
-///         dimension: Size2::FULL,
-///         child: sprite! {
-///             layer: 1
-///         }
-///     }
-/// }
-/// # */
-/// ```
+/// A bundle that spawns a camera that draws its enclosed rectangle to a render target.
 #[derive(Bundle)]
 #[non_exhaustive]
 pub struct ScopedCameraBundle {
@@ -88,14 +60,12 @@ pub fn new_render_target(assets: &AssetServer, [width, height]: [u32; 2]) -> Han
 impl ScopedCameraBundle {
 
     /// Create a camera and its render target. 
-    /// 
-    /// You have to set the size of the target image here, which will not be resized.
-    /// This might change in the future.
     pub fn new(assets: &AssetServer, dimension: [u32; 2], layer: impl DslInto<RenderLayers>) -> (Self, Handle<Image>) {
         let target = new_render_target(assets, dimension);
         (Self::from_image(target.clone(), layer), target)
     }
 
+    /// Create a camera from a render target.
     pub fn from_image(target: Handle<Image>, layer: impl DslInto<RenderLayers>) -> Self {
         let bun = Camera2dBundle::default();
         Self { 
@@ -118,7 +88,7 @@ impl ScopedCameraBundle {
     }
 }
 
-pub fn clipping_layer(
+pub fn sync_camera_dimension(
     mut query: Query<(&DimensionData, &mut OrthographicProjection), With<CameraClip>>,
 ) {
     for (dimension, mut proj) in query.iter_mut() {

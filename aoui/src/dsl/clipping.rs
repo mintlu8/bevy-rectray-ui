@@ -1,7 +1,7 @@
 use bevy::{render::texture::Image, hierarchy::BuildChildren, ecs::entity::Entity, asset::Handle};
 
-use crate::{widget_extension, widgets::{scroll::IntoScrollingBuilder, clipping::ScopedCameraBundle}, build_frame, Clipping, frame, Size2, events::EventFlags};
-use super::Widget;
+use crate::{widget_extension, widgets::{scroll::IntoScrollingBuilder, clipping::ScopedCameraBundle}, build_frame, Clipping, frame, Size2, events::EventFlags, layout::BoundsLayout};
+use super::{Widget, DslInto};
 
 widget_extension!(
     /// A camera with its viewport bound to a sprite's `RotatedRect`.`
@@ -40,7 +40,7 @@ impl<B: IntoScrollingBuilder> Widget for ScrollingFrameBuilder<B> {
         }
         let entity = build_frame!(commands, self).id();
         commands.entity(entity).insert(self.scroll.expect("Expect `scroll`").with_constraints());
-        if self.clipping == None {
+        if self.clipping.is_none(){
             commands.entity(entity).insert(Clipping::new(true));
         }
         let container = frame!(commands {

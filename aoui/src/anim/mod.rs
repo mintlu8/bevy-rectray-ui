@@ -159,7 +159,10 @@ impl Plugin for AnimationPlugin {
                 <(TextureAtlasSprite, Color)>::system,
                 <(Text, Color)>::system,
                 <(Sprite, Color)>::system,
-                <(Opacity, Opacity)>::system,
+                <(Opacity, Color)>::system,
+                <(Opacity, Opacity)>::system.after(
+                    <(Opacity, Color)>::system
+                ),
                 <(TextureAtlasSprite, Index)>::system,
             ).in_set(InterpolationSet))
             .add_systems(Update, (

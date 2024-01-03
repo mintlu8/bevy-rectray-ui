@@ -6,6 +6,8 @@ pub fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 present_mode: bevy::window::PresentMode::AutoNoVsync,
+                ime_enabled: true,
+                ime_position: Vec2::new(300.0, 300.0),
                 ..Default::default()
             }),
             ..Default::default()
@@ -51,7 +53,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         font_size: em(4),
         hitbox: Rect(1),
         text: "I'm rotated!",
-        font: "RobotoCondensed.ttf",
+        font: "ComicNeue-Regular.ttf",
         color: color!(red),
         cursor_bar: rectangle! {
             color: color!(gold),

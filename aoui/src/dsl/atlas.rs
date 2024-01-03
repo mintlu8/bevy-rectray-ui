@@ -41,7 +41,7 @@ widget_extension!(pub struct AtlasBuilder {
     /// (requires an importer for `TextureAtlas`)
     /// * Handle: `Handle<TextureAtlas>`
     /// * Struct: `TextureAtlas`
-    /// * Rectangles: `Vec<Rect>`, `[Rect; N]`
+    /// * Rectangles: `Vec<Rect>`, `[Rect; N]`, `[[f32; 4]; N]`
     /// * Subdivision: `UVec2`, `[u32; 2]`
     /// * Grid: `AtlasGrid { .. }`
     /// * Unspecified: Builds a atlas with `sprites`
@@ -159,7 +159,7 @@ impl Widget for AtlasBuilder {
     }
 }
 
-/// Construct a texture atlas sprite.
+/// Construct a texture atlas sprite. The underlying struct is [`AtlasBuilder`].
 #[macro_export]
 macro_rules! atlas {
     {$commands: tt {$($tt:tt)*}} => {

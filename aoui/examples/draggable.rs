@@ -1,7 +1,7 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::{AouiPlugin, WorldExtension};
+use bevy_aoui::{AouiPlugin, WorldExtension, Transform2D};
 
 pub fn main() {
     App::new()
@@ -69,13 +69,21 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         child: rectangle! {
             dimension: [50, 50],
             anchor: Right,
+            center: Center,
             color: color!(aqua),
             event: EventFlags::Hover|EventFlags::LeftDrag,
             extra: SetCursor { 
                 flags: EventFlags::Hover|EventFlags::LeftDrag, 
                 icon: CursorIcon::Hand,
             },
-            extra: DragX.with_handler(send1),
+            extra: DragX.with_handler(
+                Handlers::new(send1).and_mutate(
+                    |fac: f32, transform: &mut Transform2D, dim: &mut Dimension| {
+                        transform.rotation = fac * 2.0 * PI;
+                        dim.edit_raw(|v| v.y = 50.0 + (1.0 - fac) * 50.0)
+                    }
+                )
+            ),
         }
     });
 

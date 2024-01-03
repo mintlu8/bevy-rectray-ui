@@ -12,7 +12,7 @@ use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;
 
-use super::mutation::Mutation;
+use super::mutation::{Mutation, DynMutation, IntoMutationCommand};
 use super::oneshot::OneShot;
 use super::{EvLoseFocus, EvObtainFocus, EvButtonClick, EvTextSubmit, EvTextChange, EvToggleChange, EvMouseDrag, EvPositionFactor};
 
@@ -36,8 +36,10 @@ impl<T: EventHandling> Default for Handlers<T> {
 pub enum Handler<T: EventHandling> {
     /// Run a oneshot system, currently characterized by being agnostic to the caller.
     OneShotSystem(OneShot),
-    /// Mutate a component associated with this entity.
-    Mutation(Mutation),
+    /// Mutate components associated with this entity.
+    Mutation(Mutation<T::Data>),
+    /// Mutate components associated with this entity.
+    DynMutation(DynMutation),
     /// Send a signal with the associated data.
     Signal(Sender<T::Data>),
     /// Send a signal with unchecked type.
@@ -81,6 +83,18 @@ impl<T: EventHandling> DslFrom<&str> for Handler<T> {
     }
 }
 
+impl<T: EventHandling> DslFrom<Mutation<T::Data>> for Handler<T> {
+    fn dfrom(value: Mutation<T::Data>) -> Self {
+        Handler::Mutation(value)
+    }
+}
+
+impl<T: EventHandling> DslFrom<DynMutation> for Handler<T> {
+    fn dfrom(value: DynMutation) -> Self {
+        Handler::DynMutation(value)
+    }
+}
+
 impl<T: EventHandling> DslFrom<OneShot> for Handlers<T> {
     fn dfrom(value: OneShot) -> Self {
         Handlers::new(value)
@@ -104,6 +118,17 @@ impl<T: EventHandling> DslFrom<DynamicSender> for Handlers<T> {
     }
 }
 
+impl<T: EventHandling> DslFrom<Mutation<T::Data>> for Handlers<T> {
+    fn dfrom(value: Mutation<T::Data>) -> Self {
+        Handlers::new(value)
+    }
+}
+
+impl<T: EventHandling> DslFrom<DynMutation> for Handlers<T> {
+    fn dfrom(value: DynMutation) -> Self {
+        Handlers::new(value)
+    }
+}
 
 impl<T: EventHandling> Handlers<T> {
 
@@ -115,6 +140,7 @@ impl<T: EventHandling> Handlers<T> {
         Self { context: T::new_context(), handlers: SmallVec::from_const([handler.dinto()]) }
     }
 
+    /// Chain another handler in a builder pattern.
     pub fn and(mut self, handler: impl DslInto<Handler<T>>) -> Self {
         self.handlers.push(handler.dinto());
         self
@@ -141,6 +167,15 @@ impl<T: EventHandling> Handlers<T> {
     }
 
 
+    pub fn and_mutate<M, N>(
+        mut self,
+        handler: impl IntoMutationCommand<T::Data, M, N>
+    ) -> Self {
+        self.handlers.push(Mutation::new(handler).dinto());
+        self
+    }
+
+
     pub fn is_empty(&self) -> bool {
         self.handlers.is_empty()
     }
@@ -154,7 +189,10 @@ impl<T: EventHandling> Handlers<T> {
                     }
                 },
                 Handler::Mutation(mutation) => {
-                    mutation.exec(commands);
+                    mutation.exec(commands, data.clone());
+                }
+                Handler::DynMutation(mutation) => {
+                    mutation.exec(commands, Object::new(data.clone()));
                 }
                 Handler::Signal(signal) => {
                     signal.send(data.clone());
@@ -178,7 +216,12 @@ impl<T: EventHandling> Handlers<T> {
                     }
                 },
                 Handler::Mutation(mutation) => {
-                    mutation.exec(commands);
+                    if let Some(data) = data.get() {
+                        mutation.exec(commands, data);
+                    }
+                }
+                Handler::DynMutation(mutation) => {
+                    mutation.exec(commands, data.clone());
                 }
                 Handler::Signal(signal) => {
                     signal.send_dyn(data.clone())
@@ -197,6 +240,7 @@ impl<T: EventHandling> Handlers<T> {
         self.handlers.iter().for_each(|x| match x {
             Handler::OneShotSystem(_) => (),
             Handler::Mutation(_) => (),
+            Handler::DynMutation(_) => (),
             Handler::Signal(sig) => sig.try_cleanup(drop_flag),
             Handler::DynamicSignal(sig) => sig.try_cleanup(drop_flag),
             Handler::GlobalKey(_, _) => (),
@@ -212,7 +256,7 @@ pub trait EventHandling: 'static {
 }
 
 /// Register a `type<T>` that can handle certain events.
-pub fn event_handle<T: EventQuery + Send + Sync + 'static> (
+pub fn handle_event<T: EventQuery + Send + Sync + 'static> (
     mut commands: Commands,
     keys: Res<KeyStorage>,
     query: Query<(Entity, &T::Component, &Handlers<T>)>,

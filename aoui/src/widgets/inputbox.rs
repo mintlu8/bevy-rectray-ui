@@ -20,7 +20,7 @@ enum LeftRight {
 }
 
 
-/// Color of text.
+/// Color of an [`InputBox`].
 #[derive(Debug, Clone, Copy, Component)]
 pub struct TextColor(pub Color);
 
@@ -47,18 +47,16 @@ pub enum InputOverflow {
     Scroll,
 }
 
-/// Single line text input.
+/// Context for a single line text input.
+/// Holds text and cursor information.
 /// 
 /// InputBox requires 3 children to function properly:
 /// 
-/// * `InputBoxText`: empty frame component for individual glyphs.
-/// * `InputBoxCursorBar`: vertical bar of the cursor.
-/// * `InputBoxCursorArea`: select area of the cursor, should be scalable with owned dimension.
+/// * [`InputBoxText`]: empty frame component containing individual glyphs.
+/// * [`InputBoxCursorBar`]: vertical bar of the cursor.
+/// * [`InputBoxCursorArea`]: select area of the cursor.
 /// 
-/// `InputBoxCursorBar` and `InputBoxCursorArea` requires 
-/// `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
-/// 
-/// Warning: This widget does not rebuild its glyphs every frame,
+/// Warning: This widget does not rebuild its glyph entities every frame,
 /// might not behave properly if tempered externally.
 #[derive(Debug, Component, Default)]
 pub struct InputBox {
@@ -71,17 +69,22 @@ pub struct InputBox {
     em: f32,
 }
 
-/// Empty frame component for individual glyphs.
+/// Marker component for a empty frame containing individual glyphs.
 #[derive(Debug, Component, Default)]
 pub struct InputBoxText;
 
-/// Vertical bar of the cursor.
+/// Marker component for a vertical bar of the cursor.
+/// 
+/// This component can be any sprite.
 /// 
 /// Requires `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
 #[derive(Debug, Component, Default)]
 pub struct InputBoxCursorBar;
 
-/// Select area of the cursor, should be scalable.
+/// Marker component for the area of the cursor.
+/// 
+/// This component sets the `dimension` when area is changed, so anything that
+/// updates alongside dimension can be used here.
 /// 
 /// Requires `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
 #[derive(Debug, Component, Default)]
@@ -96,45 +99,55 @@ impl InputBox {
         }
     }
 
+    /// Get length of the text in the widget.
     pub fn len(&self) -> usize {
         self.text.chars().count()
     }
 
+    /// Returns true if text is empty.
     pub fn is_empty(&self) -> bool {
         self.text.is_empty()
     }
 
+    /// Returns length of the cursor range.
     pub fn cursor_len(&self) -> usize {
         self.cursor_len
     }
 
+    /// Obtain the string in the textbox.
     pub fn get(&self) -> &str {
         &self.text
     }
 
+    /// Set the range of cursor in this widget.
     pub fn set_cursor(&mut self, start: usize, end: usize) {
         self.cursor_start = start;
         self.cursor_len = end.saturating_sub(start);
     }
 
+    /// Returns true if the widget has focus.
     pub fn has_focus(&self) -> bool {
         self.focus
     }
 
+    /// Set the widget as focused.
     pub fn set_focus(&mut self, focus: bool) {
         self.focus = focus
     }
 
+    /// Get the selected portion of the string.
     pub fn selected(&self) -> &str {
         use substring::Substring;
         self.text.substring(self.cursor_start, self.cursor_start + self.cursor_len)
     }
 
+    /// Select all text in the widget by setting widget to `[0, len]`.
     pub fn select_all(&mut self) {
         self.cursor_start = 0;
         self.cursor_len = self.text.chars().count();
     }
 
+    /// Clear the text of the widget and reset cursor to `[0, 0]`.
     pub fn clear(&mut self) {
         self.text.clear();
         self.cursor_start = 0;
@@ -142,6 +155,7 @@ impl InputBox {
         self.focus = false;
     }
 
+    /// Set the text of the widget and reset cursor to `[0, 0]`.
     pub fn set(&mut self, s: impl Into<String>) {
         self.text = s.into();
         self.cursor_start = 0;
@@ -286,12 +300,13 @@ impl InputBox {
 pub fn text_on_mouse_down(
     state: Res<CursorState>,
     window: Query<&Window, With<PrimaryWindow>>,
-    mut query: Query<(Entity, &mut InputBox, &RotatedRect), With<CursorFocus>>,
+    mut query: Query<(Entity, &CursorFocus, &mut InputBox, &RotatedRect)>,
     text: Query<(&Parent, &Children), With<InputBoxText>>,
     glyphs: Query<&Transform2D>,
 ) {
     let scale = window.get_single().map(|x| x.scale_factor() as f32).unwrap_or(1.0);
-    for (entity, mut input_box, rect) in query.iter_mut() {
+    for (entity, focus, mut input_box, rect) in query.iter_mut() {
+        if !focus.intersects(EventFlags::LeftDrag) {continue;};
         let Some((_, children)) = text.into_iter().find(|(p, ..)| p.get() == entity) else {continue;};
 
         let cursor = rect.local_space(state.cursor_position()) * scale / 2.0; 
@@ -328,10 +343,10 @@ pub fn text_on_mouse_double_click(
 pub fn measure_string<F: ab_glyph::Font>(font: &impl ab_glyph::ScaleFont<F>, string: String) -> f32 {
     let mut cursor = 0.0;
     let mut last = '\0';
-    for chara in string.chars() {
-        cursor += font.kern(font.glyph_id(last), font.glyph_id(chara));            
-        cursor += font.h_advance(font.glyph_id(chara));
-        last = chara
+    for c in string.chars() {
+        cursor += font.kern(font.glyph_id(last), font.glyph_id(c));            
+        cursor += font.h_advance(font.glyph_id(c));
+        last = c
     }
     cursor
 }
@@ -478,7 +493,12 @@ pub fn inputbox_keyboard(
     mut commands: Commands,
     fonts: Res<Assets<Font>>,
     storage: Res<KeyStorage>,
-    mut query: Query<(Entity, &mut InputBox, &DimensionData, &Handle<Font>, Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>, Option<&Receiver<SigInvoke>>, ActiveDetection)>,
+    mut query: Query<(Entity, &mut InputBox, &DimensionData, &Handle<Font>, 
+        Option<&Handlers<EvTextChange>>, 
+        Option<&Handlers<EvTextSubmit>>, 
+        Option<&Receiver<SigInvoke>>, 
+        ActiveDetection
+    )>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {

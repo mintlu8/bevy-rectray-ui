@@ -56,7 +56,7 @@ impl Widget for PaddingBuilder {
     }
 }
 
-/// Construct a fit layout, commonly used for padding.
+/// Construct a fit layout, commonly used for padding. The Underlying struct is [`PaddingBuilder`].
 #[macro_export]
 macro_rules! padding {
     {$commands: tt {$($tt:tt)*}} => {
@@ -66,7 +66,8 @@ macro_rules! padding {
     };
 }
 
-/// Construct a horizontal left to right compact layout.
+/// Construct a horizontal left to right compact layout. 
+/// The Underlying struct is [`FrameBuilder`](super::builders::FrameBuilder).
 #[macro_export]
 macro_rules! hbox {
     {$commands: tt {$($tt:tt)*}} => {
@@ -78,6 +79,7 @@ macro_rules! hbox {
 }
 
 /// Construct a vertical top to bottom compact layout.
+/// The Underlying struct is [`FrameBuilder`](super::builders::FrameBuilder).
 #[macro_export]
 macro_rules! vbox {
     {$commands: tt {$($tt:tt)*}} => {
@@ -89,6 +91,7 @@ macro_rules! vbox {
 }
 
 /// Construct a horizotal left to right layout with fixed dimension.
+/// The Underlying struct is [`FrameBuilder`](super::builders::FrameBuilder).
 #[macro_export]
 macro_rules! hspan {
     {$commands: tt {$($tt:tt)*}} => {
@@ -100,6 +103,7 @@ macro_rules! hspan {
 }
 
 /// Construct a vertical top to bottom layout with fixed dimension.
+/// The Underlying struct is [`FrameBuilder`](super::builders::FrameBuilder).
 #[macro_export]
 macro_rules! vspan {
     {$commands: tt {$($tt:tt)*}} => {
@@ -111,6 +115,7 @@ macro_rules! vspan {
 }
 
 /// Construct a paragraph layout.
+/// The Underlying struct is [`FrameBuilder`](super::builders::FrameBuilder).
 #[macro_export]
 macro_rules! paragraph {
     {$commands: tt {$($tt:tt)*}} => {

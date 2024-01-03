@@ -79,6 +79,24 @@ impl BoundsLayout {
             max: Vec2::MAX
         }
     }
+
+    pub const fn x_bounds(min: f32, max: f32) -> Self{
+        BoundsLayout {
+            fixed: [false, true],
+            min: Vec2::splat(min),
+            max: Vec2::splat(max),
+        }
+    }
+
+    pub const fn y_bounds(min: f32, max: f32) -> Self{
+        BoundsLayout {
+            fixed: [true, false],
+            min: Vec2::splat(min),
+            max: Vec2::splat(max),
+        }
+    }
+
+
 }
 
 impl Default for BoundsLayout {

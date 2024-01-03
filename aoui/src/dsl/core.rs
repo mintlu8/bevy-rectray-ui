@@ -133,14 +133,6 @@ impl Widget for RectangleBuilder {
     }
 }
 
-
-/// Create a rectangle sprite with uniform color.
-#[macro_export]
-macro_rules! rectangle {
-    {$commands: tt {$($tt:tt)*}} => 
-        {$crate::meta_dsl!($commands [$crate::dsl::builders::RectangleBuilder] {$($tt)*})};
-}
-
 impl Widget for TextBuilder {
     fn spawn_with(self, commands: &mut Commands, assets: Option<&AssetServer>) -> (Entity, Entity) {
         let mut frame = build_frame!(commands, self);
@@ -173,4 +165,32 @@ impl Widget for TextBuilder {
         ));
         (frame.id(), frame.id())
     }
+}
+
+/// Construct an empty sprite. The underlying struct is [`FrameBuilder`].
+#[macro_export]
+macro_rules! frame {
+    {$commands: tt {$($tt:tt)*}} => 
+        {$crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {$($tt)*})};
+}
+
+/// Construct an image based sprite. The underlying struct is [`SpriteBuilder`].
+#[macro_export]
+macro_rules! sprite {
+    {$commands: tt {$($tt:tt)*}} => 
+        {$crate::meta_dsl!($commands [$crate::dsl::builders::SpriteBuilder] {$($tt)*})};
+}
+
+/// Construct a textbox. The underlying struct is [`TextBuilder`].
+#[macro_export]
+macro_rules! text {
+    {$commands: tt {$($tt:tt)*}} => 
+        {$crate::meta_dsl!($commands [$crate::dsl::builders::TextBuilder] {$($tt)*})};
+}
+
+/// Create a rectangle sprite with uniform color. The underlying struct is [`RectangleBuilder`].
+#[macro_export]
+macro_rules! rectangle {
+    {$commands: tt {$($tt:tt)*}} => 
+        {$crate::meta_dsl!($commands [$crate::dsl::builders::RectangleBuilder] {$($tt)*})};
 }

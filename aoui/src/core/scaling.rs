@@ -76,7 +76,7 @@ impl SizeUnit {
     }
 }
 
-/// A context sensitive Vec2
+/// A context sensitive Vec2.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Reflect)]
 pub struct Size2 {
     x: SizeUnit,
@@ -84,6 +84,7 @@ pub struct Size2 {
     raw: Vec2,
 }
 
+/// A context sensitive f32.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Reflect)]
 pub struct Size {
     unit: SizeUnit,
@@ -185,9 +186,7 @@ impl Size2 {
         self.raw
     }
 
-    /// Get mutable access to the underlying owned value.
-    /// 
-    /// For ease of use with egui.
+    /// Get mutable access to the underlying value.
     #[doc(hidden)]
     pub fn raw_mut(&mut self) -> &mut Vec2 {
         &mut self.raw
@@ -213,7 +212,7 @@ impl From<Vec2> for Size2 {
 
 impl FontSize {
     #[doc(hidden)]
-    /// For testing with egui only
+    /// Get mutable access to the underlying value.
     pub fn raw_mut(&mut self) -> &mut f32 {
         match self {
             FontSize::None => panic!("Does not own a raw value."),

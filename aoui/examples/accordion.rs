@@ -33,17 +33,20 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
     });
 
-    let (first, second) = radio_button_group(0);
+    let (first, second, third, fourth) = radio_button_group(0);
     let sig = first.recv::<i32>();
 
-    let (scroll_send1, scroll_send2, scroll_recv) = signal();
+    let (scroll_send1, scroll_send2, scroll_send3, scroll_send4, scroll_recv) = signal();
 
     let (text1, scroll1) = SharedPosition::many();
+    let (text2, scroll2) = SharedPosition::many();
+    let (text3, scroll3) = SharedPosition::many();
+    let (text4, scroll4) = SharedPosition::many();
 
     let main_target = render_target(&assets, [800, 800]);
     camera_frame!((commands, assets){
         dimension: [400, 400],
-        render_target: main_target,
+        render_target: main_target.clone(),
         layer: 1,
         child: sprite! {
             dimension: Size2::FULL,
@@ -55,7 +58,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         dimension: [400, 400],
         scroll: Scrolling::POS_Y
             .with_recv(scroll_recv),
-        layer: 3,
         child: vbox! {
             anchor: Top,
             child: hspan! {
@@ -78,42 +80,42 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     },
                 }
             },
-            child: clipping_layer! {
+            child: hbox!{
                 anchor: Top,
-                dimension: [400, 200],
-                buffer: [800, 800],
-                scroll: Scrolling::Y
-                    .with_shared_position(text1)
-                    .with_send(scroll_send1),
-                extra: sig.clone().cond_recv::<SigDimensionY>(0, 200.0, 0.0),
-                extra: transition! (Dimension 0.5 CubicInOut default [400, 400]),
-                layer: 1,
-                child: text! {
+                extra: sig.clone().cond_recv::<SigOpacity>(0, 1.0, 0.0),
+                extra: transition! (Opacity 0.5 CubicInOut default 1.0),
+                child: scrolling! {
                     anchor: Top,
-                    offset: [-10, 0],
-                    bounds: [370, 999999],
-                    color: color!(gold),
-                    wrap: true,
-                    extra: sig.clone().cond_recv::<SigOpacity>(0, 1.0, 0.0),
-                    extra: transition! (Opacity 0.5 CubicInOut default 1.0),
-                    extra: SetAlpha,
-                    text: TEXT,
-                }
-            },
-            child: rectangle! {
-                anchor: Right,
-                dimension: [20, 199],
-                color: color!(orange),
-                extra: IgnoreLayout,
-                layer: 1,
-                child: rectangle! {
-                    anchor: Top,
-                    event: EventFlags::LeftDrag,
-                    dimension: [20, 40],
-                    color: color!(red),
+                    dimension: [380, 200],
+                    scroll: Scrolling::Y
+                        .with_shared_position(text1)
+                        .with_send(scroll_send1),
+                    extra: sig.clone().cond_recv::<SigDimensionY>(0, 200.0, 0.0),
+                    extra: transition! (Dimension 0.5 Linear default [380, 200]),
                     layer: 1,
-                    extra: DragY.with_position(scroll1.flip(false, true)),
-                }
+                    child: text! {
+                        anchor: Top,
+                        bounds: [370, 999999],
+                        color: color!(gold),
+                        wrap: true,
+                        layer: 1,
+                        text: TEXT,
+                    }
+                },
+                child: rectangle! {
+                    anchor: Right,
+                    dimension: size2!(20, 100%),
+                    color: color!(orange),
+                    layer: 1,
+                    child: rectangle! {
+                        anchor: Top,
+                        event: EventFlags::LeftDrag,
+                        dimension: [20, 40],
+                        color: color!(red),
+                        layer: 1,
+                        extra: DragY.with_position(scroll1.flip(false, true)),
+                    }
+                },
             },
             child: hspan! {
                 dimension: size2!(400, 2 em),
@@ -136,26 +138,158 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     },
                 }
             },
-            child: clipping_layer! {
+            child: hbox!{
                 anchor: Top,
-                dimension: [400, 0],
-                buffer: [800, 800],
-                scroll: Scrolling::Y
-                    .with_send(scroll_send2),
-                extra: sig.clone().cond_recv::<SigDimensionY>(1, 200.0, 0.0),
-                extra: Interpolate::<Dimension>::ease(EaseFunction::CubicInOut, Vec2::new(400.0, 400.0), 0.5),
-                layer: 2,
+                extra: sig.clone().cond_recv::<SigOpacity>(1, 1.0, 0.0),
+                extra: transition! (Opacity 0.5 CubicInOut default 1.0),
+                child: scrolling! {
+                    anchor: Top,
+                    dimension: [380, 100],
+                    scroll: Scrolling::Y
+                        .with_shared_position(text2)
+                        .with_send(scroll_send2),
+                    extra: sig.clone().cond_recv::<SigDimensionY>(1, 100.0, 0.0),
+                    extra: transition! (Dimension 0.5 Linear default [380, 100]),
+                    layer: 1,
+                    child: text! {
+                        anchor: Top,
+                        bounds: [370, 999999],
+                        color: color!(gold),
+                        wrap: true,
+                        layer: 1,
+                        text: TEXT,
+                    }
+                },
+                child: rectangle! {
+                    anchor: Right,
+                    dimension: size2!(20, 100%),
+                    color: color!(orange),
+                    layer: 1,
+                    child: rectangle! {
+                        anchor: Top,
+                        event: EventFlags::LeftDrag,
+                        dimension: [20, 40],
+                        color: color!(red),
+                        layer: 1,
+                        extra: DragY.with_position(scroll2.flip(false, true)),
+                    }
+                },
+            },
+            child: hspan! {
+                dimension: size2!(400, 2 em),
                 child: text! {
-                    anchor: TopLeft,
-                    bounds: [390, 999999],
-                    color: color!(gold),
-                    opacity: 0.0,
-                    wrap: true,
-                    extra: sig.clone().cond_recv::<SigOpacity>(1, 1.0, 0.0),
-                    extra: Interpolate::<Opacity>::ease(EaseFunction::CubicInOut, 1.0, 0.5),
-                    extra: SetAlpha,
-                    text: TEXT
+                    anchor: Left,
+                    text: "Accordion 3",
+                },
+                child: radio_button! {
+                    anchor: Right,
+                    center: Center,
+                    dimension: size2!(2 em, 2 em),
+                    context: third,
+                    cancellable: true,
+                    value: 2,
+                    child: text! {
+                        text: "v",
+                        rotation: PI,
+                        extra: sig.clone().cond_recv::<SigRotation>(2, PI, 0.0),
+                        extra: transition! (Rotation 0.5 CubicInOut default PI)
+                    },
                 }
+            },
+            child: hbox!{
+                anchor: Top,
+                extra: sig.clone().cond_recv::<SigOpacity>(2, 1.0, 0.0),
+                extra: transition! (Opacity 0.5 CubicInOut default 1.0),
+                child: scrolling! {
+                    anchor: Top,
+                    dimension: [380, 500],
+                    scroll: Scrolling::Y
+                        .with_shared_position(text3)
+                        .with_send(scroll_send3),
+                    extra: sig.clone().cond_recv::<SigDimensionY>(2, 500.0, 0.0),
+                    extra: transition! (Dimension 0.5 Linear default [380, 500]),
+                    layer: 1,
+                    child: text! {
+                        anchor: Top,
+                        bounds: [370, 999999],
+                        color: color!(gold),
+                        wrap: true,
+                        layer: 1,
+                        text: "Hello, Hello, Hello!",
+                    }
+                },
+                child: rectangle! {
+                    anchor: Right,
+                    dimension: size2!(20, 100%),
+                    color: color!(orange),
+                    layer: 1,
+                    child: rectangle! {
+                        anchor: Top,
+                        event: EventFlags::LeftDrag,
+                        dimension: [20, 40],
+                        color: color!(red),
+                        layer: 1,
+                        extra: DragY.with_position(scroll3.flip(false, true)),
+                    }
+                },
+            },
+            child: hspan! {
+                dimension: size2!(400, 2 em),
+                child: text! {
+                    anchor: Left,
+                    text: "Accordion 4",
+                },
+                child: radio_button! {
+                    anchor: Right,
+                    center: Center,
+                    dimension: size2!(2 em, 2 em),
+                    context: fourth,
+                    cancellable: true,
+                    value: 3,
+                    child: text! {
+                        text: "v",
+                        rotation: PI,
+                        extra: sig.clone().cond_recv::<SigRotation>(3, PI, 0.0),
+                        extra: transition! (Rotation 0.5 CubicInOut default PI)
+                    },
+                }
+            },
+            child: hbox!{
+                anchor: Top,
+                extra: sig.clone().cond_recv::<SigOpacity>(3, 1.0, 0.0),
+                extra: transition! (Opacity 0.5 CubicInOut default 1.0),
+                child: scrolling! {
+                    anchor: Top,
+                    dimension: [380, 300],
+                    scroll: Scrolling::Y
+                        .with_shared_position(text4)
+                        .with_send(scroll_send4),
+                    extra: sig.clone().cond_recv::<SigDimensionY>(3, 300.0, 0.0),
+                    extra: transition! (Dimension 0.5 Linear default [380, 300]),
+                    layer: 1,
+                    child: text! {
+                        anchor: Top,
+                        bounds: [370, 999999],
+                        color: color!(gold),
+                        wrap: true,
+                        layer: 1,
+                        text: TEXT,
+                    }
+                },
+                child: rectangle! {
+                    anchor: Right,
+                    dimension: size2!(20, 100%),
+                    color: color!(orange),
+                    layer: 1,
+                    child: rectangle! {
+                        anchor: Top,
+                        event: EventFlags::LeftDrag,
+                        dimension: [20, 40],
+                        color: color!(red),
+                        layer: 1,
+                        extra: DragY.with_position(scroll4.flip(false, true)),
+                    }
+                },
             },
         }
     });

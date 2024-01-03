@@ -10,7 +10,6 @@ pub use colorthis::rgbaf;
 
 mod layouts;
 mod widgets;
-mod oneshot;
 mod meta_dsl;
 mod mesh2d;
 mod atlas;
@@ -42,24 +41,6 @@ pub mod builders {
     pub use super::clipping::{CameraFrameBuilder, ScrollingFrameBuilder};
 }
 
-/// Construct an empty sprite.
-#[macro_export]
-macro_rules! frame {
-    {$commands: tt {$($tt:tt)*}} => 
-        {$crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {$($tt)*})};
-}
-/// Construct an image based sprite.
-#[macro_export]
-macro_rules! sprite {
-    {$commands: tt {$($tt:tt)*}} => 
-        {$crate::meta_dsl!($commands [$crate::dsl::builders::SpriteBuilder] {$($tt)*})};
-}
-/// Construct a textbox.
-#[macro_export]
-macro_rules! text {
-    {$commands: tt {$($tt:tt)*}} => 
-        {$crate::meta_dsl!($commands [$crate::dsl::builders::TextBuilder] {$($tt)*})};
-}
 
 /// Enable commands to spawn our widgets.
 pub trait AouiCommands {

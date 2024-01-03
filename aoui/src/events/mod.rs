@@ -1,10 +1,5 @@
 //! This module provides cursor related event detection for `bevy_aoui`.
 //! 
-//! # Relation to Signals
-//! 
-//! Signals are designed to be polled by systems and has the capability to carry arbitrary data.
-//! Events are design to trigger systems or send signals without the ability to send data directly.
-//! 
 //! # Event Listeners
 //! 
 //! Add components `Hitbox` and `EventFlags` to a sprite, this allows a sprite to
@@ -24,11 +19,12 @@
 //! 
 //! We use component insertion to send events to widgets. These are
 //! `CursorFocus`, `CursorAction`, `CursorClickOutside` and `MouseWheelAction`.
+//! You can use these with queries.
 //! 
-//! They should be safe to use in `Update` and `PostUpdate` like signals.
+//! They should be safe to use during `Update` and `PostUpdate`.
 //! 
-//! * `CursorFocus`: Stores a persistent state like `Hover` or `Pressed`, this
-//! can be used with the [`With`] constraint. The [`DisplayIf`](crate::widgets::button::DisplayIf)
+//! * `CursorFocus`: Stores a persistent state like `Hover` or `Pressed`.
+//! The [`DisplayIf`](crate::widgets::button::DisplayIf)
 //! component can be used to change visibility status based on [`CursorFocus`]
 //! 
 //! * `CursorAction`: Stores a single frame event like `Click` or `Down`.
@@ -37,32 +33,22 @@
 //! 
 //! # Event Handlers
 //! 
-//! A handler listens for `CursorAction` and `CursorFocus` alongside pseudo-events `ObtainFocus` and `LoseFocus`.
+//! A [`Handlers`] listens for `CursorAction` and `CursorFocus`,
+//! pseudo-events like `EvObtainFocus` and `EvLoseFocus`,
+//! widget events like `EvButtonChange` etc and can perform.
+//! many action based on the event and its associated input.
 //! 
-//! You can use the macro `handler!` to create an event handler 
-//! using either one-shot systems or signals.
+//! Event handlers can do the following things:
 //! 
-//! ```
-//! # /*
-//! sprite! {
-//!     ...
-//!     extra: handler! { LeftClick => 
-//!         // this is a one-shot system function
-//!         fn click_handler(mut commands: Commands) {
-//!             commands.spawn(Fruit("Apple"));
-//!         },
-//!         // this is a signal sender
-//!         // Notice the signal's default type is `()`.
-//!         score_sender.map(|_: ()| 100),
-//!     }
-//! }
-//! # */
-//! ```
+//! * Run a [one-shot system](OneShot).
+//! * [Mutate](Mutation) components associated with the entity.
+//! * Send a signal.
+//! * Write signal input to a [`KeyStorage`](crate::signals::KeyStorage).
 //! 
-//! # Keyboard Events? Joysticks?
+//! # What about Keyboard Events or Joysticks?
 //! 
-//! We provide abstractions that you can use for other types of input, but that's
-//! outside the scope of this crate.
+//! We provide abstractions that you can use for other types of input, 
+//! but these are outside the scope of this crate.
 
 use bevy::{prelude::*, ecs::query::WorldQuery};
 use crate::{schedule::{AouiEventSet, AouiCleanupSet}, Hitbox, Clipping, RotatedRect, Opacity, WorldExtension};
@@ -146,23 +132,23 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
             .add_systems(Last, remove_focus.in_set(AouiCleanupSet))
             .add_systems(Update, (
-                event_handle::<EvLeftClick>,
-                event_handle::<EvLeftDown>,
-                event_handle::<EvDragEnd>,
-                event_handle::<EvRightClick>,
-                event_handle::<EvRightDown>,
-                event_handle::<EvMidClick>,
-                event_handle::<EvMidDown>,
-                event_handle::<EvDoubleClick>,
-                event_handle::<EvDragEnd>,
-                event_handle::<EvClickOutside>,
-                event_handle::<EvHover>,
-                event_handle::<EvLeftPressed>,
-                event_handle::<EvLeftDrag>,
-                event_handle::<EvMidPressed>,
-                event_handle::<EvMidDrag>,
-                event_handle::<EvRightPressed>,
-                event_handle::<EvRightDrag>,
+                handle_event::<EvLeftClick>,
+                handle_event::<EvLeftDown>,
+                handle_event::<EvDragEnd>,
+                handle_event::<EvRightClick>,
+                handle_event::<EvRightDown>,
+                handle_event::<EvMidClick>,
+                handle_event::<EvMidDown>,
+                handle_event::<EvDoubleClick>,
+                handle_event::<EvDragEnd>,
+                handle_event::<EvClickOutside>,
+                handle_event::<EvHover>,
+                handle_event::<EvLeftPressed>,
+                handle_event::<EvLeftDrag>,
+                handle_event::<EvMidPressed>,
+                handle_event::<EvMidDrag>,
+                handle_event::<EvRightPressed>,
+                handle_event::<EvRightDrag>,
                 lose_focus_detection,
                 obtain_focus_detection,
                 custom_cursor_controller,

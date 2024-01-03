@@ -50,7 +50,7 @@ impl<M: Material2d> Widget for MaterialSpriteBuilder<M> {
 
 /// Construct a sprite with a custom [`Material2d`](bevy::sprite::Material2d).
 /// 
-/// See [`MaterialSpriteBuilder`].
+/// The underlying struct is [`MaterialSpriteBuilder`].
 #[macro_export]
 macro_rules! material_sprite {
     {$commands: tt {$($tt:tt)*}} => {
@@ -87,7 +87,7 @@ impl<M: Material2d> Widget for MaterialMeshBuilder<M> {
 
 /// Construct a [`Mesh2d`](bevy::sprite::Mesh2d) with a custom [`Material2d`](bevy::sprite::Material2d).
 /// 
-/// See [`MaterialMeshBuilder`].
+/// The underlying struct is [`MaterialMeshBuilder`].
 #[macro_export]
 macro_rules! material_mesh{
     {$commands: tt {$($tt:tt)*}} => {

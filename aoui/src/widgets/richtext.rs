@@ -1,3 +1,5 @@
+//! WIP Rich Text implementation for `bevy_aoui`.
+//! 
 //! Format
 //! 
 //! # Markdown

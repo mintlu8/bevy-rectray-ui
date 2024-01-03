@@ -562,7 +562,7 @@ macro_rules! widget_extension {
     };
 }
 
-/// Use a widget builder's fields to build a frame, returns an `EntityCommands`.
+/// Use a `FrameBuilder` to build a frame, returns an `EntityCommands`.
 #[macro_export]
 macro_rules! build_frame {
     ($commands: expr, $this: expr) => {

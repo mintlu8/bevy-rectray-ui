@@ -205,12 +205,16 @@
 //! 
 //! This syntax, notice the use of braces `{}`,
 //! ```
+//! # /*
 //! field: macro! { .. },
+//! # */
 //! ```
 //! 
 //! Will be automatically rewritten as
 //! ```
+//! # /*
 //! field: macro!(commands { .. }),
+//! # */
 //! ```
 //! 
 //! Which serves as context propagation. 

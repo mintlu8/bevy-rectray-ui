@@ -7,9 +7,9 @@ use super::{dto::Object, DataTransfer, sig::Signal, create::SignalCreate};
 
 /// Marker trait for `Receiver` compatible signals.
 /// 
-/// This The parent type denotes behavior and the associated type denotes type.
+/// The parent type denotes behavior and the associated type denotes the data type.
 pub trait SignalReceiver: Send + Sync + 'static {
-    /// A hint for function marking.
+    /// Type of data transferred.
     type Type: DataTransfer;
 }
 
@@ -17,6 +17,7 @@ impl SignalReceiver for () {
     type Type = ();
 }
 
+/// A function that maps the value of a signal.
 #[derive(Default)]
 pub enum SignalMapper {
     #[default]
@@ -163,6 +164,7 @@ impl<T: DataTransfer> SignalBuilder<T> {
         }
     }
 
+    /// Send if equals, `map_send` does not work with multiple types.
     pub fn cond_send<In: DataTransfer>(self, if_eq: impl DataTransfer, then: T, or_else: T) -> Sender<In> {
         Sender {
             signal: self.signal,
@@ -171,7 +173,8 @@ impl<T: DataTransfer> SignalBuilder<T> {
         }
     }
 
-    pub fn dynamic_send(self) -> DynamicSender {
+    /// Erase the type of a sender, necessary with `Payload`.
+    pub fn type_erase(self) -> DynamicSender {
         DynamicSender {
             signal: self.signal,
             map: SignalMapper::None,

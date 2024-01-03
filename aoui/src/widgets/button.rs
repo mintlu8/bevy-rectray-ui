@@ -128,12 +128,12 @@ impl RadioButton {
     /// Create an empty `RadioButton` context, usually unchecked by default.
     pub fn new_empty() -> Self {
         let (send,) = signal::<(), _>();
-        RadioButton(Arc::new(Mutex::new(Object::NONE)), send.clone().dynamic_send())
+        RadioButton(Arc::new(Mutex::new(Object::NONE)), send.clone().type_erase())
     }
 
     pub fn new(default: impl DataTransfer) -> Self {
         let (send,) = signal::<(), _>();
-        RadioButton(Arc::new(Mutex::new(Object::new(default))), send.clone().dynamic_send())
+        RadioButton(Arc::new(Mutex::new(Object::new(default))), send.clone().type_erase())
     }
 
     pub fn set(&self, payload: &Payload) {
@@ -324,7 +324,7 @@ pub fn remove_check_button_state(mut commands: Commands,
 /// 
 /// * `button` `EvButtonClick`: sends `Payload` or `()`.
 /// * `radio_button` `EvButtonClick`: sends `Payload`, which is required.
-/// * `check_button` `EvButtonClick`: If `true`, sends `Payload` or `()`.
+/// * `check_button` `EvButtonClick`: If checked, sends `Payload` or `()`.
 /// 
 #[derive(Debug, Clone, PartialEq, Component)] 
 pub struct Payload(Object);
@@ -345,9 +345,12 @@ impl Payload {
     }
 }
 
-
+/// A trait implemented by tuple and arrays of `radio_button` contexts.
+/// Used to construct radio buttons.
 pub trait ConstructRadioButton: Sized {
+    /// Construct a radio button.
     fn construct(default: impl DataTransfer) -> Self;
+    /// Create a signal receiver for a `radio_button`'s `changed` event.
     fn recv<T: DataTransfer>(&self) -> SignalBuilder<T>;
 }
 

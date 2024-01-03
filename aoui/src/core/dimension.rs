@@ -290,6 +290,7 @@ impl DimensionMutItem<'_> {
     /// # Panics
     /// 
     /// When dimension is copied.
+    #[doc(hidden)]
     pub fn raw_mut(&mut self) -> &mut Vec2 {
         match &mut self.source.dimension {
             DimensionSize::Copied => panic!("Cannot get raw of copied value."),
@@ -305,6 +306,8 @@ impl DimensionMutItem<'_> {
         }
     }
 
+    /// Update size based on a foreign source.
+    /// 
     /// If `copied`, copy size. If `preserve_aspect`, copy aspect ratio.
     pub fn update_size(&mut self, value: impl FnOnce() -> Vec2) {
         match self.source.dimension {
