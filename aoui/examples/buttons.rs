@@ -56,7 +56,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let (send1, recv1) = signal();
     let (send2, recv2) = signal();
 
-    vbox!((commands, assets) {
+    vstack!((commands, assets) {
         offset: [0, 100],
         child: check_button! {
             dimension: size2!(14 em, 2 em),
@@ -127,7 +127,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         extra: sig.recv0(|x: &str, text: &mut Text| format_widget!(text, "<= has value {}!", x))
     });
 
-    vbox!((commands, assets) {
+    vstack!((commands, assets) {
         offset: [0, -150],
         child: #radio_button! {
             dimension: size2!(14 em, 2 em),

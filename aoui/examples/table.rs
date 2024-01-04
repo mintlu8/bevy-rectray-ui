@@ -40,7 +40,7 @@ fn anchor_circle(commands: &mut Commands, assets: &Res<AssetServer>, anchor: imp
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    vbox! ((commands, assets) {
+    vstack! ((commands, assets) {
         anchor: Top,
         margin: 4,
         child: text! { 

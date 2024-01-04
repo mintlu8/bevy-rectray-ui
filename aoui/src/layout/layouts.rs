@@ -131,11 +131,11 @@ impl Layout for BoundsLayout {
 
 /// A size agnostic mono-directional container.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
-pub struct CompactLayout {
+pub struct StackLayout {
     pub direction: LayoutDir,
 }
 
-impl CompactLayout {
+impl StackLayout {
     pub const HBOX: Self = Self { direction: LayoutDir::LeftToRight };
     pub const VBOX: Self = Self { direction: LayoutDir::TopToBottom };
 }
@@ -152,17 +152,6 @@ pub struct SpanLayout {
 impl SpanLayout {
     pub const HSPAN: Self = Self { direction: LayoutDir::LeftToRight, stretch: false };
     pub const VSPAN: Self = Self { direction: LayoutDir::TopToBottom, stretch: false };
-}
-
-/// A fix-sized mono-directional container.
-/// 
-/// The width is dynamic compared to `SpanLayout`
-#[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
-pub struct DynamicSpanLayout {
-    /// The axis, horizontal or vertical.
-    pub direction: LayoutDir,
-    /// If specified, try increase the margin to fill the span.
-    pub stretch: bool,
 }
 
 

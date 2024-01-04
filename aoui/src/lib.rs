@@ -47,7 +47,7 @@
 //! 
 //! ```
 //! # /*
-//! vbox!(commands {
+//! vstack!(commands {
 //!     font_size: em(2),
 //!     child: text! {
 //!         text: "Hello"
@@ -138,7 +138,7 @@
 //! 
 //! The `Container` is a very simple layout system that
 //! only depends on insertion order of its children. You can find your
-//! [`hbox`](layout::CompactLayout), [`grid`](layout::FixedGridLayout) or [`paragraph`](layout::ParagraphLayout) here.
+//! [`hstack`](layout::StackLayout), [`grid`](layout::FixedGridLayout) or [`paragraph`](layout::ParagraphLayout) here.
 //! 
 //! You can implement [`Layout`](layout::Layout) yourself to create a custom layout.
 //! 

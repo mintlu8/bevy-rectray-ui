@@ -29,7 +29,11 @@ widget_extension!(
     pub struct ScrollingFrameBuilder[B: IntoScrollingBuilder] {
         /// If set, configure scrolling for this widget.
         pub scroll: Option<B>,
+        /// Send a signal regarding how much of the sprite is covered by child sprites's
+        /// anchor, min bound and max bound.
         pub coverage_px: Handlers<ESigCoveragePx>,
+        /// Send a signal regarding how much of the sprite is covered by child sprites's
+        /// anchor, min bound and max bound.
         pub coverage_percent: Handlers<ESigCoveragePercent>,
     }
 );

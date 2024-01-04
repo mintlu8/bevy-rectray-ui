@@ -34,7 +34,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     });
 
     let (send, recv) = signal();
-    vbox!((commands, assets) {
+    vstack!((commands, assets) {
         hitbox: Rect(1),
         extra: Dragging::BOTH,
         extra: recv.invoke::<Dragging>(),

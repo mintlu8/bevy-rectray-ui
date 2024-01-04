@@ -1,11 +1,11 @@
 use std::{iter::repeat, mem};
 
-use crate::{Anchor, layout::{Layout, CompactLayout, LayoutOutput, LayoutControl, SpanLayout, ParagraphLayout, DynamicSpanLayout}};
+use crate::{Anchor, layout::{Layout, StackLayout, LayoutOutput, LayoutControl, SpanLayout, ParagraphLayout}};
 
 use super::{util::*, LayoutInfo};
 use bevy::{prelude::Vec2, ecs::entity::Entity};
 
-impl Layout for CompactLayout {
+impl Layout for StackLayout {
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
         let margin = parent.margin;
         match self.direction {
@@ -32,31 +32,6 @@ impl Layout for SpanLayout {
             LayoutDir::TopToBottom => span::<true>(dimension, margin, self.stretch, entities, vbucket, posy, posx),
         };
         LayoutOutput { entity_anchors, dimension }.normalized()
-    }
-}
-
-
-impl Layout for DynamicSpanLayout {
-    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
-        let margin = parent.margin;
-        let dimension = parent.dimension;
-        let line_size = match self.direction.into() {
-            Axis::Horizontal => {
-                let line_height: f32 = entities.iter().map(|x| x.dimension.y).fold(0.0, |a, b| a.max(b));
-                Vec2::new(dimension.x, line_height)
-            },
-            Axis::Vertical => {
-                let line_height: f32 = entities.iter().map(|x| x.dimension.x).fold(0.0, |a, b| a.max(b));
-                Vec2::new(line_height, dimension.y)
-            },
-        };
-        let entity_anchors = match self.direction{
-            LayoutDir::LeftToRight => span::<false>(line_size, margin, self.stretch, entities, hbucket, posx, posy),
-            LayoutDir::RightToLeft => span::<true>(line_size, margin, self.stretch, entities, hbucket, posx, posy),
-            LayoutDir::BottomToTop => span::<false>(line_size, margin, self.stretch, entities, vbucket, posy, posx),
-            LayoutDir::TopToBottom => span::<true>(line_size, margin, self.stretch, entities, vbucket, posy, posx),
-        };
-        LayoutOutput { entity_anchors, dimension: line_size }.normalized()
     }
 }
 

@@ -73,7 +73,7 @@ pub use super::Aspect::Preserve;
 pub use crate::{frame, sprite, text, atlas};
 pub use crate::{material_sprite, material_mesh};
 //pub use crate::{one_shot, handler};
-pub use crate::{padding, paragraph, hbox, vbox, hspan, vspan, linebreak};
+pub use crate::{padding, paragraph, hstack, vstack, hbox, vbox, linebreak};
 pub use crate::{inputbox, button, check_button, radio_button, camera_frame, scrolling};
 pub use crate::rectangle;
 

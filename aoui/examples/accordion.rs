@@ -1,6 +1,10 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::WorldExtension;
 use bevy_aoui::AouiPlugin;
+use bevy_aoui::events::MouseWheelAction;
+use bevy_aoui::signals::Object;
+use bevy_aoui::signals::SignalBuilder;
+use bevy_aoui::widgets::button::RadioButton;
 
 pub fn main() {
     App::new()
@@ -14,7 +18,6 @@ pub fn main() {
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
         .add_plugins(AouiPlugin)
-        .register_cursor_default(CursorIcon::Arrow)
         .register_scrolling_speed([16, 16], [0.5, -0.5])
         .run();
 }
@@ -24,6 +27,120 @@ Ut luctus tellus mi. Donec non lacus ex. Vivamus non rutrum quam. Curabitur in b
 
 #[derive(Component)]
 pub struct ScrollDimension(f32);
+
+
+pub fn accordion_page(
+    commands: &mut Commands, 
+    assets: &AssetServer, 
+    index: usize,
+    group: &RadioButton, 
+    scroll: &SignalBuilder<MouseWheelAction>,
+    text: &str,
+) -> [Entity; 2] {
+    use bevy_aoui::dsl::prelude::*;
+    let sig = group.recv::<Object>();
+
+    const HEIGHT: f32 = 200.0;
+
+    let (pos_text, pos_scroll) = SharedPosition::many();
+    let (cov_send, cov_recv) = signal();
+    let (cov_percent_send, cov_percent_recv) = signal();
+    let (render_in, render_out) = render_target(assets, [800, 800]);
+    [
+        hbox! ((commands, assets){
+            dimension: size2!(400, 2 em),
+            child: text! {
+                anchor: Left,
+                text: format!("Accordion {}", index),
+                layer: 1,
+            },
+            child: radio_button! {
+                anchor: Right,
+                center: Center,
+                dimension: size2!(2 em, 2 em),
+                context: group.clone(),
+                cancellable: true,
+                value: index,
+                child: text! {
+                    text: "v",
+                    layer: 1,
+                    extra: sig.clone().recv_select(index, 
+                        Interpolate::<Rotation>::signal_to(PI),
+                        Interpolate::<Rotation>::signal_to(0.0),
+                    ),
+                    extra: transition! (Rotation 0.5 CubicInOut default (if index == 0 {PI} else {0.0}))
+                },
+            }
+        }),
+        hstack! ((commands, assets) {
+            anchor: Top,
+            extra: sig.clone().recv_select(index, 
+                Interpolate::<Opacity>::signal_to(1.0),
+                Interpolate::<Opacity>::signal_to(0.0),
+            ),
+            extra: transition! (Opacity 0.5 CubicInOut default (if index == 0 {1.0} else {0.0})),
+            child: scrolling! {
+                anchor: Top,
+                dimension: [380, 200],
+                scroll: Scrolling::Y
+                    .with_shared_position(pos_text)
+                    .with_invoke(scroll.clone()),
+                coverage_px: cov_send,
+                coverage_percent: cov_percent_send,
+                extra: ScrollDimension(200.0),
+                extra: sig.clone().recv_select(index, 
+                    |dim: &ScrollDimension, interpolate: &mut Interpolate<Dimension>| {
+                        interpolate.interpolate_to_y(dim.0)
+                    },
+                    Interpolate::<Dimension>::signal_to_y(0.0),
+                ),
+                extra: cov_recv.recv(
+                    |fac: Vec2, dim: &mut ScrollDimension| {
+                        dim.0 = fac.y.min(HEIGHT);
+                    }
+                ).with_slot::<1>(),
+                extra: transition! (Dimension 0.5 Linear default [380, if index == 0 {200} else {0}]),
+                layer: 1,
+                child: text! {
+                    anchor: Top,
+                    bounds: [370, 999999],
+                    color: color!(gold),
+                    wrap: true,
+                    layer: (index + 4) as u8,
+                    text: text,
+                }
+            },
+            child: rectangle! {
+                anchor: Right,
+                dimension: size2!(20, 100%),
+                color: color!(orange),
+                layer: 1,
+                child: rectangle! {
+                    anchor: Top,
+                    event: EventFlags::LeftDrag,
+                    dimension: size2!(20, 20 %),
+                    color: color!(red),
+                    layer: 1,
+                    extra: DragY.with_position(pos_scroll.flip(false, true)),
+                    extra: cov_percent_recv.recv(|fac: Vec2, dim: &mut Dimension| {
+                        dim.edit_raw(|v| v.y = if fac.y > 1.0 {1.0 / fac.y} else {fac.y})
+                    }),
+                }
+            },
+            child: camera_frame! {
+                dimension: Size2::FULL,
+                render_target: render_in,
+                layer: (index + 4) as u8,
+                extra: IgnoreLayout,
+                child: sprite! {
+                    dimension: Size2::FULL,
+                    layer: 1,
+                    sprite: render_out,
+                }
+            }
+        })
+    ]
+}
 
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
@@ -38,19 +155,15 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         })
     });
 
-    let (first, second, third, fourth) = radio_button_group(0);
-    let sig = first.recv::<i32>();
+    let group = radio_button_group(0usize);
 
-    let (scroll_send1, scroll_send2, scroll_send3, scroll_send4, scroll_recv) = signal();
+    let (scroll_send, scroll_recv) = signal();
 
-    let (text1, scroll1) = SharedPosition::many();
-    let (text2, scroll2) = SharedPosition::many();
-    let (text3, scroll3) = SharedPosition::many();
-    let (text4, scroll4) = SharedPosition::many();
+    let texts = [TEXT, TEXT, "Hello, Hello, Hello!", &format!("{TEXT}{TEXT}"), "apple\norange\nbanana", TEXT];
 
-
-
-    let (cov3_send, cov3_recv) = signal();
+    let children: Vec<_> = texts.into_iter().enumerate()
+        .map(|(idx, text)| accordion_page(&mut commands, &assets, idx, &group, &scroll_send, text))
+        .flatten().collect();
 
     let (main_in, main_out) = render_target(&assets, [800, 800]);
     camera_frame!((commands, assets){
@@ -67,292 +180,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         dimension: [400, 400],
         scroll: Scrolling::POS_Y
             .with_recv(scroll_recv),
-        child: vbox! {
+        child: vstack! {
             anchor: Top,
-            child: hspan! {
-                dimension: size2!(400, 2 em),
-                child: text! {
-                    anchor: Left,
-                    text: "Accordion 1",
-                    layer: 1,
-                },
-                child: radio_button! {
-                    anchor: Right,
-                    center: Center,
-                    dimension: size2!(2 em, 2 em),
-                    context: first,
-                    cancellable: true,
-                    value: 0,
-                    child: text! {
-                        text: "v",
-                        layer: 1,
-                        extra: sig.clone().recv_select(0, 
-                            Interpolate::<Rotation>::signal_to(PI),
-                            Interpolate::<Rotation>::signal_to(0.0),
-                        ),
-                        extra: transition! (Rotation 0.5 CubicInOut default PI)
-                    },
-                }
-            },
-            child: hbox!{
-                anchor: Top,
-                extra: sig.clone().recv_select(0, 
-                    Interpolate::<Opacity>::signal_to(1.0),
-                    Interpolate::<Opacity>::signal_to(0.0),
-                ),
-                extra: transition! (Opacity 0.5 CubicInOut default 1.0),
-                child: scrolling! {
-                    anchor: Top,
-                    dimension: [380, 200],
-                    scroll: Scrolling::Y
-                        .with_shared_position(text1)
-                        .with_invoke(scroll_send1),
-                    extra: sig.clone().recv_select(0, 
-                        Interpolate::<Dimension>::signal_to_y(200.0),
-                        Interpolate::<Dimension>::signal_to_y(0.0),
-                    ),
-                    extra: transition! (Dimension 0.5 Linear default [380, 200]),
-                    layer: 1,
-                    child: text! {
-                        anchor: Top,
-                        bounds: [370, 999999],
-                        color: color!(gold),
-                        wrap: true,
-                        layer: 1,
-                        text: TEXT,
-                    }
-                },
-                child: rectangle! {
-                    anchor: Right,
-                    dimension: size2!(20, 100%),
-                    color: color!(orange),
-                    layer: 1,
-                    child: rectangle! {
-                        anchor: Top,
-                        event: EventFlags::LeftDrag,
-                        dimension: [20, 40],
-                        color: color!(red),
-                        layer: 1,
-                        extra: DragY.with_position(scroll1.flip(false, true)),
-                    }
-                },
-            },
-            child: hspan! {
-                dimension: size2!(400, 2 em),
-                child: text! {
-                    anchor: Left,
-                    text: "Accordion 2",
-                    layer: 1,
-                },
-                child: radio_button! {
-                    anchor: Right,
-                    center: Center,
-                    dimension: size2!(2 em, 2 em),
-                    context: second,
-                    cancellable: true,
-                    value: 1,
-                    child: text! {
-                        text: "v",
-                        rotation: PI,
-                        layer: 1,
-                        extra: sig.clone().recv_select(1, 
-                            Interpolate::<Rotation>::signal_to(PI),
-                            Interpolate::<Rotation>::signal_to(0.0),
-                        ),                        
-                        extra: transition! (Rotation 0.5 CubicInOut default PI)
-                    },
-                }
-            },
-            child: hbox!{
-                anchor: Top,
-                extra: sig.clone().recv_select(1, 
-                    Interpolate::<Opacity>::signal_to(1.0),
-                    Interpolate::<Opacity>::signal_to(0.0),
-                ),
-                extra: transition! (Opacity 0.5 CubicInOut default 0.0),
-                child: scrolling! {
-                    anchor: Top,
-                    dimension: [380, 100],
-                    scroll: Scrolling::Y
-                        .with_shared_position(text2)
-                        .with_invoke(scroll_send2),
-                    extra: sig.clone().recv_select(1, 
-                        Interpolate::<Dimension>::signal_to_y(100.0),
-                        Interpolate::<Dimension>::signal_to_y(0.0),
-                    ),
-                    extra: transition! (Dimension 0.5 Linear default [380, 0]),
-                    layer: 1,
-                    child: text! {
-                        anchor: Top,
-                        bounds: [370, 999999],
-                        color: color!(gold),
-                        wrap: true,
-                        layer: 1,
-                        text: TEXT,
-                    }
-                },
-                child: rectangle! {
-                    anchor: Right,
-                    dimension: size2!(20, 100%),
-                    color: color!(orange),
-                    layer: 1,
-                    child: rectangle! {
-                        anchor: Top,
-                        event: EventFlags::LeftDrag,
-                        dimension: [20, 40],
-                        color: color!(red),
-                        layer: 1,
-                        extra: DragY.with_position(scroll2.flip(false, true)),
-                    }
-                },
-            },
-            child: hspan! {
-                dimension: size2!(400, 2 em),
-                child: text! {
-                    anchor: Left,
-                    text: "Accordion 3",
-                    layer: 1,
-                },
-                child: radio_button! {
-                    anchor: Right,
-                    center: Center,
-                    dimension: size2!(2 em, 2 em),
-                    context: third,
-                    cancellable: true,
-                    value: 2,
-                    child: text! {
-                        text: "v",
-                        rotation: PI,
-                        layer: 1,
-                        extra: sig.clone().recv_select(2, 
-                            Interpolate::<Rotation>::signal_to(PI),
-                            Interpolate::<Rotation>::signal_to(0.0),
-                        ),                        
-                        extra: transition! (Rotation 0.5 CubicInOut default PI)
-                    },
-                }
-            },
-            child: hbox!{
-                anchor: Top,
-                extra: sig.clone().recv_select(2, 
-                    Interpolate::<Opacity>::signal_to(1.0),
-                    Interpolate::<Opacity>::signal_to(0.0),
-                ),
-                extra: transition! (Opacity 0.5 CubicInOut default 0.0),
-                child: scrolling! {
-                    anchor: Top,
-                    dimension: [380, 500],
-                    scroll: Scrolling::Y
-                        .with_shared_position(text3)
-                        .with_invoke(scroll_send3),
-                    coverage_px: cov3_send,
-                    extra: ScrollDimension(0.0),
-                    extra: sig.clone().recv_select(2, 
-                        |dim: &ScrollDimension, interpolate: &mut Interpolate<Dimension>| {
-                            interpolate.interpolate_to_y(dim.0)
-                        },
-                        Interpolate::<Dimension>::signal_to_y(0.0),
-                    ),
-                    extra: cov3_recv.recv(
-                        |fac: Vec2, dim: &mut ScrollDimension| {
-                            dim.0 = fac.y;
-                        }
-                    ).with_slot::<1>(),
-                    extra: transition! (Dimension 0.5 Linear default [380, 0]),
-                    layer: 1,
-                    child: text! {
-                        anchor: Top,
-                        bounds: [370, 999999],
-                        color: color!(gold),
-                        wrap: true,
-                        layer: 1,
-                        text: "Hello, Hello, Hello!",
-                    }
-                },
-                child: rectangle! {
-                    anchor: Right,
-                    dimension: size2!(20, 100%),
-                    color: color!(orange),
-                    layer: 1,
-                    child: rectangle! {
-                        anchor: Top,
-                        event: EventFlags::LeftDrag,
-                        dimension: [20, 40],
-                        color: color!(red),
-                        layer: 1,
-                        extra: DragY.with_position(scroll3.flip(false, true)),
-                    }
-                },
-            },
-            child: hspan! {
-                dimension: size2!(400, 2 em),
-                child: text! {
-                    anchor: Left,
-                    text: "Accordion 4",
-                    layer: 1,
-                },
-                child: radio_button! {
-                    anchor: Right,
-                    center: Center,
-                    dimension: size2!(2 em, 2 em),
-                    context: fourth,
-                    cancellable: true,
-                    value: 3,
-                    child: text! {
-                        text: "v",
-                        rotation: PI,
-                        layer: 1,
-                        extra: sig.clone().recv_select(3, 
-                            Interpolate::<Rotation>::signal_to(PI),
-                            Interpolate::<Rotation>::signal_to(0.0),
-                        ),
-                        extra: transition! (Rotation 0.5 CubicInOut default PI)
-                    },
-                }
-            },
-            child: hbox!{
-                anchor: Top,
-                extra: sig.clone().recv_select(3, 
-                    Interpolate::<Opacity>::signal_to(1.0),
-                    Interpolate::<Opacity>::signal_to(0.0),
-                ),
-                extra: transition! (Opacity 0.5 CubicInOut default 0.0),
-                child: scrolling! {
-                    anchor: Top,
-                    dimension: [380, 300],
-                    scroll: Scrolling::Y
-                        .with_shared_position(text4)
-                        .with_invoke(scroll_send4),
-                        extra: sig.clone().recv_select(3, 
-                            Interpolate::<Dimension>::signal_to_y(300.0),
-                            Interpolate::<Dimension>::signal_to_y(0.0),
-                        ),
-                    extra: transition! (Dimension 0.5 Linear default [380, 0]),
-                    layer: 1,
-                    child: text! {
-                        anchor: Top,
-                        bounds: [370, 999999],
-                        color: color!(gold),
-                        wrap: true,
-                        layer: 1,
-                        text: TEXT,
-                    }
-                },
-                child: rectangle! {
-                    anchor: Right,
-                    dimension: size2!(20, 100%),
-                    color: color!(orange),
-                    layer: 1,
-                    child: rectangle! {
-                        anchor: Top,
-                        event: EventFlags::LeftDrag,
-                        dimension: [20, 40],
-                        color: color!(red),
-                        layer: 1,
-                        extra: DragY.with_position(scroll4.flip(false, true)),
-                    }
-                },
-            },
+            children: children,
         }
     });
     

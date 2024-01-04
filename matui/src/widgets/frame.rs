@@ -8,9 +8,9 @@ use bevy::window::CursorIcon;
 use bevy_aoui::layout::Axis;
 use bevy_aoui::signals::signal;
 use bevy_aoui::widgets::button::SetCursor;
-use bevy_aoui::{material_sprite, Hitbox, vbox};
+use bevy_aoui::{material_sprite, Hitbox, vstack};
 use bevy_aoui::widgets::drag::{Dragging, DragConstraint};
-use bevy_aoui::{widget_extension, build_frame, size2, layout::CompactLayout, BuildMeshTransform};
+use bevy_aoui::{widget_extension, build_frame, size2, layout::StackLayout, BuildMeshTransform};
 use bevy_aoui::events::{EventFlags, Handlers, EvMouseDrag};
 use bevy_aoui::dsl::{Widget, mesh_rectangle};
 use bevy_aoui::dsl::HandleOrString;
@@ -87,7 +87,7 @@ widget_extension!(
 impl Widget for MWindowBuilder {
     fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
         self.z += 0.01;
-        self.layout = Some(Box::new(CompactLayout::VBOX));
+        self.layout = Some(Box::new(StackLayout::VBOX));
         let frame = build_frame!(commands, self);
         let assets = assets.expect("Please pass in the AssetServer");
         let style = self.palette;
@@ -124,7 +124,7 @@ impl Widget for MWindowBuilder {
                 },
                 Handlers::<EvMouseDrag>::new(drag_send),
             ));
-            let banner_entity = vbox!((commands, assets) {
+            let banner_entity = vstack!((commands, assets) {
                 child: banner,
                 child: divider! {
                     inset: 0.1,

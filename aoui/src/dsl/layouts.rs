@@ -69,10 +69,10 @@ macro_rules! padding {
 /// Construct a horizontal left to right compact layout. 
 /// The Underlying struct is [`FrameBuilder`](super::builders::FrameBuilder).
 #[macro_export]
-macro_rules! hbox {
+macro_rules! hstack {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {
-            layout: $crate::layout::CompactLayout::HBOX,
+            layout: $crate::layout::StackLayout::HBOX,
             $($tt)*
         })
     };
@@ -81,10 +81,10 @@ macro_rules! hbox {
 /// Construct a vertical top to bottom compact layout.
 /// The Underlying struct is [`FrameBuilder`](super::builders::FrameBuilder).
 #[macro_export]
-macro_rules! vbox {
+macro_rules! vstack {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {
-            layout: $crate::layout::CompactLayout::VBOX,
+            layout: $crate::layout::StackLayout::VBOX,
             $($tt)*
         })
     };
@@ -93,7 +93,7 @@ macro_rules! vbox {
 /// Construct a horizotal left to right layout with fixed dimension.
 /// The Underlying struct is [`FrameBuilder`](super::builders::FrameBuilder).
 #[macro_export]
-macro_rules! hspan {
+macro_rules! hbox {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {
             layout: $crate::layout::SpanLayout::HSPAN,
@@ -105,7 +105,7 @@ macro_rules! hspan {
 /// Construct a vertical top to bottom layout with fixed dimension.
 /// The Underlying struct is [`FrameBuilder`](super::builders::FrameBuilder).
 #[macro_export]
-macro_rules! vspan {
+macro_rules! vbox {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {
             layout: $crate::layout::SpanLayout::VSPAN,

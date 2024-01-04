@@ -76,7 +76,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         })
     });
     
-    vbox!((commands, assets)  {
+    vstack!((commands, assets)  {
         child: atlas! {
             dimension: [128, 128],
             atlas: "ducky.json",

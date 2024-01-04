@@ -34,17 +34,17 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         "Layout Demo",
         "Insertion Order: light to dark.",
         "Anchor: circle.",
-        "Red: Compact HBox",
-        "Yellow: HSpan",
-        "Green: Compact VBox",
-        "Blue: VSpan",
+        "Red: HStack",
+        "Yellow: HBox",
+        "Green: VStack",
+        "Blue: VBox",
     ];
     let colors = colors![
         white, white, white,
         red, yellow, green, blue,
     ];
 
-    vbox! ((commands, assets) {
+    vstack! ((commands, assets) {
         anchor: Top,
         margin: 4,
         child: #text! { 
@@ -90,7 +90,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         blue700, blue800, blue900
     ];
 
-    hbox! ((commands, assets) {
+    hstack! ((commands, assets) {
         anchor: Left,
         dimension: [400, 100],
         offset: [20, 120],
@@ -117,7 +117,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
     });
 
-    hspan! ((commands, assets) {
+    hbox! ((commands, assets) {
         anchor: Left,
         dimension: [600, 100],
         offset: [20, 0],
@@ -144,7 +144,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
     });
 
-    vbox! ((commands, assets) {
+    vstack! ((commands, assets) {
         anchor: Right,
         dimension: [100, 700],
         offset: [-200, 0],
@@ -171,7 +171,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
     });
 
-    vspan! ((commands, assets) {
+    vbox! ((commands, assets) {
         anchor: Right,
         dimension: [100, 700],
         offset: [-20, 0],

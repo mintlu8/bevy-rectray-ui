@@ -102,7 +102,7 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
     let (mut transform, mut dimension) = root.single_mut();
     let (flexbox, mut container, mut transform2) = container.single_mut();
     let mut layout_type = match &container.layout {
-        x if x.downcast_ref::<CompactLayout>().is_some() => "compact",
+        x if x.downcast_ref::<StackLayout>().is_some() => "compact",
         x if x.downcast_ref::<SpanLayout>().is_some() => "span",
         x if x.downcast_ref::<ParagraphLayout>().is_some() => "paragraph",
         x if x.downcast_ref::<FixedGridLayout>().is_some() => "fixed grid",
@@ -166,7 +166,7 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
             });
         match layout_type {
             "compact" => {
-                if let Some(CompactLayout { direction }) = container.layout.downcast_mut() {
+                if let Some(StackLayout { direction }) = container.layout.downcast_mut() {
                     ComboBox::from_label("Direction")
                     .selected_text(match direction {
                         LayoutDir::LeftToRight => "left to right",
@@ -181,7 +181,7 @@ pub fn egui_window(mut commands: Commands, mut ctx: EguiContexts,
                         ui.selectable_value(direction, LayoutDir::TopToBottom, "top to bottom");
                     });
                 } else {
-                    container.layout = Box::new(CompactLayout { 
+                    container.layout = Box::new(StackLayout { 
                         direction: LayoutDir::LeftToRight
                     })
                 }

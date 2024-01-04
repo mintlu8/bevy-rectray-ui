@@ -5,7 +5,7 @@ use bevy::sprite::Mesh2dHandle;
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
 use bevy_aoui::Opacity;
-use bevy_aoui::{widget_extension, build_frame, Hitbox, size2, text, layout::{Container, CompactLayout, LayoutDir}, sprite, BuildMeshTransform};
+use bevy_aoui::{widget_extension, build_frame, Hitbox, size2, text, layout::{Container, StackLayout, LayoutDir}, sprite, BuildMeshTransform};
 use bevy_aoui::anim::{Interpolate, Easing};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvButtonClick};
 use bevy_aoui::widgets::button::{PropagateFocus, Button, SetCursor, Payload};
@@ -150,7 +150,7 @@ impl Widget for MButtonBuilder {
                 icon: self.cursor.unwrap_or(CursorIcon::Hand),
             },
             Container {
-                layout: Box::new(CompactLayout { direction: LayoutDir::LeftToRight}),
+                layout: Box::new(StackLayout { direction: LayoutDir::LeftToRight}),
                 margin: size2!(0.5 em, 1 em),
                 padding: size2!(1 em, 0.75 em),
                 range: None,

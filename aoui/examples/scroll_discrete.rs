@@ -35,7 +35,7 @@ pub fn init(mut commands: Commands) {
 
     let s = "abcdefghijklmnopqrstuvwxyz".chars();
     
-    vbox! (commands {
+    vstack! (commands {
         dimension: [200, 60],
         hitbox: Rect(1),
         event: EventFlags::MouseWheel,

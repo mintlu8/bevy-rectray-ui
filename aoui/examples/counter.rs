@@ -36,7 +36,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     let (sender, receiver) = signal();
 
-    hbox!((commands, assets) {
+    hstack!((commands, assets) {
         margin: size2!(0.5 em, 0.5 em),
         font_size: em(2),
         child: text! {

@@ -68,7 +68,7 @@ use bevy::render::view::RenderLayers;
 use bevy::{asset::{Handle, Assets}, text::Font, render::color::Color, hierarchy::BuildChildren};
 use bevy::ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component};
 use crate::{Transform2D, Anchor, FontSize, Dimension, Size2, DimensionSize, dimension::DimensionMut};
-use crate::layout::{Container, CompactLayout, LayoutDir};
+use crate::layout::{Container, StackLayout, LayoutDir};
 use crate::bundles::AouiBundle;
 use crate::layout::LayoutControl;
 use crate::frame;
@@ -606,7 +606,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                                         ..Default::default()
                                     },
                                     Container {
-                                        layout: Box::new(CompactLayout {
+                                        layout: Box::new(StackLayout {
                                             direction: LayoutDir::LeftToRight
                                         }),
                                         margin: Size2::ZERO,

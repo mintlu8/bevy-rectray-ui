@@ -45,7 +45,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         child: check_button! {
             dimension: Size2::FULL,
             on_change: send,
-            child: hspan! {
+            child: hbox! {
                 dimension: size2!(22 em, 2 em),
                 font_size: em(2),
                 child: text! {
@@ -87,7 +87,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             }),
             extra: transition! (Opacity 0.5 Linear default 0.0),
             dimension: size2!(14 em, 4 em),
-            child: vbox! {
+            child: vstack! {
                 anchor: Top,
                 child: #radio_button! {
                     dimension: size2!(14 em, 2 em),
