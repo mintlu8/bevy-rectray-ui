@@ -26,7 +26,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal(|fps: f32, text: &mut Text| {
+            format_widget!(text, "FPS: {:.2}", fps);
+        })
     });
 
     let (send1, recv1) = signal();
@@ -35,7 +37,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [-400, 200],
         color: color!(gold),
         text: "Scroll this! =>",
-        extra: recv1.map_recv::<SigText>(|x: f32| format!("This has value {:.2}! =>", x))
+        extra: recv1.recv(|x: f32, text: &mut Text| format_widget!(text, "This has value {:.2}! =>", x))
     });
     
     sprite! (commands {
@@ -154,7 +156,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [-400, -200],
         color: color!(gold),
         text: "Scroll this! =>",
-        extra: recv2.map_recv::<SigText>(|x: f32| format!("This has value {:.2}! =>", x))
+        extra: recv2.recv(|x: f32, text: &mut Text| format_widget!(text, "This has value {:.2}! =>", x))
     });
 
     sprite! (commands {

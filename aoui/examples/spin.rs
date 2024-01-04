@@ -26,7 +26,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal(|fps: f32, text: &mut Text| {
+            format_widget!(text, "FPS: {:.2}", fps);
+        })
     });
 
     text! ((commands, assets) {

@@ -1,4 +1,4 @@
-use std::{fmt::Debug, any::TypeId};
+use std::{fmt::Debug, any::TypeId, mem};
 use downcast_rs::{impl_downcast, Downcast};
 
 const _: Option<Box<dyn DataTransfer>> = None;
@@ -25,6 +25,61 @@ impl<T> DataTransfer for T where T: Debug + Clone + PartialEq + Send + Sync + 's
     }
 }
 
+pub trait AsObject: Sized + Debug + Clone + Send + Sync + 'static {
+    fn get(obj: &Object) -> Option<Self>;
+    fn get_ref(obj: &Object) -> Option<&Self>;
+    fn from_object(obj: Object) -> Option<Self>;
+    fn into_object(self) -> Object;
+}
+
+impl<T> AsObject for T where T: DataTransfer + Clone {
+    fn get(obj: &Object) -> Option<Self> {
+        obj.0.as_ref().and_then(|x| x.dyn_clone().downcast().ok().map(|x| *x))
+    }
+
+    fn get_ref(obj: &Object) -> Option<&Self> {
+        obj.0.as_ref().and_then(|x| x.downcast_ref())
+    }
+    
+    fn from_object(obj: Object) -> Option<Self> {
+        obj.0.and_then(|x| x.downcast().map(|x| *x).ok())
+    }
+
+    fn into_object(self) -> Object {
+        Object(Some(Box::new(self)))
+    }
+}
+
+impl AsObject for Object  {
+    fn get(obj: &Object) -> Option<Self> {
+        if obj.is_some(){
+            Some(obj.clone())
+        } else {
+            None
+        }
+    }
+
+    fn get_ref(obj: &Object) -> Option<&Self> {
+        if obj.is_some(){
+            Some(obj)
+        } else {
+            None
+        }
+    }
+
+    fn from_object(obj: Object) -> Option<Self> {
+        if obj.is_some(){
+            Some(obj)
+        } else {
+            None
+        }
+    }
+
+    fn into_object(self) -> Object {
+        self
+    }
+}
+
 /// A type erased nullable dynamic object.
 #[derive(Debug)]
 #[derive(Default)]
@@ -37,17 +92,6 @@ impl Clone for Object {
 }
 
 
-
-impl PartialEq for Object {
-    fn eq(&self, other: &Self) -> bool {
-        match (&self.0, &other.0) {
-            (None, None) => true,
-            (Some(a), Some(b)) => a.dyn_eq(b.as_ref()),
-            _ => false
-        }
-    }
-}
-
 impl Object {
     pub const NONE: Self = Self(None);
 
@@ -55,8 +99,22 @@ impl Object {
         Self(Some(Box::new(())))
     }
 
-    pub fn new<T: DataTransfer>(v: T) -> Self {
-        Self(Some(Box::new(v)))
+    /// Create a unnameable object that is not equal to anything.
+    pub fn unnameable() -> Self {
+        #[derive(Debug, Clone)]
+        struct UnnameableUnequal;
+
+        impl PartialEq for UnnameableUnequal{
+            fn eq(&self, _: &Self) -> bool {
+                false
+            }
+        }
+        Self(Some(Box::new(UnnameableUnequal)))
+    }
+
+
+    pub fn new<T: AsObject>(v: T) -> Self {
+        AsObject::into_object(v)
     }
 
     pub fn is_some(&self) -> bool {
@@ -67,30 +125,38 @@ impl Object {
         self.0.is_none()
     }
 
-    pub fn get<T: DataTransfer>(&self) -> Option<T> {
-        self.0.as_ref().and_then(|x| x.dyn_clone().downcast().ok().map(|x| *x))
+    pub fn get<T: AsObject>(&self) -> Option<T> {
+        AsObject::get(self)
     }
 
-    pub fn get_ref<T: DataTransfer>(&self) -> Option<&T> {
-        self.0.as_ref().and_then(|x| x.downcast_ref())
+    pub fn get_ref<T: AsObject>(&self) -> Option<&T> {
+        AsObject::get_ref(self)
     }
 
     pub fn clean(&mut self) {
         self.0.take();
     }
 
-
-    pub fn take<T: DataTransfer>(&mut self) -> Option<T> {
-        self.0.take().and_then(|x| x.downcast().ok().map(|x| *x))
+    pub fn take<T: AsObject>(&mut self) -> Option<T> {
+        AsObject::from_object(mem::take(self))
     }
 
-    pub fn set<T: DataTransfer>(&mut self, v: T) {
-        self.0 = Some(Box::new(v))
+    pub fn set<T: AsObject>(&mut self, v: T) {
+        *self = AsObject::into_object(v)
     }
 
-    pub fn swap<T: DataTransfer>(&mut self, v: T) -> Option<T>{
+    pub fn swap<T: AsObject>(&mut self, v: T) -> Option<T>{
         let result = self.take();
-        self.0 = Some(Box::new(v));
+        *self = AsObject::into_object(v);
         result
+    }
+
+    /// Object does not impl `PartialEq` for specialization.
+    pub fn equal_to(&self, other: &Object) -> bool {
+        match (&self.0, &other.0) {
+            (Some(a), Some(b)) => a.dyn_eq(b.as_ref()),
+            (None, None) => true,
+            _ => false
+        }
     }
 }

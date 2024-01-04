@@ -1,7 +1,7 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::{AouiPlugin, WorldExtension, Transform2D};
+use bevy_aoui::{AouiPlugin, WorldExtension};
 
 pub fn main() {
     App::new()
@@ -38,12 +38,15 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    text!((commands, assets) {
+    text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal(|fps: f32, text: &mut Text| {
+            format_widget!(text, "FPS: {:.2}", fps);
+        })
     });
+
     material_sprite! ((commands, assets) {
         dimension: [100, 100],
         hitbox: Rect(1),
@@ -91,7 +94,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [300, 100],
         color: color!(gold),
         text: "<= Drag and this will change!",
-        extra: recv1.map_recv::<SigText>(|x: f32| format!("<= has value {:.2}!", x))
+        extra: recv1.recv(|x: f32, text: &mut Text| format_widget!(text, "<= has value {:.2}!", x))
     });
 
     let (send2, recv2) = signal();
@@ -130,6 +133,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [300, -100],
         color: color!(gold),
         text: "<= Drag and this will change!",
-        extra: recv3.map_recv::<SigText>(|x: f32| format!("<= has value {:.2}!", x))
+        extra: recv3.recv(|x: f32, text: &mut Text| format_widget!(text, "<= has value {:.2}!", x))
     });
 }

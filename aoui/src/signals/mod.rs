@@ -77,24 +77,29 @@
 
 mod dto;
 mod mpmc;
-mod create;
-pub mod types;
+//pub mod types;
 mod globals;
-mod systems;
+//mod systems;
 mod storage;
 mod sig;
 use std::sync::atomic::AtomicU8;
 
 use atomic::Ordering;
 use bevy::{app::{Plugin, Update, PreUpdate, Last}, ecs::{schedule::IntoSystemConfigs, system::{Resource, ResMut}}};
-pub use create::signal;
 pub use globals::*;
-pub use dto::{DataTransfer, Object};
+pub use dto::{Object, AsObject};
 pub use mpmc::*;
+pub use receiver::*;
 pub use storage::KeyStorage;
+pub mod receiver;
 use sig::Signal;
 
-use crate::schedule::{AouiEventSet, AouiCleanupSet};
+use crate::{schedule::{AouiEventSet, AouiCleanupSet}, dsl::CloneSplit};
+
+pub fn signal<T: AsObject, S: CloneSplit<SignalBuilder<T>>>() -> S {
+    S::clone_split(SignalBuilder::new(Signal::new()))
+}
+
 
 //use self::types::{SigSubmit, SigChange, SigDrag, SigScroll};
 
@@ -129,31 +134,17 @@ impl Default for DropFlag {
 
 impl Plugin for SignalsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        use systems::*;
         app
             .init_resource::<KeyStorage>()
             .init_resource::<DropFlag>()
             .add_systems(PreUpdate, globals::send_fps.in_set(AouiEventSet))
             .add_systems(Update, (
-                signal_receive_text,
-                signal_receive_text,
-                signal_receive_offset,
-                signal_receive_offset_x,
-                signal_receive_offset_y,
-                signal_receive_rotation,
-                signal_receive_scale,
-                signal_receive_scale_x,
-                signal_receive_scale_y,
-                signal_receive_dimension,
-                signal_receive_dimension_x,
-                signal_receive_dimension_y,
-                signal_receive_opacity,
-                signal_receive_disable,
-                signal_receive_opacity_disable,
-                signal_receive_color_sprite,
-                signal_receive_color_atlas,
-                signal_receive_color_text,
-                signal_receive_color_interpolate,
+                signal_receive::<0>,
+                signal_receive::<1>,
+                signal_receive::<2>,
+                signal_receive::<3>,
+                signal_receive::<4>,
+                signal_receive::<5>,
             ))
             .add_systems(Last, DropFlag::system_incr.before(AouiCleanupSet))
             .add_systems(Last, KeyStorage::system_reset_changed_status)

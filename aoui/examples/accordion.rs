@@ -22,6 +22,9 @@ pub fn main() {
 static TEXT: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris semper magna nibh, nec tincidunt metus fringilla id. Phasellus viverra elit volutpat orci lacinia, non suscipit odio egestas. Praesent urna ipsum, viverra non dui id, auctor sodales sem. Quisque ut mi sit amet quam ultricies cursus at vitae justo. Morbi egestas pulvinar dui id elementum. Aliquam non aliquam eros. Nam euismod in lectus sit amet blandit. Aenean mauris diam, auctor ut massa sed, convallis congue leo. Maecenas non nibh semper, tempor velit sit amet, facilisis lacus. Curabitur nec leo nisl. Proin vitae fringilla nisl. Sed vel hendrerit mi. Donec et cursus risus, at euismod justo.
 Ut luctus tellus mi. Donec non lacus ex. Vivamus non rutrum quam. Curabitur in bibendum tellus. Fusce eu gravida massa. Ut viverra vestibulum convallis. Morbi ullamcorper gravida fringilla. Morbi ullamcorper sem eget eleifend sagittis. Mauris interdum odio eget luctus pretium. In non dapibus risus.";
 
+#[derive(Component)]
+pub struct ScrollDimension(f32);
+
 pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
@@ -30,7 +33,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal(|fps: f32, text: &mut Text| {
+            format_widget!(text, "FPS: {:.2}", fps);
+        })
     });
 
     let (first, second, third, fourth) = radio_button_group(0);
@@ -43,14 +48,18 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     let (text3, scroll3) = SharedPosition::many();
     let (text4, scroll4) = SharedPosition::many();
 
-    let main_target = render_target(&assets, [800, 800]);
+
+
+    let (cov3_send, cov3_recv) = signal();
+
+    let (main_in, main_out) = render_target(&assets, [800, 800]);
     camera_frame!((commands, assets){
         dimension: [400, 400],
-        render_target: main_target.clone(),
+        render_target: main_in,
         layer: 1,
         child: sprite! {
             dimension: Size2::FULL,
-            sprite: main_target,
+            sprite: main_out,
         }
     });
 
@@ -65,6 +74,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 child: text! {
                     anchor: Left,
                     text: "Accordion 1",
+                    layer: 1,
                 },
                 child: radio_button! {
                     anchor: Right,
@@ -75,22 +85,32 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     value: 0,
                     child: text! {
                         text: "v",
-                        extra: sig.clone().cond_recv::<SigRotation>(0, PI, 0.0),
+                        layer: 1,
+                        extra: sig.clone().recv_select(0, 
+                            Interpolate::<Rotation>::signal_to(PI),
+                            Interpolate::<Rotation>::signal_to(0.0),
+                        ),
                         extra: transition! (Rotation 0.5 CubicInOut default PI)
                     },
                 }
             },
             child: hbox!{
                 anchor: Top,
-                extra: sig.clone().cond_recv::<SigOpacity>(0, 1.0, 0.0),
+                extra: sig.clone().recv_select(0, 
+                    Interpolate::<Opacity>::signal_to(1.0),
+                    Interpolate::<Opacity>::signal_to(0.0),
+                ),
                 extra: transition! (Opacity 0.5 CubicInOut default 1.0),
                 child: scrolling! {
                     anchor: Top,
                     dimension: [380, 200],
                     scroll: Scrolling::Y
                         .with_shared_position(text1)
-                        .with_send(scroll_send1),
-                    extra: sig.clone().cond_recv::<SigDimensionY>(0, 200.0, 0.0),
+                        .with_invoke(scroll_send1),
+                    extra: sig.clone().recv_select(0, 
+                        Interpolate::<Dimension>::signal_to_y(200.0),
+                        Interpolate::<Dimension>::signal_to_y(0.0),
+                    ),
                     extra: transition! (Dimension 0.5 Linear default [380, 200]),
                     layer: 1,
                     child: text! {
@@ -122,6 +142,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 child: text! {
                     anchor: Left,
                     text: "Accordion 2",
+                    layer: 1,
                 },
                 child: radio_button! {
                     anchor: Right,
@@ -133,23 +154,33 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     child: text! {
                         text: "v",
                         rotation: PI,
-                        extra: sig.clone().cond_recv::<SigRotation>(1, PI, 0.0),
+                        layer: 1,
+                        extra: sig.clone().recv_select(1, 
+                            Interpolate::<Rotation>::signal_to(PI),
+                            Interpolate::<Rotation>::signal_to(0.0),
+                        ),                        
                         extra: transition! (Rotation 0.5 CubicInOut default PI)
                     },
                 }
             },
             child: hbox!{
                 anchor: Top,
-                extra: sig.clone().cond_recv::<SigOpacity>(1, 1.0, 0.0),
-                extra: transition! (Opacity 0.5 CubicInOut default 1.0),
+                extra: sig.clone().recv_select(1, 
+                    Interpolate::<Opacity>::signal_to(1.0),
+                    Interpolate::<Opacity>::signal_to(0.0),
+                ),
+                extra: transition! (Opacity 0.5 CubicInOut default 0.0),
                 child: scrolling! {
                     anchor: Top,
                     dimension: [380, 100],
                     scroll: Scrolling::Y
                         .with_shared_position(text2)
-                        .with_send(scroll_send2),
-                    extra: sig.clone().cond_recv::<SigDimensionY>(1, 100.0, 0.0),
-                    extra: transition! (Dimension 0.5 Linear default [380, 100]),
+                        .with_invoke(scroll_send2),
+                    extra: sig.clone().recv_select(1, 
+                        Interpolate::<Dimension>::signal_to_y(100.0),
+                        Interpolate::<Dimension>::signal_to_y(0.0),
+                    ),
+                    extra: transition! (Dimension 0.5 Linear default [380, 0]),
                     layer: 1,
                     child: text! {
                         anchor: Top,
@@ -180,6 +211,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 child: text! {
                     anchor: Left,
                     text: "Accordion 3",
+                    layer: 1,
                 },
                 child: radio_button! {
                     anchor: Right,
@@ -191,23 +223,42 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     child: text! {
                         text: "v",
                         rotation: PI,
-                        extra: sig.clone().cond_recv::<SigRotation>(2, PI, 0.0),
+                        layer: 1,
+                        extra: sig.clone().recv_select(2, 
+                            Interpolate::<Rotation>::signal_to(PI),
+                            Interpolate::<Rotation>::signal_to(0.0),
+                        ),                        
                         extra: transition! (Rotation 0.5 CubicInOut default PI)
                     },
                 }
             },
             child: hbox!{
                 anchor: Top,
-                extra: sig.clone().cond_recv::<SigOpacity>(2, 1.0, 0.0),
-                extra: transition! (Opacity 0.5 CubicInOut default 1.0),
+                extra: sig.clone().recv_select(2, 
+                    Interpolate::<Opacity>::signal_to(1.0),
+                    Interpolate::<Opacity>::signal_to(0.0),
+                ),
+                extra: transition! (Opacity 0.5 CubicInOut default 0.0),
                 child: scrolling! {
                     anchor: Top,
                     dimension: [380, 500],
                     scroll: Scrolling::Y
                         .with_shared_position(text3)
-                        .with_send(scroll_send3),
-                    extra: sig.clone().cond_recv::<SigDimensionY>(2, 500.0, 0.0),
-                    extra: transition! (Dimension 0.5 Linear default [380, 500]),
+                        .with_invoke(scroll_send3),
+                    coverage_px: cov3_send,
+                    extra: ScrollDimension(0.0),
+                    extra: sig.clone().recv_select(2, 
+                        |dim: &ScrollDimension, interpolate: &mut Interpolate<Dimension>| {
+                            interpolate.interpolate_to_y(dim.0)
+                        },
+                        Interpolate::<Dimension>::signal_to_y(0.0),
+                    ),
+                    extra: cov3_recv.recv(
+                        |fac: Vec2, dim: &mut ScrollDimension| {
+                            dim.0 = fac.y;
+                        }
+                    ).with_slot::<1>(),
+                    extra: transition! (Dimension 0.5 Linear default [380, 0]),
                     layer: 1,
                     child: text! {
                         anchor: Top,
@@ -238,6 +289,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 child: text! {
                     anchor: Left,
                     text: "Accordion 4",
+                    layer: 1,
                 },
                 child: radio_button! {
                     anchor: Right,
@@ -249,23 +301,33 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     child: text! {
                         text: "v",
                         rotation: PI,
-                        extra: sig.clone().cond_recv::<SigRotation>(3, PI, 0.0),
+                        layer: 1,
+                        extra: sig.clone().recv_select(3, 
+                            Interpolate::<Rotation>::signal_to(PI),
+                            Interpolate::<Rotation>::signal_to(0.0),
+                        ),
                         extra: transition! (Rotation 0.5 CubicInOut default PI)
                     },
                 }
             },
             child: hbox!{
                 anchor: Top,
-                extra: sig.clone().cond_recv::<SigOpacity>(3, 1.0, 0.0),
-                extra: transition! (Opacity 0.5 CubicInOut default 1.0),
+                extra: sig.clone().recv_select(3, 
+                    Interpolate::<Opacity>::signal_to(1.0),
+                    Interpolate::<Opacity>::signal_to(0.0),
+                ),
+                extra: transition! (Opacity 0.5 CubicInOut default 0.0),
                 child: scrolling! {
                     anchor: Top,
                     dimension: [380, 300],
                     scroll: Scrolling::Y
                         .with_shared_position(text4)
-                        .with_send(scroll_send4),
-                    extra: sig.clone().cond_recv::<SigDimensionY>(3, 300.0, 0.0),
-                    extra: transition! (Dimension 0.5 Linear default [380, 300]),
+                        .with_invoke(scroll_send4),
+                        extra: sig.clone().recv_select(3, 
+                            Interpolate::<Dimension>::signal_to_y(300.0),
+                            Interpolate::<Dimension>::signal_to_y(0.0),
+                        ),
+                    extra: transition! (Dimension 0.5 Linear default [380, 0]),
                     layer: 1,
                     child: text! {
                         anchor: Top,

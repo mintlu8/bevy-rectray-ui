@@ -8,10 +8,10 @@ use bevy::math::{Vec2, IVec2};
 use bevy::hierarchy::{Children, Parent};
 use bevy::ecs::{component::Component, system::{Commands, Res, Query}};
 use crate::DimensionData;
+use crate::dsl::CloneSplit;
 use crate::{signals::KeyStorage, AouiREM, Transform2D, Anchor, anim::Attr, layout::Container};
 use crate::anim::Offset;
 use crate::events::{Handlers, EvMouseWheel, MouseWheelAction, EvPositionFactor};
-use self::sealed::BuildSharedPosition;
 
 use super::{scroll::{Scrolling, ScrollDiscrete}, drag::Dragging};
 
@@ -67,46 +67,6 @@ impl Default for SharedPosition {
 
 }
 
-mod sealed {
-    use super::SharedPosition;
-
-    pub trait BuildSharedPosition: Sized  {
-        fn build() -> Self;
-    }
-
-    impl<const N: usize> BuildSharedPosition for [SharedPosition; N] {
-        fn build() -> Self {
-            let base = SharedPosition::default();
-            core::array::from_fn(|_| base.clone())
-        }
-    }
-
-    macro_rules! impl_build_pos {
-        ($name:ident) => {
-            impl BuildSharedPosition for ($name,) {
-                fn build() -> Self {
-                    ($name::default(),)
-                }
-            }
-        };
-        ($name:ident $(,$rest: ident)*) => {
-            impl BuildSharedPosition for ($name $(,$rest)*) {
-                fn build() -> Self {
-                    let first = $name::default();
-                    ($({let val: $rest = first.clone(); val},)* first)
-                }
-            }
-            impl_build_pos!($($rest),*);
-        };
-    }
-
-    impl_build_pos!(
-        SharedPosition,SharedPosition,SharedPosition,SharedPosition,
-        SharedPosition,SharedPosition,SharedPosition,SharedPosition,
-        SharedPosition,SharedPosition,SharedPosition,SharedPosition
-    );
-}
-
 
 impl SharedPosition {
 
@@ -117,8 +77,8 @@ impl SharedPosition {
         }
     }
 
-    pub fn many<T: BuildSharedPosition>() -> T {
-        T::build()
+    pub fn many<T: CloneSplit<SharedPosition>>() -> T {
+        T::clone_split(SharedPosition::new())
     }
 }
 

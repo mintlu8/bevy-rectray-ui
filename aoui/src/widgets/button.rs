@@ -3,10 +3,9 @@ use std::{sync::{Mutex, Arc}, ops::Deref, mem};
 use bevy::{hierarchy::Children, ecs::{entity::Entity, query::Has}};
 use bevy::window::{Window, PrimaryWindow, CursorIcon};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
-use crate::{dsl::prelude::signal, signals::KeyStorage, anim::VisibilityToggle};
-use crate::signals::{Object, DynamicSender, SignalBuilder};
+use crate::{dsl::{prelude::{signal, SignalSender}, CloneSplit}, signals::{KeyStorage, AsObject}, anim::VisibilityToggle};
+use crate::signals::{Object, SignalBuilder};
 use crate::events::{Handlers, EvButtonClick, EvToggleChange};
-use crate::signals::DataTransfer;
 use crate::events::{EventFlags, CursorFocus, CursorAction};
 
 
@@ -121,19 +120,19 @@ impl From<bool> for CheckButton {
 /// 
 /// Discriminant is the [`Payload`] component.
 #[derive(Debug, Clone, Component)]
-pub struct RadioButton(Arc<Mutex<Object>>, DynamicSender);
+pub struct RadioButton(Arc<Mutex<Object>>, SignalSender<Object>);
 
 impl RadioButton {
 
     /// Create an empty `RadioButton` context, usually unchecked by default.
     pub fn new_empty() -> Self {
-        let (send,) = signal::<(), _>();
-        RadioButton(Arc::new(Mutex::new(Object::NONE)), send.clone().type_erase())
+        let (send,) = signal();
+        RadioButton(Arc::new(Mutex::new(Object::NONE)), send.send())
     }
 
-    pub fn new(default: impl DataTransfer) -> Self {
-        let (send,) = signal::<(), _>();
-        RadioButton(Arc::new(Mutex::new(Object::new(default))), send.clone().type_erase())
+    pub fn new(default: impl AsObject) -> Self {
+        let (send,) = signal();
+        RadioButton(Arc::new(Mutex::new(Object::new(default))), send.send())
     }
 
     pub fn set(&self, payload: &Payload) {
@@ -142,25 +141,25 @@ impl RadioButton {
         self.1.send_dyn(payload.0.clone())
     }
 
-    pub fn get<T: DataTransfer>(&self) -> Option<T> {
+    pub fn get<T: AsObject>(&self) -> Option<T> {
         self.0.lock().unwrap().get()
     }
 
-    pub fn recv<T: DataTransfer>(&self) -> SignalBuilder<T> {
-        self.1.new_receiver()
+    pub fn recv<T: AsObject>(&self) -> SignalBuilder<T> {
+        self.1.specialize_receiver()
     }
 
     pub fn clear(&self) {
         let mut lock = self.0.lock().unwrap();
         *lock = Object::NONE;
-        self.1.send_dyn(Object::NONE)
+        self.1.send(Object::unnameable())
     }
 }
 
 impl PartialEq<Payload> for RadioButton {
     fn eq(&self, other: &Payload) -> bool {
         let lock = self.0.lock().unwrap();
-        lock.deref() == &other.0
+        lock.deref().equal_to(&other.0)
     }
 }
 
@@ -230,8 +229,7 @@ pub fn radio_button_on_click(
 
 /// If set, we set the cursor to a default value every frame.
 /// 
-/// Not a part of the standard plugin, but
-/// can be used if you are using `SetCursor`.
+/// Remove this if custom behavior is desired.
 #[derive(Debug, Resource, Clone, Copy)]
 pub struct CursorDefault(pub CursorIcon);
 
@@ -326,7 +324,7 @@ pub fn remove_check_button_state(mut commands: Commands,
 /// * `radio_button` `EvButtonClick`: sends `Payload`, which is required.
 /// * `check_button` `EvButtonClick`: If checked, sends `Payload` or `()`.
 /// 
-#[derive(Debug, Clone, PartialEq, Component)] 
+#[derive(Debug, Clone, Component)] 
 pub struct Payload(Object);
 
 impl Payload {
@@ -334,73 +332,16 @@ impl Payload {
         Self(Object::NONE)
     }
 
-    pub fn new(value: impl DataTransfer + Clone) -> Self {
+    pub fn new(value: impl AsObject) -> Self {
         Self(Object::new(value))
     }
 
     /// Mutate the payload.
-    pub fn mut_dyn<A: DataTransfer, B: DataTransfer>(&mut self, f: impl Fn(&A) -> B) {
+    pub fn mut_dyn<A: AsObject, B: AsObject>(&mut self, f: impl Fn(&A) -> B) {
         let Some(value) = self.0.get_ref().map(f) else {return};
         self.0.set(value)
     }
 }
-
-/// A trait implemented by tuple and arrays of `radio_button` contexts.
-/// Used to construct radio buttons.
-pub trait ConstructRadioButton: Sized {
-    /// Construct a radio button.
-    fn construct(default: impl DataTransfer) -> Self;
-    /// Create a signal receiver for a `radio_button`'s `changed` event.
-    fn recv<T: DataTransfer>(&self) -> SignalBuilder<T>;
-}
-
-impl<const N: usize> ConstructRadioButton for [RadioButton; N] {
-    fn construct(default: impl DataTransfer) -> Self {
-        let result = RadioButton::new(default);
-        core::array::from_fn(|_|result.clone())
-    }
-    fn recv<T: DataTransfer>(&self) -> SignalBuilder<T> {
-        self[0].recv::<T>()
-    }
-}
-
-macro_rules! radio_button_create {
-    ($first: ident) => {
-        impl ConstructRadioButton for ($first,) {
-            fn construct(default: impl DataTransfer) -> Self {
-                (RadioButton::new(default), )
-            }
-            fn recv<T: DataTransfer>(&self) -> SignalBuilder<T> {
-                self.0.recv::<T>()
-            }
-        }
-    };
-    ($first: ident, $($receivers: ident),*) => {
-        impl ConstructRadioButton for ($($receivers),* , $first) {
-            fn construct(default: impl DataTransfer) -> Self {                    
-                let result = RadioButton::new(default);
-                (
-                    $({
-                        let btn: $receivers = result.clone();
-                        btn
-                    },)*
-                    result
-                )
-            }
-            fn recv<T: DataTransfer>(&self) -> SignalBuilder<T> {
-                self.0.recv::<T>()
-            }
-        }
-
-        radio_button_create!($($receivers),*);
-    };
-}
-
-radio_button_create!(RadioButton, 
-    RadioButton, RadioButton, RadioButton, RadioButton,
-    RadioButton, RadioButton, RadioButton, RadioButton,
-    RadioButton, RadioButton, RadioButton, RadioButton
-);  
 
 /// Construct an array of shared `RadioButton` contexts. 
 /// 
@@ -411,7 +352,7 @@ radio_button_create!(RadioButton,
 /// // Construct 4 items as an array.
 /// let colors = radio_button_group::<_, 4>("Red");
 /// ```
-pub fn radio_button_group<T: ConstructRadioButton>(default: impl DataTransfer) -> T {
-    T::construct(default)
+pub fn radio_button_group<T: CloneSplit<RadioButton>>(default: impl AsObject) -> T {
+    T::clone_split(RadioButton::new(default))
 }
 

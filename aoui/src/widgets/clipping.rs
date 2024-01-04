@@ -6,7 +6,7 @@ use bevy::render::render_resource::{Extent3d, TextureUsages, TextureDescriptor, 
 use bevy::render::view::{VisibleEntities, RenderLayers};
 use bevy::render::camera::{Camera, CameraRenderGraph, OrthographicProjection, RenderTarget, ScalingMode};
 use bevy::core_pipeline::{core_2d::Camera2d, tonemapping::{Tonemapping, DebandDither}, clear_color::ClearColorConfig};
-use crate::{BuildTransform, Anchor, DimensionData};
+use crate::{BuildTransform, Anchor, DimensionData, dsl::CloneSplit};
 
 use crate::dsl::DslInto;
 
@@ -33,9 +33,9 @@ pub struct ScopedCameraBundle {
 }
 
 
-/// Create an image suitable as render target.
-pub fn new_render_target(assets: &AssetServer, [width, height]: [u32; 2]) -> Handle<Image> {
-    assets.add(Image {
+/// Create an image suitable as a render target.
+pub fn render_target<T: CloneSplit<Handle<Image>>>(assets: &AssetServer, [width, height]: [u32; 2]) -> T {
+    let handle = assets.add(Image {
         texture_descriptor: TextureDescriptor {
             label: None,
             size: Extent3d {
@@ -54,15 +54,16 @@ pub fn new_render_target(assets: &AssetServer, [width, height]: [u32; 2]) -> Han
         },
         data: vec![0; width as usize * height as usize * 4],
         ..Default::default()
-    })
+    });
+    CloneSplit::clone_split(handle)
 }
 
 impl ScopedCameraBundle {
 
     /// Create a camera and its render target. 
     pub fn new(assets: &AssetServer, dimension: [u32; 2], layer: impl DslInto<RenderLayers>) -> (Self, Handle<Image>) {
-        let target = new_render_target(assets, dimension);
-        (Self::from_image(target.clone(), layer), target)
+        let (cam, texture) = render_target(assets, dimension);
+        (Self::from_image(cam, layer), texture)
     }
 
     /// Create a camera from a render target.

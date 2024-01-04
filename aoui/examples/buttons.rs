@@ -4,8 +4,8 @@ use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use bevy_aoui::AouiPlugin;
 use bevy_aoui::WorldExtension;
-use bevy_aoui::signals::Receiver;
-use bevy_aoui::signals::types::SigInvoke;
+use bevy_aoui::signals::Invoke;
+use bevy_aoui::signals::ReceiveInvoke;
 
 pub fn main() {
     App::new()
@@ -25,7 +25,11 @@ pub fn main() {
 }
 
 #[derive(Debug, Component)]
-pub struct Listen(Receiver<SigInvoke>);
+pub struct Listen(Invoke<Listen>);
+
+impl ReceiveInvoke for Listen {
+    type Type = ();
+}
 
 pub fn recv(query: Query<&Listen>) {
     for item in query.iter() {
@@ -43,7 +47,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal(|fps: f32, text: &mut Text| {
+            format_widget!(text, "FPS: {:.2}", fps);
+        })
     });
     
 
@@ -101,24 +107,24 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         offset: [300, 120],
         color: color!(gold),
         text: "<= true!",
-        extra: recv1.map_recv::<SigText>(|x: bool| format!("<= {}!", x))
+        extra: recv1.recv0(|x: bool, text: &mut Text| format_widget!(text, "<= {}!", x))
     });
     text! ((commands, assets) {
         offset: [300, 80],
         color: color!(gold),
         text: "<= false!",
-        extra: recv2.map_recv::<SigText>(|x: bool| format!("<= {}!", x))
+        extra: recv2.recv0(|x: bool, text: &mut Text| format_widget!(text, "<= {}!", x))
     });
     
     let ctx = radio_button_group::<[_; 4]>("Fire");
-    let sig = ctx.recv();
+    let sig = ctx[0].recv();
     let elements = ["Fire", "Water", "Earth", "Wind"];
 
     text! ((commands, assets) {
         offset: [300, -100],
         color: color!(gold),
         text: "<= This reflects the value of the radio button.",
-        extra: sig.map_recv::<SigText>(|x: &str| format!("<= has value {}!", x))
+        extra: sig.recv0(|x: &str, text: &mut Text| format_widget!(text, "<= has value {}!", x))
     });
 
     vbox!((commands, assets) {
@@ -149,13 +155,13 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     
     let (send, recv, recv2) = signal();
 
-    commands.spawn(Listen(recv2.recv()));
+    commands.spawn(Listen(recv2.invoke()));
 
     text! ((commands, assets) {
         offset: [300, 0],
         color: color!(gold),
         text: "<= Click this button.",
-        extra: recv.map_recv::<SigText>(|_: ()| format!("<= You clicked it!"))
+        extra: recv.recv0(|text: &mut Text| format_widget!(text, "You clicked it!"))
     });
 
     button! ((commands, assets) {

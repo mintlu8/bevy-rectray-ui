@@ -25,22 +25,24 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal(|fps: f32, text: &mut Text| {
+            format_widget!(text, "FPS: {:.2}", fps);
+        })
     });
     
-    let target = render_target(&assets, [800, 800]);
+    let (target_in, target_out) = render_target(&assets, [800, 800]);
 
     camera_frame!((commands, assets) {
         dimension: [400, 400],
         offset: [-200, 0],
-        render_target: target.clone(),
+        render_target: target_in,
         layer: 1,
     });
 
     sprite!((commands, assets) {
         dimension: [400, 400],
         offset: [-200, 0],
-        sprite: target
+        sprite: target_out
     });
     
 
@@ -61,19 +63,19 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
         }
     });
 
-    let target = render_target(&assets, [800, 800]);
+    let (target_in, target_out) = render_target(&assets, [800, 800]);
     
     camera_frame!((commands, assets) {
         dimension: [400, 400],
         offset: [200, 0],
-        render_target: target.clone(),
+        render_target: target_in,
         layer: 1,
     });
 
     sprite!((commands, assets) {
         dimension: [400, 400],
         offset: [200, 0],
-        sprite: target
+        sprite: target_out
     });
     
 

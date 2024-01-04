@@ -7,7 +7,6 @@ use bevy::sprite::Mesh2dHandle;
 use bevy::window::CursorIcon;
 use bevy_aoui::layout::Axis;
 use bevy_aoui::signals::signal;
-use bevy_aoui::signals::types::SigDrag;
 use bevy_aoui::widgets::button::SetCursor;
 use bevy_aoui::{material_sprite, Hitbox, vbox};
 use bevy_aoui::widgets::drag::{Dragging, DragConstraint};
@@ -113,7 +112,7 @@ impl Widget for MWindowBuilder {
         if let Some(banner) = self.banner {
             let (drag_send, drag_recv) = signal();
             commands.entity(frame).insert(
-                drag_recv.recv::<SigDrag>()
+                drag_recv.invoke::<Dragging>()
             );
 
             commands.entity(banner).insert((

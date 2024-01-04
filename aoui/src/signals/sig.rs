@@ -1,6 +1,6 @@
 use std::sync::{Arc, atomic::{AtomicBool, Ordering, AtomicU8}, Mutex};
 
-use super::{Object, DataTransfer};
+use super::{Object, AsObject};
 
 /// A Signal for sending and receiving data between entities.
 /// 
@@ -46,7 +46,7 @@ impl Signal {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn write(&self, item: impl DataTransfer) {
+    pub(crate) fn write(&self, item: impl AsObject) {
         let mut lock = self.inner.object.lock().unwrap();
         lock.set(item);
         self.inner.polled.store(false, Ordering::Relaxed);
@@ -58,17 +58,11 @@ impl Signal {
         self.inner.polled.store(false, Ordering::Relaxed);
     }
 
-    pub(crate) fn read<T: DataTransfer>(&self) -> Option<T> {
+    pub(crate) fn read<T: AsObject>(&self) -> Option<T> {
         let lock = self.inner.object.lock().unwrap();
         self.inner.polled.store(true, Ordering::Relaxed);
         self.inner.drop_flag.store(0, Ordering::Relaxed);
         lock.get()
-    }
-
-    pub(crate) fn read_dyn(&self) -> Object {
-        let lock = self.inner.object.lock().unwrap();
-        self.inner.polled.store(true, Ordering::Relaxed);
-        lock.clone()
     }
 
     pub(crate) fn read_any(&self) -> bool {

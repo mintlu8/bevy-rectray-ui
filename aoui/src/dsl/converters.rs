@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use bevy::asset::{Asset, Handle, AssetServer};
-use crate::{signals::DataTransfer, widgets::button::Payload};
+use crate::{widgets::button::Payload, signals::AsObject};
 use super::{DslFrom, DslInto};
 
 /// Extended `Option` for the DSL.
@@ -38,7 +38,7 @@ impl<T> OptionX<T> {
     }
 }
 
-impl<T: DataTransfer + Clone> DslFrom<T> for OptionX<Payload> {
+impl<T: AsObject> DslFrom<T> for OptionX<Payload> {
     fn dfrom(value: T) -> Self {
         OptionX::Some(Payload::new(value))
     }

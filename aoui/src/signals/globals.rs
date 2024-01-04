@@ -1,9 +1,11 @@
 use bevy::{diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin}, ecs::system::Res};
 use once_cell::sync::Lazy;
 
-use super::{Sender, Receiver, signal, SignalReceiver};
+use crate::events::mutation::IntoMutationCommand;
 
-pub(crate) static SIG_FPS: Lazy<Sender<f32>> = Lazy::new(|| {
+use super::{SignalSender, signal, receiver::SignalReceiver};
+
+pub(crate) static SIG_FPS: Lazy<SignalSender<f32>> = Lazy::new(|| {
     let (send, _) = signal();
     send.send()
 });
@@ -17,7 +19,7 @@ pub(crate) fn send_fps(fps: Option<Res<DiagnosticsStore>>) {
     }
 }
 
-/// Signal receiver for the `FPS` as a `f32`. requires `FrameTimeDiagnosticsPlugin`
-pub fn fps_signal<T: SignalReceiver>(f: impl Fn(f32) -> T::Type + Clone + Send + Sync + 'static) -> Receiver<T> {
-    SIG_FPS.new_receiver().map_recv(f)
+/// Signal receiver for the `FPS` as a `f32`. Requires `FrameTimeDiagnosticsPlugin`.
+pub fn fps_signal<A, B>(f: impl IntoMutationCommand<f32, A, B>) -> SignalReceiver<0> {
+    SIG_FPS.new_receiver().recv(f)
 }

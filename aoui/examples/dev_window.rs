@@ -24,18 +24,20 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
-    text!((commands, assets) {
+    text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal(|fps: f32, text: &mut Text| {
+            format_widget!(text, "FPS: {:.2}", fps);
+        })
     });
 
     let (send, recv) = signal();
     vbox!((commands, assets) {
         hitbox: Rect(1),
         extra: Dragging::BOTH,
-        extra: recv.recv::<SigDrag>(),
+        extra: recv.invoke::<Dragging>(),
         child: rectangle! {
             z: -1,
             color: color!(darkblue),

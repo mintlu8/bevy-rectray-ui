@@ -1,4 +1,4 @@
-use bevy::{window::CursorIcon, app::{App, Last}, ecs::system::{Query, Res}, math::Vec2};
+use bevy::{window::CursorIcon, app::{App, Last, Update}, ecs::system::{Query, Res}, math::Vec2};
 use crate::{widgets::button::CursorDefault, events::{EventHandling, Handlers, ScrollScaling}, dsl::DslInto, signals::DropFlag, schedule::AouiCleanupSet};
 
 /// Extension methods to `World` and `App`
@@ -12,6 +12,9 @@ pub trait WorldExtension {
 
     /// Register an event which cleans up its associated signals.
     fn register_event<T: EventHandling + 'static>(&mut self) -> &mut Self;
+
+    /// Register addition signal ids, default is `0..=5`. `255` should not be used
+    fn register_signal_id<const SIGNAL_ID: u8>(&mut self) -> &mut Self;
 }
 
 impl WorldExtension for App {
@@ -38,5 +41,9 @@ impl WorldExtension for App {
         }
         self.add_systems(Last, event_cleanup::<T>.in_set(AouiCleanupSet));
         self
+    }
+
+    fn register_signal_id<const S: u8>(&mut self) -> &mut Self {
+        self.add_systems(Update, crate::signals::signal_receive::<S>)
     }
 }

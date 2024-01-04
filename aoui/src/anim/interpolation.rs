@@ -201,6 +201,10 @@ impl<T: Interpolation> Interpolate<T> {
         }
     }
 
+    pub fn signal_to(value: T::FrontEnd) -> impl Fn(&mut Self) + Clone {
+        move |comp| comp.interpolate_to(value)
+    }
+
     /// Reverse the current curve.
     pub fn reverse(&mut self) {
         self.range.reverse();
@@ -234,6 +238,32 @@ impl<T: Interpolation> Interpolate<T> {
         self.range = range;
         self.current = 0.0;
         self.time = time;
+    }
+}
+
+impl<T: Interpolation<FrontEnd = Vec2>> Interpolate<T>  {
+    pub fn interpolate_to_x(&mut self, value: f32) {
+        let target = self.target();
+        self.interpolate_to(Vec2::new(value, target.y));
+    }
+
+    pub fn interpolate_to_y(&mut self, value: f32) {
+        let target = self.target();
+        self.interpolate_to(Vec2::new(target.x, value));
+    }
+    
+    pub fn signal_to_x(value: f32) -> impl Fn(&mut Self) + Clone{
+        move |comp| { 
+            let target = comp.target();
+            comp.interpolate_to(Vec2::new(value, target.y));
+        }
+    }
+
+    pub fn signal_to_y(value: f32) -> impl Fn(&mut Self) + Clone{
+        move |comp| { 
+            let target = comp.target();
+            comp.interpolate_to(Vec2::new(target.x, value));
+        }
     }
 }
 

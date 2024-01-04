@@ -7,12 +7,12 @@ use smallvec::SmallVec;
 
 use crate::dsl::{DslFrom, DslInto};
 use crate::events::*;
-use crate::signals::{DataTransfer, Sender, DynamicSender, SignalMapper, SignalBuilder, KeyStorage, Object};
+use crate::signals::{SignalSender, SignalMapper, SignalBuilder, KeyStorage, Object, AsObject};
 use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;
 
-use super::mutation::{Mutation, DynMutation, IntoMutationCommand};
+use super::mutation::{Mutation, IntoMutationCommand};
 use super::oneshot::OneShot;
 use super::{EvLoseFocus, EvObtainFocus, EvButtonClick, EvTextSubmit, EvTextChange, EvToggleChange, EvMouseDrag, EvPositionFactor};
 
@@ -38,12 +38,8 @@ pub enum Handler<T: EventHandling> {
     OneShotSystem(OneShot),
     /// Mutate components associated with this entity.
     Mutation(Mutation<T::Data>),
-    /// Mutate components associated with this entity.
-    DynMutation(DynMutation),
     /// Send a signal with the associated data.
-    Signal(Sender<T::Data>),
-    /// Send a signal with unchecked type.
-    DynamicSignal(DynamicSender),
+    Signal(SignalSender<T::Data>),
     /// Set a key-value pair in a [storage](crate::signals::KeyStorage).
     GlobalKey(String, SignalMapper),
 }
@@ -60,14 +56,9 @@ impl<T: EventHandling> DslFrom<SignalBuilder<T::Data>> for Handler<T> {
     }
 }
 
-impl<T: EventHandling> DslFrom<Sender<T::Data>> for Handler<T> {
-    fn dfrom(value: Sender<T::Data>) -> Self {
+impl<T: EventHandling> DslFrom<SignalSender<T::Data>> for Handler<T> {
+    fn dfrom(value: SignalSender<T::Data>) -> Self {
         Handler::Signal(value)
-    }
-}
-impl<T: EventHandling> DslFrom<DynamicSender> for Handler<T> {
-    fn dfrom(value: DynamicSender) -> Self {
-        Handler::DynamicSignal(value)
     }
 }
 
@@ -89,12 +80,6 @@ impl<T: EventHandling> DslFrom<Mutation<T::Data>> for Handler<T> {
     }
 }
 
-impl<T: EventHandling> DslFrom<DynMutation> for Handler<T> {
-    fn dfrom(value: DynMutation) -> Self {
-        Handler::DynMutation(value)
-    }
-}
-
 impl<T: EventHandling> DslFrom<OneShot> for Handlers<T> {
     fn dfrom(value: OneShot) -> Self {
         Handlers::new(value)
@@ -107,25 +92,14 @@ impl<T: EventHandling> DslFrom<SignalBuilder<T::Data>> for Handlers<T> {
     }
 }
 
-impl<T: EventHandling> DslFrom<Sender<T::Data>> for Handlers<T> {
-    fn dfrom(value: Sender<T::Data>) -> Self {
-        Handlers::new(value)
-    }
-}
-impl<T: EventHandling> DslFrom<DynamicSender> for Handlers<T> {
-    fn dfrom(value: DynamicSender) -> Self {
+impl<T: EventHandling> DslFrom<SignalSender<T::Data>> for Handlers<T> {
+    fn dfrom(value: SignalSender<T::Data>) -> Self {
         Handlers::new(value)
     }
 }
 
 impl<T: EventHandling> DslFrom<Mutation<T::Data>> for Handlers<T> {
     fn dfrom(value: Mutation<T::Data>) -> Self {
-        Handlers::new(value)
-    }
-}
-
-impl<T: EventHandling> DslFrom<DynMutation> for Handlers<T> {
-    fn dfrom(value: DynMutation) -> Self {
         Handlers::new(value)
     }
 }
@@ -191,13 +165,7 @@ impl<T: EventHandling> Handlers<T> {
                 Handler::Mutation(mutation) => {
                     mutation.exec(commands, data.clone());
                 }
-                Handler::DynMutation(mutation) => {
-                    mutation.exec(commands, Object::new(data.clone()));
-                }
                 Handler::Signal(signal) => {
-                    signal.send(data.clone());
-                },
-                Handler::DynamicSignal(signal) => {
                     signal.send(data.clone());
                 },
                 Handler::GlobalKey(name, mapper) => {
@@ -220,14 +188,8 @@ impl<T: EventHandling> Handlers<T> {
                         mutation.exec(commands, data);
                     }
                 }
-                Handler::DynMutation(mutation) => {
-                    mutation.exec(commands, data.clone());
-                }
                 Handler::Signal(signal) => {
                     signal.send_dyn(data.clone())
-                },
-                Handler::DynamicSignal(signal) => {
-                    signal.send_dyn(data.clone());
                 },
                 Handler::GlobalKey(name, mapper) => {
                     keys.set_dyn(name, mapper.map(data.clone()));
@@ -240,9 +202,7 @@ impl<T: EventHandling> Handlers<T> {
         self.handlers.iter().for_each(|x| match x {
             Handler::OneShotSystem(_) => (),
             Handler::Mutation(_) => (),
-            Handler::DynMutation(_) => (),
             Handler::Signal(sig) => sig.try_cleanup(drop_flag),
-            Handler::DynamicSignal(sig) => sig.try_cleanup(drop_flag),
             Handler::GlobalKey(_, _) => (),
         })
     }
@@ -250,7 +210,7 @@ impl<T: EventHandling> Handlers<T> {
 
 /// Trait for a handleable event.
 pub trait EventHandling: 'static {
-    type Data: DataTransfer + Clone;
+    type Data: AsObject;
     type Context: Default + Send + Sync + 'static;
     fn new_context() -> Self::Context;
 }
@@ -371,12 +331,8 @@ impl EventHandling for EvObtainFocus {
     fn new_context() -> Self::Context { false }
 }
 
-/// Can never be constructed, hinting at dynamic input, i.e. `Payload`.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum DynamicData {}
-
 impl EventHandling for EvButtonClick {
-    type Data = DynamicData;
+    type Data = Object;
     type Context = ();
     fn new_context() -> Self::Context {}
 }

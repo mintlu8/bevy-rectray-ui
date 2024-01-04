@@ -2,7 +2,7 @@ use std::{mem, sync::RwLock};
 
 use bevy::{utils::HashMap, ecs::system::{Resource, ResMut}};
 
-use super::{DataTransfer, Object};
+use super::{Object, AsObject};
 
 #[derive(Debug, Clone)]
 struct ChangeDetectObject {
@@ -30,7 +30,7 @@ impl KeyStorage {
     }
 
     /// Obtain a value with a key
-    pub fn get<T: DataTransfer>(&self, name: impl AsRef<str>) -> Option<T> {
+    pub fn get<T: AsObject>(&self, name: impl AsRef<str>) -> Option<T> {
         let lock = self.0.read().unwrap();
         lock.get(name.as_ref()).and_then(|x| x.value.get())
     }
@@ -38,7 +38,7 @@ impl KeyStorage {
     /// Obtain a value with a key.
     /// 
     /// This should be used if the resource is uncontested.
-    pub fn get_owned<T: DataTransfer>(&mut self, name: impl AsRef<str>) -> Option<T> {
+    pub fn get_owned<T: AsObject>(&mut self, name: impl AsRef<str>) -> Option<T> {
         let lock = self.0.get_mut().unwrap();
         lock.get(name.as_ref()).and_then(|x| x.value.get())
     }
@@ -46,12 +46,12 @@ impl KeyStorage {
     /// Sets a value, returns the original value if exists.
     /// 
     /// Sets 'changed' if value is **different**, aka `!=`.
-    pub fn set(&self, name: impl Into<String> + AsRef<str>, data: impl DataTransfer) -> Option<Object> {
+    pub fn set(&self, name: impl Into<String> + AsRef<str>, data: impl AsObject) -> Option<Object> {
         let mut lock = self.0.write().unwrap();
         let obj = Object::new(data);
         match lock.get_mut(name.as_ref()) {
             Some(original) => {
-                if original.value == obj {
+                if original.value.equal_to(&obj) {
                     Some(obj)
                 } else {
                     Some(mem::replace(original, ChangeDetectObject::new(obj)).value)
@@ -73,7 +73,7 @@ impl KeyStorage {
         let mut lock = self.0.write().unwrap();
         match lock.get_mut(name.as_ref()) {
             Some(original) => {
-                if original.value == obj {
+                if original.value.equal_to(&obj) {
                     Some(obj)
                 } else {
                     Some(mem::replace(original, ChangeDetectObject::new(obj)).value)
@@ -91,12 +91,12 @@ impl KeyStorage {
     /// Sets 'changed' if value is **different**, aka `!=`.
     /// 
     /// This should be used if the resource is uncontested.
-    pub fn set_owned(&mut self, name: impl Into<String> + AsRef<str>, data: impl DataTransfer) -> Option<Object> {
+    pub fn set_owned(&mut self, name: impl Into<String> + AsRef<str>, data: impl AsObject) -> Option<Object> {
         let lock = self.0.get_mut().unwrap();
         let obj = Object::new(data);
         match lock.get_mut(name.as_ref()) {
             Some(original) => {
-                if original.value == obj {
+                if original.value.equal_to(&obj) {
                     Some(obj)
                 } else {
                     Some(mem::replace(original, ChangeDetectObject::new(obj)).value)
@@ -116,7 +116,7 @@ impl KeyStorage {
         let lock = self.0.get_mut().unwrap();
         match lock.get_mut(name.as_ref()) {
             Some(original) => {
-                if original.value == obj {
+                if original.value.equal_to(&obj) {
                     Some(obj)
                 } else {
                     Some(mem::replace(original, ChangeDetectObject::new(obj)).value)
@@ -150,7 +150,7 @@ impl KeyStorage {
     }
 
     /// Obtain a value with a key only if it is changed.
-    pub fn get_changed<T: DataTransfer>(&self, name: impl AsRef<str>) -> Option<T> {
+    pub fn get_changed<T: AsObject>(&self, name: impl AsRef<str>) -> Option<T> {
         let lock = self.0.read().unwrap();
         lock.get(name.as_ref())
             .filter(|x| x.changed)

@@ -29,7 +29,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal(|fps: f32, text: &mut Text| {
+            format_widget!(text, "FPS: {:.2}", fps);
+        })
     });
 
     let (sender, receiver) = signal();
@@ -39,7 +41,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         font_size: em(2),
         child: text! {
             text: "0",
-            extra: receiver.map_recv::<SigText>(|x: i32| format!("{}", x))
+            extra: receiver.recv0(|x: i32, text: &mut Text| format_widget!(text, "{}", x))
         },
         child: button! {
             event: EventFlags::LeftClick,

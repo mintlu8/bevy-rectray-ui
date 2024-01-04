@@ -3,6 +3,7 @@
 use crate::Anchor;
 use crate::BuildTransform;
 pub use crate::{color, colors, gradient, transition, size2, markers};
+pub use crate::format_widget;
 pub use super::DslInto;
 pub use super::util::*;
 pub use super::util::DslHitbox::*;
@@ -13,7 +14,7 @@ pub use std::f32::consts::PI;
 pub const INFINITY: f32 = f32::INFINITY;
 pub const EPS: f32 = f32::EPSILON;
 pub use bevy::prelude::Color;
-pub use crate::{Dimension, Opacity, SizeUnit, Size2};
+pub use crate::{Transform2D, Dimension, Opacity, SizeUnit, Size2};
 pub use crate::layout::LayoutControl::{Linebreak, IgnoreLayout};
 pub use crate::anim::{Interpolate, Offset, Rotation, Scale, Index};
 pub use interpolation::EaseFunction;
@@ -35,16 +36,16 @@ pub use crate::events::{
     EvPositionFactor,
     Handlers, Handler, OneShot, Mutation
 };
-pub use crate::signals::{signal, fps_signal, Sender, Receiver, types::*};
+pub use crate::signals::{signal, fps_signal, SignalSender, SignalReceiver};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::SharedPosition;
 pub use crate::widgets::button::{
     PropagateFocus, DisplayIf, SetCursor, CheckButtonState, radio_button_group,
-    CheckButton, RadioButton, ConstructRadioButton
+    CheckButton, RadioButton
 };
 pub use crate::widgets::scroll::{Scrolling, IntoScrollingBuilder};
 pub use crate::widgets::drag::IntoDraggingBuilder;
-pub use crate::widgets::clipping::new_render_target as render_target;
+pub use crate::widgets::clipping::render_target as render_target;
 
 pub const FlipX: [bool; 2] = [true, false];
 pub const FlipY: [bool; 2] = [false, true];

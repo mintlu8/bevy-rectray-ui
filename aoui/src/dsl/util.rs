@@ -1,5 +1,7 @@
 use bevy::math::Vec2;
+use bevy::text::Text;
 use crate::layout::Layout;
+use crate::widgets::inputbox::InputBox;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit};
 use crate::{Size2, FontSize, layout::Alignment, layout::LayoutDir};
 
@@ -471,5 +473,33 @@ macro_rules! size2 {
     };
     ($($tt:tt)*) => {
         $crate::size2!(@accumulate [] [$($tt)*])
+    };
+}
+
+pub trait WidgetWrite {
+    fn write(&mut self, s: String);
+}
+
+impl WidgetWrite for Text {
+    fn write(&mut self, s: String) {
+        if let Some(section) = self.sections.first_mut() {
+            section.value = s;
+        }
+    }
+}
+
+impl WidgetWrite for InputBox {
+    fn write(&mut self, s: String) {
+        self.set(s)
+    }
+}
+
+/// Write to a text widget component using `format!` syntax.
+/// 
+/// The component must implement [`WidgetWrite`].
+#[macro_export]
+macro_rules! format_widget {
+    ($widget: expr, $s: literal $(,$rest: expr),* $(,)?) => {
+        $crate::dsl::WidgetWrite::write($widget, format!($s, $($rest),*))
     };
 }

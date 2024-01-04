@@ -1,7 +1,7 @@
 use bevy::{render::texture::Image, hierarchy::BuildChildren, ecs::entity::Entity, asset::Handle};
-
-use crate::{widget_extension, widgets::{scroll::IntoScrollingBuilder, clipping::ScopedCameraBundle}, build_frame, Clipping, frame, Size2, events::EventFlags, layout::BoundsLayout};
-use super::{Widget, DslInto};
+use crate::{widget_extension, build_frame, Clipping, frame, Size2, events::{EventFlags, ESigCoveragePx, Handlers, ESigCoveragePercent}};
+use crate::widgets::{scroll::IntoScrollingBuilder, clipping::ScopedCameraBundle};
+use super::Widget;
 
 widget_extension!(
     /// A camera with its viewport bound to a sprite's `RotatedRect`.`
@@ -29,6 +29,8 @@ widget_extension!(
     pub struct ScrollingFrameBuilder[B: IntoScrollingBuilder] {
         /// If set, configure scrolling for this widget.
         pub scroll: Option<B>,
+        pub coverage_px: Handlers<ESigCoveragePx>,
+        pub coverage_percent: Handlers<ESigCoveragePercent>,
     }
 );
 
@@ -46,8 +48,13 @@ impl<B: IntoScrollingBuilder> Widget for ScrollingFrameBuilder<B> {
         let container = frame!(commands {
             dimension: Size2::FULL,
         });
+        if !self.coverage_px.is_empty() {
+            commands.entity(container).insert(self.coverage_px);
+        }
+        if !self.coverage_percent.is_empty() {
+            commands.entity(container).insert(self.coverage_percent);
+        }
         commands.entity(entity).add_child(container);
-        
         (entity, container)
     }
 }

@@ -54,27 +54,27 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         text: "This is a receiver.",
         offset: [-200, 0],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_s1.recv::<SigText>(),
+        extra: recv_s1.recv(|s: String, text: &mut Text| format_widget!(text, "{}", s))
     });
 
     text!((commands, assets) {
         text: "This is a formatter.",
         offset: [-200, -200],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_s2.map_recv::<SigText>(|s: String| format!("Received string \"{}\"!", s)),
+        extra: recv_s2.recv(|s: String, text: &mut Text| format_widget!(text, "Received string \"{}\"!", s))
     });
 
     text!((commands, assets) {
         text: "This is a change detector.",
         offset: [200, 0],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_c1.recv::<SigText>(),
+        extra: recv_c1.recv(|s: String, text: &mut Text| format_widget!(text, "{}", s))
     });
 
     text!((commands, assets) {
         text: "This is a change detecting formatter.",
         offset: [200, -200],
         font: assets.load::<Font>("RobotoCondensed.ttf"),
-        extra: recv_c2.map_recv::<SigText>(|s: String| format!("Received string \"{}\"!", s)),
+        extra: recv_c2.recv(|s: String, text: &mut Text| format_widget!(text, "Received string \"{}\"!", s))
     });
 }

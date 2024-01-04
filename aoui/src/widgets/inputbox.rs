@@ -8,9 +8,8 @@ use bevy::text::{Text, Font};
 use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
 use crate::{DimensionData, Dimension};
 use crate::dimension::DimensionMut;
-use crate::signals::KeyStorage;
+use crate::signals::{KeyStorage, Invoke, ReceiveInvoke};
 use crate::{RotatedRect, Transform2D, bundles::AouiTextBundle};
-use crate::signals::{Receiver, types::SigInvoke};
 use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction, ActiveDetection, EvTextChange, EvTextSubmit, Handlers};
 use ab_glyph::Font as FontTrait;
 
@@ -67,6 +66,10 @@ pub struct InputBox {
     focus: bool,
     active: LeftRight,
     em: f32,
+}
+
+impl ReceiveInvoke for InputBox {
+    type Type = ();
 }
 
 /// Marker component for a empty frame containing individual glyphs.
@@ -496,7 +499,7 @@ pub fn inputbox_keyboard(
     mut query: Query<(Entity, &mut InputBox, &DimensionData, &Handle<Font>, 
         Option<&Handlers<EvTextChange>>, 
         Option<&Handlers<EvTextSubmit>>, 
-        Option<&Receiver<SigInvoke>>, 
+        Option<&Invoke<InputBox>>, 
         ActiveDetection
     )>,
     mut events: EventReader<ReceivedCharacter>,

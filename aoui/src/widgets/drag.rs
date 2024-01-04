@@ -4,11 +4,10 @@ use bevy::ecs::system::{Query, Res, Commands};
 use crate::dsl::DslInto;
 use crate::{Transform2D, anim::Attr};
 use crate::events::{Handlers, EvMouseDrag, EvPositionFactor};
-use crate::signals::{types::SigDrag, KeyStorage};
+use crate::signals::{KeyStorage, Invoke, ReceiveInvoke};
 use serde::{Serialize, Deserialize};
 
 use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::Offset};
-use crate::signals::Receiver;
 
 use super::{SharedPosition, constraints::PositionChanged};
 pub use super::constraints::DragConstraint;
@@ -89,7 +88,7 @@ pub fn drag_start(
     mut commands: Commands,
     storage: Res<KeyStorage>,
     send: Query<(Entity, &CursorAction, &Handlers<EvMouseDrag>), Without<Dragging>>,
-    mut receive: Query<(&Receiver<SigDrag>, &mut Dragging, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
+    mut receive: Query<(&Invoke<Dragging>, &mut Dragging, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut Dragging, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>)>,
 ) {
     for (entity, focus, send) in send.iter() {
@@ -138,13 +137,17 @@ pub enum DragState {
     End,
 }
 
+impl ReceiveInvoke for Dragging {
+    type Type = DragState;
+}
+
 pub fn dragging(
     mut commands: Commands,
     storage: Res<KeyStorage>,
     state: Res<CursorState>,
     send: Query<(Entity, &CursorFocus, &Handlers<EvMouseDrag>), Without<Dragging>>,
     mut query: Query<(Entity, &CursorFocus, &Dragging, Attr<Transform2D, Offset>)>,
-    mut receive: Query<(Entity, &Dragging, Attr<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorFocus>>,
+    mut receive: Query<(Entity, &Dragging, Attr<Transform2D, Offset>, &Invoke<Dragging>), Without<CursorFocus>>,
 ) {
     let delta = state.cursor_position() - state.down_position();
 
@@ -184,7 +187,7 @@ pub fn drag_end(
     mut commands: Commands,
     storage: Res<KeyStorage>,
     send: Query<(Entity, &CursorAction, &Handlers<EvMouseDrag>), Without<Dragging>>,
-    mut receive: Query<(&mut DragSnapBack, Attr<Transform2D, Offset>, &Receiver<SigDrag>), Without<CursorAction>>,
+    mut receive: Query<(&mut DragSnapBack, Attr<Transform2D, Offset>, &Invoke<Dragging>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut DragSnapBack, Attr<Transform2D, Offset>)>
 ) {
     for (entity, focus, send) in send.iter() {
@@ -237,11 +240,11 @@ pub trait IntoDraggingBuilder: Bundle + Default {
         (self.with_constraints(), handler.dinto())
     }
 
-    fn with_send(self, handler: impl DslInto<Handlers<EvMouseDrag>>) -> impl IntoDraggingBuilder {
+    fn with_invoke(self, handler: impl DslInto<Handlers<EvMouseDrag>>) -> impl IntoDraggingBuilder {
         (self.with_constraints(), handler.dinto())
     }
 
-    fn with_recv(self, handler: impl DslInto<Receiver<SigDrag>>) -> impl IntoDraggingBuilder {
+    fn with_recv(self, handler: impl DslInto<Invoke<Dragging>>) -> impl IntoDraggingBuilder {
         (self.with_constraints(), handler.dinto())
     }
 }

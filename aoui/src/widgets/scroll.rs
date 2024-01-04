@@ -1,10 +1,10 @@
 use bevy::{hierarchy::Children, math::{Vec2, IVec2}, log::warn, reflect::Reflect, ecs::{query::With, system::Res, bundle::Bundle, entity::Entity}};
 use bevy::ecs::{component::Component, query::Without};
 use bevy::ecs::system::{Query, Commands};
-use crate::{Transform2D, signals::types::SigScroll, anim::Attr, anim::Offset, events::EvPositionFactor, AouiREM, DimensionData};
+use crate::{Transform2D, anim::Attr, anim::Offset, events::EvPositionFactor, AouiREM, DimensionData, signals::ReceiveInvoke};
 use crate::layout::{Container, LayoutControl};
 use crate::events::{EvMouseWheel, Handlers};
-use crate::signals::{Receiver, KeyStorage};
+use crate::signals::{Invoke, KeyStorage};
 use crate::dsl::DslInto;
 
 use crate::events::MouseWheelAction;
@@ -103,13 +103,17 @@ impl Default for Scrolling {
     }
 }
 
+impl ReceiveInvoke for Scrolling {
+    type Type = MouseWheelAction;
+}
+
 pub fn scrolling_system(
     mut commands: Commands,
     rem: Option<Res<AouiREM>>,
     storage: Res<KeyStorage>,
     mut scroll: Query<(Entity, &Scrolling, &DimensionData, &Children, &MouseWheelAction)>,
     sender: Query<(Entity, &MouseWheelAction, &Handlers<EvMouseWheel>), Without<Scrolling>>,
-    mut receiver: Query<(Entity, &Scrolling, &DimensionData, &Children, &Receiver<SigScroll>), Without<MouseWheelAction>>,
+    mut receiver: Query<(Entity, &Scrolling, &DimensionData, &Children, &Invoke<Scrolling>), Without<MouseWheelAction>>,
     mut child_query: Query<Attr<Transform2D, Offset>, With<Children>>,
 ) {
     let rem = rem.map(|x| x.get()).unwrap_or(16.0);
@@ -172,7 +176,7 @@ impl ScrollDiscrete {
 pub fn scrolling_discrete(
     mut commands: Commands,
     mut scroll: Query<(Entity, &ScrollDiscrete, &mut Container, &Children, &MouseWheelAction)>,
-    mut receiver: Query<(Entity, &ScrollDiscrete, &mut Container, &Children, &Receiver<SigScroll>), Without<MouseWheelAction>>,
+    mut receiver: Query<(Entity, &ScrollDiscrete, &mut Container, &Children, &Invoke<Scrolling>), Without<MouseWheelAction>>,
     child_query: Query<&LayoutControl>,
 ) {
     let iter = scroll.iter_mut()
@@ -226,11 +230,11 @@ pub trait IntoScrollingBuilder: Bundle + Default {
         (self.with_constraints(), handler.dinto())
     }
 
-    fn with_send(self, handler: impl DslInto<Handlers<EvMouseWheel>>) -> impl IntoScrollingBuilder {
+    fn with_invoke(self, handler: impl DslInto<Handlers<EvMouseWheel>>) -> impl IntoScrollingBuilder {
         (self.with_constraints(), handler.dinto())
     }
 
-    fn with_recv(self, handler: impl DslInto<Receiver<SigScroll>>) -> impl IntoScrollingBuilder {
+    fn with_recv(self, handler: impl DslInto<Invoke<Scrolling>>) -> impl IntoScrollingBuilder {
         (self.with_constraints(), handler.dinto())
     }
 }

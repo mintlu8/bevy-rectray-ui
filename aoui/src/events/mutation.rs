@@ -5,10 +5,11 @@ use bevy::ecs::world::World;
 use bevy::ecs::{component::Component, entity::Entity};
 use bevy::ecs::system::{EntityCommands, Command, RunSystemOnce, Query};
 
-use crate::signals::{DataTransfer, Object};
+use crate::signals::{AsObject, Object};
 
-pub trait IntoMutationCommand<T: DataTransfer + Clone, M1, M2>: Clone + Send + Sync + 'static {
-    fn into_command(&self, entity: Entity, data: T) -> impl Command;
+pub trait IntoMutationCommand<T: Clone, M1, M2>: Clone + Send + Sync + 'static {
+    const ANY: bool;
+    fn into_command(self, entity: Entity, data: T) -> impl Command;
 }
 
 macro_rules! multi_mutation {
@@ -33,14 +34,13 @@ macro_rules! mutation {
             #[doc(hidden)]
             pub enum Disambiguate {}
             #[allow(unused_parens, non_snake_case)]
-            impl<T: DataTransfer + Clone, Func, $($i: Component),*> IntoMutationCommand<T, ($($i),*), Disambiguate> for Func where Func: Fn($($e1),*) + Send + Sync + Clone + 'static {
-                fn into_command(&self, entity: Entity, _: T) -> impl Command {
-                    let func = self.clone();
+            impl<T: AsObject, Func, $($i: Component),*> IntoMutationCommand<T, ($($i),*), Disambiguate> for Func where Func: Fn($($e1),*) + Send + Sync + Clone + 'static {
+                const ANY: bool = true;
+                fn into_command(self, entity: Entity, _: T) -> impl Command {
                     move |w: &mut World| {
                         w.run_system_once(move |mut q: Query<($($e1),*)>| {
-                            dbg!(stringify!(Query<($($e1),*)>));
                             if let Ok(($($e2)*)) = q.get_mut(entity) {
-                                func($($e3),*);
+                                self($($e3),*);
                             }
                         });
                     }
@@ -51,13 +51,13 @@ macro_rules! mutation {
             pub enum DisambiguateData {}
 
             #[allow(unused_parens, non_snake_case)]
-            impl<T: DataTransfer + Clone, Func, $($i: Component),*> IntoMutationCommand<T, ($($i),*), DisambiguateData> for Func where Func: Fn(T, $($e1),*) + Send + Sync + Clone + 'static {
-                fn into_command(&self, entity: Entity, data: T) -> impl Command {
-                    let func = self.clone();
+            impl<T: AsObject, Func, $($i: Component),*> IntoMutationCommand<T, ($($i),*), DisambiguateData> for Func where Func: Fn(T, $($e1),*) + Send + Sync + Clone + 'static {
+                const ANY: bool = false;
+                fn into_command(self, entity: Entity, data: T) -> impl Command {
                     move |w: &mut World| {
                         w.run_system_once(move |mut q: Query<($($e1),*)>| {
                             if let Ok(($($e2)*)) = q.get_mut(entity) {
-                                func(data.clone(), $($e3),*);
+                                self(data.clone(), $($e3),*);
                             }
                         });
                     }
@@ -75,29 +75,17 @@ macro_rules! mutation {
     };
 }
 
-multi_mutation!(A, B, C, D, E, F, G);
+multi_mutation!(A, B, C, D, E, F);
 
-pub struct Mutation<T: DataTransfer>(Box<dyn Fn(&mut EntityCommands, T) + Send + Sync>);
+pub struct Mutation<T: AsObject>(Box<dyn Fn(&mut EntityCommands, T) + Send + Sync>);
 
-impl<T: DataTransfer> Debug for Mutation<T> {
+impl<T: AsObject> Debug for Mutation<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Mutation").finish()
     }
 }
 
-impl Mutation<()> {
-    /// For receiving type erased input.
-    pub fn dynamic<T: DataTransfer + Clone, M, N>(f: impl IntoMutationCommand<T, M, N>) -> DynMutation{
-        DynMutation(Box::new(move |commands: &mut EntityCommands, data: Object| {
-            let entity = commands.id();
-            if let Some(data) = data.get::<T>() {
-                commands.commands().add(f.into_command(entity, data));
-            }
-        }))
-    }
-}
-
-impl<T: DataTransfer + Clone> Mutation<T> {
+impl<T: AsObject> Mutation<T> {
 
     /// Construct a mutation for associated components.
     /// 
@@ -115,7 +103,7 @@ impl<T: DataTransfer + Clone> Mutation<T> {
     pub fn new<M, N>(f: impl IntoMutationCommand<T, M, N>) -> Self{
         Mutation(Box::new(move |commands: &mut EntityCommands, data: T| {
             let entity = commands.id();
-            commands.commands().add(f.into_command(entity, data));
+            commands.commands().add(f.clone().into_command(entity, data));
         }))
     }
     
@@ -124,16 +112,13 @@ impl<T: DataTransfer + Clone> Mutation<T> {
     }
 }
 
-pub struct DynMutation(Box<dyn Fn(&mut EntityCommands, Object) + Send + Sync>);
-
-impl Debug for DynMutation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("DynMutation").finish()
-    }
-}
-
-impl DynMutation {
-    pub fn exec(&self, commands: &mut EntityCommands, data: Object) {
-        (self.0)(commands, data)
+impl Mutation<Object> {
+    pub fn dynamic<T: AsObject, M, N>(f: impl IntoMutationCommand<T, M, N>) -> Self{
+        Mutation(Box::new(move |commands: &mut EntityCommands, data: Object| {
+            let entity = commands.id();
+            if let Some(data) = data.get() {
+                commands.commands().add(f.clone().into_command(entity, data));
+            }
+        }))
     }
 }

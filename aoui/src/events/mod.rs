@@ -51,7 +51,7 @@
 //! but these are outside the scope of this crate.
 
 use bevy::{prelude::*, ecs::query::WorldQuery};
-use crate::{schedule::{AouiEventSet, AouiCleanupSet}, Hitbox, Clipping, RotatedRect, Opacity, WorldExtension};
+use crate::{schedule::{AouiEventSet, AouiCleanupSet}, Hitbox, Clipping, RotatedRect, Opacity, WorldExtension, widgets::button::CursorDefault};
 
 mod systems;
 mod state;
@@ -59,8 +59,9 @@ mod event;
 mod handler;
 mod wheel;
 mod cursor;
-mod mutation;
+pub(crate) mod mutation;
 mod oneshot;
+mod coverage;
 
 pub use event::*;
 pub use state::*;
@@ -72,6 +73,7 @@ pub use mutation::Mutation;
 pub use oneshot::OneShot;
 
 use self::cursor::custom_cursor_controller;
+pub use coverage::{ESigCoveragePercent, ESigCoveragePx};
 
 /// Marker component for Aoui's camera, optional.
 /// 
@@ -128,6 +130,7 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
         app.init_resource::<CursorState>()
             .init_resource::<ScrollScaling>()
             .init_resource::<DoubleClickThreshold>()
+            .init_resource::<CursorDefault>()
             .add_systems(PreUpdate, mouse_button_input.in_set(AouiEventSet))
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
             .add_systems(Last, remove_focus.in_set(AouiCleanupSet))
@@ -149,9 +152,12 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
                 handle_event::<EvMidDrag>,
                 handle_event::<EvRightPressed>,
                 handle_event::<EvRightDrag>,
+            ))
+            .add_systems(Update, (
                 lose_focus_detection,
                 obtain_focus_detection,
                 custom_cursor_controller,
+                coverage::calculate_coverage,
             ))
             .register_event::<EvLeftClick>()
             .register_event::<EvLeftDown>()
@@ -180,6 +186,8 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .register_event::<EvTextChange>()
             .register_event::<EvTextSubmit>()
             .register_event::<EvPositionFactor>()
+            .register_event::<ESigCoveragePercent>()
+            .register_event::<ESigCoveragePx>()
         ;
     }
 }

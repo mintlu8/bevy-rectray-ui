@@ -2,6 +2,7 @@ use std::{sync::{OnceLock, Arc}, marker::PhantomData};
 
 use bevy::ecs::system::{SystemId, IntoSystem, Command, Commands};
 
+/// A lazy initialized one-shot system.
 #[derive(Debug)]
 pub struct OneShot(Arc<OnceLock<SystemId>>);
 

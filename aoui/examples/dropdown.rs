@@ -27,7 +27,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal::<SigText>(|x: f32| format!("FPS: {:.2}", x))
+        extra: fps_signal(|fps: f32, text: &mut Text| {
+            format_widget!(text, "FPS: {:.2}", fps);
+        })
     });
     
     let (send, recv_rot, fold_recv) = signal();
@@ -37,7 +39,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     ];
 
     let text_ctx = radio_button_group::<[_; 4]>("");
-    let text_recv = text_ctx.recv();
+    let text_recv = text_ctx[0].recv();
     frame!((commands, assets){
         dimension: size2!(22 em, 2 em),
         child: check_button! {
@@ -55,7 +57,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                     anchor: Left,
                     text: "",
                     font: "ComicNeue-Bold.ttf",
-                    extra: text_recv.map_recv::<SigText>(|x: &str| x.to_string())
+                    extra: text_recv.recv(|x: &str, text: &mut Text| format_widget!(text, "{}", x))
                 },
             },
             child: text! {
@@ -64,7 +66,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 center: Center,
                 rotation: degrees(90),
                 text: "v",
-                extra: recv_rot.map_recv::<SigRotation>(|x: bool| if x {0.0} else {PI/2.0}),
+                extra: recv_rot.recv(|x: bool, rot: &mut Interpolate<Rotation>| if x {
+                    rot.interpolate_to(0.0)
+                } else {
+                    rot.interpolate_to(PI / 2.0)
+                }),
                 extra: transition! (Rotation 0.5 CubicInOut default PI/2.0)
             },
         },
@@ -74,7 +80,11 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             layer: 1,
             scroll: Scrolling::Y,
             clipping: false,
-            extra: fold_recv.map_recv::<SigOpacity>(|x: bool| if x {1.0f32} else {0.0f32}),
+            extra: fold_recv.recv(|x: bool, op: &mut Interpolate<Opacity>| if x {
+                op.interpolate_to(1.0)
+            } else {
+                op.interpolate_to(0.0)
+            }),
             extra: transition! (Opacity 0.5 Linear default 0.0),
             dimension: size2!(14 em, 4 em),
             child: vbox! {
