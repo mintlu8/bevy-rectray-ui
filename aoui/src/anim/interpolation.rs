@@ -303,7 +303,10 @@ pub enum Rotation{}
 pub enum Scale{}
 #[derive(Debug)]
 pub enum Index{}
-
+#[derive(Debug)]
+pub enum Margin{}
+#[derive(Debug)]
+pub enum Padding{}
 
 
 impl Interpolation for Offset {
@@ -351,6 +354,20 @@ impl Interpolation for Color {
 impl Interpolation for Opacity {
     type FrontEnd = f32;
     type Data = f32;
+    fn into_data(data: Self::FrontEnd) -> Self::Data { data }
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
+}
+
+impl Interpolation for Margin {
+    type FrontEnd = Vec2;
+    type Data = Vec2;
+    fn into_data(data: Self::FrontEnd) -> Self::Data { data }
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
+}
+
+impl Interpolation for Padding {
+    type FrontEnd = Vec2;
+    type Data = Vec2;
     fn into_data(data: Self::FrontEnd) -> Self::Data { data }
     fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
 }

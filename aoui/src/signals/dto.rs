@@ -3,6 +3,8 @@ use downcast_rs::{impl_downcast, Downcast};
 
 const _: Option<Box<dyn DataTransfer>> = None;
 
+/// A dynamic object that can be sent through signals, 
+/// excluding `Object` since that has to be special handled.
 pub trait DataTransfer: Downcast + Debug + Send + Sync + 'static {
     fn dyn_clone(&self) -> Box<dyn DataTransfer>;
     fn dyn_eq(&self, other: &dyn DataTransfer) -> bool;
@@ -25,6 +27,7 @@ impl<T> DataTransfer for T where T: Debug + Clone + PartialEq + Send + Sync + 's
     }
 }
 
+/// A type that can converted to and from [`Object`].
 pub trait AsObject: Sized + Debug + Clone + Send + Sync + 'static {
     fn get(obj: &Object) -> Option<Self>;
     fn get_ref(obj: &Object) -> Option<&Self>;
@@ -80,7 +83,7 @@ impl AsObject for Object  {
     }
 }
 
-/// A type erased nullable dynamic object.
+/// A boxed type erased nullable dynamic object.
 #[derive(Debug)]
 #[derive(Default)]
 pub struct Object(Option<Box<dyn DataTransfer>>);
@@ -93,13 +96,10 @@ impl Clone for Object {
 
 
 impl Object {
+    /// A `None` object, if sent through a signal, does nothing.
     pub const NONE: Self = Self(None);
 
-    pub fn unit() -> Self {
-        Self(Some(Box::new(())))
-    }
-
-    /// Create a unnameable object that is not equal to anything.
+    /// Create an unnameable object that is never equal to anything.
     pub fn unnameable() -> Self {
         #[derive(Debug, Clone)]
         struct UnnameableUnequal;

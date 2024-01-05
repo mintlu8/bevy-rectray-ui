@@ -53,6 +53,8 @@ impl Plugin for MatuiPlugin {
         app.add_systems(PostUpdate, (
             sync_rounded_rect,
             sync_rounded_shadow,
+            sync_rounded_rect_opacity,
+            sync_rounded_shadow_opacity,
         ).in_set(AouiStoreOutputSet));
         app.add_systems(Update, (
             interpolate_stroke_color,

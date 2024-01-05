@@ -38,6 +38,11 @@
 //! widget events like `EvButtonChange` etc and can perform.
 //! many action based on the event and its associated input.
 //! 
+//! Events starting with `Ev` are one-shot events.
+//! They should be registered with `register_event` to be removed at the end of the frame.
+//! 
+//! Additionally [`Fetch<T>`] is a persistent channel that transfers data.
+//! 
 //! Event handlers can do the following things:
 //! 
 //! * Run a [one-shot system](OneShot).
@@ -62,6 +67,7 @@ mod cursor;
 pub(crate) mod mutation;
 mod oneshot;
 mod coverage;
+mod fetch;
 
 pub use event::*;
 pub use state::*;
@@ -71,9 +77,10 @@ pub use wheel::{MouseWheelAction, ScrollScaling};
 pub use cursor::CustomCursor;
 pub use mutation::Mutation;
 pub use oneshot::OneShot;
+pub use fetch::*;
 
 use self::cursor::custom_cursor_controller;
-pub use coverage::{ESigCoveragePercent, ESigCoveragePx};
+pub use coverage::{FetchCoveragePercent, FetchCoveragePx};
 
 /// Marker component for Aoui's camera, optional.
 /// 
@@ -154,6 +161,19 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
                 handle_event::<EvRightDrag>,
             ))
             .add_systems(Update, (
+                fetch::transfer_offset,
+                fetch::transfer_offset_evaluated,
+                fetch::transfer_dimension,
+                fetch::transfer_dimension_evaluated,
+                fetch::transfer_rotation,
+                fetch::transfer_scale,
+                fetch::transfer_opacity,
+                fetch::transfer_margin,
+                fetch::transfer_padding,
+                fetch::transfer_margin_evaluated,
+                fetch::transfer_padding_evaluated,
+            ))
+            .add_systems(Update, (
                 lose_focus_detection,
                 obtain_focus_detection,
                 custom_cursor_controller,
@@ -186,8 +206,6 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .register_event::<EvTextChange>()
             .register_event::<EvTextSubmit>()
             .register_event::<EvPositionFactor>()
-            .register_event::<ESigCoveragePercent>()
-            .register_event::<ESigCoveragePx>()
         ;
     }
 }

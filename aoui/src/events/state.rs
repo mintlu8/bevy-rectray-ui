@@ -31,6 +31,7 @@ pub struct CursorState{
     pub(super) dragging: bool,
     pub(super) drag_button: MouseButton,
     pub(super) drag_target: Option<Entity>,
+    pub(super) focused: Option<Entity>,
     pub(super) drag_dbl_click: bool,
 }
 
@@ -45,6 +46,7 @@ impl Default for CursorState {
             dragging: false, 
             drag_button: MouseButton::Left, 
             drag_target: None, 
+            focused: None,
             caught: false,
             drag_dbl_click: false,
         }

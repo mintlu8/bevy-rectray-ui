@@ -4,7 +4,7 @@ use bevy::asset::{Asset, Handle, Assets};
 use bevy::math::{Vec2, Vec4};
 use bevy::render::{color::Color, texture::Image};
 use bevy::render::render_resource::{AsBindGroup, ShaderRef, Shader};
-use bevy_aoui::{anim::{Interpolate, Interpolation}, dsl::DslInto, DimensionData};
+use bevy_aoui::{anim::{Interpolate, Interpolation}, dsl::DslInto, DimensionData, Opacity};
 
 use crate::builders::Stroke;
 
@@ -171,6 +171,17 @@ pub fn sync_rounded_rect(
     }
 }
 
+pub fn sync_rounded_rect_opacity(
+    query: Query<(&Handle<RoundedRectangleMaterial>, &Opacity)>,
+    mut assets: ResMut<Assets<RoundedRectangleMaterial>>
+){
+    for (handle, opacity) in query.iter() {
+        let Some(asset) = assets.get_mut(handle) else {return};
+        asset.color.set_a(opacity.get());
+    }
+}
+
+
 pub fn sync_rounded_shadow(
     query: Query<(&Handle<RoundedShadowMaterial>, &DimensionData)>, 
     mut assets: ResMut<Assets<RoundedShadowMaterial>>
@@ -178,6 +189,16 @@ pub fn sync_rounded_shadow(
     for (handle, dimension) in query.iter() {
         let Some(asset) = assets.get_mut(handle) else {return};
         asset.size = dimension.size;
+    }
+}
+
+pub fn sync_rounded_shadow_opacity(
+    query: Query<(&Handle<RoundedShadowMaterial>, &Opacity)>,
+    mut assets: ResMut<Assets<RoundedShadowMaterial>>
+){
+    for (handle, opacity) in query.iter() {
+        let Some(asset) = assets.get_mut(handle) else {return};
+        asset.color.set_a(opacity.get());
     }
 }
 

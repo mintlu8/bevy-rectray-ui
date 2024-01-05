@@ -67,6 +67,12 @@ impl DslFrom<usize> for f32 {
     }
 }
 
+impl DslFrom<i32> for Opacity {
+    fn dfrom(value: i32) -> Self {
+        Opacity::new(value as f32)
+    }
+}
+
 impl DslFrom<f32> for Opacity {
     fn dfrom(value: f32) -> Self {
         Opacity::new(value)

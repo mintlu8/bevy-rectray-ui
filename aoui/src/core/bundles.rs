@@ -14,7 +14,7 @@ use crate::{Transform2D, RotatedRect, BuildTransform, Hitbox, layout::LayoutCont
 
 /// The minimal bundle required for Aoui to function.
 ///
-/// Provides DOM propagation but no rendering support.
+/// Provides transform propagation but no rendering support.
 #[derive(Debug, Default, Bundle)]
 pub struct AouiBundle {
     pub transform: Transform2D,

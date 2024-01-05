@@ -53,7 +53,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     let capsule_radius = min(size.x, size.y) / 2.0;
-    radius = radius * (1.0 - capsule) + capsule_radius * capsule;
+    radius = min(radius, capsule_radius) * (1.0 - capsule) + capsule_radius * capsule;
     
     let origin = size / 2.0 - radius;
 

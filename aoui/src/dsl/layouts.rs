@@ -56,7 +56,7 @@ impl Widget for PaddingBuilder {
     }
 }
 
-/// Construct a fit layout, commonly used for padding. The Underlying struct is [`PaddingBuilder`].
+/// Construct a `BoundsLayout`, commonly used for padding. The Underlying struct is [`PaddingBuilder`].
 #[macro_export]
 macro_rules! padding {
     {$commands: tt {$($tt:tt)*}} => {
@@ -72,7 +72,7 @@ macro_rules! padding {
 macro_rules! hstack {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {
-            layout: $crate::layout::StackLayout::HBOX,
+            layout: $crate::layout::StackLayout::HSTACK,
             $($tt)*
         })
     };
@@ -84,7 +84,7 @@ macro_rules! hstack {
 macro_rules! vstack {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {
-            layout: $crate::layout::StackLayout::VBOX,
+            layout: $crate::layout::StackLayout::VSTACK,
             $($tt)*
         })
     };
@@ -96,7 +96,7 @@ macro_rules! vstack {
 macro_rules! hbox {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {
-            layout: $crate::layout::SpanLayout::HSPAN,
+            layout: $crate::layout::SpanLayout::HBOX,
             $($tt)*
         })
     };
@@ -108,7 +108,7 @@ macro_rules! hbox {
 macro_rules! vbox {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {
-            layout: $crate::layout::SpanLayout::VSPAN,
+            layout: $crate::layout::SpanLayout::VBOX,
             $($tt)*
         })
     };

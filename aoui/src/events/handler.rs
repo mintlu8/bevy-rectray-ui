@@ -154,6 +154,19 @@ impl<T: EventHandling> Handlers<T> {
         self.handlers.is_empty()
     }
 
+    pub fn send_signal(&self, data: T::Data) {
+        for handler in self.handlers.iter() {
+            match handler {
+                Handler::Signal(signal) => {
+                    signal.send(data.clone());
+                },
+                _ => {
+                    warn!("Fetch only supports sending signals.")
+                }
+            }
+        }
+    }
+
     pub fn handle(&self, commands: &mut EntityCommands, keys: &KeyStorage, data: T::Data) {
         for handler in self.handlers.iter() {
             match handler {

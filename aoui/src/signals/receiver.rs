@@ -6,6 +6,25 @@ use crate::{events::mutation::IntoMutationCommand, dsl::DslFrom};
 
 use super::{Object, SignalBuilder, dto::AsObject, sig::Signal};
 
+/// A raw signal receiver that can be polled, not a component.
+pub struct RawReceiver<T: AsObject> {
+    signal: Signal,
+    p: PhantomData<T>,
+}
+
+impl<T: AsObject> Debug for RawReceiver<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RawReceiver").finish()
+    }
+}
+
+impl<T: AsObject> RawReceiver<T> {
+    pub fn poll(&self) -> Option<T> {
+        self.signal.read()
+    }
+}
+
+/// A signal receiver component that run a mutation function.
 #[derive(Component)]
 pub struct SignalReceiver<const SIGNAL_ID: u8> {
     signal: Signal,
@@ -107,6 +126,13 @@ impl<T: AsObject> SignalBuilder<T> {
     /// Receives a signal at the `5` slot.
     pub fn recv5<A, B>(self, f: impl IntoMutationCommand<T, A, B>) -> SignalReceiver<5> {
         self.recv(f).with_slot()
+    }
+
+    pub fn recv_raw(self) -> RawReceiver<T> {
+        RawReceiver {
+            signal: self.signal,
+            p: PhantomData
+        }
     }
 
     pub fn invoke<A: ReceiveInvoke>(self) -> Invoke<A> {

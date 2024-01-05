@@ -57,31 +57,6 @@ macro_rules! signal_mapper {
     };
 }
 
-impl Signal {
-    pub fn get_mapped<T: AsObject>(&self, mapper: &SignalMapper) -> Option<T> {
-        match mapper {
-            SignalMapper::None => self.read(),
-            SignalMapper::Function(f) => {
-                self.read::<Object>()
-                    .and_then(|mut x| {
-                        f.call(&mut x);
-                        x.get()
-                    })
-            },
-            SignalMapper::If(cond, a, b) => {
-                self.read::<Object>()
-                    .and_then(|obj| {
-                        if obj.equal_to(cond) {
-                            a.get()
-                        } else {
-                            b.get()
-                        }
-                    })
-            },
-        }
-    }
-}
-
 impl Debug for SignalMapper{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -173,40 +148,6 @@ impl<T: AsObject> SignalBuilder<T> {
         }
     }
 
-    // pub fn recv<Out: SignalReceiver<Type = T>>(self) -> Receiver<Out>{
-    //     Receiver { 
-    //         signal: self.signal, 
-    //         map: SignalMapper::None, 
-    //         p: PhantomData,
-    //     }
-    // }
-
-    // pub fn map_recv<Out: SignalReceiver>(self, f: impl Fn(T) -> Out::Type + Clone + Send + Sync + 'static) -> Receiver<Out> {
-    //     Receiver {
-    //         signal: self.signal,
-    //         map: signal_mapper!(T, f),
-    //         p: PhantomData,
-    //     }
-    // }
-
-    // pub fn cond_recv<Out: SignalReceiver>(self, if_eq: impl DataTransfer, then: Out::Type, or_else: Out::Type) -> Receiver<Out> {
-    //     Receiver {
-    //         signal: self.signal,
-    //         map: SignalMapper::If(Object::new(if_eq), Object::new(then), Object::new(or_else)),
-    //         p: PhantomData,
-    //     }
-    // }
-
-
-    // /// Special receiver that maps `Some(_) => ()` regardless of type.
-    // pub fn recv_any(self) -> Receiver<()> {
-    //     Receiver {
-    //         signal: self.signal,
-    //         map: SignalMapper::Function(Box::new(|obj: &mut Object| *obj = Object::new(()))),
-    //         p: PhantomData,
-    //     }
-    // }
-
     pub fn clone_split<S: CloneSplit<SignalBuilder<T>>>(&self) -> S {
         S::clone_split(SignalBuilder::new(self.signal.clone()))
     }
@@ -270,15 +211,3 @@ impl SignalSender<Object> {
         }
     }
 }
-
-// impl<T: SignalReceiver> DslFrom<SignalBuilder<T::Type>> for Option<Receiver<T>> {
-//     fn dfrom(value: SignalBuilder<T::Type>) -> Self {
-//         Some(value.recv())
-//     }
-// }
-
-// impl<T: SignalReceiver> DslFrom<SignalBuilder<T::Type>> for Receiver<T> {
-//     fn dfrom(value: SignalBuilder<T::Type>) -> Self {
-//         value.recv()
-//     }
-// }

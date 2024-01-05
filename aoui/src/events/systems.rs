@@ -73,6 +73,7 @@ pub fn mouse_button_input(
         }
     });
     state.caught = false;
+    state.focused = None;
     if state.blocked { return; }
     let(camera, camera_transform) = match marked_camera.get_single() {
         Ok((cam, transform)) => (cam, transform),
@@ -89,6 +90,7 @@ pub fn mouse_button_input(
     if state.dragging {
         state.caught = true;
         if let Some(mut entity) = state.drag_target(&mut commands) {
+            state.focused = Some(entity.id());
             if !buttons.pressed(state.drag_button) {
                 if state.drag_dbl_click && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
                     entity.insert(CursorAction(EventFlags::DoubleClick));
@@ -151,11 +153,14 @@ pub fn mouse_button_input(
                     state.drag_button = MouseButton::Left;
                     state.drag_dbl_click = flag.contains(EventFlags::DoubleClick);
                     commands.entity(entity).insert(CursorFocus(EventFlags::LeftDrag));
+                    state.focused = Some(entity);
                 } else {
                     commands.entity(entity).insert(CursorFocus(EventFlags::LeftPressed));
+                    state.focused = Some(entity);
                 }
             } else if flag.contains(EventFlags::LeftClick) {
                 commands.entity(entity).insert(CursorFocus(EventFlags::LeftPressed));
+                state.focused = Some(entity);
             }
         }
     } else if buttons.pressed(MouseButton::Right) {
@@ -175,11 +180,14 @@ pub fn mouse_button_input(
                     state.drag_button = MouseButton::Right;
                     state.drag_dbl_click = false;
                     commands.entity(entity).insert(CursorFocus(EventFlags::RightDrag));
+                    state.focused = Some(entity);
                 } else {
                     commands.entity(entity).insert(CursorFocus(EventFlags::RightPressed));
+                    state.focused = Some(entity);
                 }
             } else if flag.contains(EventFlags::RightClick) {
                 commands.entity(entity).insert(CursorFocus(EventFlags::RightPressed));
+                state.focused = Some(entity);
             }
         }
     } else if buttons.pressed(MouseButton::Middle) {
@@ -200,11 +208,14 @@ pub fn mouse_button_input(
                     state.drag_button = MouseButton::Middle;
                     state.drag_dbl_click = false;
                     commands.entity(entity).insert(CursorFocus(EventFlags::MidDrag));
+                    state.focused = Some(entity);
                 } else {
                     commands.entity(entity).insert(CursorFocus(EventFlags::MidPressed));
+                    state.focused = Some(entity);
                 }
             } else if flag.contains(EventFlags::MidClick) {
                 commands.entity(entity).insert(CursorFocus(EventFlags::MidPressed));
+                state.focused = Some(entity);
             }
         }
     } else {
@@ -246,10 +257,15 @@ pub fn mouse_button_input(
                 .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
                 .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         }
-        iter(EventFlags::Hover)
-            .filter(|(.., hitbox)| hitbox.contains(mouse_pos))
-            .max_by(|(.., a), (.., b)| a.compare(b))
-            .map(|(entity, ..)| commands.entity(entity).insert(CursorFocus(EventFlags::Hover)).end())
-            .exec(|| state.caught = true);
+        if state.focused.is_none() {
+            iter(EventFlags::Hover)
+                .filter(|(.., hitbox)| hitbox.contains(mouse_pos))
+                .max_by(|(.., a), (.., b)| a.compare(b))
+                .map(|(entity, ..)| {
+                    commands.entity(entity).insert(CursorFocus(EventFlags::Hover)).end();
+                    state.focused = Some(entity);
+                })
+                .exec(|| state.caught = true);
+        }
     }   
 }

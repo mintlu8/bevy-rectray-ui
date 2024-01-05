@@ -2,7 +2,7 @@ use bevy::math::Vec2;
 use bevy::text::Text;
 use crate::layout::Layout;
 use crate::widgets::inputbox::InputBox;
-use crate::{Hitbox, HitboxShape, Anchor, SizeUnit};
+use crate::{Hitbox, HitboxShape, Anchor, SizeUnit, Size};
 use crate::{Size2, FontSize, layout::Alignment, layout::LayoutDir};
 
 
@@ -254,25 +254,36 @@ pub fn angle(f: impl DslInto<Vec2>) -> f32{
 }
 
 /// Set font size by `px`.
-pub fn px(f: impl DslInto<f32>) -> (SizeUnit, f32) {
-    (SizeUnit::Pixels, f.dinto())
+pub fn px(f: impl DslInto<f32>) -> Size {
+    Size::new(SizeUnit::Pixels, f.dinto())
 }
 
 /// Set font size by `em`.
-pub fn em(f: impl DslInto<f32>) -> (SizeUnit, f32) {
-    (SizeUnit::Em, f.dinto())
+pub fn em(f: impl DslInto<f32>) -> Size {
+    Size::new(SizeUnit::Em, f.dinto())
 }
 
 /// Set font size by `rem`.
-pub fn rem(f: impl DslInto<f32>) -> (SizeUnit, f32) {
-    (SizeUnit::Rem, f.dinto())
+pub fn rem(f: impl DslInto<f32>) -> Size {
+    Size::new(SizeUnit::Rem, f.dinto())
 }
 
 /// Set font size by `%`.
 /// 
 /// Provide values like `40`, not `0.4`.
-pub fn percent(f: impl DslInto<f32>) -> FontSize {
-    FontSize::Pixels(f.dinto() / 100.0)
+pub fn percent(f: impl DslInto<f32>) -> Size {
+    Size::new(SizeUnit::Percent, f.dinto() / 100.0)
+}
+
+impl DslFrom<Size> for FontSize {
+    fn dfrom(value: Size) -> Self {
+        match value.unit {
+            SizeUnit::Pixels => FontSize::Pixels(value.value),
+            SizeUnit::Em => FontSize::Ems(value.value),
+            SizeUnit::Rem => FontSize::Rems(value.value),
+            u => panic!("Unsupported SizeUnit {:?} as FontSize.", u)
+        }
+    }
 }
 
 /// Accepts 1 or 2 numbers for a `Vec2` or a `Size2`
@@ -361,55 +372,55 @@ impl_one_or_two!(Size2, x, y, Size2::pixels(x as f32, y as f32));
 #[macro_export]
 macro_rules! size {
     (infer) => {
-        ($crate::SizeUnit::Infer, 0.0)
+        $crate::Size::new($crate::SizeUnit::Infer, 0.0)
     };
     ($x: tt) => {
-        ($crate::SizeUnit::Pixels, $x as f32)
+        $crate::Size::new($crate::SizeUnit::Pixels, $x as f32)
     };
     (-$x: tt) => {
-        ($crate::SizeUnit::Pixels, -($x as f32))
+        $crate::Size::new($crate::SizeUnit::Pixels, -($x as f32))
     };
     ($x: tt px) => {
-        ($crate::SizeUnit::Pixels, $x as f32)
+        $crate::Size::new($crate::SizeUnit::Pixels, $x as f32)
     };
     (-$x: tt px) => {
-        ($crate::SizeUnit::Pixels, -($x as f32))
+        $crate::Size::new($crate::SizeUnit::Pixels, -($x as f32))
     };
     ($x: tt em) => {
-        ($crate::SizeUnit::Em, $x as f32)
+        $crate::Size::new($crate::SizeUnit::Em, $x as f32)
     };
     (-$x: tt em) => {
-        ($crate::SizeUnit::Em, -($x as f32))
+        $crate::Size::new($crate::SizeUnit::Em, -($x as f32))
     };
     ($x: tt rem) => {
-        ($crate::SizeUnit::Rem, $x as f32)
+        $crate::Size::new($crate::SizeUnit::Rem, $x as f32)
     };
     (-$x: tt rem) => {
-        ($crate::SizeUnit::Rem, -($x as f32))
+        $crate::Size::new($crate::SizeUnit::Rem, -($x as f32))
     };
     ($x: tt %) => {
-        ($crate::SizeUnit::Percent, $x as f32 / 100.0)
+        $crate::Size::new($crate::SizeUnit::Percent, $x as f32 / 100.0)
     };
     (-$x: tt %) => {
-        ($crate::SizeUnit::Percent, -($x as f32) / 100.0)
+        $crate::Size::new($crate::SizeUnit::Percent, -($x as f32) / 100.0)
     };
     (1 + $x: tt px) => {
-        ($crate::SizeUnit::MarginPx, $x as f32)
+        $crate::Size::new($crate::SizeUnit::MarginPx, $x as f32)
     };
     (1 - $x: tt px) => {
-        ($crate::SizeUnit::MarginPx, -($x as f32))
+        $crate::Size::new($crate::SizeUnit::MarginPx, -($x as f32))
     };
     (1 + $x: tt em) => {
-        ($crate::SizeUnit::MarginEm, $x as f32)
+        $crate::Size::new($crate::SizeUnit::MarginEm, $x as f32)
     };
     (1 - $x: tt em) => {
-        ($crate::SizeUnit::MarginEm, -($x as f32))
+        $crate::Size::new($crate::SizeUnit::MarginEm, -($x as f32))
     };
     (1 + $x: tt rem) => {
-        ($crate::SizeUnit::MarginRem, $x as f32)
+        $crate::Size::new($crate::SizeUnit::MarginRem, $x as f32)
     };
     (1 - $x: tt rem) => {
-        ($crate::SizeUnit::MarginRem, -($x as f32))
+        $crate::Size::new($crate::SizeUnit::MarginRem, -($x as f32))
     };
 }
 

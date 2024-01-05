@@ -1,6 +1,6 @@
-use bevy::{ecs::{system::{Query, Commands, Res}, entity::Entity}, hierarchy::Children, math::Vec2};
+use bevy::{ecs::system::{Query, Res}, hierarchy::Children, math::Vec2};
 
-use crate::{DimensionData, Transform2D, signals::KeyStorage, Anchor, AouiREM};
+use crate::{DimensionData, Transform2D, Anchor, AouiREM};
 
 use super::{EventHandling, Handlers};
 
@@ -12,7 +12,7 @@ use super::{EventHandling, Handlers};
 /// anchor, min bound, and max bound,
 /// ignores rotation and scaling.
 #[derive(Debug, Clone)]
-pub enum ESigCoveragePx {}
+pub enum FetchCoveragePx {}
 
 
 /// An signal sender that calculates how many percentage of the sprite's bounding
@@ -22,39 +22,37 @@ pub enum ESigCoveragePx {}
 /// anchor, min bound, and max bound,
 /// ignores rotation and scaling.
 #[derive(Debug, Clone)]
-pub enum ESigCoveragePercent {}
+pub enum FetchCoveragePercent {}
 
 
-impl EventHandling for ESigCoveragePx {
+impl EventHandling for FetchCoveragePx {
     type Data = Vec2;
     type Context = ();
     fn new_context() -> Self::Context {}
 }
 
-impl EventHandling for ESigCoveragePercent {
+impl EventHandling for FetchCoveragePercent {
     type Data = Vec2;
     type Context = ();
     fn new_context() -> Self::Context {}
 }
 
 pub fn calculate_coverage(
-    mut commands: Commands,
     rem: Res<AouiREM>,
-    storage: Res<KeyStorage>,
-    query: Query<(Entity, &Transform2D, &DimensionData, Option<&Children>,
-        Option<&Handlers<ESigCoveragePercent>>, 
-        Option<&Handlers<ESigCoveragePx>>)>
+    query: Query<(&Transform2D, &DimensionData, Option<&Children>,
+        Option<&Handlers<FetchCoveragePercent>>, 
+        Option<&Handlers<FetchCoveragePx>>)>
 ) {
     
     let rem = rem.get();
-    for (entity, _, dimension, children, percent, px) in query.iter() {
+    for (_, dimension, children, percent, px) in query.iter() {
         if percent.is_none() && px.is_none() { continue; }
         let Some(children) = children else {
             if let Some(handler) = percent {
-                handler.handle(&mut commands.entity(entity), &storage, Vec2::ZERO);
+                handler.send_signal(Vec2::ZERO);
             }
             if let Some(handler) = percent {
-                handler.handle(&mut commands.entity(entity), &storage, Vec2::ZERO);
+                handler.send_signal(Vec2::ZERO);
             }
             continue;
         };
@@ -63,7 +61,7 @@ pub fn calculate_coverage(
         let mut min = Vec2::NAN;
         let mut max = Vec2::NAN;
         for child in children {
-            let Ok((_, transform, dimension, ..)) = query.get(*child) else {continue};
+            let Ok((transform, dimension, ..)) = query.get(*child) else {continue};
             let anchor = size * transform.get_parent_anchor();
             let center = anchor - dimension.size * transform.anchor;
             let offset = transform.offset.as_pixels(size, em, rem);
@@ -77,10 +75,10 @@ pub fn calculate_coverage(
             pixels = Vec2::ZERO;
         }
         if let Some(handler) = px {
-            handler.handle(&mut commands.entity(entity), &storage, pixels);
+            handler.send_signal(pixels);
         }
         if let Some(handler) = percent {
-            handler.handle(&mut commands.entity(entity), &storage, pixels / size);
+            handler.send_signal(pixels / size);
         }
     }
 }

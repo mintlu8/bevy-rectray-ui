@@ -1,11 +1,12 @@
 use bevy::{render::texture::Image, hierarchy::BuildChildren, ecs::entity::Entity, asset::Handle};
-use crate::{widget_extension, build_frame, Clipping, frame, Size2, events::{EventFlags, ESigCoveragePx, Handlers, ESigCoveragePercent}};
+use crate::{widget_extension, build_frame, Clipping, frame, Size2, events::{EventFlags, FetchCoveragePx, Handlers, FetchCoveragePercent}};
 use crate::widgets::{scroll::IntoScrollingBuilder, clipping::ScopedCameraBundle};
 use super::Widget;
 
 widget_extension!(
     /// A camera with its viewport bound to a sprite's `RotatedRect`.`
     pub struct CameraFrameBuilder {
+        /// Render target of the camera.
         pub render_target: Option<Handle<Image>>,
     }
 );
@@ -31,10 +32,10 @@ widget_extension!(
         pub scroll: Option<B>,
         /// Send a signal regarding how much of the sprite is covered by child sprites's
         /// anchor, min bound and max bound.
-        pub coverage_px: Handlers<ESigCoveragePx>,
+        pub coverage_px: Handlers<FetchCoveragePx>,
         /// Send a signal regarding how much of the sprite is covered by child sprites's
         /// anchor, min bound and max bound.
-        pub coverage_percent: Handlers<ESigCoveragePercent>,
+        pub coverage_percent: Handlers<FetchCoveragePercent>,
     }
 );
 

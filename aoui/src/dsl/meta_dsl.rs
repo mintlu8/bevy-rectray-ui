@@ -514,7 +514,7 @@ macro_rules! widget_extension {
             /// Matched parent anchor of the sprite, default is `anchor`.
             /// Usually should not be set in idiomatic use.
             pub parent_anchor: Option<$crate::Anchor>,
-            /// Center of the sprite, default is `anchor`.
+            /// Center of the sprite, default is `center`.
             pub center: Option<$crate::Anchor>,
             /// Propagated opacity.
             pub opacity: $crate::Opacity,
@@ -524,11 +524,11 @@ macro_rules! widget_extension {
             pub offset: $crate::Size2,
             /// Rotation of the sprite from `center`.
             pub rotation: f32,
-            /// Scale of the sprite.
+            /// Scale of the sprite from `center`.
             pub scale: Option<$crate::dsl::OneOrTwo<$crate::bevy::math::Vec2>>,
             /// Z depth of the sprite.
             pub z: f32,
-            /// If true, clips its children, requires no rotation to function properly
+            /// If true, clips its children, currently only affects events.
             pub clipping: Option<bool>,
             /// Owned dimension of the sprite.
             /// 
@@ -536,7 +536,7 @@ macro_rules! widget_extension {
             /// 
             /// The `size` field from `SpriteBuilder` sets the size of the underlying sprite instead.
             pub dimension: Option<$crate::Size2>,
-            /// Aspect ration of sprite, default is o
+            /// Aspect ratio of sprite, default unused.
             pub aspect: $crate::dsl::Aspect,
             /// Propagated font size.
             pub font_size: $crate::FontSize,

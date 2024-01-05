@@ -65,7 +65,7 @@ use bevy::{ecs::{schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs},
 use ::interpolation::Ease;
 pub use ::interpolation::EaseFunction;
 mod interpolation;
-pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Index};
+pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Index, Padding, Margin};
 mod assoc;
 pub use assoc::{Attr, InterpolateAssociation};
 

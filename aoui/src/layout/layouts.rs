@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use bevy::ecs::entity::Entity;
 use bevy::prelude::{Vec2, UVec2};
 use downcast_rs::{impl_downcast, Downcast};
-use crate::{Size2, SizeUnit};
+use crate::{Size2, SizeUnit, Size};
 
 use super::{util::*, LayoutInfo};
 
@@ -45,54 +45,56 @@ impl LayoutOutput {
 }
 
 /// A dynamic dimensioned `Frame` that by default have size equal
-/// to the maximum of its children, this is subject to constraints.
+/// to the maximum of its children.
+/// 
+/// This layout usually should contain only one child with no offset.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct BoundsLayout {
     /// If set, use `Dimension` on that axis.
     pub fixed: [bool; 2],
     /// Minimum bounds.
-    pub min: Vec2,
+    pub min: Size2,
     /// Maximum bounds.
-    pub max: Vec2,
+    pub max: Size2,
 }
 
 impl BoundsLayout {
     /// Ignore constraints and use `BoundsLayout` as padding.
     pub const PADDING: Self = Self {
         fixed: [false; 2],
-        min: Vec2::ZERO, 
-        max: Vec2::MAX
+        min: Size2::ZERO, 
+        max: Size2::MAX
     };
 
-    pub const fn from_max(max: Vec2) -> Self{
+    pub const fn from_max(max: Size2) -> Self{
         BoundsLayout {
             fixed: [false; 2],
-            min: Vec2::ZERO,
+            min: Size2::MAX,
             max,
         }
     }
 
-    pub const fn from_min(min: Vec2) -> Self{
+    pub const fn from_min(min: Size2) -> Self{
         BoundsLayout {
             fixed: [false; 2],
             min,
-            max: Vec2::MAX
+            max: Size2::MAX
         }
     }
 
-    pub const fn x_bounds(min: f32, max: f32) -> Self{
+    pub const fn x_bounds(min: Size, max: Size) -> Self{
         BoundsLayout {
             fixed: [false, true],
-            min: Vec2::splat(min),
-            max: Vec2::splat(max),
+            min: Size2::splat(min),
+            max: Size2::splat(max),
         }
     }
 
-    pub const fn y_bounds(min: f32, max: f32) -> Self{
+    pub const fn y_bounds(min: Size, max: Size) -> Self{
         BoundsLayout {
             fixed: [true, false],
-            min: Vec2::splat(min),
-            max: Vec2::splat(max),
+            min: Size2::splat(min),
+            max: Size2::splat(max),
         }
     }
 
@@ -107,12 +109,16 @@ impl Default for BoundsLayout {
 
 impl Layout for BoundsLayout {
     fn place(&self, info: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
-        let mut max = Vec2::ZERO;
+        let mut max_dim = Vec2::ZERO;
         let entity_anchors: Vec<_> = entities.into_iter().map(|x| {
-            max = max.max(x.dimension);
+            max_dim = max_dim.max(x.dimension);
             (x.entity, x.anchor.as_vec())
         }).collect();
-        let dim = max.clamp(self.min, self.max);
+        
+        let min = self.min.as_pixels(info.dimension, info.em, info.rem);
+        let max = self.max.as_pixels(info.dimension, info.em, info.rem);
+
+        let dim = max_dim.clamp(min, max);
 
         let dimension = Vec2::new(
             if !self.fixed[0] {dim.x} else {info.dimension.x},
@@ -136,8 +142,8 @@ pub struct StackLayout {
 }
 
 impl StackLayout {
-    pub const HBOX: Self = Self { direction: LayoutDir::LeftToRight };
-    pub const VBOX: Self = Self { direction: LayoutDir::TopToBottom };
+    pub const HSTACK: Self = Self { direction: LayoutDir::LeftToRight };
+    pub const VSTACK: Self = Self { direction: LayoutDir::TopToBottom };
 }
 
 /// A fix-sized mono-directional container.
@@ -150,8 +156,8 @@ pub struct SpanLayout {
 }
 
 impl SpanLayout {
-    pub const HSPAN: Self = Self { direction: LayoutDir::LeftToRight, stretch: false };
-    pub const VSPAN: Self = Self { direction: LayoutDir::TopToBottom, stretch: false };
+    pub const HBOX: Self = Self { direction: LayoutDir::LeftToRight, stretch: false };
+    pub const VBOX: Self = Self { direction: LayoutDir::TopToBottom, stretch: false };
 }
 
 

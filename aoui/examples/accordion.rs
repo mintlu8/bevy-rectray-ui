@@ -61,6 +61,7 @@ pub fn accordion_page(
                 context: group.clone(),
                 cancellable: true,
                 value: index,
+                z: 0.01,
                 child: text! {
                     text: "v",
                     layer: 1,

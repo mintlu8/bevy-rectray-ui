@@ -137,6 +137,15 @@ impl Dimension {
         }
     }
 
+    /// Run a closure with the underlying raw value.
+    /// 
+    /// Has no effect if dimension is not owned.
+    pub fn with_raw(&self, f: impl FnOnce(Vec2)) {
+        match self.dimension {
+            DimensionSize::Copied => (),
+            DimensionSize::Owned(v) => f(v.raw()),
+        }
+    }
     /// Edit a contextless underlying value.
     /// 
     /// Has no effect if dimension is not owned.

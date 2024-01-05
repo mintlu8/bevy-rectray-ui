@@ -87,11 +87,16 @@ pub struct Size2 {
 /// A context sensitive f32.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Reflect)]
 pub struct Size {
-    unit: SizeUnit,
-    value: f32,
+    pub unit: SizeUnit,
+    pub value: f32,
 }
 
 impl Size {
+
+    pub const fn new(unit: SizeUnit, value: f32) -> Self{
+        Size { unit, value }
+    }
+
     /// Compute size in pixels given parent info.
     #[inline]
     pub fn as_pixels(self, parent: f32, em: f32, rem: f32) -> f32 {
@@ -106,6 +111,12 @@ impl Size2 {
         raw: Vec2::ZERO,
     };
 
+    pub const MAX: Self = Self {
+        x: SizeUnit::Pixels,
+        y: SizeUnit::Pixels,
+        raw: Vec2::MAX,
+    };
+
     pub const FULL: Self = Self {
         x: SizeUnit::Percent,
         y: SizeUnit::Percent,
@@ -113,13 +124,23 @@ impl Size2 {
     };
 
     /// Construct size.
-    pub const fn new(x: (SizeUnit, f32), y: (SizeUnit, f32)) -> Self{
+    pub const fn new(x: Size, y: Size) -> Self{
         Self {
-            x: x.0,
-            y: y.0,
-            raw: Vec2::new(x.1, y.1)
+            x: x.unit,
+            y: y.unit,
+            raw: Vec2::new(x.value, y.value)
         }
     }
+
+    /// Construct size.
+    pub const fn splat(x: Size) -> Self{
+        Self {
+            x: x.unit,
+            y: x.unit,
+            raw: Vec2::new(x.value, x.value)
+        }
+    }
+
 
     /// Size based on fixed number of pixels.
     pub const fn pixels(x: f32, y: f32) -> Self{

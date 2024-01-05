@@ -33,27 +33,99 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         })
     });
 
-    
+    let palette_idle = WidgetPalette { 
+        background: color!(red500), 
+        foreground: color!(white), 
+        stroke: color!(none),
+    };
+
+    let palette_hover = WidgetPalette { 
+        background: color!(red600), 
+        foreground: color!(white), 
+        stroke: color!(none),
+    };
+
+    let palette_pressed = WidgetPalette { 
+        background: color!(red800), 
+        foreground: color!(white), 
+        stroke: color!(none),
+    };
+
+    let (collapse_send, collapse_recv, collapse_spin) = signal();
+
     mwindow!((commands, assets) {
         radius: 5,
         palette: palette!(WindowPalette { 
             background: white,
             banner: purple, 
         }),
-        margin: 0.5,
-        z: 100,
-        padding: 1,
+        margin: size2!(0, 0.5 em),
+        z: 40,
         shadow: 12,
-        banner: padding!{
-            padding: size2!(2 em, 0.5 em),
+        collapse: collapse_recv,
+        banner: hbox! {
+            dimension: size2!(100%, 2 em),
+            margin: size2!(1 em, 0),
             child: text! {
                 text: "Hello, World!",
                 color: color!(black),
+            },
+            child: check_button! {
+                anchor: Right,
+                offset: size2!(-1 em, 0),
+                dimension: size2!(1 em, 1 em),                    
+                checked: true,
+                on_change: collapse_send,
+                child: text! {
+                    text: "v",
+                    color: color!(black),
+                    extra: transition!(Rotation 0.2 Linear default 0.0),
+                    extra: collapse_spin.recv_select(true,
+                        Interpolate::<Rotation>::signal_to(0.0),
+                        Interpolate::<Rotation>::signal_to(PI),
+                    )
+                }
             }
         },
         child: text! {
             text: "Inner!",
             color: color!(black),
+        },
+        child: hstack! {
+            margin: size2!(1 em, 0),
+            child: text! {
+                color: color!(black),
+                text: "Button:",
+            },
+            child: mbutton!{
+                shadow: 5,
+                capsule: true,
+                palette: palette_idle,
+                palette_hover: palette_hover,
+                palette_pressed: palette_pressed,
+                text: "Click Me!"
+            },
+        },
+        child: hstack! {
+            margin: size2!(1 em, 0),
+            child: text! {
+                color: color!(black),
+                text: "Button:",
+            },
+            child: mtoggle! {
+                background_size: 1.0,
+                length: 2,
+                dial_size: 1.6,
+                palette: palette!(TogglePalette {
+                    background: white, 
+                    dial: red500, 
+                }),
+                checked_palette: palette!(TogglePalette {
+                    background: red700, 
+                    dial: red500, 
+                }),
+                dial_shadow: (4, color!(grey)),
+            }
         },
     });
 
@@ -61,22 +133,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         dimension: size2![100, 100],
         shadow: 5,
         capsule: true,
-        palette: WidgetPalette { 
-            background: color!(red500), 
-            foreground: color!(white), 
-            stroke: color!(none),
-        },
-        palette_hover: WidgetPalette { 
-            background: color!(red600), 
-            foreground: color!(white), 
-            stroke: color!(none),
-        },
-        palette_pressed: WidgetPalette { 
-            background: color!(red800), 
-            foreground: color!(white), 
-            stroke: color!(none),
-        },
-        //capsule: true,
+        palette: palette_idle,
+        palette_hover: palette_hover,
+        palette_pressed: palette_pressed,
         icon: "cross.png",
         text: "Hello",
     });
@@ -116,4 +175,5 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }),
         dial_shadow: (4, color!(grey)),
     });
+
 }

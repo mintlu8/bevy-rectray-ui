@@ -103,17 +103,17 @@
 //! * Fine grained low level anchor-offset layout system.
 //! * First class support for rotation and scaling.
 //! * Simple and intuitive containers.
-//! * Native ECS components with no external context.
+//! * Decentralized ECS components with no central state.
 //! * Complete support of bevy's 2D primitives.
 //! * Input handling system for mouse and cursor.
 //! * Building blocks for most common widgets.
 //! * Event handling through one-shot systems.
-//! * Reactivity and animation through marked signals.
+//! * Reactivity and animation through signals.
 //! * `macro_rules` based DSL that annihilates boilerplate.
 //! * Easy integration with third-party 2D crates.
 //! * Easy migration to future bevy versions.
 //! 
-//! # What' `bevy_aoui` is not
+//! # What `bevy_aoui` is not
 //! 
 //! * Not a renderer.
 //! 
@@ -128,8 +128,12 @@
 //! 
 //! * No ui script or serialization.
 //!     
-//!     `bevy_aoui` uses rust code for a lot of things, including events and reactivity, 
-//!     serializing the UI might be difficult.
+//!     `bevy_aoui` uses rust closures for a lot of things, including events and reactivity, 
+//!     those are unfortunately not serializable.
+//! 
+//! * No styling
+//!     
+//! `   Styling is outside the scope of this crate.
 //! 
 //! # Container
 //! 
@@ -144,7 +148,7 @@
 //! 
 //! # Widget Abstractions
 //! 
-//! [widget builders](crate::dsl::builders) are used to empower our DSL.
+//! [Widget builders](crate::dsl::builders) are used to empower our DSL.
 //! Widget builders implements [`Widget`](dsl::Widget) and [`Default`] and can be used in general like so:
 //! 
 //! ```
@@ -161,7 +165,7 @@
 //! This returns an [`Entity`](bevy::ecs::entity::Entity).
 //! 
 //! `dinto` is implemented in [`DslFrom`](dsl::DslFrom) or [`DslInto`](dsl::DslInto). 
-//! which gives us nice conversion like `[i32; 2] -> Vec2`, which saves us a lot of typing!
+//! which gives us nice conversion like `[i32; 2] -> Vec2`, which can save us a lot of typing!
 //! 
 //! When using the dsl macro, this becomes 
 //! ```
@@ -177,7 +181,8 @@
 //! much nicer, right?
 //! 
 //! `commands` is the context, if `AssetServer` is needed 
-//! we can put `(commands, assets)` there.
+//! we can put `(commands, assets)` there, which should be the
+//! case most of the time.
 //!
 //! # DSL Syntax
 //! 
