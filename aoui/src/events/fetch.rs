@@ -35,9 +35,7 @@ impl<T: Interpolation> EventHandling for Fetch<T> where T::Data: PartialEq {
 
     type Context = ();
 
-    fn new_context() -> Self::Context {
-        ()
-    }
+    fn new_context() -> Self::Context {}
 }
 
 impl<T: Interpolation> EventHandling for Fetch<Evaluated<T>> where T::Data: PartialEq {
@@ -45,9 +43,7 @@ impl<T: Interpolation> EventHandling for Fetch<Evaluated<T>> where T::Data: Part
 
     type Context = ();
 
-    fn new_context() -> Self::Context {
-        ()
-    }
+    fn new_context() -> Self::Context {}
 }
 
 pub fn transfer_dimension(

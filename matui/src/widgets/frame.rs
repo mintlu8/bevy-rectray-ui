@@ -138,10 +138,8 @@ impl Widget for MWindowBuilder {
                 collapse.clone().recv(|open: bool, dim: &WindowDimensionQuery, inter: &mut Interpolate<Dimension>| {
                     if open {
                         inter.interpolate_to(Vec2::ONE);
-                    } else {
-                        if let Some(frac) = (||Some((dim.banner.poll()?.y + dim.padding.poll()?.y * 2.0) / dim.total.poll()?.y))() {
+                    } else if let Some(frac) = (||Some((dim.banner.poll()?.y + dim.padding.poll()?.y * 2.0) / dim.total.poll()?.y))() {
                             inter.interpolate_to(Vec2::new(1.0, frac))
-                        }
                     }
                 })
             ));

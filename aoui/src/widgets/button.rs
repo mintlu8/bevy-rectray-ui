@@ -348,9 +348,9 @@ impl Payload {
 /// # Example
 /// ```
 /// use bevy_aoui::widgets::button::radio_button_group;
-/// let ([he_him, she_her, they_them], gender_sender) = radio_button_group("He/Him");
+/// let (ferris, gopher, python) = radio_button_group("Ferris");
 /// // Construct 4 items as an array.
-/// let colors = radio_button_group::<_, 4>("Red");
+/// let colors = radio_button_group::<[_; 4]>("Red");
 /// ```
 pub fn radio_button_group<T: CloneSplit<RadioButton>>(default: impl AsObject) -> T {
     T::clone_split(RadioButton::new(default))

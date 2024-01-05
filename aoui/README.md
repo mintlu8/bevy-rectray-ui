@@ -2,18 +2,9 @@
 
 [![Crates.io](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
 [![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
-
-A light-weight Anchor-Offset based 2D sprite rendering system for the bevy engine.
-
-Bevy Aoui provides a light-weight rectangular anchor-offset based 2D sprite rendering,
-UI layout and skeletal animation system.
-
-Similar to the philosophy of Rust, Aoui provides low level control through the
-anchor-offset system and high level ergonomics through its layout system.
+Bevy Aoui is an component based 2D and UI solution for the bevy engine.
 
 ## Getting Started
-
-Before you start you should check out `bevy_aoui`'s examples if you like shapes or DSL.
 
 First add the Aoui Plugin:
 
@@ -21,136 +12,247 @@ First add the Aoui Plugin:
 app.add_plugins(AouiPlugin)
 ```
 
+Import the DSL prelude in the function scope
+
+```rust
+fn spawn(mut commands: Commands, assets: Res<AssetServer>) {
+    use bevy_aoui::dsl::prelude::*;
+    ...
+}
+```
+
 Create a sprite:
 
 ```rust
-commands.spawn(AouiSpriteBundle {
-    sprite: Sprite { 
-        color: Color::RED,
-        ..Default::default()
-    },
-    transform: Transform2D { 
-        center: Some(Anchor::Center),
-        anchor: Anchor::TopCenter,
-        offset: Vec2::new(20.0, 0.0),
-        rotation: 1.21,
-        scale: Vec2::new(4.0, 1.0),
-        ..Default::default()
-    },
-    dimension: Dimension::pixels(Vec2::new(50.0, 50.0)),
-    texture: assets.load("sprite.png"),
-    ..Default::default()
-});
+sprite!(commands {
+    sprite: "Ferris.png",
+    anchor: Left,
+    offset: [40, 0],
+    dimension: [200, 200],
+})
 ```
 
-Create some text:
+This spawns a "Ferris.png" to the center left of the screen,
+moved to the right by 40 px, with dimension 200 px * 200 px,
+and returns an `Entity`.
+
+Create a stack of words:
 
 ```rust
-commands.spawn(AouiTextBundle {
-    text: Text::from_section(
-        "Hello, World!!", 
-        style(Color::WHITE)
-    ),
-    font: assets.load::<Font>("OpenSans.ttf"),
-    transform: Transform2D { 
-        center: Some(Anchor::Center),
-        anchor: Anchor::TopCenter,
-        offset: Vec2::new(20.0, 0.0),
-        rotation: 1.21,
-        scale: Vec2::new(4.0, 1.0),
-        ..Default::default()
+vstack!(commands {
+    font_size: em(2),
+    child: text! {
+        text: "Hello"
     },
-    dimension: Dimension::COPIED.with_em(SetEM::Pixels(24.0)),
-    ..Default::default()
+    child: text! {
+        text: "rust"
+    },
+    child: text! {
+        text: "and"
+    },
+    child: text! {
+        text: "bevy"
+    },
 });
 ```
 
-## Core Concepts
+## How this works?
 
-Aoui offers a refreshingly different paradigm from traditional CSS based UI layout.
+`bevy_aoui` is all about rectangles!
 
-Aoui Sprites contains these core components:
+Each sprite is a rectangle, and placed relative to the parent
+rectangle.
 
-* [anchor](Transform2D::anchor)
-* [center](Transform2D::center)
-* [offset](Transform2D::offset)
-* [rotation](Transform2D::rotation)
-* [scale](Transform2D::scale)
-* [dimension](Dimension::dim)
+You might want to
 
-Each sprite is conceptualized as a rectangle with a dimension and
-9 [anchors](bevy::sprite::Anchor): `BottomLeft`, `CenterRight`, `Center`, etc.
+```text
+Place a sprite to the center right of the parent sprite,
+move left by 10 px, 
+with 20% of parent's width as width
+2x font size as height
+and rotate by 45 degrees.
+```
 
-[Custom anchors](bevy::sprite::Anchor::Custom) can be used but not in some layouts.
+In `aoui` this is incredibly simple:
 
-Sprites are connected to parent sprites via one of the parent's anchors
-and can be offset by a `Vec2`. When the offset is set to `(0, 0)`,
-the anchors of the parent and child sprites overlap.
+```rust
+sprite!(commands {
+    anchor: Right,
+    offset: [-10, 0],
+    dimension: size2!(20 %, 2 em),
+    rotation: degrees(45),
+    ...
+})
+```
 
-In the case of parentless sprites, they are anchored to the window's rectangle.
+Use `Transform2D` and `Dimension` to manipulate `aoui` widgets directly.
 
-When applying `rotation` and `scale`, sprites can use a
-`center` that operates independently from the anchor.
+## What `bevy_aoui` provides
+
+* Fine grained low level anchor-offset layout system.
+* First class support for rotation and scaling.
+* Simple and intuitive containers.
+* Decentralized ECS components with no central state.
+* Complete support of bevy's 2D primitives.
+* Input handling system for mouse and cursor.
+* Building blocks for most common widgets.
+* Event handling through one-shot systems.
+* Reactivity and animation through signals.
+* `macro_rules` based DSL that annihilates boilerplate.
+* Easy integration with third-party 2D crates.
+* Easy migration to future bevy versions.
+
+## What `bevy_aoui` is not
+
+* Not a renderer.
+
+    `bevy_aoui` has minimal rendering features and no third party bevy dependencies,
+    this ensures maintainability and easy migration to future bevy versions,
+    at the cost of not having out of the box widget styles.
+
+* Not `bevy_ui` compatible.
+
+    `bevy_aoui` is not dependent on `bevy_ui` in any way. This means `bevy_ui` exclusive
+    features won't be available in `bevy_aoui` as is.
+
+* No ui script or serialization.
+
+    `bevy_aoui` uses rust closures for a lot of things, including events and reactivity,
+    those are unfortunately not serializable.
+
+* No styling
+
+   Styling is outside the scope of this crate.
 
 ## Container
 
-Anchor-Offset is well-suited for isolated UI components, but when it comes to arranging
-multiple UI elements in a specific order, you'll find the `Container` useful.
+Anchor-Offset offers fine-grained control over the layout, but you can surrender
+that control to containers for ergonomics.
 
-The `Container` is a layout system that only depands on insertion order and works
-with Bevy's [`Children`](bevy::prelude::Children) component.
+The `Container` is a very simple layout system that
+only depends on insertion order of its children. You can find your
+`hstack`, `grid` or `paragraph` here.
 
-Check out the book for more information.
+You can implement `Layout` yourself to create a custom layout.
 
-## Advantages of Aoui
+## Widget Abstractions
 
-There are many awesome UI libraries in the bevy ecosystem
-that you should definitely use over Aoui in
-many use cases. However, Aoui offers some unique advantages:
+Widget builders are used to empower our DSL.
+Widget builders implements `Widget` and `Default` and can be used in general like so:
 
-* Full ECS support with easy feature composition.
+```rust
+FrameBuilder {
+    offset: [121, 423].dinto(),
+    anchor: Center.dinto(),
+    color: color!(red).dinto()
+    ..Default::default()
+}.build(commands)
+```
 
-Aoui is built fully embracing bevy's ecosystem.
-You can mix and match our modularized components
-and add, remove or edit any system you want to change.
+This returns an `Entity`.
 
-* Relative size system.
+`dinto` is implemented in `DslFrom` or `DslInto`.
+which gives us nice conversion like `[i32; 2] -> Vec2`, which can save us a lot of typing!
 
-Full support for web like size units: `em`, `rem`, `%`, etc.
+When using the dsl macro, this becomes
 
-* First class rotation and scaling support.
+```rust
+frame! (commands {
+    offset: [121, 423],
+    anchor: Center,
+    color: color!(red),
+});
+```
 
-You are can rotate and scale any sprite from any position on it with ease.
+much nicer, right?
 
-* Simple but versatile layout system.
+`commands` is the context, if `AssetServer` is needed
+we can put `(commands, assets)` there, which should be the
+case most of the time.
 
-Simple layouts that work out of the box with minimal configuration.
+## DSL Syntax
 
-* High level abstractions with low level control.
+The DSL have a few special fields that makes it much more powerful than
+a simple struct constructor.
 
-You can mix and match anchoring and layouts to best suit your needs.
+### child and children
 
-## FAQ
+`child:` is a special field that can be repeated, it accepts an `Entity`
+and inserts it as a child.
 
-### What about the widgets?
+```rust
+frame! (commands {
+    ...
+    child: rectangle! {
+        dimension: [40, 40]
+    },
+    child: text! {
+        text: "Hello, World!!"
+    },
+});
+```
 
-`bevy_aoui` is a layout system, not a widget library.
-Implementations of most Aoui widgets
-will live outside of the main crate, like in `bevy_aoui`.
+This syntax, notice the use of braces `{}`,
 
-`bevy_aoui` is a lot more experimental and subject to more
-changes than `bevy_aoui`. Checkout our examples for simple widget implementations.
+```rust
+field: macro! { .. },
+```
 
-`Aoui` is commited to not have a standard look and not interacting with the
-render pipeline as much as possible, therefore the standard widgets
-might not be an out-of-the-box solution for you.
+Will be automatically rewritten as
 
-### Where about the performance?
+```rust
+field: macro!(commands { .. }),
+```
 
-`bevy_aoui` is an ergonomic focused crate with some performance tradeoffs,
-each sprite has to go through multiple steps of rotation and scaling compared
-to traditional rendering. Currently performance optimization features like
-`no_rotation` are removed for API consistancy, this might change in the future
-if the api become more stablized.
+Which serves as context propagation.
 
-Performance related pull requests and suggestions are welcome.
+`children:` adds an iterator as children to the entity.
+Iterators of `Entity` and `&Entity` are both accepted.
+Child and children guarantees insertion order.
+
+### extra
+
+Extra adds a component or a bundle to a widget,
+which is the idiomatic pattern to compose behaviors.
+
+```rust
+// Example: Add dragging support to a `Sprite`.
+sprite! (commands {
+    ...
+    extra: DragX,
+    extra: DragConstraint,
+    extra: DragSnapBack,
+});
+```
+
+### entity
+
+`entity` lets us fetch the `Entity`
+directly from a nested macro invocation.
+
+```rust
+let sprite_entity: Entity;
+sprite! (commands {
+    child: sprite! {
+        entity: sprite_entity,
+    }
+});
+```
+
+## Next Step
+
+See documentation on individual modules for more information.
+
+## License
+
+License under either of
+
+Apache License, Version 2.0 (LICENSE-APACHE or <http://www.apache.org/licenses/LICENSE-2.0>)
+MIT license (LICENSE-MIT or <http://opensource.org/licenses/MIT>)
+at your option.
+
+## Contribution
+
+Contributions are welcome!
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
