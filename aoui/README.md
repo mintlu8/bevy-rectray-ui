@@ -2,7 +2,8 @@
 
 [![Crates.io](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
 [![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
-Bevy Aoui is an component based 2D and UI solution for the bevy engine.
+
+Bevy Aoui is a component based 2D and UI solution for the bevy engine.
 
 ## Getting Started
 

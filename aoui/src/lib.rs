@@ -1,4 +1,4 @@
-//! Bevy Aoui is an component based 2D and UI solution for the bevy engine.
+//! Bevy Aoui is a component based 2D and UI solution for the bevy engine.
 //! 
 //!
 //! # Getting Started
