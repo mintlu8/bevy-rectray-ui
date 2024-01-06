@@ -291,7 +291,7 @@ pub trait Interpolation: Sized + 'static {
         mut query: Query<&mut Interpolate<Self>>
     ) {
         let delta = time.delta_seconds();
-        query.par_iter_mut().for_each(move |mut x| x.update(delta))
+        query.iter_mut().for_each(move |mut x| x.update(delta))
     }
 }
 

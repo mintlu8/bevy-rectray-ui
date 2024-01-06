@@ -8,7 +8,7 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, bundles::*, layout::*};
+use bevy_aoui::{*, bundles::*, layout::*, dsl::AouiCommands};
 use bevy::{prelude::*, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}};
 use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox}, EguiPlugin};
 
@@ -38,11 +38,11 @@ pub fn main() {
         .run();
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
-    let textbox = paragraph!((commands, assets) {
+    let textbox = paragraph!(commands {
         dimension: [700, 700],
         margin: size2!(0.4 em, 0),
         font_size: em(1),
@@ -65,7 +65,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 })
             );
         });
-        words.push(commands.spawn(LinebreakBundle::new(Size2::em(1.0, 1.0))).id());
+        words.push(commands.spawn_bundle(LinebreakBundle::new(Size2::em(1.0, 1.0))).id());
     });
     commands.entity(textbox).push_children(&words[0..words.len()-1]);
 }

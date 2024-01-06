@@ -34,8 +34,8 @@ pub struct ScopedCameraBundle {
 
 
 /// Create an image suitable as a render target.
-pub fn render_target<T: CloneSplit<Handle<Image>>>(assets: &AssetServer, [width, height]: [u32; 2]) -> T {
-    let handle = assets.add(Image {
+pub fn render_target<T: CloneSplit<Handle<Image>>>(assets: impl AsRef<AssetServer>, [width, height]: [u32; 2]) -> T {
+    let handle = assets.as_ref().add(Image {
         texture_descriptor: TextureDescriptor {
             label: None,
             size: Extent3d {
@@ -61,7 +61,7 @@ pub fn render_target<T: CloneSplit<Handle<Image>>>(assets: &AssetServer, [width,
 impl ScopedCameraBundle {
 
     /// Create a camera and its render target. 
-    pub fn new(assets: &AssetServer, dimension: [u32; 2], layer: impl DslInto<RenderLayers>) -> (Self, Handle<Image>) {
+    pub fn new(assets: impl AsRef<AssetServer>, dimension: [u32; 2], layer: impl DslInto<RenderLayers>) -> (Self, Handle<Image>) {
         let (cam, texture) = render_target(assets, dimension);
         (Self::from_image(cam, layer), texture)
     }

@@ -1,47 +1,49 @@
+use bevy::ecs::entity::Entity;
+
 use crate::{layout::*, build_frame};
 
 /// Construct a dummy entity for linebreak in a layout.
 #[macro_export]
 macro_rules! linebreak {
     (($commands: expr $(, $tt:expr)*) $({})? $(,)?) => {
-        $commands.spawn($crate::bundles::LinebreakBundle::default()).id()
+        $commands.spawn_bundle($crate::bundles::LinebreakBundle::default()).id()
     };
     (($commands: expr $(, $tt:expr)*), $size: expr $(,)?) => {
         {
             use $crate::dsl::DslInto;            
             let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
-            $commands.spawn($crate::bundles::LinebreakBundle::new(size)).id()
+            $commands.spawn_bundle($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
     (($commands: expr $(, $tt:expr)*) {$size: expr}) => {
         {
             use $crate::dsl::DslInto;            
             let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
-            $commands.spawn($crate::bundles::LinebreakBundle::new(size)).id()
+            $commands.spawn_bundle($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
     ($commands: tt $({})? $(,)?) => {
-        $commands.spawn($crate::bundles::LinebreakBundle::default()).id()
+        $commands.spawn_bundle($crate::bundles::LinebreakBundle::default()).id()
     };
     ($commands: tt $size: expr $(,)?) => {
         {
             use $crate::dsl::DslInto;
             let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
-            $commands.spawn($crate::bundles::LinebreakBundle::new(size)).id()
+            $commands.spawn_bundle($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
     ($commands: tt {$size: expr}) => {
         {
             use $crate::dsl::DslInto;
             let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
-            $commands.spawn($crate::bundles::LinebreakBundle::new(size)).id()
+            $commands.spawn_bundle($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
 }
 
 use crate::widget_extension;
 
-use super::Widget;
+use super::{Widget, AouiCommands};
 
 
 widget_extension! {
@@ -49,7 +51,7 @@ widget_extension! {
 }
 
 impl Widget for PaddingBuilder {
-    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         self.layout = Some(Box::new(BoundsLayout::PADDING));
         let entity = build_frame!(commands, self).id();
         (entity, entity)

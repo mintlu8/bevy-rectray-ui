@@ -81,62 +81,35 @@ mod mpmc;
 mod globals;
 //mod systems;
 mod storage;
-mod sig;
-use std::sync::atomic::AtomicU8;
+mod signal;
+mod signal_pool;
 
-use atomic::Ordering;
-use bevy::{app::{Plugin, Update, PreUpdate, Last}, ecs::{schedule::IntoSystemConfigs, system::{Resource, ResMut}}};
+use bevy::{app::{Plugin, Update, PreUpdate, Last, PostUpdate}, ecs::schedule::IntoSystemConfigs};
 pub use globals::*;
 pub use dto::{Object, AsObject};
 pub use mpmc::*;
 pub use receiver::*;
 pub use storage::KeyStorage;
 pub mod receiver;
-use sig::Signal;
+pub(crate) use signal::Signal;
 
 use crate::{schedule::{AouiEventSet, AouiCleanupSet}, dsl::CloneSplit};
 
-pub fn signal<T: AsObject, S: CloneSplit<SignalBuilder<T>>>() -> S {
+pub use signal_pool::SignalPool;
+
+/// Create a shared persistent value as an unmanaged signal.
+pub fn channel<T: AsObject, S: CloneSplit<SignalBuilder<T>>>() -> S {
     S::clone_split(SignalBuilder::new(Signal::new()))
 }
 
-
-//use self::types::{SigSubmit, SigChange, SigDrag, SigScroll};
-
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct SignalsPlugin;
-
-
-/// Flags for making signals live for 2 frames.
-#[derive(Debug, Resource)]
-pub struct DropFlag(AtomicU8);
-
-impl DropFlag {
-    pub fn get(&self) -> u8 {
-        self.0.load(Ordering::Relaxed)
-    }
-
-    pub fn incr(&mut self) {
-        let v = self.0.get_mut();
-        *v = 3 - *v;
-    }
-
-    pub fn system_incr(mut res: ResMut<DropFlag>) {
-        res.incr()
-    }
-}
-
-impl Default for DropFlag {
-    fn default() -> Self {
-        Self(AtomicU8::new(1))
-    }
-}
 
 impl Plugin for SignalsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .init_resource::<KeyStorage>()
-            .init_resource::<DropFlag>()
+            .init_resource::<SignalPool>()
             .add_systems(PreUpdate, globals::send_fps.in_set(AouiEventSet))
             .add_systems(Update, (
                 signal_receive::<0>,
@@ -146,8 +119,9 @@ impl Plugin for SignalsPlugin {
                 signal_receive::<4>,
                 signal_receive::<5>,
             ))
-            .add_systems(Last, DropFlag::system_incr.before(AouiCleanupSet))
+            .add_systems(PostUpdate, SignalPool::system_add_deferred)
             .add_systems(Last, KeyStorage::system_reset_changed_status)
+            .add_systems(Last, SignalPool::system_signal_cleanup.in_set(AouiCleanupSet))
         ;
     }
 }

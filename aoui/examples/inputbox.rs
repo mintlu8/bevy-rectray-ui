@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_aoui::{AouiPlugin, WorldExtension};
+use bevy_aoui::{AouiPlugin, WorldExtension, dsl::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -19,10 +19,10 @@ pub fn main() {
 }
 
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
-    inputbox! ((commands, assets) {
+    commands.spawn_bundle(Camera2dBundle::default());
+    inputbox! (commands {
         dimension: size2!(400, 1 em),
         font_size: em(4),
         hitbox: Rect(1),
@@ -46,7 +46,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             z: -0.2
         }
     });
-    inputbox! ((commands, assets) {
+    inputbox! (commands {
         dimension: size2!(400, 1 em),
         offset: [-400, 0],
         rotation: degrees(45),

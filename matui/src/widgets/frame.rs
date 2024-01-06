@@ -9,12 +9,12 @@ use bevy::window::CursorIcon;
 use bevy_aoui::anim::{Interpolate, Padding};
 use bevy_aoui::layout::Axis;
 use bevy_aoui::layout::LayoutControl::IgnoreLayout;
-use bevy_aoui::signals::{signal, SignalBuilder, RawReceiver};
+use bevy_aoui::signals::{channel, SignalBuilder, RawReceiver};
 use bevy_aoui::{material_sprite, Hitbox, vstack, Size2, Opacity, transition, Dimension, Anchor};
 use bevy_aoui::widgets::drag::{Dragging, DragConstraint};
 use bevy_aoui::{widget_extension, build_frame, size2, layout::StackLayout};
 use bevy_aoui::events::{EventFlags, Handlers, EvMouseDrag, Fetch, Evaluated};
-use bevy_aoui::dsl::{Widget, DslInto};
+use bevy_aoui::dsl::{Widget, DslInto, AouiCommands};
 use bevy_aoui::dsl::HandleOrString;
 use crate::shapes::RoundedRectangleMaterial;
 
@@ -26,8 +26,7 @@ pub struct Divider {
 }
 
 impl Widget for Divider {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&AssetServer>) -> (Entity, Entity) {
-        let assets = assets.expect("Please pass in the asset server");
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
         let mat = if self.inset == 0.0 {
             RoundedRectangleMaterial::rect(self.color)
         } else {
@@ -35,14 +34,14 @@ impl Widget for Divider {
         };
         match self.axis {
             Axis::Horizontal => {
-                let entity = material_sprite!((commands, assets) {
+                let entity = material_sprite!(commands {
                     dimension: size2!({100.0 - self.inset * 2.0}%, 0.1 em),
                     material: mat,
                 });
                 (entity, entity)
             },
             Axis::Vertical => {
-                let entity = material_sprite!((commands, assets) {
+                let entity = material_sprite!(commands {
                     dimension: size2!(0.1 em, {100.0 - self.inset * 200.0}%),
                     material: mat,
                 });
@@ -96,7 +95,7 @@ widget_extension!(
 );
 
 impl Widget for MWindowBuilder {
-    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         self.z += 0.01;
         self.layout = Some(Box::new(StackLayout::VSTACK));
         self.event = Some(EventFlags::BlockAll);
@@ -104,10 +103,9 @@ impl Widget for MWindowBuilder {
         self.margin = Size2::em(0.0, window_margin.y).dinto();
         self.padding = Size2::em(window_margin.x, window_margin.y).dinto();
         let frame = build_frame!(commands, self);
-        let assets = assets.expect("Please pass in the AssetServer");
         let style = self.palette;
         let frame = frame.id();
-        let mat = if let Some(im) = self.texture.try_get(assets) {
+        let mat = if let Some(im) = self.texture.try_get(commands) {
             RoundedRectangleMaterial::from_image(im, style.background, self.radius)
         } else {
             RoundedRectangleMaterial::new(style.background, self.radius)
@@ -116,7 +114,7 @@ impl Widget for MWindowBuilder {
             Dragging::BOTH,
             DragConstraint,
         ));
-        let background = material_sprite!((commands, assets) {
+        let background = material_sprite!(commands {
             z: -0.05,
             anchor: Anchor::TopCenter,
             dimension: Size2::FULL,
@@ -124,9 +122,9 @@ impl Widget for MWindowBuilder {
             extra: IgnoreLayout,
         });
         commands.entity(frame).add_child(background);
-        let (dim_max_send, dim_max_recv) = signal();
-        let (dim_banner_send, dim_banner_recv) = signal();
-        let (padding_send, padding_recv) = signal();
+        let (dim_max_send, dim_max_recv) = commands.signal();
+        let (dim_banner_send, dim_banner_recv) = commands.signal();
+        let (padding_send, padding_recv) = commands.signal();
         if let Some(collapse) = &self.collapse {
             commands.entity(background).insert((
                 transition!(Dimension 0.2 Linear default Vec2::ONE),
@@ -149,11 +147,11 @@ impl Widget for MWindowBuilder {
             ));
         }
         if let OptionM::Some(shadow) = self.shadow {
-            let shadow = shadow.build_rect(commands, assets, self.radius);
+            let shadow = shadow.build_rect(commands, self.radius);
             commands.entity(background).add_child(shadow);
         }
         if let Some(banner) = self.banner {
-            let (drag_send, drag_recv) = signal();
+            let (drag_send, drag_recv) = commands.signal();
             commands.entity(frame).insert(
                 drag_recv.invoke::<Dragging>()
             );
@@ -165,7 +163,7 @@ impl Widget for MWindowBuilder {
             ));
             commands.entity(frame).add_child(banner);
 
-            let divider = divider!((commands, assets){
+            let divider = divider!(commands{
                 inset: 0.1,
                 axis: Axis::Horizontal,
                 color: self.palette.stroke,

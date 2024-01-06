@@ -1,7 +1,7 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::{AouiPlugin, WorldExtension};
+use bevy_aoui::{AouiPlugin, WorldExtension, dsl::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -34,20 +34,20 @@ impl Material2d for Circle {
     }
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
 
-    material_sprite! ((commands, assets) {
+    material_sprite! (commands {
         dimension: [100, 100],
         hitbox: Rect(1),
         z: 10,
@@ -64,9 +64,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         extra: transition!(Offset 4.0 BounceOut default Vec2::ZERO),
     });
 
-    let (send1, recv1) = signal();
+    let (send1, recv1) = commands.signal();
 
-    rectangle!((commands, assets) {
+    rectangle!(commands {
         dimension: [400, 50],
         offset: [0, 100],
         child: rectangle! {
@@ -90,17 +90,17 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
 
-    text! ((commands, assets) {
+    text! (commands {
         offset: [300, 100],
         color: color!(gold),
         text: "<= Drag and this will change!",
         extra: recv1.recv(|x: f32, text: &mut Text| format_widget!(text, "<= has value {:.2}!", x))
     });
 
-    let (send2, recv2) = signal();
-    let (send3, recv3) = signal();
+    let (send2, recv2) = commands.signal();
+    let (send3, recv3) = commands.signal();
 
-    rectangle!((commands, assets) {
+    rectangle!(commands {
         dimension: [400, 50],
         offset: [0, -100],
         child: rectangle! {
@@ -113,7 +113,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
 
-    material_sprite! ((commands, assets) {
+    material_sprite! (commands {
         dimension: [100, 100],
         offset: [-300, -100],
         hitbox: Rect(1),
@@ -129,7 +129,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         extra: Handlers::<EvMouseDrag>::new(send2),
     });
 
-    text! ((commands, assets) {
+    text! (commands {
         offset: [300, -100],
         color: color!(gold),
         text: "<= Drag and this will change!",

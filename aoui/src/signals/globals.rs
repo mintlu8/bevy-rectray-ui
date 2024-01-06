@@ -3,10 +3,10 @@ use once_cell::sync::Lazy;
 
 use crate::events::mutation::IntoMutationCommand;
 
-use super::{SignalSender, signal, receiver::SignalReceiver};
+use super::{SignalSender, channel, receiver::SignalReceiver};
 
 pub(crate) static SIG_FPS: Lazy<SignalSender<f32>> = Lazy::new(|| {
-    let (send, _) = signal();
+    let (send, _) = channel();
     send.send()
 });
 
@@ -20,6 +20,6 @@ pub(crate) fn send_fps(fps: Option<Res<DiagnosticsStore>>) {
 }
 
 /// Signal receiver for the `FPS` as a `f32`. Requires `FrameTimeDiagnosticsPlugin`.
-pub fn fps_signal<A, B>(f: impl IntoMutationCommand<f32, A, B>) -> SignalReceiver<0> {
+pub fn fps_channel<A, B>(f: impl IntoMutationCommand<f32, A, B>) -> SignalReceiver<0> {
     SIG_FPS.new_receiver().recv(f)
 }

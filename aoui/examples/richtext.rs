@@ -3,7 +3,7 @@
 //! Note this just compiles to bevy_text, nothing fancy here.
 
 use bevy::{prelude::*, utils::HashMap};
-use bevy_aoui::{AouiPlugin, widgets::richtext::{RichTextBuilder, FontStyle}};
+use bevy_aoui::{AouiPlugin, widgets::richtext::{RichTextBuilder, FontStyle}, dsl::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -20,25 +20,27 @@ pub fn main() {
 }
 
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
     let rich = paragraph! (commands {
         dimension: [600, 600],
         //margin: [8, 0],
         font_size: 32,
     });
-    let mut builder = RichTextBuilder::new(&mut commands, HashMap::from([
-        (("comicneue", FontStyle::None), assets.load("ComicNeue-Regular.ttf")),
-        (("comicneue", FontStyle::Bold), assets.load("ComicNeue-Bold.ttf")),
-        (("comicneue", FontStyle::Italic), assets.load("ComicNeue-Italic.ttf")),
-        (("comicneue", FontStyle::Bold|FontStyle::Italic), assets.load("ComicNeue-BoldItalic.ttf")),
-        (("roboto", FontStyle::None), assets.load("RobotoCondensed.ttf")),
-        (("roboto", FontStyle::Bold), assets.load("RobotoCondensed-Bold.ttf")),
-        (("roboto", FontStyle::Italic), assets.load("RobotoCondensed-Italic.ttf")),
-        (("roboto", FontStyle::Bold|FontStyle::Italic), assets.load("RobotoCondensed-BoldItalic.ttf")),
-    ]))
-        .configure_size(assets.load("ComicNeue-Regular.ttf"), 32.0)
+    let fonts = HashMap::from([
+        (("comicneue", FontStyle::None), commands.load("ComicNeue-Regular.ttf")),
+        (("comicneue", FontStyle::Bold), commands.load("ComicNeue-Bold.ttf")),
+        (("comicneue", FontStyle::Italic), commands.load("ComicNeue-Italic.ttf")),
+        (("comicneue", FontStyle::Bold|FontStyle::Italic), commands.load("ComicNeue-BoldItalic.ttf")),
+        (("roboto", FontStyle::None), commands.load("RobotoCondensed.ttf")),
+        (("roboto", FontStyle::Bold), commands.load("RobotoCondensed-Bold.ttf")),
+        (("roboto", FontStyle::Italic), commands.load("RobotoCondensed-Italic.ttf")),
+        (("roboto", FontStyle::Bold|FontStyle::Italic), commands.load("RobotoCondensed-BoldItalic.ttf")),
+    ]);
+    let default = commands.load("ComicNeue-Regular.ttf");
+    let mut builder = RichTextBuilder::new(&mut commands, fonts)
+        .configure_size(default.clone(), 32.0)
         .with_font("roboto")
         .with_color(Color::WHITE);
 
@@ -77,8 +79,8 @@ Awesome {br} right?
     });
 
 
-    let mut builder = RichTextBuilder::new(&mut commands, assets.load("ComicNeue-Regular.ttf"))
-        .configure_size(assets.load("ComicNeue-Regular.ttf"), 32.0)
+    let mut builder = RichTextBuilder::new(&mut commands, default.clone())
+        .configure_size(default, 32.0)
         .with_color(Color::WHITE);
         //.with_ignore_space(true);
 

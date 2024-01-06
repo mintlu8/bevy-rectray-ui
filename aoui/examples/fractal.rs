@@ -2,7 +2,7 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, bundles::*};
+use bevy_aoui::{*, bundles::*, dsl::AouiCommands};
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_egui::{EguiContexts, egui::{self, Slider}, EguiPlugin};
 pub fn main() {
@@ -54,16 +54,16 @@ pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, enitity: 
     }
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    let texture = assets.load::<Image>("square.png");
-    commands.spawn(Camera2dBundle::default());
+    let texture = commands.load::<Image>("square.png");
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
@@ -71,7 +71,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
 
-    let enitity = commands.spawn(AouiSpriteBundle {
+    let enitity = commands.spawn_bundle(AouiSpriteBundle {
         sprite: Sprite {
             color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 1.0),
             custom_size: Some(Vec2::new(800.0, 800.0)),
@@ -81,7 +81,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         ..Default::default()
     }).id();
 
-    spawn_fractal(&mut commands, 5, 250.0, enitity, texture.clone());
+    spawn_fractal(commands.commands(), 5, 250.0, enitity, texture.clone());
 }
 
 pub fn egui_window(mut ctx: EguiContexts, 

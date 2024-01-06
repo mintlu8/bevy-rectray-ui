@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_aoui::{AouiPlugin, linebreak};
+use bevy_aoui::{AouiPlugin, linebreak, dsl::AouiCommands};
 use bevy_aoui_shapes::{shape, Shapes, AouiShapesPlugin};
 use bevy_prototype_lyon::prelude::*;
 
@@ -13,10 +13,10 @@ pub fn main() {
         .run();
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
-    shape! ((commands, assets) {
+    shape! (commands {
         shape: Shapes::Rectangle,
         stroke: (color!(purple), 2.8),
         fill: color!(black),

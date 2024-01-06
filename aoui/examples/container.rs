@@ -2,7 +2,7 @@
 #![allow(clippy::type_complexity)]
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, bundles::*, layout::*};
+use bevy_aoui::{*, bundles::*, layout::*, dsl::AouiCommands};
 use bevy_egui::{self, EguiContexts, egui::{self, ComboBox, Grid, Slider}};
 use bevy::prelude::*;
 use rand::Rng;
@@ -30,11 +30,11 @@ pub struct Root;
 #[derive(Component)]
 pub struct RootFlex;
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
-    let texture = assets.load::<Image>("square.png");
-    commands.spawn(Camera2dBundle::default());
+pub fn init(mut commands: AouiCommands) {
+    let texture = commands.load::<Image>("square.png");
+    commands.spawn_bundle(Camera2dBundle::default());
 
-    let container = commands.spawn((AouiSpriteBundle {
+    let container = commands.spawn_bundle((AouiSpriteBundle {
         sprite: Sprite {
             color: Color::rgb_linear(0.8, 0.8, 0.8),
             ..Default::default()
@@ -51,7 +51,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         range: None,
     }, RootFlex)).id();
 
-    commands.spawn((AouiSpriteBundle {
+    commands.spawn_bundle((AouiSpriteBundle {
         sprite: Sprite {
             color: Color::WHITE,
             ..Default::default()

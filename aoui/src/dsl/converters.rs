@@ -1,7 +1,7 @@
 use std::borrow::Cow;
-use bevy::asset::{Asset, Handle, AssetServer};
+use bevy::asset::{Asset, Handle};
 use crate::{widgets::button::Payload, signals::AsObject};
-use super::{DslFrom, DslInto};
+use super::{DslFrom, DslInto, AouiCommands};
 
 /// Extended `Option` for the DSL.
 /// 
@@ -54,51 +54,34 @@ pub enum HandleOrString<T: Asset>{
     String(String),
 }
 
-#[doc(hidden)]
-pub trait IntoAssets{
-    fn get(&self) -> &AssetServer;
-}
-
-impl IntoAssets for &AssetServer {
-    fn get(&self) -> &AssetServer {
-        self
-    }
-}
-
-impl IntoAssets for Option<&AssetServer> {
-    fn get(&self) -> &AssetServer {
-        self.expect("Please pass in the AssetServer.")
-    }
-}
-
 impl<T: Asset> HandleOrString<T> {
     /// This uses the default behavior of treating unspecified as the default asset.
-    pub fn get(self, assets: impl IntoAssets) -> Handle<T>{
+    pub fn get(self, assets: &AouiCommands) -> Handle<T>{
         match self {
             HandleOrString::None => Default::default(),
             HandleOrString::Handle(handle) => handle,
             HandleOrString::String(string) => {
-                assets.get().load(string)
+                assets.load(string)
             },
         }
     }
 
-    pub fn expect(self, assets: impl IntoAssets, err: &str) -> Handle<T>{
+    pub fn expect(self, assets: &AouiCommands, err: &str) -> Handle<T>{
         match self {
             HandleOrString::None => panic!("{}", err),
             HandleOrString::Handle(handle) => handle,
             HandleOrString::String(string) => {
-                assets.get().load(string)
+                assets.load(string)
             },
         }
     }
 
-    pub fn try_get(self, assets: impl IntoAssets) -> Option<Handle<T>>{
+    pub fn try_get(self, assets: &AouiCommands) -> Option<Handle<T>>{
         match self {
             HandleOrString::None => None,
             HandleOrString::Handle(handle) => Some(handle),
             HandleOrString::String(string) => {
-                Some(assets.get().load(string))
+                Some(assets.load(string))
             },
         }
     }
@@ -166,32 +149,32 @@ pub enum HandleOrAsset<T: Asset>{
 }
 
 impl<T: Asset> HandleOrAsset<T> {
-    pub fn get(self, assets: impl IntoAssets) -> Handle<T>{
+    pub fn get(self, assets: &AouiCommands) -> Handle<T>{
         match self {
             HandleOrAsset::None => Default::default(),
             HandleOrAsset::Handle(handle) => handle,
             HandleOrAsset::Asset(asset) => {
-                assets.get().add(asset)
+                assets.add(asset)
             },
         }
     }
 
-    pub fn expect(self, assets: impl IntoAssets, msg: &str) -> Handle<T>{
+    pub fn expect(self, assets: &AouiCommands, msg: &str) -> Handle<T>{
         match self {
             HandleOrAsset::None => panic!("{}", msg),
             HandleOrAsset::Handle(handle) => handle,
             HandleOrAsset::Asset(asset) => {
-                assets.get().add(asset)
+                assets.add(asset)
             },
         }
     }
 
-    pub fn try_get(self, assets: Option<&AssetServer>) -> Option<Handle<T>>{
+    pub fn try_get(self, assets: &AouiCommands) -> Option<Handle<T>>{
         match self {
             HandleOrAsset::None => None,
             HandleOrAsset::Handle(handle) => Some(handle),
             HandleOrAsset::Asset(asset) => {
-                Some(assets.get().add(asset))
+                Some(assets.add(asset))
             },
         }
     }

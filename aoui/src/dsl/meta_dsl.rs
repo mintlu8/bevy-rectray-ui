@@ -377,78 +377,25 @@ macro_rules! meta_dsl {
         )
     };
 
-    (($commands: expr$(,)?) [$($path: tt)*] {$(,)?}
+    ($commands: tt [$($path: tt)*] {$(,)?}
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*}
         {$($child_type: ident: $children: expr),*}
         {$($out:ident)?}
     ) => {
         {
-            use $crate::dsl::{DslInto, AouiCommands};
             #[allow(clippy::needless_update)]
             let entity = $($path)* {
-                $($field: ($expr).dinto(),)*
-                ..Default::default()
-            };
-            let extras = ($($extras),*);
-            let children = $crate::parse_children!(($commands) _children {$($child_type: $children),*} {});
-            let out = $commands.spawn_aoui((
-                entity,
-                extras,
-                children,
-            ));
-            $($out = out;)?
-            out
-        }
-    };
-
-    (($commands: expr, $assets: expr) [$($path: tt)*] {$(,)?}
-        {$($field: ident: $expr: expr),*}
-        {$($extras: expr),*}
-        {$($child_type: ident: $children: expr),*}
-        {$($out:ident)?}
-    ) => {
-        {
-            use $crate::dsl::{DslInto, AouiCommands};
-            #[allow(clippy::needless_update)]
-            let entity = $($path)* {
-                $($field: ($expr).dinto(),)*
-                ..Default::default()
-            };
-            let extras = ($($extras),*);
-            let children = $crate::parse_children!(($commands,$assets) _children {$($child_type: $children),*} {});
-            let out = $commands.spawn_aoui_with_assets(
-                &$assets, (
-                    entity,
-                    extras,
-                    children,
-                )
-            );
-            $($out = out;)?
-            out
-        }
-    };
-
-    ($commands: ident [$($path: tt)*] {$(,)?}
-        {$($field: ident: $expr: expr),*}
-        {$($extras: expr),*}
-        {$($child_type: ident: $children: expr),*}
-        {$($out:ident)?}
-    ) => {
-        {
-            use $crate::dsl::{DslInto, AouiCommands};
-            #[allow(clippy::needless_update)]
-            let entity = $($path)* {
-                $($field: ($expr).dinto(),)*
+                $($field: $crate::dsl::DslInto::dinto($expr),)*
                 ..Default::default()
             };
             let extras = ($($extras),*);
             let children = $crate::parse_children!($commands _children {$($child_type: $children),*} {});
-            let out = $commands.spawn_aoui((
+            let out = $commands.spawn_aoui(
                 entity,
                 extras,
                 children,
-            ));
+            );
             $($out = out;)?
             out
         }

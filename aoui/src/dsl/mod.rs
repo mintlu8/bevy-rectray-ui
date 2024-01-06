@@ -4,7 +4,10 @@ mod convert;
 mod util;
 mod core;
 
-use bevy::{prelude::{Commands, Entity, BuildChildren, Bundle}, asset::AssetServer};
+use bevy::prelude::{Commands, Entity, BuildChildren, Bundle};
+use bevy::ecs::system::{SystemParam, Res, EntityCommands};
+use bevy::asset::{AssetServer, Asset, Handle, AssetPath};
+use bevy::render::texture::Image;
 #[doc(hidden)]
 pub use colorthis::rgbaf;
 
@@ -30,6 +33,9 @@ pub use mesh2d::mesh_rectangle;
 pub mod prelude;
 pub use convert::{DslFrom, DslInto};
 
+use crate::signals::{SignalPool, AsObject, SignalBuilder};
+use crate::widgets::clipping::render_target;
+
 pub mod builders {
     pub use super::core::{FrameBuilder, SpriteBuilder, RectangleBuilder, TextBuilder};
 
@@ -41,19 +47,44 @@ pub mod builders {
     pub use super::clipping::{CameraFrameBuilder, ScrollingFrameBuilder};
 }
 
-
-/// Enable commands to spawn our widgets.
-pub trait AouiCommands {
-    /// Spawn an aoui widget.
-    fn spawn_aoui(&mut self, a: (impl Widget, impl Bundle, impl AsRef<[Entity]>)) -> Entity;
-    /// Spawn an aoui widget.
-    fn spawn_aoui_with_assets(&mut self, assets: &AssetServer, a: (impl Widget, impl Bundle, impl AsRef<[Entity]>)) -> Entity;
-
+#[derive(SystemParam)]
+pub struct AouiCommands<'w, 's> {
+    commands: Commands<'w, 's>,
+    asset_server: Res<'w, AssetServer>,
+    signals: Res<'w, SignalPool>,
 }
 
-impl<'w, 's> AouiCommands for Commands<'w, 's> {
+impl<'w, 's> AouiCommands<'w, 's> {
+    pub fn commands(&mut self) -> &mut Commands<'w, 's> {
+        &mut self.commands
+    }
+
+    pub fn entity<'a>(&'a mut self, entity: Entity) -> EntityCommands<'w, 's, 'a> {
+        self.commands.entity(entity)
+    }
+
+    pub fn assets(&self) -> &AssetServer {
+        &self.asset_server
+    }
+
+    pub fn add<'a, T: Asset>(&self, item: T) -> Handle<T> {
+        self.assets().add(item)
+    }
+
+    pub fn load<'a, T: Asset>(&self, name: impl Into<AssetPath<'a>>) -> Handle<T> {
+        self.assets().load(name)
+    }
+
+    pub fn spawn_bundle<'a>(&'a mut self, bundle: impl Bundle) -> EntityCommands<'w, 's, 'a>{
+        self.commands.spawn(bundle)
+    }
+
+    pub fn render_target<T: CloneSplit<Handle<Image>>>(&self, dimension: [u32; 2]) -> T{
+        render_target(&self.asset_server, dimension)
+    }
+
     /// Spawn a `Widget` without passing in an `AssetServer`, this may panic.
-    fn spawn_aoui(&mut self, (widget, extras, children): (impl Widget, impl Bundle, impl AsRef<[Entity]>)) -> Entity {
+    pub fn spawn_aoui(&mut self, widget: impl Widget, extras: impl Bundle, children: impl AsRef<[Entity]>) -> Entity {
         let (id, container) = widget.spawn(self);
         self.entity(container).push_children(children.as_ref());
         self.entity(id)
@@ -61,13 +92,24 @@ impl<'w, 's> AouiCommands for Commands<'w, 's> {
         id
     }
 
-    /// Spawn a `Widget` with an `AssetServer`.
-    fn spawn_aoui_with_assets(&mut self, assets: &AssetServer, (widget, extras, children): (impl Widget, impl Bundle, impl AsRef<[Entity]>)) -> Entity {
-        let (id, container) = widget.spawn_with(self, Some(assets));
-        self.entity(container).push_children(children.as_ref());
-        self.entity(id)
-            .insert(extras);
-        id
+    pub fn signal<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self) -> S {
+        self.signals.signal()
+    }
+
+    pub fn named_signal<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self, name: &str) -> S {
+        self.signals.named(name)
+    }
+}
+
+impl AsRef<AssetServer> for AouiCommands<'_, '_> {
+    fn as_ref(&self) -> &AssetServer {
+        &self.asset_server
+    }
+}
+
+impl<'w, 's> AsMut<Commands<'w, 's>> for AouiCommands<'w, 's> {
+    fn as_mut(&mut self) -> &mut Commands<'w, 's> {
+        &mut self.commands
     }
 }
 
@@ -76,11 +118,7 @@ impl<'w, 's> AouiCommands for Commands<'w, 's> {
 /// You can construct it with the [`widget_extension`](crate::widget_extension) macro.
 pub trait Widget: Sized {
     /// This function should panic if assets is needed but is `None`.
-    fn spawn(self, commands: &mut Commands) -> (Entity, Entity) {
-        self.spawn_with(commands, None)
-    }
-    /// This function should panic if assets is needed but is `None`.
-    fn spawn_with(self, commands: &mut Commands, assets: Option<&AssetServer>) -> (Entity, Entity);
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity);
 }
 
 /// Construct marker components by name.

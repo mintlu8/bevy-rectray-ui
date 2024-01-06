@@ -19,7 +19,7 @@ pub fn main() {
         .run();
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn(Camera2dBundle::default());
 
@@ -27,13 +27,13 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(black),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
 
 
-    material_sprite!((commands, assets) {
+    material_sprite!(commands {
         offset: size2!(0, 25%),
         dimension: size2!(20%, 20%),
         material: RoundedRectangleMaterial::capsule_image(assets.load("bricks.png"), color!(white)),
@@ -44,7 +44,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
     
-    material_sprite!((commands, assets) {
+    material_sprite!(commands {
         offset: size2!(25%, 25%),
         dimension: size2!(20%, 20%),
         material: RoundedRectangleMaterial::from_image(assets.load("bricks.png"), color!(white), 20.0),
@@ -56,7 +56,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
     });
 
 
-    material_sprite!((commands, assets) {
+    material_sprite!(commands {
         dimension: size2!(20%, 20%),
         material: RoundedRectangleMaterial::capsule(color!(white)),
         child: material_sprite! {
@@ -65,7 +65,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             z: -1,
         }
     });
-    material_sprite!((commands, assets) {
+    material_sprite!(commands {
         offset: size2!(25%, 0),
         dimension: size2!(20%, 20%),
         material: RoundedRectangleMaterial::capsule(color!(white)),
@@ -75,7 +75,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             z: -1,
         }
     });
-    material_sprite!((commands, assets) {
+    material_sprite!(commands {
         offset: size2!(-25%, 0),
         dimension: size2!(20%, 20%),
         material: RoundedRectangleMaterial::capsule(color!(green)).with_stroke((color!(blue), 5.0)),
@@ -85,7 +85,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             z: -1,
         }
     });
-    material_sprite!((commands, assets) {
+    material_sprite!(commands {
         offset: size2!(0, -25%),
         dimension: size2!(20%, 20%),
         material: RoundedRectangleMaterial::new(color!(white), 20.0),
@@ -96,7 +96,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
 
-    material_sprite!((commands, assets) {
+    material_sprite!(commands {
         offset: size2!(25%, -25%),
         dimension: size2!(20%, 20%),
         material: RoundedRectangleMaterial::new(color!(white), 20.0),
@@ -107,7 +107,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
 
-    material_sprite!((commands, assets) {
+    material_sprite!(commands {
         offset: size2!(-25%, -25%),
         dimension: size2!(20%, 20%),
         material: RoundedRectangleMaterial::new(color!(white), 20.0)

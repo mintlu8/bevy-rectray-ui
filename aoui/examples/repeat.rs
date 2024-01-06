@@ -1,7 +1,7 @@
 //! Demo for the `quote!` syntax.
 
 use bevy::prelude::*;
-use bevy_aoui::AouiPlugin;
+use bevy_aoui::{AouiPlugin, dsl::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -11,14 +11,14 @@ pub fn main() {
         .run();
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
     let directions = [PI, 0.0, PI, 0.0, PI, 0.0];
     let colors = colors!(blue100, blue200, blue300, blue400, blue500, blue600, blue700, blue800, blue900);
     let rotations = [-0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4];
 
-    hstack! ((commands, assets) {
+    hstack! (commands {
         child: #vstack! {
             rotation: #directions,
             child: #rectangle! {

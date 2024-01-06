@@ -8,7 +8,7 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, DimensionMut};
+use bevy_aoui::{*, DimensionMut, dsl::AouiCommands};
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox, Ui}, EguiPlugin};
 
@@ -27,11 +27,11 @@ pub struct A;
 #[derive(Debug, Component)]
 pub struct B;
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
 
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
-    rectangle!((commands, assets) {
+    rectangle!(commands {
         color: color!(cyan),
         dimension: [200, 200],
         extra: A,

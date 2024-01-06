@@ -614,7 +614,7 @@ pub fn inputbox_keyboard(
 
 /// Copy em as text size.
 pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &DimensionData)>) {
-    query.par_iter_mut().for_each(|(mut sp, dimension)| {
+    query.iter_mut().for_each(|(mut sp, dimension)| {
         if sp.as_ref().em != dimension.em {
             sp.em = dimension.em;
         }

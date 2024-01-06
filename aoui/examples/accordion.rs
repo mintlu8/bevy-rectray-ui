@@ -1,6 +1,7 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::WorldExtension;
 use bevy_aoui::AouiPlugin;
+use bevy_aoui::dsl::AouiCommands;
 use bevy_aoui::events::MouseWheelAction;
 use bevy_aoui::signals::Object;
 use bevy_aoui::signals::SignalBuilder;
@@ -30,8 +31,7 @@ pub struct ScrollDimension(f32);
 
 
 pub fn accordion_page(
-    commands: &mut Commands, 
-    assets: &AssetServer, 
+    commands: &mut AouiCommands, 
     index: usize,
     group: &RadioButton, 
     scroll: &SignalBuilder<MouseWheelAction>,
@@ -43,11 +43,11 @@ pub fn accordion_page(
     const HEIGHT: f32 = 200.0;
 
     let (pos_text, pos_scroll) = SharedPosition::many();
-    let (cov_send, cov_recv) = signal();
-    let (cov_percent_send, cov_percent_recv) = signal();
-    let (render_in, render_out) = render_target(assets, [800, 800]);
+    let (cov_send, cov_recv) = commands.signal();
+    let (cov_percent_send, cov_percent_recv) = commands.signal();
+    let (render_in, render_out) = commands.render_target([800, 800]);
     [
-        hbox! ((commands, assets){
+        hbox! (commands{
             dimension: size2!(400, 2 em),
             child: text! {
                 anchor: Left,
@@ -73,7 +73,7 @@ pub fn accordion_page(
                 },
             }
         }),
-        hstack! ((commands, assets) {
+        hstack! (commands {
             anchor: Top,
             extra: sig.clone().recv_select(index, 
                 Interpolate::<Opacity>::signal_to(1.0),
@@ -143,31 +143,31 @@ pub fn accordion_page(
     ]
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
 
     let group = radio_button_group(0usize);
 
-    let (scroll_send, scroll_recv) = signal();
+    let (scroll_send, scroll_recv) = commands.signal();
 
     let texts = [TEXT, TEXT, "Hello, Hello, Hello!", &format!("{TEXT}{TEXT}"), "apple\norange\nbanana", TEXT];
 
     let children: Vec<_> = texts.into_iter().enumerate()
-        .map(|(idx, text)| accordion_page(&mut commands, &assets, idx, &group, &scroll_send, text))
+        .map(|(idx, text)| accordion_page(&mut commands, idx, &group, &scroll_send, text))
         .flatten().collect();
 
-    let (main_in, main_out) = render_target(&assets, [800, 800]);
-    camera_frame!((commands, assets){
+    let (main_in, main_out) = commands.render_target([800, 800]);
+    camera_frame!(commands{
         dimension: [400, 400],
         render_target: main_in,
         layer: 1,
@@ -177,7 +177,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
 
-    scrolling!((commands, assets) {
+    scrolling!(commands {
         dimension: [400, 400],
         scroll: Scrolling::POS_Y
             .with_recv(scroll_recv),

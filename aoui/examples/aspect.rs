@@ -1,6 +1,6 @@
 //! A simple test case for percentage size.
 use bevy::prelude::*;
-use bevy_aoui::AouiPlugin;
+use bevy_aoui::{AouiPlugin, dsl::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -10,11 +10,11 @@ pub fn main() {
         .run();
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
-    sprite!((commands, assets) {
+    sprite!(commands {
         sprite: "check.png",
         dimension: size2!(50%, 50%),
         color: color!(gold),

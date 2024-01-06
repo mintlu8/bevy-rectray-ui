@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AouiPlugin, dsl::DslInto, Anchor, material_sprite, layout::TableLayout};
+use bevy_aoui::{AouiPlugin, dsl::{DslInto, AouiCommands}, Anchor, material_sprite, layout::TableLayout};
 
 pub fn main() {
     App::new()
@@ -24,8 +24,8 @@ impl Material2d for Circle {
     }
 }
 
-fn anchor_circle(commands: &mut Commands, assets: &Res<AssetServer>, anchor: impl DslInto<Anchor>) -> Entity{
-    material_sprite!((commands, assets) {
+fn anchor_circle(commands: &mut AouiCommands, anchor: impl DslInto<Anchor>) -> Entity{
+    material_sprite!(commands {
         anchor: anchor,
         dimension: [6, 6],
         z: 10,
@@ -37,10 +37,10 @@ fn anchor_circle(commands: &mut Commands, assets: &Res<AssetServer>, anchor: imp
 }
 
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
-    vstack! ((commands, assets) {
+    commands.spawn_bundle(Camera2dBundle::default());
+    vstack! (commands {
         anchor: Top,
         margin: 4,
         child: text! { 
@@ -52,7 +52,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             text: "5 columns of 20%, 10%, 20%, 30%, 20%" 
         },
     });
-    frame! ((commands, assets) {
+    frame! (commands {
         anchor: Center,
         dimension: [700, 100],
         z: 1,
@@ -105,61 +105,61 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             anchor: TopLeft,
             dimension: [80, 50],
             color: color!(red100),
-            child: anchor_circle(&mut commands, &assets, TopLeft),
+            child: anchor_circle(&mut commands, TopLeft),
         },
         child: rectangle! {
             anchor: TopCenter,
             dimension: [40, 90],
             color: color!(red200),
-            child: anchor_circle(&mut commands, &assets, TopCenter)
+            child: anchor_circle(&mut commands, TopCenter)
         },
         child: rectangle! {
             anchor: TopRight,
             dimension: [60, 30],
             color: color!(red300),
-            child: anchor_circle(&mut commands, &assets, TopRight)
+            child: anchor_circle(&mut commands, TopRight)
         },
         child: rectangle! {
             anchor: CenterLeft,
             dimension: [70, 50],
             color: color!(red400),
-            child: anchor_circle(&mut commands, &assets, CenterLeft)
+            child: anchor_circle(&mut commands, CenterLeft)
         },
         child: rectangle! {
             anchor: Center,
             dimension: [50, 60],
             color: color!(red500),
-            child: anchor_circle(&mut commands, &assets, Center)
+            child: anchor_circle(&mut commands, Center)
         },
         child: rectangle! {
             anchor: CenterRight,
             dimension: [40, 90],
             color: color!(red600),
-            child: anchor_circle(&mut commands, &assets, CenterRight)
+            child: anchor_circle(&mut commands, CenterRight)
         },
         child: rectangle! {
             anchor: BottomLeft,
             dimension: [10, 10],
             color: color!(red700),
-            child: anchor_circle(&mut commands, &assets, BottomLeft)
+            child: anchor_circle(&mut commands, BottomLeft)
         },
         child: rectangle! {
             anchor: BottomCenter,
             dimension: [30, 70],
             color: color!(red800),
-            child: anchor_circle(&mut commands, &assets, BottomCenter)
+            child: anchor_circle(&mut commands, BottomCenter)
         },
         child: rectangle! {
             anchor: BottomRight,
             dimension: [90, 30],
             color: color!(red900),
-            child: anchor_circle(&mut commands, &assets, BottomRight)
+            child: anchor_circle(&mut commands, BottomRight)
         },
         child: rectangle! {
             anchor: Center,
             dimension: [40, 40],
             color: color!(red950),
-            child: anchor_circle(&mut commands, &assets, Center)
+            child: anchor_circle(&mut commands, Center)
         },
 
 
@@ -167,62 +167,62 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             anchor: CenterLeft,
             dimension: [60, 40],
             color: color!(orange100),
-            child: anchor_circle(&mut commands, &assets, CenterLeft),
+            child: anchor_circle(&mut commands, CenterLeft),
         },
 
         child: rectangle! {
             anchor: TopRight,
             dimension: [50, 30],
             color: color!(orange200),
-            child: anchor_circle(&mut commands, &assets, TopRight)
+            child: anchor_circle(&mut commands, TopRight)
         },
         child: rectangle! {
             anchor: BottomCenter,
             dimension: [40, 10],
             color: color!(orange300),
-            child: anchor_circle(&mut commands, &assets, BottomCenter)
+            child: anchor_circle(&mut commands, BottomCenter)
         },
         child: rectangle! {
             anchor: TopLeft,
             dimension: [20, 50],
             color: color!(orange400),
-            child: anchor_circle(&mut commands, &assets, TopLeft)
+            child: anchor_circle(&mut commands, TopLeft)
         },
         child: rectangle! {
             anchor: BottomLeft,
             dimension: [40, 40],
             color: color!(orange500),
-            child: anchor_circle(&mut commands, &assets, BottomLeft)
+            child: anchor_circle(&mut commands, BottomLeft)
         },
         child: rectangle! {
             anchor: TopCenter,
             dimension: [40, 50],
             color: color!(orange600),
-            child: anchor_circle(&mut commands, &assets, TopCenter)
+            child: anchor_circle(&mut commands, TopCenter)
         },
         child: rectangle! {
             anchor: CenterRight,
             dimension: [30, 30],
             color: color!(orange700),
-            child: anchor_circle(&mut commands, &assets, CenterRight)
+            child: anchor_circle(&mut commands, CenterRight)
         },
         child: rectangle! {
             anchor: TopRight,
             dimension: [30, 60],
             color: color!(orange800),
-            child: anchor_circle(&mut commands, &assets, TopRight)
+            child: anchor_circle(&mut commands, TopRight)
         },
         child: rectangle! {
             anchor: BottomLeft,
             dimension: [50, 30],
             color: color!(orange900),
-            child: anchor_circle(&mut commands, &assets, BottomLeft)
+            child: anchor_circle(&mut commands, BottomLeft)
         },
         child: rectangle! {
             anchor: BottomRight,
             dimension: [30, 30],
             color: color!(orange950),
-            child: anchor_circle(&mut commands, &assets, BottomRight)
+            child: anchor_circle(&mut commands, BottomRight)
         },
     });
 }

@@ -66,8 +66,8 @@
 use std::{collections::HashMap, hash::{Hash, BuildHasher}, num::ParseFloatError};
 use bevy::render::view::RenderLayers;
 use bevy::{asset::{Handle, Assets}, text::Font, render::color::Color, hierarchy::BuildChildren};
-use bevy::ecs::{entity::Entity, system::{Commands, Query, Res}, bundle::Bundle, component::Component};
-use crate::{Transform2D, Anchor, FontSize, Dimension, Size2, DimensionSize, dimension::DimensionMut};
+use bevy::ecs::{entity::Entity, system::{Query, Res}, bundle::Bundle, component::Component};
+use crate::{Transform2D, Anchor, FontSize, Dimension, Size2, DimensionSize, dimension::DimensionMut, dsl::AouiCommands};
 use crate::layout::{Container, StackLayout, LayoutDir};
 use crate::bundles::AouiBundle;
 use crate::layout::LayoutControl;
@@ -81,7 +81,7 @@ pub struct GlyphSpace {
 
 pub fn synchronize_glyph_spaces(mut query: Query<(&GlyphSpace, DimensionMut)>, fonts: Res<Assets<Font>> ){
     use ab_glyph::{Font, ScaleFont};
-    query.par_iter_mut().for_each(|(font, mut dimension)| {
+    query.iter_mut().for_each(|(font, mut dimension)| {
         if let Some(font) = fonts.get(&font.font) {
             let font = font.font.as_scaled(dimension.dynamic.em);
             let width = font.h_advance(font.glyph_id(' '));
@@ -221,7 +221,7 @@ pub struct RichTextBuilder<'t, 'w, 's, F: FontFetcher, B: Bundle + Clone = ()>{
     bundle: B,
     /// This determines the inserted `LinebreakBundle`'s height.
     line_gap:(Handle<Font>, FontSize),
-    commands: &'t mut Commands<'w, 's>,
+    commands: &'t mut AouiCommands<'w, 's>,
     font: F,
     style: FontStyle,
     color_stack: Vec<Color>,
@@ -235,7 +235,7 @@ pub struct RichTextBuilder<'t, 'w, 's, F: FontFetcher, B: Bundle + Clone = ()>{
 }
 
 impl<'a, 'w, 's, F: FontFetcher> RichTextBuilder<'a, 'w, 's, F> {
-    pub fn new(commands: &'a mut Commands<'w, 's>, font: F) -> Self {
+    pub fn new(commands: &'a mut AouiCommands<'w, 's>, font: F) -> Self {
         Self { 
             bundle: (), 
             line_gap: (font.default(), FontSize::None),
@@ -402,7 +402,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
 
     pub fn push_bundle(&mut self, bun: impl Bundle) {
         let anchor = self.anchor();
-        let entity = self.commands.spawn(bun).insert(
+        let entity = self.commands.spawn_bundle(bun).insert(
             Transform2D::UNIT.with_anchor(anchor)
         ).id();
         self.buffer.push(entity);
@@ -437,7 +437,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
 
         macro_rules! line_gap {
             () => {
-                self.buffer.push(self.commands.spawn((
+                self.buffer.push(self.commands.spawn_bundle((
                     AouiBundle{
                         dimension: Dimension {
                             font_size: self.line_gap.1,
@@ -597,7 +597,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                             Some(RichTextScope::Size) => { self.size_stack.pop(); },
                             Some(RichTextScope::Zip) => {
                                 let anchor = self.anchor();
-                                self.buffer.push(self.commands.spawn((
+                                self.buffer.push(self.commands.spawn_bundle((
                                     AouiBundle {
                                         dimension: Dimension {
                                             font_size: self.size(),

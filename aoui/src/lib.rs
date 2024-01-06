@@ -17,7 +17,7 @@
 //! 
 //! ```
 //! # /*
-//! fn spawn(mut commands: Commands, assets: Res<AssetServer>) {
+//! fn spawn(mut commands: AouiCommands) {
 //!     use bevy_aoui::dsl::prelude::*;
 //!     ...
 //! }
@@ -181,7 +181,7 @@
 //! much nicer, right?
 //! 
 //! `commands` is the context, if `AssetServer` is needed 
-//! we can put `(commands, assets)` there, which should be the
+//! we can put `commands` there, which should be the
 //! case most of the time.
 //!
 //! # DSL Syntax
@@ -273,8 +273,8 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::single_match)]
-pub mod layout;
 pub(crate) mod core;
+pub mod layout;
 pub mod dsl;
 pub mod widgets;
 pub mod events;

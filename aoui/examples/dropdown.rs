@@ -2,6 +2,7 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::WorldExtension;
 use bevy_aoui::AouiPlugin;
+use bevy_aoui::dsl::AouiCommands;
 
 pub fn main() {
     App::new()
@@ -19,20 +20,20 @@ pub fn main() {
         .run();
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
     
-    let (send, recv_rot, fold_recv) = signal();
+    let (send, recv_rot, fold_recv) = commands.signal();
 
     let elements = [
         "Water", "Earth", "Fire", "Air"
@@ -40,7 +41,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
 
     let text_ctx = radio_button_group::<[_; 4]>("");
     let text_recv = text_ctx[0].recv();
-    frame!((commands, assets){
+    frame!(commands{
         dimension: size2!(22 em, 2 em),
         child: check_button! {
             dimension: Size2::FULL,

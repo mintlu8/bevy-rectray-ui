@@ -1,7 +1,7 @@
 /// A simple example of rendering description using the paragraph layout.
 
 use bevy::prelude::*;
-use bevy_aoui::AouiPlugin;
+use bevy_aoui::{AouiPlugin, dsl::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -11,11 +11,11 @@ pub fn main() {
         .run();
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
-    paragraph!((commands, assets) {
+    paragraph!(commands {
         dimension: [400, 700],
         child: rectangle! {
             color: color!(neutral800),

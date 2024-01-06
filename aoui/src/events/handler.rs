@@ -120,13 +120,13 @@ impl<T: EventHandling> Handlers<T> {
         self
     }
 
-    pub fn oneshot<M: Send + Sync + 'static>(
-        commands: &mut Commands, 
+    pub fn oneshot<'w, 's, M: Send + Sync + 'static>(
+        mut commands: impl AsMut<Commands<'w, 's>>, 
         handler: impl IntoSystem<(), (), M> + Send + Sync + 'static
     ) -> Self {
         Self {
             context: T::new_context(), handlers: SmallVec::from_const([
-                OneShot::new(commands, handler).dinto()
+                OneShot::new(commands.as_mut(), handler).dinto()
             ])
         }
     }

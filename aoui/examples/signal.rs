@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_aoui::{AouiPlugin, WorldExtension};
+use bevy_aoui::{AouiPlugin, WorldExtension, dsl::AouiCommands};
 
 
 pub fn main() {
@@ -18,18 +18,18 @@ pub fn main() {
 }
 
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
-    let (submit_sender, recv_s1, recv_s2) = signal();
-    let (change_sender, recv_c1, recv_c2) = signal();
-    inputbox! ((commands, assets) {
+    commands.spawn_bundle(Camera2dBundle::default());
+    let (submit_sender, recv_s1, recv_s2) = commands.signal();
+    let (change_sender, recv_c1, recv_c2) = commands.signal();
+    inputbox! (commands {
         dimension: size2!(800, 1 em),
         offset: [0, 200],
         font_size: em(4),
         hitbox: Rect(1),
         text: "Type here and press Enter.",
-        font: assets.load::<Font>("RobotoCondensed.ttf"),
+        font: commands.load::<Font>("RobotoCondensed.ttf"),
         color: color!(red),
         cursor_bar: rectangle! {
             color: color!(gold),
@@ -50,31 +50,31 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         }
     });
 
-    text!((commands, assets) {
+    text!(commands {
         text: "This is a receiver.",
         offset: [-200, 0],
-        font: assets.load::<Font>("RobotoCondensed.ttf"),
+        font: "RobotoCondensed.ttf",
         extra: recv_s1.recv(|s: String, text: &mut Text| format_widget!(text, "{}", s))
     });
 
-    text!((commands, assets) {
+    text!(commands {
         text: "This is a formatter.",
         offset: [-200, -200],
-        font: assets.load::<Font>("RobotoCondensed.ttf"),
+        font: "RobotoCondensed.ttf",
         extra: recv_s2.recv(|s: String, text: &mut Text| format_widget!(text, "Received string \"{}\"!", s))
     });
 
-    text!((commands, assets) {
+    text!(commands {
         text: "This is a change detector.",
         offset: [200, 0],
-        font: assets.load::<Font>("RobotoCondensed.ttf"),
+        font: "RobotoCondensed.ttf",
         extra: recv_c1.recv(|s: String, text: &mut Text| format_widget!(text, "{}", s))
     });
 
-    text!((commands, assets) {
+    text!(commands {
         text: "This is a change detecting formatter.",
         offset: [200, -200],
-        font: assets.load::<Font>("RobotoCondensed.ttf"),
+        font: "RobotoCondensed.ttf",
         extra: recv_c2.recv(|s: String, text: &mut Text| format_widget!(text, "Received string \"{}\"!", s))
     });
 }

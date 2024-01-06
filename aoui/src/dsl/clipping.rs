@@ -1,7 +1,7 @@
 use bevy::{render::texture::Image, hierarchy::BuildChildren, ecs::entity::Entity, asset::Handle};
 use crate::{widget_extension, build_frame, Clipping, frame, Size2, events::{EventFlags, FetchCoveragePx, Handlers, FetchCoveragePercent}};
 use crate::widgets::{scroll::IntoScrollingBuilder, clipping::ScopedCameraBundle};
-use super::Widget;
+use super::{Widget, AouiCommands};
 
 widget_extension!(
     /// A camera with its viewport bound to a sprite's `RotatedRect`.`
@@ -12,7 +12,7 @@ widget_extension!(
 );
 
 impl Widget for CameraFrameBuilder {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
         let Some(buffer) = self.render_target else  {panic!("Requires \"buffer\"")};
         let entity = build_frame!(commands, self).id();
 
@@ -40,7 +40,7 @@ widget_extension!(
 );
 
 impl<B: IntoScrollingBuilder> Widget for ScrollingFrameBuilder<B> {
-    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         match &mut self.event {
             Some(flag) => *flag |= EventFlags::MouseWheel,
             None => self.event = Some(EventFlags::MouseWheel),

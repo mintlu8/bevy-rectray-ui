@@ -1,7 +1,7 @@
 //! This showcases discrete scrolling.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, widgets::scroll::ScrollDiscrete};
+use bevy_aoui::{AouiPlugin, widgets::scroll::ScrollDiscrete, dsl::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -20,15 +20,15 @@ pub fn main() {
 }
 
 
-pub fn init(mut commands: Commands) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });

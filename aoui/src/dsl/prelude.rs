@@ -36,7 +36,7 @@ pub use crate::events::{
     EvPositionFactor,
     Handlers, Handler, OneShot, Mutation
 };
-pub use crate::signals::{signal, fps_signal, SignalSender, SignalReceiver};
+pub use crate::signals::{channel, fps_channel, SignalSender, SignalReceiver};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::SharedPosition;
 pub use crate::widgets::button::{
@@ -45,7 +45,6 @@ pub use crate::widgets::button::{
 };
 pub use crate::widgets::scroll::{Scrolling, IntoScrollingBuilder};
 pub use crate::widgets::drag::IntoDraggingBuilder;
-pub use crate::widgets::clipping::render_target as render_target;
 
 pub const FlipX: [bool; 2] = [true, false];
 pub const FlipY: [bool; 2] = [false, true];

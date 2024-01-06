@@ -16,7 +16,7 @@ app.add_plugins(AouiPlugin)
 Import the DSL prelude in the function scope
 
 ```rust
-fn spawn(mut commands: Commands, assets: Res<AssetServer>) {
+fn spawn(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
     ...
 }
@@ -92,15 +92,14 @@ Use `Transform2D` and `Dimension` to manipulate `aoui` widgets directly.
 
 * Fine grained low level anchor-offset layout system.
 * First class support for rotation and scaling.
-* Simple and intuitive containers.
+* Simple and intuitive layouts.
 * Decentralized ECS components with no central state.
 * Complete support of bevy's 2D primitives.
 * Input handling system for mouse and cursor.
 * Building blocks for most common widgets.
-* Event handling through one-shot systems.
+* Event handling through closures.
 * Reactivity and animation through signals.
 * `macro_rules` based DSL that annihilates boilerplate.
-* Easy integration with third-party 2D crates.
 * Easy migration to future bevy versions.
 
 ## What `bevy_aoui` is not
@@ -125,16 +124,18 @@ Use `Transform2D` and `Dimension` to manipulate `aoui` widgets directly.
 
    Styling is outside the scope of this crate.
 
-## Container
+## Layouts
 
-Anchor-Offset offers fine-grained control over the layout, but you can surrender
-that control to containers for ergonomics.
+Vanilla `bevy_aoui` gives you an experience akin to a traditional 2D game framework,
+this is great for keeping things simple at first, like placing something
+at the corner of a window.
+But for more complicated UI you might find using `Layout` with `Container` more attractive.
 
-The `Container` is a very simple layout system that
-only depends on insertion order of its children. You can find your
-`hstack`, `grid` or `paragraph` here.
+With `Container`, you get access to CSS like properties `padding` and `margin`,
+reverse dimension propagation in `BoundsLayout`,
+and common layouts like `hbox`, `paragraph` and `grid`.
 
-You can implement `Layout` yourself to create a custom layout.
+You can also implement `Layout` yourself to create a custom layout.
 
 ## Widget Abstractions
 
@@ -168,7 +169,7 @@ frame! (commands {
 much nicer, right?
 
 `commands` is the context, if `AssetServer` is needed
-we can put `(commands, assets)` there, which should be the
+we can put `commands` there, which should be the
 case most of the time.
 
 ## DSL Syntax

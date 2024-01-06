@@ -11,7 +11,7 @@ use crate::widget_extension;
 use crate::widgets::inputbox::{TextColor, InputOverflow};
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea, InputBoxText};
 
-use super::{Widget, HandleOrString};
+use super::{Widget, HandleOrString, AouiCommands};
 use super::converters::OptionX;
 
 #[doc(hidden)]
@@ -41,13 +41,14 @@ widget_extension!(
 );
 
 impl Widget for InputBoxBuilder {
-    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         inject_event!(self.event, EventFlags::Hover|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside);
+        let font = self.font.get(&commands);
         let mut entity = build_frame!(commands, self);
         entity.insert((
             InputBox::new(&self.text, self.overflow),
             TextColor(self.color.expect("color is required.")),
-            self.font.get(assets),
+            font,
             SetCursor {
                 flags: EventFlags::Hover|EventFlags::LeftDrag,
                 icon: self.cursor_icon.unwrap_or(CursorIcon::Text),
@@ -61,7 +62,7 @@ impl Widget for InputBoxBuilder {
         }
         let entity = entity.id();
         let children = [
-            commands.spawn ((
+            commands.spawn_bundle((
                 AouiBundle {
                     dimension: Dimension::INHERIT,
                     ..Default::default()
@@ -98,7 +99,7 @@ widget_extension!(
 );
 
 impl Widget for ButtonBuilder {
-    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         inject_event!(self.event, EventFlags::Hover|EventFlags::LeftClick);
         let mut entity = build_frame!(commands, self);
         entity.insert((
@@ -137,7 +138,7 @@ widget_extension!(
 );
 
 impl Widget for CheckButtonBuilder {
-    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         inject_event!(self.event, EventFlags::Hover|EventFlags::LeftClick);
         let mut  entity = build_frame!(commands, self);
         entity.insert((
@@ -177,7 +178,7 @@ widget_extension!(
 );
 
 impl Widget for RadioButtonBuilder {
-    fn spawn_with(mut self, commands: &mut bevy::prelude::Commands, _: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         inject_event!(self.event, EventFlags::Hover|EventFlags::LeftClick);
         let mut entity = build_frame!(commands, self);
 

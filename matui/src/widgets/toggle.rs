@@ -1,5 +1,5 @@
-use bevy::{render::{color::Color, texture::Image}, window::CursorIcon, ecs::{component::Component, system::Query}, hierarchy::BuildChildren, math::Vec2};
-use bevy_aoui::{widget_extension, build_frame, Hitbox, Dimension, Size2, material_sprite, sprite, size2};
+use bevy::{render::{color::Color, texture::Image}, window::CursorIcon, ecs::{component::Component, system::Query, entity::Entity}, hierarchy::BuildChildren, math::Vec2};
+use bevy_aoui::{widget_extension, build_frame, Hitbox, Dimension, Size2, material_sprite, sprite, size2, dsl::AouiCommands};
 use bevy_aoui::anim::{Interpolate, Easing, Offset, EaseFunction};
 use bevy_aoui::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange};
 use bevy_aoui::widgets::button::{PropagateFocus, CheckButton, Payload, SetCursor, CheckButtonState};
@@ -10,7 +10,7 @@ use crate::shapes::{RoundedRectangleMaterial, StrokeColor};
 use super::util::{OptionM, ShadowInfo, StrokeColors};
 
 #[derive(Debug, Component, Clone, Copy)]
-pub struct TogglePalette {
+pub struct DialPalette {
     pub background: Color,
     pub dial: Color,
     pub background_stroke: Color,
@@ -18,7 +18,7 @@ pub struct TogglePalette {
     pub icon: Color,
 }
 
-impl Default for TogglePalette {
+impl Default for DialPalette {
     fn default() -> Self {
         Self { 
             background: Color::NONE, 
@@ -37,7 +37,7 @@ pub struct ToggleColors {
 }
 
 pub fn toggle_color_change(mut query: Query<(&CheckButtonState, &ToggleColors, &mut Interpolate<Color>)>) {
-    query.par_iter_mut().for_each(|(check, colors, mut color)| {
+    query.iter_mut().for_each(|(check, colors, mut color)| {
         match check {
             CheckButtonState::Checked => color.interpolate_to(colors.active),
             CheckButtonState::Unchecked => color.interpolate_to(colors.inactive),
@@ -46,7 +46,7 @@ pub fn toggle_color_change(mut query: Query<(&CheckButtonState, &ToggleColors, &
 }
 
 pub fn toggle_stroke_change(mut query: Query<(&CheckButtonState, &StrokeColors<ToggleColors>, &mut Interpolate<StrokeColor>)>) {
-    query.par_iter_mut().for_each(|(check, colors, mut color)| {
+    query.iter_mut().for_each(|(check, colors, mut color)| {
         match check {
             CheckButtonState::Checked => color.interpolate_to(colors.active),
             CheckButtonState::Unchecked => color.interpolate_to(colors.inactive),
@@ -64,7 +64,7 @@ pub struct ToggleDial {
 }
 
 pub fn toggle_dial_change(mut query: Query<(&CheckButtonState, &ToggleDial, &mut Interpolate<Offset>, &mut Interpolate<Dimension>)>) {
-    query.par_iter_mut().for_each(|(check, dial, mut offset, mut dimension)| {
+    query.iter_mut().for_each(|(check, dial, mut offset, mut dimension)| {
         match check {
             CheckButtonState::Checked => {
                 offset.interpolate_to(dial.active_offset);
@@ -96,8 +96,8 @@ widget_extension!(
         /// The length the dial travels in em, default is 1.25 em.
         pub length: Option<f32>,
         
-        pub palette: TogglePalette,
-        pub checked_palette: Option<TogglePalette>,
+        pub palette: DialPalette,
+        pub checked_palette: Option<DialPalette>,
         
         /// Size of the background in em, default is `Full` (evaluates to 2.0 em).
         pub background_size: Option<f32>,
@@ -125,13 +125,12 @@ widget_extension!(
 );
 
 impl Widget for MToggleBuilder {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
         let mut frame = build_frame!(commands, self);
-        let assets = assets.expect("Please pass in the AssetServer");
 
         let unchecked_palette = self.palette;
         let checked_palette = self.checked_palette.unwrap_or(unchecked_palette);
-        let TogglePalette { background, dial, background_stroke, dial_stroke, icon: icon_color } = if self.checked {
+        let DialPalette { background, dial, background_stroke, dial_stroke, icon: icon_color } = if self.checked {
             checked_palette
         } else {
             unchecked_palette
@@ -164,7 +163,7 @@ impl Widget for MToggleBuilder {
 
         let size = self.background_size.map(|x| Size2::em(x + horiz_len, x))
             .unwrap_or(Size2::FULL);
-        let background = material_sprite!((commands, assets) {
+        let background = material_sprite!(commands {
             dimension: size,
             z: 0.01,
             material: RoundedRectangleMaterial::capsule(background)
@@ -189,13 +188,13 @@ impl Widget for MToggleBuilder {
             ),
         });
         if let OptionM::Some(shadow) = self.shadow {
-            let shadow = shadow.build_capsule(commands, assets);
+            let shadow = shadow.build_capsule(commands);
             commands.entity(background).add_child(shadow);
         }
         commands.entity(frame).add_child(background);
         let dial_size = self.dial_size.unwrap_or(1.4);
         let checked_size = self.checked_size.unwrap_or(dial_size);
-        let dial = material_sprite!((commands, assets) {
+        let dial = material_sprite!(commands {
             offset: Size2::em(0.0, 0.0),
             dimension: Size2::em(dial_size, dial_size),
             z: 0.02,
@@ -245,11 +244,11 @@ impl Widget for MToggleBuilder {
             ),
         });
         if let OptionM::Some(shadow) = self.dial_shadow {
-            let shadow = shadow.build_capsule(commands, assets);
+            let shadow = shadow.build_capsule(commands);
             commands.entity(dial).add_child(shadow);
         }
         if self.icon.is_some() && self.icon_checked.is_none() {
-            let icon = sprite!((commands, assets) {
+            let icon = sprite!(commands {
                 sprite: self.icon,
                 dimension: size2!(66.6%, 66.6%),
                 extra: Interpolate::<Color>::new(
@@ -264,7 +263,7 @@ impl Widget for MToggleBuilder {
             });
             commands.entity(dial).add_child(icon);
         } else if self.icon.is_some() {
-            let icon = sprite!((commands, assets) {
+            let icon = sprite!(commands {
                 sprite: self.icon,
                 dimension: size2!(66.6%, 66.6%),
                 extra: Interpolate::<Color>::new(
@@ -280,7 +279,7 @@ impl Widget for MToggleBuilder {
             commands.entity(dial).add_child(icon);
         } 
         if self.icon_checked.is_some() {
-            let icon = sprite!((commands, assets) {
+            let icon = sprite!(commands {
                 sprite: self.icon_checked,
                 dimension: size2!(66.6%, 66.6%),
                 extra: Interpolate::<Color>::new(

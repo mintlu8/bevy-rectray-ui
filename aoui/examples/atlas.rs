@@ -2,6 +2,7 @@ use bevy::asset::AssetLoader;
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::WorldExtension;
 use bevy_aoui::AouiPlugin;
+use bevy_aoui::dsl::AouiCommands;
 
 pub fn main() {
     App::new()
@@ -63,20 +64,20 @@ impl AssetLoader for AtlasImporter {
 }
 
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
     
-    vstack!((commands, assets)  {
+    vstack!(commands  {
         child: atlas! {
             dimension: [128, 128],
             atlas: "ducky.json",
@@ -122,7 +123,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 [128, 33, 32, 31],
                 [160, 33, 32, 31],
             ],
-            sprites: assets.load("ducky.png"),
+            sprites: commands.load("ducky.png"),
             padding: [1, 1],
             extra: transition!(
                 Index 0.2 Linear repeat (0, 5)

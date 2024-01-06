@@ -4,7 +4,7 @@ use bevy::ecs::{system::{EntityCommands, Query, Commands}, component::Component,
 
 use crate::{events::mutation::IntoMutationCommand, dsl::DslFrom};
 
-use super::{Object, SignalBuilder, dto::AsObject, sig::Signal};
+use super::{Object, SignalBuilder, dto::AsObject, signal::Signal};
 
 /// A raw signal receiver that can be polled, not a component.
 pub struct RawReceiver<T: AsObject> {

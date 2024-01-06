@@ -3,7 +3,7 @@ use std::{sync::{Mutex, Arc}, ops::Deref, mem};
 use bevy::{hierarchy::Children, ecs::{entity::Entity, query::Has}};
 use bevy::window::{Window, PrimaryWindow, CursorIcon};
 use bevy::ecs::{system::{Query, Resource, Res, Commands}, component::Component, query::With};
-use crate::{dsl::{prelude::{signal, SignalSender}, CloneSplit}, signals::{KeyStorage, AsObject}, anim::VisibilityToggle};
+use crate::{dsl::{prelude::SignalSender, CloneSplit}, signals::{KeyStorage, AsObject, Signal}, anim::VisibilityToggle};
 use crate::signals::{Object, SignalBuilder};
 use crate::events::{Handlers, EvButtonClick, EvToggleChange};
 use crate::events::{EventFlags, CursorFocus, CursorAction};
@@ -35,7 +35,7 @@ pub struct SetCursor {
 pub struct DisplayIf<T>(pub T);
 
 pub fn event_conditional_visibility(mut query: Query<(&DisplayIf<EventFlags>, Option<&CursorFocus>, VisibilityToggle)>){
-    query.par_iter_mut().for_each(|(display_if, focus, mut vis)| {
+    query.iter_mut().for_each(|(display_if, focus, mut vis)| {
         if focus.is_some() && display_if.0.contains(focus.unwrap().flags()) 
             || focus.is_none() && display_if.0.contains(EventFlags::Idle) {
             vis.set_visible(true)
@@ -48,7 +48,7 @@ pub fn event_conditional_visibility(mut query: Query<(&DisplayIf<EventFlags>, Op
 pub fn check_conditional_visibility(
     mut query: Query<(&DisplayIf<CheckButtonState>, &CheckButtonState, VisibilityToggle)>
 ) {
-    query.par_iter_mut().for_each(|(display_if, state, mut vis)| {
+    query.iter_mut().for_each(|(display_if, state, mut vis)| {
         if &display_if.0 == state {
             vis.set_visible(true)
         } else {
@@ -126,13 +126,18 @@ impl RadioButton {
 
     /// Create an empty `RadioButton` context, usually unchecked by default.
     pub fn new_empty() -> Self {
-        let (send,) = signal();
-        RadioButton(Arc::new(Mutex::new(Object::NONE)), send.send())
+        
+        RadioButton(
+            Arc::new(Mutex::new(Object::NONE)), 
+            SignalBuilder::new(Signal::new()).send()
+        )
     }
 
     pub fn new(default: impl AsObject) -> Self {
-        let (send,) = signal();
-        RadioButton(Arc::new(Mutex::new(Object::new(default))), send.send())
+        RadioButton(
+            Arc::new(Mutex::new(Object::new(default))), 
+            SignalBuilder::new(Signal::new()).send()
+        )
     }
 
     pub fn set(&self, payload: &Payload) {

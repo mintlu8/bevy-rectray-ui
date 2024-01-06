@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder};
+use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder, dsl::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -17,29 +17,29 @@ pub fn main() {
 }
 
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
     
-    let (target_in, target_out) = render_target(&assets, [800, 800]);
+    let (target_in, target_out) = commands.render_target([800, 800]);
 
-    camera_frame!((commands, assets) {
+    camera_frame!(commands {
         dimension: [400, 400],
         offset: [-200, 0],
         render_target: target_in,
         layer: 1,
     });
 
-    sprite!((commands, assets) {
+    sprite!(commands {
         dimension: [400, 400],
         offset: [-200, 0],
         sprite: target_out
@@ -63,25 +63,25 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
         }
     });
 
-    let (target_in, target_out) = render_target(&assets, [800, 800]);
+    let (target_in, target_out) = commands.render_target([800, 800]);
     
-    camera_frame!((commands, assets) {
+    camera_frame!(commands {
         dimension: [400, 400],
         offset: [200, 0],
         render_target: target_in,
         layer: 1,
     });
 
-    sprite!((commands, assets) {
+    sprite!(commands {
         dimension: [400, 400],
         offset: [200, 0],
         sprite: target_out
     });
     
-
+    let font = commands.load("ComicNeue-Regular.ttf");
     let entity = {
-        let mut builder = RichTextBuilder::new(&mut commands, assets.load("ComicNeue-Regular.ttf"))
-            .configure_size(assets.load("ComicNeue-Regular.ttf"), 32.0)
+        let mut builder = RichTextBuilder::new(&mut commands, font.clone())
+            .configure_size(font, 32.0)
             .with_color(Color::WHITE)
             .with_layer(1);
 

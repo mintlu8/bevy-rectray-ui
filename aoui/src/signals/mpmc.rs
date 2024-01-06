@@ -2,7 +2,7 @@ use std::{marker::PhantomData, fmt::Debug};
 
 use crate::dsl::CloneSplit;
 
-use super::{dto::{Object, AsObject}, sig::Signal};
+use super::{dto::{Object, AsObject}, signal::Signal};
 
 /// A function that maps the value of a signal.
 #[derive(Default)]
@@ -96,7 +96,7 @@ impl<F> SignalMapperFn for F where F: Fn(&mut Object) + Clone + Send + Sync + 's
 #[derive(Debug)]
 pub struct SignalBuilder<T: AsObject> {
     pub(super) signal: Signal,
-    p: PhantomData<T>,
+    pub(super) p: PhantomData<T>,
 }
 
 impl<T: AsObject> Clone for SignalBuilder<T> {
@@ -107,7 +107,7 @@ impl<T: AsObject> Clone for SignalBuilder<T> {
 
 impl<T: AsObject> SignalBuilder<T> {
 
-    pub(super) fn new(signal: Signal) -> Self {
+    pub(crate) fn new(signal: Signal) -> Self {
         Self {
             signal,
             p: PhantomData,
@@ -172,12 +172,12 @@ impl<T: AsObject> Debug for SignalSender<T> {
 impl<T: AsObject> SignalSender<T> {
     pub fn send(&self, item: T) {
         let obj = self.map.map(Object::new(item));
-        self.signal.write_dyn(obj);
+        self.signal.write(obj);
     }
 
     pub fn send_dyn(&self, item: Object) {
         let obj = self.map.map(item);
-        self.signal.write_dyn(obj);
+        self.signal.write(obj);
     }
 
     /// Create a new receiver of the underlying signal.

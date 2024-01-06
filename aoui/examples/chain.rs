@@ -1,6 +1,6 @@
 //! Showcases a simple skeletal system by chaining rectangles.
 
-use bevy_aoui::{*, bundles::*};
+use bevy_aoui::{*, bundles::*, dsl::AouiCommands};
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{Slider, self}};
 pub fn main() {
@@ -25,22 +25,22 @@ pub struct Root;
 #[derive(Component)]
 pub struct AnchorMarker;
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    let texture = assets.load::<Image>("square.png");
-    commands.spawn(Camera2dBundle::default());
+    let texture = commands.load::<Image>("square.png");
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
-    let mut last = commands.spawn((AouiSpriteBundle {
+    let mut last = commands.spawn_bundle((AouiSpriteBundle {
         transform: Transform2D::UNIT.with_anchor(Anchor::Center).with_z(0.1),
         sprite: Sprite {
             color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5),
@@ -51,7 +51,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         ..Default::default()
     }, Root)).id();
     for _ in 0..120 {
-        let curr = commands.spawn(AouiSpriteBundle {
+        let curr = commands.spawn_bundle(AouiSpriteBundle {
             transform: Transform2D::UNIT
                 .with_anchor(Anchor::CenterLeft)
                 .with_center(Anchor::CenterLeft)
@@ -65,7 +65,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
             texture: texture.clone(),
             ..Default::default()
         }).id();
-        let marker = commands.spawn((AouiSpriteBundle {
+        let marker = commands.spawn_bundle((AouiSpriteBundle {
             transform: Transform2D::UNIT
                 .with_offset(Vec2::new(1.0, 0.0))
                 .with_anchor(Anchor::CenterRight)

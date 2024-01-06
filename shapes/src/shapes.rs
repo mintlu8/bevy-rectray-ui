@@ -1,5 +1,5 @@
-use bevy::{math::Vec2, sprite::{Mesh2dHandle, ColorMaterial}, prelude::Color};
-use bevy_aoui::{widget_extension, dsl::{prelude::OneOrTwo, DslFrom, Widget}, bundles::BuildTransformBundle, build_frame};
+use bevy::{math::Vec2, sprite::{Mesh2dHandle, ColorMaterial}, prelude::Color, ecs::entity::Entity};
+use bevy_aoui::{widget_extension, dsl::{prelude::OneOrTwo, DslFrom, Widget, AouiCommands}, bundles::BuildTransformBundle, build_frame};
 use bevy_prototype_lyon::prelude::*;
 
 use crate::systems::{ShapeDimension, Shapes};
@@ -58,7 +58,8 @@ widget_extension! {
 }
 
 impl Widget for ShapeBuilder {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (bevy::prelude::Entity, bevy::prelude::Entity) {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+        let color_material = commands.add(ColorMaterial::default());
         let mut frame = build_frame!(commands, self);
         frame.insert((
             BuildTransformBundle::default(),
@@ -69,7 +70,7 @@ impl Widget for ShapeBuilder {
                 anchor: self.anchor,
             },
             Mesh2dHandle::default(),
-            assets.expect("Please pass in the AssetServer").add(ColorMaterial::default()),
+            color_material,
         ));
         if let OptionX::Some(fill) = self.fill {
             frame.insert(fill);

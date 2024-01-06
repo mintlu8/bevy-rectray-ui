@@ -56,7 +56,7 @@
 //! but these are outside the scope of this crate.
 
 use bevy::{prelude::*, ecs::query::WorldQuery};
-use crate::{schedule::{AouiEventSet, AouiCleanupSet}, Hitbox, Clipping, RotatedRect, Opacity, WorldExtension, widgets::button::CursorDefault};
+use crate::{schedule::{AouiEventSet, AouiCleanupSet}, Hitbox, Clipping, RotatedRect, Opacity, widgets::button::CursorDefault};
 
 mod systems;
 mod state;
@@ -179,33 +179,6 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
                 custom_cursor_controller,
                 coverage::calculate_coverage,
             ))
-            .register_event::<EvLeftClick>()
-            .register_event::<EvLeftDown>()
-            .register_event::<EvDragEnd>()
-            .register_event::<EvRightClick>()
-            .register_event::<EvRightDown>()
-            .register_event::<EvMidClick>()
-            .register_event::<EvMidDown>()
-            .register_event::<EvDoubleClick>()
-            .register_event::<EvDragEnd>()
-            .register_event::<EvClickOutside>()
-            .register_event::<EvHover>()
-            .register_event::<EvLeftPressed>()
-            .register_event::<EvLeftDrag>()
-            .register_event::<EvMidPressed>()
-            .register_event::<EvMidDrag>()
-            .register_event::<EvRightPressed>()
-            .register_event::<EvRightDrag>()
-            .register_event::<EvMouseWheel>()
-            .register_event::<EvMouseDrag>()
-            .register_event::<EvObtainFocus>()
-            .register_event::<EvLoseFocus>()
-            .register_event::<EvObtainFocus>()
-            .register_event::<EvButtonClick>()
-            .register_event::<EvToggleChange>()
-            .register_event::<EvTextChange>()
-            .register_event::<EvTextSubmit>()
-            .register_event::<EvPositionFactor>()
         ;
     }
 }

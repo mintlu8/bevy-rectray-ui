@@ -13,7 +13,7 @@ pub trait InterpolateAssociation {
     fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd; 
 
     fn system(mut query: Query<(&mut Self::Component, &Interpolate<Self::Interpolation>)>) {
-        query.par_iter_mut().for_each(|(mut comp, inter)| {
+        query.iter_mut().for_each(|(mut comp, inter)| {
             Self::set(comp.as_mut(), inter.get())
         })
     }

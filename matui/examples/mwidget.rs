@@ -1,6 +1,6 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, WorldExtension};
-use bevy_matui::{MatuiPlugin, mbutton, mtoggle, widgets::{util::WidgetPalette, toggle::TogglePalette, frame::WindowPalette}, palette, mwindow};
+use bevy_aoui::{AouiPlugin, WorldExtension, dsl::AouiCommands};
+use bevy_matui::{MatuiPlugin, mbutton, mtoggle, widgets::{util::WidgetPalette, toggle::DialPalette, frame::WindowPalette}, palette, mwindow, mslider};
 
 pub fn main() {
     App::new()
@@ -20,15 +20,15 @@ pub fn main() {
         .run();
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
@@ -51,9 +51,9 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         stroke: color!(none),
     };
 
-    let (collapse_send, collapse_recv, collapse_spin) = signal();
+    let (collapse_send, collapse_recv, collapse_spin) = commands.signal();
 
-    mwindow!((commands, assets) {
+    mwindow!(commands {
         radius: 5,
         palette: palette!(WindowPalette { 
             background: white,
@@ -98,7 +98,6 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 text: "Button:",
             },
             child: mbutton!{
-                shadow: 5,
                 capsule: true,
                 palette: palette_idle,
                 palette_hover: palette_hover,
@@ -116,20 +115,28 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
                 background_size: 1.0,
                 length: 2,
                 dial_size: 1.6,
-                palette: palette!(TogglePalette {
+                palette: palette!(DialPalette {
                     background: white, 
                     dial: red500, 
                 }),
-                checked_palette: palette!(TogglePalette {
+                checked_palette: palette!(DialPalette {
                     background: red700, 
                     dial: red500, 
                 }),
                 dial_shadow: (4, color!(grey)),
             }
         },
+
+        child: mslider! {
+            range: (0..5),
+            palette: palette!(DialPalette {
+                background: grey, 
+                dial: red500, 
+            })
+        }
     });
 
-    mbutton!((commands, assets){
+    mbutton!(commands{
         dimension: size2![100, 100],
         shadow: 5,
         capsule: true,
@@ -140,15 +147,15 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         text: "Hello",
     });
 
-    mtoggle!((commands, assets){
+    mtoggle!(commands{
         offset: [0, 100],
-        palette: palette!(TogglePalette {
+        palette: palette!(DialPalette {
             background: white, 
             dial: red500, 
             background_stroke: red700, 
             icon: white,
         }),
-        checked_palette: palette!(TogglePalette {
+        checked_palette: palette!(DialPalette {
             background: red700, 
             dial: white, 
             background_stroke: red700,
@@ -160,16 +167,16 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         //background_stroke: (color!(darkred), 3),
     });
 
-    mtoggle!((commands, assets){
+    mtoggle!(commands{
         offset: [0, 200],
         background_size: 1.0,
         length: 2,
         dial_size: 1.6,
-        palette: palette!(TogglePalette {
+        palette: palette!(DialPalette {
             background: white, 
             dial: red500, 
         }),
-        checked_palette: palette!(TogglePalette {
+        checked_palette: palette!(DialPalette {
             background: red700, 
             dial: red500, 
         }),

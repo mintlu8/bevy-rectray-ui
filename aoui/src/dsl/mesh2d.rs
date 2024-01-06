@@ -4,7 +4,7 @@ use bevy::sprite::{Material2d, Mesh2dHandle};
 
 use crate::{BuildMeshTransform, build_frame, widget_extension};
 
-use super::{Widget, converters::HandleOrAsset};
+use super::{Widget, converters::HandleOrAsset, AouiCommands};
 
 widget_extension!(
     /// Construct a sprite with a custom [`Material2d`](bevy::sprite::Material2d).
@@ -33,13 +33,12 @@ pub fn mesh_rectangle() -> Mesh {
 }
 
 impl<M: Material2d> Widget for MaterialSpriteBuilder<M> {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+        let material = self.material.expect(&commands, "Please specify a material.");
+        let mesh = commands.add(mesh_rectangle());
         let mut entity = build_frame!(commands, self);
-        let assets = assets.expect("Please pass in the asset server.");
-        let mesh = mesh_rectangle();
         let e = entity.insert((
-            self.material.expect(Some(assets), "Please specify a material."),
-            Mesh2dHandle(assets.add(mesh)),
+            material, Mesh2dHandle(mesh),
             GlobalTransform::IDENTITY,
             BuildMeshTransform,
         )).id();
@@ -71,11 +70,12 @@ widget_extension!(
 );
 
 impl<M: Material2d> Widget for MaterialMeshBuilder<M> {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+        let material = self.material.expect(&commands, "Please specify a material.");
+        let mesh = Mesh2dHandle(self.mesh.expect(&commands, "Please specify a mesh."));
         let mut entity = build_frame!(commands, self);
         let e = entity.insert((
-            self.material.expect(assets, "Please specify a material."),
-            Mesh2dHandle(self.mesh.expect(assets, "Please specify a mesh.")),
+            material, mesh,
             GlobalTransform::IDENTITY,
             BuildMeshTransform,
         )).id();

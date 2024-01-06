@@ -4,7 +4,7 @@ use bevy::render::{texture::Image, color::Color};
 
 use crate::{widget_extension, widgets::DeferredAtlasBuilder, bundles::BuildTransformBundle, build_frame};
 
-use super::{Widget, DslFrom};
+use super::{Widget, DslFrom, AouiCommands};
 
 #[derive(Debug, Default)]
 pub enum AtlasSprites {
@@ -68,9 +68,8 @@ widget_extension!(pub struct AtlasBuilder {
 });
 
 impl Widget for AtlasBuilder {
-    fn spawn_with(self, commands: &mut bevy::prelude::Commands, assets: Option<&bevy::prelude::AssetServer>) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
         let entity = build_frame!(commands, self).insert(BuildTransformBundle::default()).id();
-        let assets = ||assets.expect("Please pass in the AssetServer.");
         let [x, y] = self.flip;
         let sprite = TextureAtlasSprite{
             color: self.color.unwrap_or(Color::WHITE),
@@ -82,14 +81,14 @@ impl Widget for AtlasBuilder {
         };
         match self.atlas {
             AtlasRectangles::AtlasFile(file) => {
-                let asset: Handle<TextureAtlas> = assets().load(file);
+                let asset: Handle<TextureAtlas> = commands.load(file);
                 commands.entity(entity).insert((
                     asset,
                     sprite
                 ));
             },
             AtlasRectangles::AtlasStruct(atlas) => {
-                let asset: Handle<TextureAtlas> = assets().add(atlas);
+                let asset: Handle<TextureAtlas> = commands.add(atlas);
                 commands.entity(entity).insert((
                     asset,
                     sprite
@@ -103,7 +102,7 @@ impl Widget for AtlasBuilder {
             },
             AtlasRectangles::None => {
                 let handles = match self.sprites {
-                    AtlasSprites::ImageNames(names) => names.into_iter().map(|x| assets().load(x)).collect(),
+                    AtlasSprites::ImageNames(names) => names.into_iter().map(|x| commands.load(x)).collect(),
                     AtlasSprites::ImageHandles(handles) => handles,
                     _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
                 };
@@ -114,7 +113,7 @@ impl Widget for AtlasBuilder {
             },
             AtlasRectangles::Rectangles(rectangles) => {
                 let texture = match self.sprites {
-                    AtlasSprites::ImageName(name) => assets().load(name),
+                    AtlasSprites::ImageName(name) => commands.load(name),
                     AtlasSprites::ImageHandle(handle) => handle,
                     _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
                 };
@@ -128,20 +127,21 @@ impl Widget for AtlasBuilder {
             },
             AtlasRectangles::Grid { size, count, offset } => {
                 let image = match self.sprites {
-                    AtlasSprites::ImageName(name) => assets().load(name),
+                    AtlasSprites::ImageName(name) => commands.load(name),
                     AtlasSprites::ImageHandle(handle) => handle,
                     _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
                 };
                 let [x, y] = count;
                 let atlas = TextureAtlas::from_grid(image, size, y, x, self.atlas_padding, Some(offset));
+                let atlas = commands.add(atlas);
                 commands.entity(entity).insert((
                     sprite,
-                    assets().add(atlas),
+                    atlas,
                 ));
             },
             AtlasRectangles::Subdivide(slices) => {
                 let image = match self.sprites {
-                    AtlasSprites::ImageName(name) => assets().load(name),
+                    AtlasSprites::ImageName(name) => commands.load(name),
                     AtlasSprites::ImageHandle(handle) => handle,
                     _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
                 };

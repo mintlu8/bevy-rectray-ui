@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use bevy::{render::color::Color, ecs::{component::Component, system::Commands, entity::Entity}, asset::AssetServer};
-use bevy_aoui::{dsl::DslFrom, material_sprite, size2, layout::LayoutControl};
+use bevy_aoui::{dsl::{DslFrom, AouiCommands}, material_sprite, size2, layout::LayoutControl};
 
 use crate::shapes::RoundedShadowMaterial;
 
@@ -83,8 +83,8 @@ pub struct ShadowInfo {
 
 impl ShadowInfo {
     
-    pub fn build_capsule(&self, commands: &mut Commands, assets: &AssetServer) -> Entity {
-        material_sprite!((commands, assets) {
+    pub fn build_capsule(&self, commands: &mut AouiCommands) -> Entity {
+        material_sprite!(commands {
             dimension: size2![1 + {self.size * 2.0} px, 1 + {self.size * 2.0} px],
             z: -0.005,
             material: RoundedShadowMaterial::capsule(self.color, self.size - self.size * self.darken),
@@ -92,8 +92,8 @@ impl ShadowInfo {
         })
     }
 
-    pub fn build_rect(&self, commands: &mut Commands, assets: &AssetServer, corner: f32) -> Entity {
-        material_sprite!((commands, assets) {
+    pub fn build_rect(&self, commands: &mut AouiCommands, corner: f32) -> Entity {
+        material_sprite!(commands {
             dimension: size2![1 + {self.size * 2.0} px, 1 + {self.size * 2.0} px],
             z: -0.005,
             material: RoundedShadowMaterial::new(self.color, corner, self.size - self.size * self.darken),

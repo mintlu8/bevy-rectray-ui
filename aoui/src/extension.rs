@@ -1,5 +1,5 @@
-use bevy::{window::CursorIcon, app::{App, Last, Update}, ecs::system::{Query, Res}, math::Vec2};
-use crate::{widgets::button::CursorDefault, events::{EventHandling, Handlers, ScrollScaling}, dsl::DslInto, signals::DropFlag, schedule::AouiCleanupSet};
+use bevy::{window::CursorIcon, app::{App, Update}, math::Vec2};
+use crate::{widgets::button::CursorDefault, events::ScrollScaling, dsl::DslInto};
 
 /// Extension methods to `World` and `App`
 pub trait WorldExtension {
@@ -9,9 +9,6 @@ pub trait WorldExtension {
 
     /// Register mouse wheel scrolling speed.
     fn register_scrolling_speed(&mut self, line_to_pixels: impl DslInto<Vec2>, speed: impl DslInto<Vec2>) -> &mut Self;
-
-    /// Register an event which cleans up its associated signals.
-    fn register_event<T: EventHandling + 'static>(&mut self) -> &mut Self;
 
     /// Register addition signal ids, default is `0..=5`. `255` should not be used
     fn register_signal_id<const SIGNAL_ID: u8>(&mut self) -> &mut Self;
@@ -29,18 +26,6 @@ impl WorldExtension for App {
             line_to_pixels: line_to_pixels.dinto(),
             pixel_scale: speed.dinto(),
         })
-    }
-
-    fn register_event<T: EventHandling>(&mut self) -> &mut Self {
-        use bevy::prelude::IntoSystemConfigs;
-        fn event_cleanup<T: EventHandling>(
-            drop_flag: Res<DropFlag>,
-            mut query: Query<&mut Handlers<T>>
-        ) {
-            query.iter_mut().for_each(|x| x.cleanup(drop_flag.get()));
-        }
-        self.add_systems(Last, event_cleanup::<T>.in_set(AouiCleanupSet));
-        self
     }
 
     fn register_signal_id<const S: u8>(&mut self) -> &mut Self {

@@ -1,7 +1,7 @@
 //! Demo for the span based layouts.
 
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AouiPlugin, material_sprite};
+use bevy_aoui::{AouiPlugin, material_sprite, dsl::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -26,9 +26,9 @@ impl Material2d for Circle {
     }
 }
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     let text = [ 
         "Layout Demo",
@@ -44,7 +44,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         red, yellow, green, blue,
     ];
 
-    vstack! ((commands, assets) {
+    vstack! (commands {
         anchor: Top,
         margin: 4,
         child: #text! { 
@@ -90,7 +90,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         blue700, blue800, blue900
     ];
 
-    hstack! ((commands, assets) {
+    hstack! (commands {
         anchor: Left,
         dimension: [400, 100],
         offset: [20, 120],
@@ -117,7 +117,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
     });
 
-    hbox! ((commands, assets) {
+    hbox! (commands {
         anchor: Left,
         dimension: [600, 100],
         offset: [20, 0],
@@ -144,7 +144,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
     });
 
-    vstack! ((commands, assets) {
+    vstack! (commands {
         anchor: Right,
         dimension: [100, 700],
         offset: [-200, 0],
@@ -171,7 +171,7 @@ pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
         },
     });
 
-    vbox! ((commands, assets) {
+    vbox! (commands {
         anchor: Right,
         dimension: [100, 700],
         offset: [-20, 0],

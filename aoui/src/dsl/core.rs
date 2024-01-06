@@ -1,5 +1,5 @@
-use bevy::{asset::AssetServer, sprite::Sprite};
-use bevy::ecs::{system::Commands, entity::Entity};
+use bevy::sprite::Sprite;
+use bevy::ecs::entity::Entity;
 use bevy::math::{Vec2, Rect};
 use bevy::text::{Text, TextSection, TextStyle, BreakLineOn, Text2dBounds, TextLayoutInfo, Font};
 use bevy::render::{color::Color, texture::{Image, BevyDefault}};
@@ -7,7 +7,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension};
 
 use crate::{widget_extension, transform2d, dimension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
 
-use super::{Widget, DslInto, HandleOrString};
+use super::{Widget, DslInto, HandleOrString, AouiCommands};
 
 widget_extension!(pub struct FrameBuilder {});
 widget_extension!(
@@ -55,9 +55,9 @@ widget_extension!(
 );
 
 impl Widget for FrameBuilder {
-    fn spawn_with(self, commands: &mut Commands, _: Option<&AssetServer>) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
 
-        let mut base = commands.spawn(
+        let mut base = commands.spawn_bundle(
             AouiBundle {
                 transform: transform2d!(self),
                 dimension: dimension!(self),
@@ -92,7 +92,8 @@ impl Widget for FrameBuilder {
 }
 
 impl Widget for SpriteBuilder {
-    fn spawn_with(self, commands: &mut Commands, assets: Option<&AssetServer>) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+        let sprite = self.sprite.get(&commands);
         let mut frame = build_frame!(commands, self);
         frame.insert((
             Sprite {
@@ -103,7 +104,7 @@ impl Widget for SpriteBuilder {
                 flip_y: self.flip[1],
                 ..Default::default()
             },
-            self.sprite.get(assets),
+            sprite,
             BuildTransformBundle::default(),
         ));
         (frame.id(), frame.id())
@@ -112,13 +113,13 @@ impl Widget for SpriteBuilder {
 
 
 impl Widget for RectangleBuilder {
-    fn spawn_with(self, commands: &mut Commands, assets: Option<&AssetServer>) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
         let texture = Image::new(Extent3d {
             width: 1,
             height: 1,
             ..Default::default()
         }, TextureDimension::D2, vec![255, 255, 255, 255], BevyDefault::bevy_default());
-        let texture = assets.expect("Please pass in the AssetServer").add(texture);
+        let texture = commands.add(texture);
         let frame = build_frame!(commands, self)
             .insert((
             Sprite {
@@ -134,14 +135,15 @@ impl Widget for RectangleBuilder {
 }
 
 impl Widget for TextBuilder {
-    fn spawn_with(self, commands: &mut Commands, assets: Option<&AssetServer>) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+        let font = self.font.get(&commands);
         let mut frame = build_frame!(commands, self);
         frame.insert((
             Text {
                 sections: vec![TextSection::new(
                     self.text,
                     TextStyle {
-                        font: self.font.get(assets),
+                        font: font,
                         color: self.color.unwrap_or(Color::WHITE),
                         ..Default::default()
                     }

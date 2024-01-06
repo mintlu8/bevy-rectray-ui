@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, WorldExtension};
+use bevy_aoui::{AouiPlugin, WorldExtension, dsl::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -18,20 +18,20 @@ pub fn main() {
 }
 
 
-pub fn init(mut commands: Commands, assets: Res<AssetServer>) {
+pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
+        extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
 
-    text! ((commands, assets) {
+    text! (commands {
         dimension: size2!(400, 1 em),
         font_size: em(4),
         text: "I'm Spinning!",
