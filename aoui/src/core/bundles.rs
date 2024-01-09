@@ -66,7 +66,7 @@ impl LinebreakBundle {
         Self {
             bundle: AouiBundle { 
                 dimension: Dimension {
-                    dimension: crate::DimensionSize::Owned(size.into()),
+                    dimension: crate::DimensionType::Owned(size.into()),
                     ..Default::default()
                 }, 
                 ..Default::default()
@@ -79,7 +79,7 @@ impl LinebreakBundle {
         Self {
             bundle: AouiBundle { 
                 dimension: Dimension {
-                    dimension: crate::DimensionSize::Owned(Size2::em(size.x, size.y)),
+                    dimension: crate::DimensionType::Owned(Size2::em(size.x, size.y)),
                     ..Default::default()
                 }, 
                 ..Default::default()

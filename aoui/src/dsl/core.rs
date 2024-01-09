@@ -5,9 +5,10 @@ use bevy::text::{Text, TextSection, TextStyle, BreakLineOn, Text2dBounds, TextLa
 use bevy::render::{color::Color, texture::{Image, BevyDefault}};
 use bevy::render::render_resource::{Extent3d, TextureDimension};
 
-use crate::{widget_extension, transform2d, dimension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
+use crate::{DimensionType, Transform2D, Anchor, Dimension};
+use crate::{widget_extension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
 
-use super::{Widget, DslInto, HandleOrString, AouiCommands};
+use super::{Widget, DslInto, HandleOrString, AouiCommands, Aspect, OneOrTwo};
 
 widget_extension!(pub struct FrameBuilder {});
 widget_extension!(
@@ -55,12 +56,33 @@ widget_extension!(
 );
 
 impl Widget for FrameBuilder {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+        if self.layout.is_some() && self.dimension == DimensionType::Copied {
+            self.dimension = DimensionType::Dynamic;
+        }
 
         let mut base = commands.spawn_bundle(
             AouiBundle {
-                transform: transform2d!(self),
-                dimension: dimension!(self),
+                transform: Transform2D {
+                    center: self.center,
+                    anchor: self.anchor,
+                    parent_anchor: self.parent_anchor.unwrap_or(Anchor::Inherit),
+                    offset: self.offset,
+                    rotation: self.rotation,
+                    scale: match self.scale{
+                        Some(OneOrTwo(vec)) => vec,
+                        None => Vec2::ONE,
+                    },
+                    z: self.z
+                },
+                dimension: Dimension {
+                    dimension: self.dimension,
+                    font_size: self.font_size,
+                    preserve_aspect: match self.aspect {
+                        Aspect::None => false,
+                        _ => true,
+                    }
+                },
                 opacity: self.opacity,
                 vis: self.visible.dinto(),
                 clipping: Clipping::new(self.clipping.unwrap_or(false)),
@@ -93,7 +115,7 @@ impl Widget for FrameBuilder {
 
 impl Widget for SpriteBuilder {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        let sprite = self.sprite.get(&commands);
+        let sprite = self.sprite.get(commands);
         let mut frame = build_frame!(commands, self);
         frame.insert((
             Sprite {
@@ -136,14 +158,14 @@ impl Widget for RectangleBuilder {
 
 impl Widget for TextBuilder {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        let font = self.font.get(&commands);
+        let font = self.font.get(commands);
         let mut frame = build_frame!(commands, self);
         frame.insert((
             Text {
                 sections: vec![TextSection::new(
                     self.text,
                     TextStyle {
-                        font: font,
+                        font,
                         color: self.color.unwrap_or(Color::WHITE),
                         ..Default::default()
                     }

@@ -14,6 +14,6 @@ pub use hitbox::*;
 pub use scaling::*;
 
 pub use transform::{Transform2D, BuildTransform, BuildMeshTransform};
-pub use dimension::{Dimension, DimensionData, DimensionSize, DimensionMut};
+pub use dimension::{Dimension, DimensionData, DimensionType, DimensionMut};
 
 pub mod bundles;

@@ -34,7 +34,7 @@ pub fn mesh_rectangle() -> Mesh {
 
 impl<M: Material2d> Widget for MaterialSpriteBuilder<M> {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        let material = self.material.expect(&commands, "Please specify a material.");
+        let material = self.material.expect(commands, "Please specify a material.");
         let mesh = commands.add(mesh_rectangle());
         let mut entity = build_frame!(commands, self);
         let e = entity.insert((
@@ -71,8 +71,8 @@ widget_extension!(
 
 impl<M: Material2d> Widget for MaterialMeshBuilder<M> {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        let material = self.material.expect(&commands, "Please specify a material.");
-        let mesh = Mesh2dHandle(self.mesh.expect(&commands, "Please specify a mesh."));
+        let material = self.material.expect(commands, "Please specify a material.");
+        let mesh = Mesh2dHandle(self.mesh.expect(commands, "Please specify a mesh."));
         let mut entity = build_frame!(commands, self);
         let e = entity.insert((
             material, mesh,

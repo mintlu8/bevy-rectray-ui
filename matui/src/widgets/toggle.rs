@@ -2,7 +2,8 @@ use bevy::{render::{color::Color, texture::Image}, window::CursorIcon, ecs::{com
 use bevy_aoui::{widget_extension, build_frame, Hitbox, Dimension, Size2, material_sprite, sprite, size2, dsl::AouiCommands};
 use bevy_aoui::anim::{Interpolate, Easing, Offset, EaseFunction};
 use bevy_aoui::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange};
-use bevy_aoui::widgets::button::{PropagateFocus, CheckButton, Payload, SetCursor, CheckButtonState};
+use bevy_aoui::widgets::button::{CheckButton, Payload, CheckButtonState};
+use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
 use bevy_aoui::dsl::{Widget, HandleOrString, OptionX};
 
 use crate::shapes::{RoundedRectangleMaterial, StrokeColor};

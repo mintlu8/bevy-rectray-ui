@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use bevy::ecs::entity::Entity;
 use bevy::prelude::{Vec2, UVec2};
@@ -16,16 +17,9 @@ const _: Option<Box<dyn Layout>> = None;
 /// meaning it will update its size based on the size occupied by its children. 
 /// You can parent it to an anchor of
 /// a fixed sized widget for alignment.
-/// 
-/// # Object Safety
-/// 
-/// This trait is object safe.
 pub trait Layout: Downcast + Debug + Send + Sync + 'static {
     /// Place sprites in the layout.
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput;
-    /// Returns a reliable minimum size for percentage base dimension.
-    #[allow(unused_variables)]
-    fn reliable_dimension(&self, computed_size: Vec2) -> Vec2 { Vec2::ZERO }
 }
 
 impl_downcast!(Layout);
@@ -126,39 +120,43 @@ impl Layout for BoundsLayout {
         );
         LayoutOutput { entity_anchors, dimension }
     }
-
-    fn reliable_dimension(&self, computed_size: Vec2) -> Vec2 {
-        Vec2::new(
-            if self.fixed[0] {0.0} else {computed_size.x},
-            if self.fixed[1] {0.0} else {computed_size.y},
-        )
-    }
 }
 
 /// A size agnostic mono-directional container.
-#[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
-pub struct StackLayout {
-    pub direction: LayoutDir,
-}
+#[derive(Debug, Clone, Copy, Default)]
+pub struct StackLayout<D: Direction = X>(PhantomData<D>);
 
 impl StackLayout {
-    pub const HSTACK: Self = Self { direction: LayoutDir::LeftToRight };
-    pub const VSTACK: Self = Self { direction: LayoutDir::TopToBottom };
+    pub const HSTACK: StackLayout<X> = StackLayout(PhantomData);
+    pub const VSTACK: StackLayout<Rev<Y>> = StackLayout(PhantomData);
 }
+
+impl<D: Direction> StackLayout<D> {
+    pub fn new() -> Self {
+        StackLayout(PhantomData)
+    }
+}
+
 
 /// A fix-sized mono-directional container.
-#[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
-pub struct SpanLayout {
-    /// The axis, horizontal or vertical.
-    pub direction: LayoutDir,
-    /// If specified, try increase the margin to fill the span.
-    pub stretch: bool,
-}
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SpanLayout<D: StretchDir = X>(PhantomData<D>);
 
 impl SpanLayout {
-    pub const HBOX: Self = Self { direction: LayoutDir::LeftToRight, stretch: false };
-    pub const VBOX: Self = Self { direction: LayoutDir::TopToBottom, stretch: false };
+    pub const HBOX: SpanLayout<X> = SpanLayout(PhantomData);
+    pub const VBOX: SpanLayout<Rev<Y>> = SpanLayout(PhantomData);
 }
+
+impl<D: StretchDir> SpanLayout<D> {
+    pub fn new() -> Self {
+        SpanLayout(PhantomData)
+    }
+
+    fn with_stretch(self) -> SpanLayout<Stretch<D>> {
+        SpanLayout(PhantomData)
+    }
+}
+
 
 
 /// A statically sized mono-directional HBox or VBox
@@ -171,23 +169,20 @@ impl SpanLayout {
 /// # Panics
 ///
 /// * When supplied a [`Anchor::Custom`](bevy::sprite::Anchor) Anchor.
-#[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
-pub struct ParagraphLayout {
-    /// The primary axis, horizontal or vertical
-    pub direction: LayoutDir,
-    /// The order of which lines are placed.
-    pub stack: LayoutDir,
-    /// If specified, try increase the margin to fill the span.
-    pub stretch: bool,
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ParagraphLayout<D1: StretchDir=X, D2: Direction=Rev<Y>>(PhantomData<(D1, D2)>) where (D1, D2): DirectionPair;
+
+impl ParagraphLayout {
+    pub const PARAGRAPH: Self = Self(PhantomData);
 }
 
-impl Default for ParagraphLayout {
-    fn default() -> Self {
-        Self {
-            direction: LayoutDir::LeftToRight,
-            stack: LayoutDir::TopToBottom,
-            stretch: false,
-        }
+impl<D1: StretchDir, D2: Direction> ParagraphLayout<D1, D2> where (D1, D2): DirectionPair {
+    fn new() -> Self {
+        Self(PhantomData)
+    }
+
+    fn with_stretch(self) -> ParagraphLayout<Stretch<D1>, D2> where (Stretch<D1>, D2): DirectionPair {
+        ParagraphLayout::<Stretch<D1>, D2>(PhantomData)
     }
 }
 

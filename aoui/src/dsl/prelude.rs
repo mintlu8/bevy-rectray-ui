@@ -14,13 +14,13 @@ pub use std::f32::consts::PI;
 pub const INFINITY: f32 = f32::INFINITY;
 pub const EPS: f32 = f32::EPSILON;
 pub use bevy::prelude::Color;
-pub use crate::{Transform2D, Dimension, Opacity, SizeUnit, Size2};
+pub use crate::{Transform2D, Dimension, Opacity, Detach, SizeUnit, Size2};
 pub use crate::layout::LayoutControl::{Linebreak, IgnoreLayout};
 pub use crate::anim::{Interpolate, Offset, Rotation, Scale, Index};
 pub use interpolation::EaseFunction;
 pub use crate::events::{
     EventFlags,
-    CustomCursor,
+    CustomCursor, TrackCursor,
     EvLeftDown, EvLeftClick, 
     EvMidDown, EvMidClick, 
     EvRightDown, EvRightClick,
@@ -40,8 +40,11 @@ pub use crate::signals::{channel, fps_channel, SignalSender, SignalReceiver};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::SharedPosition;
 pub use crate::widgets::button::{
-    PropagateFocus, DisplayIf, SetCursor, CheckButtonState, radio_button_group,
+    CheckButtonState, radio_button_group,
     CheckButton, RadioButton
+};
+pub use crate::widgets::util::{
+    PropagateFocus, DisplayIf, SetCursor, 
 };
 pub use crate::widgets::scroll::{Scrolling, IntoScrollingBuilder};
 pub use crate::widgets::drag::IntoDraggingBuilder;

@@ -36,7 +36,7 @@ pub use super::constraints::DragConstraint;
 pub struct Dragging {
     pub x: bool,
     pub y: bool,
-    drag_start: Vec2,
+    pub drag_start: Vec2,
 }
 
 impl Dragging {

@@ -1,15 +1,17 @@
 use bevy::ecs::entity::Entity;
 use bevy::hierarchy::BuildChildren;
 use bevy::render::color::Color;
+use bevy::render::render_resource::{TextureFormat, Extent3d, TextureDimension};
+use bevy::render::texture::Image;
 use bevy::text::Font;
 use bevy::window::CursorIcon;
-use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel, SetCursor, PropagateFocus};
-use crate::{build_frame, Dimension};
-use crate::bundles::AouiBundle;
+use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel};
+use crate::widgets::util::{SetCursor, PropagateFocus, DisplayIf};
+use crate::{build_frame, sprite, Anchor};
 use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit};
 use crate::widget_extension;
-use crate::widgets::inputbox::{TextColor, InputOverflow};
-use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea, InputBoxText};
+use crate::widgets::inputbox::{InputOverflow, InputBoxFocus};
+use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea};
 
 use super::{Widget, HandleOrString, AouiCommands};
 use super::converters::OptionX;
@@ -43,16 +45,24 @@ widget_extension!(
 impl Widget for InputBoxBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         inject_event!(self.event, EventFlags::Hover|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside);
-        let font = self.font.get(&commands);
+        let font = self.font.get(commands);
+
+        let texture = commands.add(Image::new(Extent3d {
+            width: 1,
+            height: 1,
+            ..Default::default()
+        }, TextureDimension::D2, vec![255], TextureFormat::R8Unorm));
+        
         let mut entity = build_frame!(commands, self);
         entity.insert((
             InputBox::new(&self.text, self.overflow),
-            TextColor(self.color.expect("color is required.")),
+            //TextColor(self.color.expect("color is required.")),
             font,
             SetCursor {
                 flags: EventFlags::Hover|EventFlags::LeftDrag,
                 icon: self.cursor_icon.unwrap_or(CursorIcon::Text),
             },
+            texture.clone(),
         ));
         if !self.on_submit.is_empty()  {
             entity.insert(self.on_submit);
@@ -62,18 +72,18 @@ impl Widget for InputBoxBuilder {
         }
         let entity = entity.id();
         let children = [
-            commands.spawn_bundle((
-                AouiBundle {
-                    dimension: Dimension::INHERIT,
-                    ..Default::default()
-                },
-                InputBoxText,
-            )).id(),
+            sprite!(commands {
+                color: self.color.expect("color is required."),
+                center: Anchor::CenterLeft,
+                scale: [0.5, 0.5],
+                sprite: texture,
+                anchor: Anchor::CenterLeft,
+            }),
             commands.entity(self.cursor_bar.expect("cursor_bar is required."))
-                .insert(InputBoxCursorBar)
+                .insert((InputBoxCursorBar, DisplayIf::<InputBoxFocus>::default()))
                 .id(),
-            commands.entity(self.cursor_area.expect("cursor_bar is required."))
-                .insert(InputBoxCursorArea)
+            commands.entity(self.cursor_area.expect("cursor_area is required."))
+                .insert((InputBoxCursorArea, DisplayIf::<InputBoxFocus>::default()))
                 .id()
         ];
         commands.entity(entity).push_children(&children);

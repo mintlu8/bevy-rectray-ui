@@ -45,7 +45,7 @@ impl CursorAction {
 pub struct CursorClickOutside;
 
 pub(super) mod sealed {
-    use bevy::ecs::component::Component;
+    use bevy::{ecs::component::Component, reflect::Reflect};
 
     tlbf::tlbf!(
         /// Flags for cursor events.
@@ -69,7 +69,7 @@ pub(super) mod sealed {
         /// * `ClickOutside` requires mouse up be outside of a sprite and the sprite not being dragged.
         /// * Dragged sprite will receive `Down` from other mouse buttons regardless of their handlers.
         /// * There is in fact no `MouseUp`.
-        #[derive(Component)]
+        #[derive(Component, Reflect)]
         pub EventFlags: u32 {
             pub Idle,
             pub Hover,

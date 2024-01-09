@@ -6,27 +6,28 @@ use bevy::sprite::Mesh2dHandle;
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
 use bevy_aoui::Opacity;
-use bevy_aoui::{widget_extension, build_frame, Hitbox, size2, text, layout::{Container, StackLayout, LayoutDir}, sprite, BuildMeshTransform};
+use bevy_aoui::{widget_extension, build_frame, Hitbox, size2, text, layout::{Container, StackLayout}, sprite, BuildMeshTransform};
 use bevy_aoui::anim::{Interpolate, Easing};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvButtonClick};
-use bevy_aoui::widgets::button::{PropagateFocus, Button, SetCursor, Payload};
+use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
+use bevy_aoui::widgets::button::{Button, Payload};
 use bevy_aoui::dsl::{Widget, mesh_rectangle, AouiCommands};
 use bevy_aoui::dsl::HandleOrString;
 use bevy_aoui::dsl::OptionX;
-use crate::style::{Palette, WidgetStyle};
 use crate::shapes::{RoundedRectangleMaterial, StrokeColor};
 
 use super::util::{OptionM, ShadowInfo, StrokeColors, WidgetPalette};
 
+/// A simple state machine that changes depending on status.
 #[derive(Debug, Component, Clone, Copy)]
-pub struct ButtonColors {
-    idle: Color,
-    hover: Color,
-    pressed: Color,
-    disabled: Color,
+pub struct CursorStateColors {
+    pub idle: Color,
+    pub hover: Color,
+    pub pressed: Color,
+    pub disabled: Color,
 }
 
-impl Default for ButtonColors {
+impl Default for CursorStateColors {
     fn default() -> Self {
         Self { 
             idle: Color::NONE, 
@@ -37,7 +38,23 @@ impl Default for ButtonColors {
     }
 }
 
-pub fn btn_color_change(mut query: Query<(&ButtonColors, &Opacity, Option<&CursorFocus>, &mut Interpolate<Color>)>) {
+pub fn cursor_color_change(mut query: Query<(&CursorStateColors, &Opacity, Option<&CursorFocus>, &mut Interpolate<Color>)>) {
+    query.iter_mut().for_each(|(colors, opacity, focus, mut color)| {
+        if opacity.is_disabled() {
+            color.interpolate_to(colors.disabled);
+            return;
+        }
+        match focus {
+            Some(focus) if focus.is(EventFlags::Hover)=> color.interpolate_to(colors.hover),
+            Some(focus) if focus.intersects(EventFlags::LeftPressed|EventFlags::LeftDrag) 
+                => color.interpolate_to(colors.pressed),
+            _ => color.interpolate_to(colors.idle),
+        }
+    })
+}
+
+
+pub fn cursor_stroke_change(mut query: Query<(&StrokeColors<CursorStateColors>, &Opacity, Option<&CursorFocus>, &mut Interpolate<StrokeColor>)>) {
     query.iter_mut().for_each(|(colors, opacity, focus, mut color)| {
         if opacity.is_disabled() {
             color.interpolate_to(colors.disabled);
@@ -51,59 +68,6 @@ pub fn btn_color_change(mut query: Query<(&ButtonColors, &Opacity, Option<&Curso
     })
 }
 
-
-pub fn btn_stroke_change(mut query: Query<(&StrokeColors<ButtonColors>, &Opacity, Option<&CursorFocus>, &mut Interpolate<StrokeColor>)>) {
-    query.iter_mut().for_each(|(colors, opacity, focus, mut color)| {
-        if opacity.is_disabled() {
-            color.interpolate_to(colors.disabled);
-            return;
-        }
-        match focus {
-            Some(focus) if focus.is(EventFlags::Hover)=> color.interpolate_to(colors.hover),
-            Some(focus) if focus.is(EventFlags::LeftPressed)=> color.interpolate_to(colors.pressed),
-            _ => color.interpolate_to(colors.idle),
-        }
-    })
-}
-
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum ButtonStyle {
-    #[default]
-    Filled,
-    Tonal,
-    Outlined,
-    Text,
-}
-
-impl WidgetStyle for ButtonStyle {
-    type StyleType = WidgetPalette;
-
-    fn style(&self, style: Palette) -> Self::StyleType {
-        match self {
-            ButtonStyle::Filled => WidgetPalette {
-                background: style.main.background,
-                foreground: style.main.on_background,
-                stroke: Color::NONE,
-            },
-            ButtonStyle::Tonal => WidgetPalette {
-                background: style.main.container,
-                foreground: style.main.on_container,
-                stroke: Color::NONE,
-            },
-            ButtonStyle::Outlined => WidgetPalette {
-                background: style.surface.background,
-                foreground: style.main.background,
-                stroke: style.surface.on_background,
-            },
-            ButtonStyle::Text => WidgetPalette {
-                background: style.main.background,
-                foreground: Color::NONE,
-                stroke: Color::NONE,
-            },
-        }
-    }
-}
 
 #[derive(Debug, Component, Clone, Copy, Default)]
 pub struct ColorOnClick;
@@ -150,18 +114,18 @@ impl Widget for MButtonBuilder {
                 icon: self.cursor.unwrap_or(CursorIcon::Hand),
             },
             Container {
-                layout: Box::new(StackLayout { direction: LayoutDir::LeftToRight}),
+                layout: Box::new(StackLayout::HSTACK),
                 margin: size2!(0.5 em, 1 em),
                 padding: size2!(1 em, 0.75 em),
                 range: None,
             },
-            ButtonColors {
+            CursorStateColors {
                 idle: style.background,
                 hover: hover.background,
                 pressed: pressed.background,
                 disabled: disabled.background,
             },
-            StrokeColors(ButtonColors{
+            StrokeColors(CursorStateColors{
                 idle: style.stroke,
                 hover: hover.stroke,
                 pressed: pressed.stroke,
@@ -188,12 +152,12 @@ impl Widget for MButtonBuilder {
             frame.insert(payload);
         };
         let frame = frame.id();
-        if let Some(icon) = self.icon.try_get(&commands) {
+        if let Some(icon) = self.icon.try_get(commands) {
             let child = sprite!(commands{
                 sprite: icon,
                 z: 0.01,
                 dimension: size2!(1.2 em, 1.2 em),
-                extra: ButtonColors { 
+                extra: CursorStateColors { 
                     idle: style.foreground,
                     hover: hover.foreground,
                     pressed: pressed.foreground,
@@ -217,7 +181,7 @@ impl Widget for MButtonBuilder {
                 text: text,
                 z: 0.01,
                 font: self.font.get(commands),
-                extra: ButtonColors { 
+                extra: CursorStateColors { 
                     idle: style.foreground,
                     hover: hover.foreground,
                     pressed: pressed.foreground,
@@ -237,7 +201,7 @@ impl Widget for MButtonBuilder {
 
         match (self.capsule, self.radius) {
             (true, ..) => {
-                let mat = commands.add(if let Some(im) = self.texture.try_get(&commands) {
+                let mat = commands.add(if let Some(im) = self.texture.try_get(commands) {
                     RoundedRectangleMaterial::capsule_image(im, style.background)
                 } else {
                     RoundedRectangleMaterial::capsule(style.background)
@@ -256,7 +220,7 @@ impl Widget for MButtonBuilder {
                 (frame, frame)
             },
             (_, radius, ..) => {
-                let mat = commands.add(if let Some(im) = self.texture.try_get(&commands) {
+                let mat = commands.add(if let Some(im) = self.texture.try_get(commands) {
                     RoundedRectangleMaterial::from_image(im, style.background, radius)
                 } else {
                     RoundedRectangleMaterial::new(style.background, radius)

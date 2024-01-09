@@ -162,43 +162,32 @@ impl Material2d for RoundedRectangleMaterial {
 }
 
 pub fn sync_rounded_rect(
-    query: Query<(&Handle<RoundedRectangleMaterial>, &DimensionData)>,
+    query: Query<(&Handle<RoundedRectangleMaterial>, &DimensionData, &Opacity)>,
     mut assets: ResMut<Assets<RoundedRectangleMaterial>>
 ){
-    for (handle, dimension) in query.iter() {
-        let Some(asset) = assets.get_mut(handle) else {return};
-        asset.size = dimension.size;
+    for (handle, dimension, opacity) in query.iter() {
+        if let Some(asset) = assets.get(handle) {
+            if asset.size != dimension.size || asset.color.a() != opacity.get() {
+                let Some(asset) = assets.get_mut(handle) else {return};
+                asset.size = dimension.size;
+                asset.color.set_a(opacity.get());
+            }
+        }
     }
 }
-
-pub fn sync_rounded_rect_opacity(
-    query: Query<(&Handle<RoundedRectangleMaterial>, &Opacity)>,
-    mut assets: ResMut<Assets<RoundedRectangleMaterial>>
-){
-    for (handle, opacity) in query.iter() {
-        let Some(asset) = assets.get_mut(handle) else {return};
-        asset.color.set_a(opacity.get());
-    }
-}
-
 
 pub fn sync_rounded_shadow(
-    query: Query<(&Handle<RoundedShadowMaterial>, &DimensionData)>, 
+    query: Query<(&Handle<RoundedShadowMaterial>, &DimensionData, &Opacity)>, 
     mut assets: ResMut<Assets<RoundedShadowMaterial>>
 ){
-    for (handle, dimension) in query.iter() {
-        let Some(asset) = assets.get_mut(handle) else {return};
-        asset.size = dimension.size;
-    }
-}
-
-pub fn sync_rounded_shadow_opacity(
-    query: Query<(&Handle<RoundedShadowMaterial>, &Opacity)>,
-    mut assets: ResMut<Assets<RoundedShadowMaterial>>
-){
-    for (handle, opacity) in query.iter() {
-        let Some(asset) = assets.get_mut(handle) else {return};
-        asset.color.set_a(opacity.get());
+    for (handle, dimension, opacity) in query.iter() {
+        if let Some(asset) = assets.get(handle) {
+            if asset.size != dimension.size || asset.color.a() != opacity.get() {
+                let Some(asset) = assets.get_mut(handle) else {return};
+                asset.size = dimension.size;
+                asset.color.set_a(opacity.get());
+            }
+        }
     }
 }
 
@@ -207,8 +196,12 @@ pub fn interpolate_round_rect_color(
     mut assets: ResMut<Assets<RoundedRectangleMaterial>> 
 ){
     for (interpolate, material) in query.iter() {
-        let Some(asset) = assets.get_mut(material) else {return};
-        asset.color = interpolate.get()
+        if let Some(asset) = assets.get(material) {
+            if asset.color != interpolate.get() {
+                let Some(asset) = assets.get_mut(material) else {return};
+                asset.color = interpolate.get()
+            }
+        }
     }
 }
 
@@ -233,7 +226,11 @@ pub fn interpolate_stroke_color(
     mut assets: ResMut<Assets<RoundedRectangleMaterial>> 
 ){
     for (interpolate, material) in query.iter() {
-        let Some(asset) = assets.get_mut(material) else {return};
-        asset.stroke_color = interpolate.get()
+        if let Some(asset) = assets.get(material) {
+            if asset.color != interpolate.get() {
+                let Some(asset) = assets.get_mut(material) else {return};
+                asset.stroke_color = interpolate.get()
+            }
+        }
     }
 }

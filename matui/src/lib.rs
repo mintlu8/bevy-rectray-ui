@@ -29,7 +29,7 @@ use aoui::anim::Interpolation;
 use bevy::{app::{Plugin, PostUpdate, Update}, asset::load_internal_asset, render::render_resource::Shader, ecs::schedule::IntoSystemConfigs, sprite::Material2dPlugin};
 use bevy_aoui::schedule::AouiStoreOutputSet;
 
-use crate::{shapes::*, widgets::{btn_color_change, toggle_color_change, toggle_dial_change, button::btn_stroke_change}};
+use crate::{shapes::*, widgets::{cursor_color_change, toggle_color_change, toggle_dial_change, button::cursor_stroke_change}};
 
 /// `[u8;4]` this reduces the size of `Color` by `1/5`.
 pub type Color8 = [u8; 4];
@@ -53,8 +53,6 @@ impl Plugin for MatuiPlugin {
         app.add_systems(PostUpdate, (
             sync_rounded_rect,
             sync_rounded_shadow,
-            sync_rounded_rect_opacity,
-            sync_rounded_shadow_opacity,
         ).in_set(AouiStoreOutputSet));
         app.add_systems(Update, (
             interpolate_stroke_color,
@@ -62,8 +60,8 @@ impl Plugin for MatuiPlugin {
             StrokeColor::update_interpolate,
         ));
         app.add_systems(Update, (
-            btn_color_change,
-            btn_stroke_change,
+            cursor_color_change,
+            cursor_stroke_change,
             toggle_color_change,
             toggle_dial_change
         ).in_set(AouiStoreOutputSet));

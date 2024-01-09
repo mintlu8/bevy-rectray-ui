@@ -46,10 +46,15 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
     let color = color * textureSample(texture, samplr, in.uv);
     var stroke = stroke;
+    var stroke_color = stroke_color;
 
     /// Short circuit stroke calculation to prevent artifects.
     if all(color == stroke_color) {
         stroke = 0.0;
+        stroke_color = vec4(0.0, 0.0, 0.0, 0.0);
+    } else if (stroke == 0.0) {
+        /// 0.0 stroke is buggy
+        stroke_color = vec4(0.0, 0.0, 0.0, 0.0);
     }
 
     let capsule_radius = min(size.x, size.y) / 2.0;
@@ -61,10 +66,11 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     var length = sdf(position);
     radius = radius - stroke;
-    let smooth_fac = max(min(stroke / 2.0, 2.0), 0.0);
+    let smooth_fac = max(min(stroke / 2.0, 1.0), 0.0);
     let stroke_fac = (1.0 - smoothstep(stroke - smooth_fac, stroke, abs(length - radius))) * stroke_color.a;
 
-    let factor = 1.0 - smoothstep(radius - 2.0, radius, length);
-    let fill = color * factor;
-    return fill * (1.0 - stroke_fac) + stroke_color * stroke_fac;
+    let extrude_fac = 1.0 - (select(0.0, 1.0, length > radius) * stroke_color.w);
+    let factor = 1.0 - smoothstep(radius - 1.0, radius, length);
+    let fill = vec4(color.xyz, color.a * factor);
+    return fill * (1.0 - stroke_fac) * extrude_fac + vec4(stroke_color.xyz, stroke_fac);
 }

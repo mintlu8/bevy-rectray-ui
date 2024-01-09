@@ -122,7 +122,7 @@ macro_rules! vbox {
 macro_rules! paragraph {
     {$commands: tt {$($tt:tt)*}} => {
         $crate::meta_dsl!($commands [$crate::dsl::builders::FrameBuilder] {
-            layout: $crate::layout::ParagraphLayout::default(),
+            layout: $crate::layout::ParagraphLayout::PARAGRAPH,
             $($tt)*
         })
     };

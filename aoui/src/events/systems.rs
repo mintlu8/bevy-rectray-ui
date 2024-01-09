@@ -1,8 +1,6 @@
 use bevy::{prelude::*, window::{Window, PrimaryWindow}};
 
-use crate::widgets::clipping::CameraClip;
-
-use super::*;
+use super::{*, cursor::CameraQuery};
 
 
 /// Remove [`CursorFocus`], [`CursorAction`], [`CursorClickOutside`] and [`Submit`];
@@ -61,8 +59,7 @@ pub fn mouse_button_input(
     double_click: Res<DoubleClickThreshold>,
     buttons: Res<Input<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
-    marked_camera: Query<(&Camera, &GlobalTransform), With<AouiCamera>>,
-    unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<AouiCamera>, Without<CameraClip>)>,
+    camera: CameraQuery,
     query: Query<(Entity, &EventFlags, CursorDetection, ActiveDetection)>,
 ) {
     let iter = |f: EventFlags|query.iter().filter_map(move |(entity, flag, cursor, detection)| {
@@ -75,17 +72,10 @@ pub fn mouse_button_input(
     state.caught = false;
     state.focused = None;
     if state.blocked { return; }
-    let(camera, camera_transform) = match marked_camera.get_single() {
-        Ok((cam, transform)) => (cam, transform),
-        Err(_) => match unmarked_camera.get_single(){
-            Ok((cam, transform)) => (cam, transform),
-            Err(_) => return,
-        },
-    };
     let Ok(window) = windows.get_single() else { return };
     let Some(mouse_pos) = window.cursor_position()
-        .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
-        .map(|ray| ray.origin.truncate()) else {return;};
+        .and_then(|cursor| camera.viewport_to_world(cursor))
+    else {return;};
     state.cursor_pos = mouse_pos;
     if state.dragging {
         state.caught = true;

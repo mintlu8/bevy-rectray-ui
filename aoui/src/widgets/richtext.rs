@@ -67,8 +67,8 @@ use std::{collections::HashMap, hash::{Hash, BuildHasher}, num::ParseFloatError}
 use bevy::render::view::RenderLayers;
 use bevy::{asset::{Handle, Assets}, text::Font, render::color::Color, hierarchy::BuildChildren};
 use bevy::ecs::{entity::Entity, system::{Query, Res}, bundle::Bundle, component::Component};
-use crate::{Transform2D, Anchor, FontSize, Dimension, Size2, DimensionSize, dimension::DimensionMut, dsl::AouiCommands};
-use crate::layout::{Container, StackLayout, LayoutDir};
+use crate::{Transform2D, Anchor, FontSize, Dimension, Size2, DimensionType, dimension::DimensionMut, dsl::AouiCommands};
+use crate::layout::{Container, StackLayout};
 use crate::bundles::AouiBundle;
 use crate::layout::LayoutControl;
 use crate::frame;
@@ -86,7 +86,7 @@ pub fn synchronize_glyph_spaces(mut query: Query<(&GlyphSpace, DimensionMut)>, f
             let font = font.font.as_scaled(dimension.dynamic.em);
             let width = font.h_advance(font.glyph_id(' '));
             let height = font.height();
-            dimension.source.dimension = DimensionSize::Owned(Size2::pixels(width, height));
+            dimension.source.dimension = DimensionType::Owned(Size2::pixels(width, height));
         }
     }) 
 }
@@ -606,9 +606,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                                         ..Default::default()
                                     },
                                     Container {
-                                        layout: Box::new(StackLayout {
-                                            direction: LayoutDir::LeftToRight
-                                        }),
+                                        layout: Box::new(StackLayout::HSTACK),
                                         margin: Size2::ZERO,
                                         padding: Size2::ZERO,
                                         range: None,

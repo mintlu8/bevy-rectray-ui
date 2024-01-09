@@ -24,8 +24,8 @@ fn filter_nan(v: Vec2) -> Vec2 {
 
 fn flip_vec(v: Vec2, [x, y]: &[bool; 2]) -> Vec2 {
     Vec2::new(
-        if *x {v.x} else {1.0 - v.x}, 
-        if *y {v.y} else {1.0 - v.y}, 
+        if *x {1.0 - v.x} else {v.x}, 
+        if *y {1.0 - v.y} else {v.y}, 
     )
 }
 
@@ -42,6 +42,7 @@ pub fn remove_position_changed(mut commands: Commands,
         commands.entity(entity).remove::<PositionChanged>();
     }
 }
+
 /// A shared percentage based position.
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct SharedPosition{
@@ -54,6 +55,10 @@ impl SharedPosition {
     pub fn flip(mut self, x: bool, y: bool) -> Self {
         self.flip = [x, y];
         self
+    }
+
+    pub fn set(&self, value: Vec2) {
+        self.position.store(value, Ordering::Relaxed)
     }
 }
 
@@ -298,7 +303,7 @@ pub fn drag_constraint(
                 }
             },
             Some(SharedPosition { position, flip }) => {
-                let fac = flip_vec(position.load(Ordering::Relaxed), flip);
+                let fac = flip_vec(dbg!(position.load(Ordering::Relaxed)), flip);
                 if fac.is_nan() { continue; }
                 if drag.x {
                     pos.x = (max.x - min.x) * fac.x + min.x;

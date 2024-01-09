@@ -109,3 +109,7 @@ impl Clipping {
         }
     }
 }
+
+/// If specified, breaks hierarchy, making the sprite window space.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
+pub struct Detach;

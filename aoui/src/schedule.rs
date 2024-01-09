@@ -8,7 +8,7 @@ use bevy::window::PrimaryWindow;
 
 use crate::AouiREM;
 
-use crate::core::pipeline::{compute_aoui_transforms, TRoot, TAll};
+use crate::core::pipeline::{compute_aoui_transforms, compute_aoui_opacity};
 use crate::core::systems::*;
 
 /// Fetch info for the tree, happens before `AouiTreeUpdate`.
@@ -85,9 +85,10 @@ impl bevy::prelude::Plugin for CorePlugin {
                 copy_dimension_text,
                 copy_dimension_atlas,
             ).in_set(AouiLoadInputSet))
-            .add_systems(PostUpdate,
-                compute_aoui_transforms::<PrimaryWindow, TRoot, TAll>
-            .in_set(AouiTreeUpdateSet))
+            .add_systems(PostUpdate, (
+                compute_aoui_transforms::<PrimaryWindow>,
+                compute_aoui_opacity
+            ).in_set(AouiTreeUpdateSet))
             .add_systems(PostUpdate, (
                 sync_dimension_atlas,
                 sync_dimension_sprite,

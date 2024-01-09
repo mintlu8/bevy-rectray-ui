@@ -68,7 +68,7 @@ pub fn copy_dimension_atlas(mut query: Query<(&TextureAtlasSprite, &Handle<Textu
 /// Synchonize size from `Dimension` to `Sprite`
 pub fn sync_dimension_sprite(mut query: Query<(&mut Sprite, &Dimension, &DimensionData)>) {
     query.iter_mut().for_each(|(mut sp, dimension, data)| {
-        if dimension.is_owned() {
+        if !dimension.is_copied() && sp.custom_size != Some(data.size) {
             sp.custom_size = Some(data.size)
         }
     })
@@ -77,7 +77,7 @@ pub fn sync_dimension_sprite(mut query: Query<(&mut Sprite, &Dimension, &Dimensi
 /// Synchonize size from `Dimension` to `TextureAtlasSprite`
 pub fn sync_dimension_atlas(mut query: Query<(&mut TextureAtlasSprite, &Dimension, &DimensionData)>) {
     query.iter_mut().for_each(|(mut sp, dimension, data)| {
-        if dimension.is_owned() {
+        if !dimension.is_copied() && sp.custom_size != Some(data.size) {
             sp.custom_size = Some(data.size)
         }
     })
@@ -86,7 +86,7 @@ pub fn sync_dimension_atlas(mut query: Query<(&mut TextureAtlasSprite, &Dimensio
 /// Copy owned dimension as text bounds. 
 pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimension, &DimensionData), Without<OptOutTextBoundsSync>>) {
     query.iter_mut().for_each(|(mut sp, dimension, data)| {
-        if dimension.is_owned() && sp.as_ref().size != data.size {
+        if !dimension.is_copied() && sp.as_ref().size != data.size {
             sp.size = data.size
         }
     })

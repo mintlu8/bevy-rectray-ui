@@ -15,7 +15,7 @@ pub fn main() {
 
 pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
     shape! (commands {
         shape: Shapes::Rectangle,
         stroke: (color!(purple), 2.8),

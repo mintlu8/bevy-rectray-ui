@@ -134,9 +134,7 @@ pub struct ParentInfo {
     pub anchor: Option<Vec2>,
     pub dimension: Vec2,
     pub em: f32,
-    pub opacity: f32,
     pub clip: Option<Affine2>,
-    pub disabled: bool,
 }
 
 impl ParentInfo {
@@ -164,6 +162,12 @@ impl RotatedRect {
     #[inline]
     pub fn center(&self) -> Vec2 {
         self.affine.translation
+    }
+
+    // Half dimension
+    #[inline]
+    pub fn half_dim(&self) -> Vec2 {
+        Vec2::from_angle(-self.rotation).rotate(self.affine.transform_vector2(Vec2::new(0.5, 0.5)))
     }
 
     /// convert a screen space point to local space, centered on `Center`.

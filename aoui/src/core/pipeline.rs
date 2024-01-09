@@ -1,3 +1,5 @@
+use std::mem;
+
 use bevy::{prelude::*, window::PrimaryWindow, ecs::query::{ReadOnlyWorldQuery, WorldQuery}, math::Affine2};
 
 use crate::{*, layout::*, dimension::DimensionMut};
@@ -15,20 +17,21 @@ const Z_INCREMENT: f32 = 0.01;
 
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::needless_pass_by_ref_mut)]
-fn propagate<TAll: ReadOnlyWorldQuery>(
+fn propagate(
     parent: ParentInfo,
     entity: Entity,
     rem: f32,
-    mut_query: &mut Query<AouiEntity, TAll>,
+    mut_query: &mut Query<AouiEntity>,
     flex_query: &Query<&Container>,
     parent_query: &Query<&Parent>,
     child_query: &Query<&Children>,
+    not_root: &Query<Entity, Without<Detach>>,
     control_query: &Query<&LayoutControl>,
     queue: &mut Vec<(Entity, ParentInfo)>) {
 
     if !mut_query.contains(entity) { return; }
 
-    if parent_query.get(entity).ok().map(|x| x.get()) != parent.entity {
+    if parent.entity.is_some() && parent_query.get(entity).ok().map(|x| x.get()) != parent.entity {
         panic!("Malformed hierarchy, parent child mismatch.")
     }
 
@@ -42,19 +45,15 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
     clipping.global = parent.clip;
 
     opacity.occluded = false;
-    opacity.computed_opacity = opacity.opacity * parent.opacity;
-    opacity.computed_disabled = opacity.disabled || parent.disabled;
-    let disabled = opacity.computed_disabled;
-    let opacity = opacity.computed_opacity;
 
     if let Ok(layout) = flex_query.get(entity) {
-        let children = child_query.get(entity).map(|x| x.iter()).into_iter().flatten();
+        let children = not_root.iter_many(child_query.get(entity).map(|x| x.iter()).into_iter().flatten());
         let mut other_entities = Vec::new();
         let mut args = Vec::new();
         let mut index = 0;
         for child in children {
-            if !mut_query.contains(*child) { continue }
-            if parent_query.get(*child).ok().map(|x| x.get()) != Some(entity) {
+            if !mut_query.contains(child) { continue }
+            if parent_query.get(child).ok().map(|x| x.get()) != Some(entity) {
                 panic!("Malformed hierarchy, parent child mismatch.")
             }
             // otherwise cloned property will recursively overflow this entire thing.
@@ -62,17 +61,17 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
 
             let range = layout.range.clone().unwrap_or(0..usize::MAX);
             // SAFETY: safe since double mut access is gated by the hierarchy check
-            if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { mut_query.get_unchecked(*child) } {
-                match control_query.get(*child) {
+            if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { mut_query.get_unchecked(child) } {
+                match control_query.get(child) {
                     Ok(LayoutControl::IgnoreLayout) => other_entities.push((
-                        *child, 
+                        child, 
                         child_transform.get_parent_anchor()
                     )),
                     control => {
                         if range.contains(&index) {
                             let _ = child_dim.update(dimension, em, rem);
                             args.push(LayoutItem {
-                                entity: *child,
+                                entity: child,
                                 anchor: child_transform.get_parent_anchor(),
                                 dimension: child_dim.estimate(dimension, em, rem),
                                 control: control.copied().unwrap_or_default(),
@@ -95,7 +94,6 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             entity_anchors.iter_mut().for_each(|(_, anc)| *anc *= fac);
         }
         dim.dynamic.size = size;
-        dim.dynamic.reliable_size = layout.reliable_dimension(size);
         let rect = RotatedRect::construct(
             &parent,
             transform.parent_anchor,
@@ -118,8 +116,6 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             anchor: None,
             dimension: size,
             em,
-            opacity,
-            disabled,
             clip: if clipping.clip {Some(rect.affine.inverse())} else {parent.clip},
         };
 
@@ -132,7 +128,6 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
         }
         return;
     }
-    dim.dynamic.reliable_size = Vec2::ZERO;
 
     let rect = RotatedRect::construct(
         &parent,
@@ -158,12 +153,10 @@ fn propagate<TAll: ReadOnlyWorldQuery>(
             anchor: None,
             dimension,
             em,
-            opacity,
-            disabled,
             clip: if clipping.clip {Some(rect.affine.inverse())} else {parent.clip},
         };
-        for child in children {
-            queue.push((*child, info))
+        for child in not_root.iter_many(children) {
+            queue.push((child, info))
         }
     }
 
@@ -214,13 +207,14 @@ pub(crate) type TAll = ();
 /// 
 /// TAll: Readonly query for all children, including TRoot.
 #[allow(clippy::too_many_arguments)]
-pub fn compute_aoui_transforms<'t, R: RootQuery<'t>, TRoot: ReadOnlyWorldQuery, TAll: ReadOnlyWorldQuery>(
+pub fn compute_aoui_transforms<'t, R: RootQuery<'t>>(
     root: Query<R::Query, R::ReadOnly>,
-    root_entities: Query<Entity, TRoot>,
-    mut entity_query: Query<AouiEntity, TAll>,
+    root_entities: Query<Entity, Or<(Without<Parent>, With<Detach>)>>,
+    mut entity_query: Query<AouiEntity>,
     flex_query: Query<&Container>,
     parent_query: Query<&Parent>,
     child_query: Query<&Children>,
+    not_root: Query<Entity, Without<Detach>>,
     control_query: Query<&LayoutControl>,
     res_rem: Option<Res<AouiREM>>,
 ) {
@@ -235,8 +229,6 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>, TRoot: ReadOnlyWorldQuery, 
         anchor: None,
         dimension,
         em: rem,
-        opacity: 1.0,
-        disabled: false,
         clip: None,
     };
 
@@ -253,9 +245,59 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>, TRoot: ReadOnlyWorldQuery, 
                 &flex_query, 
                 &parent_query, 
                 &child_query, 
+                &not_root,
                 &control_query, 
                 &mut queue
             );
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct OpacityStatus {
+    parent: Option<Entity>,
+    opacity: f32,
+    disabled: bool,
+}
+
+fn propagate_aoui_opacity (
+    queue: &mut Vec<(Entity, OpacityStatus)>,
+    query: &mut Query<(Entity, &mut Opacity)>,
+    parent_query: &Query<&Parent>,
+    child_query: &Query<&Children>,
+) {
+    for (entity, status) in mem::take(queue) {
+        let Ok((_, mut opacity)) = query.get_mut(entity) else {continue};
+        if parent_query.get(entity).map(|x| x.get()).ok() != status.parent {
+            panic!("Malformed hierarchy, parent child mismatch.")
+        }
+        opacity.computed_opacity = opacity.opacity * status.opacity;
+        opacity.computed_disabled = opacity.disabled || status.disabled;
+        let status = OpacityStatus {
+            parent: Some(entity),
+            opacity: opacity.computed_opacity,
+            disabled: opacity.disabled,
+        };
+        if let Ok(children) = child_query.get(entity){
+            queue.extend(children.iter().map(|x| (*x, status)));
+        }
+    }
+}
+
+pub fn compute_aoui_opacity(
+    root: Query<Entity, Without<Parent>>,
+    mut query: Query<(Entity, &mut Opacity)>,
+    parent_query: Query<&Parent>,
+    child_query: Query<&Children>,
+) {
+    let mut queue: Vec<_> = query.iter_many(root.iter())
+        .map(|(e, _)| (e, OpacityStatus {
+            parent: None,
+            opacity: 1.0,
+            disabled: false,
+        }))
+        .collect();
+    while !queue.is_empty() {
+        propagate_aoui_opacity(&mut queue, &mut query, &parent_query, &child_query)
     }
 }

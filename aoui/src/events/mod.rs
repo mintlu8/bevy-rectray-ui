@@ -56,7 +56,9 @@
 //! but these are outside the scope of this crate.
 
 use bevy::{prelude::*, ecs::query::WorldQuery};
-use crate::{schedule::{AouiEventSet, AouiCleanupSet}, Hitbox, Clipping, RotatedRect, Opacity, widgets::button::CursorDefault};
+use crate::{Hitbox, Clipping, RotatedRect, Opacity};
+use crate::widgets::util::CursorDefault;
+use crate::schedule::{AouiEventSet, AouiCleanupSet};
 
 mod systems;
 mod state;
@@ -74,12 +76,13 @@ pub use state::*;
 use systems::*;
 pub use handler::*;
 pub use wheel::{MouseWheelAction, ScrollScaling};
-pub use cursor::CustomCursor;
+pub use cursor::{CustomCursor, TrackCursor};
 pub use mutation::Mutation;
 pub use oneshot::OneShot;
 pub use fetch::*;
+pub use cursor::CameraQuery;
 
-use self::cursor::custom_cursor_controller;
+use self::cursor::{custom_cursor_controller, track_cursor};
 pub use coverage::{FetchCoveragePercent, FetchCoveragePx};
 
 /// Marker component for Aoui's camera, optional.
@@ -176,6 +179,7 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .add_systems(Update, (
                 lose_focus_detection,
                 obtain_focus_detection,
+                track_cursor,
                 custom_cursor_controller,
                 coverage::calculate_coverage,
             ))

@@ -402,43 +402,6 @@ macro_rules! meta_dsl {
     };
 }
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! transform2d {
-    ($this: expr) => {
-        $crate::Transform2D {
-            center: $this.center.unwrap_or($crate::Anchor::Inherit),
-            anchor: $this.anchor,
-            parent_anchor: $this.parent_anchor.unwrap_or($crate::Anchor::Inherit),
-            offset: $this.offset,
-            rotation: $this.rotation,
-            scale: match $this.scale{
-                Some($crate::dsl::prelude::OneOrTwo(vec)) => vec,
-                None => $crate::bevy::math::Vec2::ONE,
-            },
-            z: $this.z
-        }
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! dimension {
-    ($this: expr) => {
-        {
-            let dimension = match $this.dimension {
-                Some(size) => $crate::Dimension::owned(size),
-                None => $crate::Dimension::COPIED.with_em($this.font_size),
-            }.with_em($this.font_size);
-            match $this.aspect {
-                $crate::dsl::Aspect::None => dimension,
-                $crate::dsl::Aspect::Preserve => dimension.with_preserve_aspect(true),
-                $crate::dsl::Aspect::Owned(_) => dimension.with_preserve_aspect(true),
-            }
-        }
-    }
-}
-
 /// Create a widget builder based on the definition of a primitive widget `Frame`.
 /// 
 /// Use `build_frame!` to utilize this definition.
@@ -462,7 +425,7 @@ macro_rules! widget_extension {
             /// Usually should not be set in idiomatic use.
             pub parent_anchor: Option<$crate::Anchor>,
             /// Center of the sprite, default is `center`.
-            pub center: Option<$crate::Anchor>,
+            pub center: $crate::Anchor,
             /// Propagated opacity.
             pub opacity: $crate::Opacity,
             /// Visible, default is inherited.
@@ -482,7 +445,7 @@ macro_rules! widget_extension {
             /// If not set, size is fetched dynamically from various sources.
             /// 
             /// The `size` field from `SpriteBuilder` sets the size of the underlying sprite instead.
-            pub dimension: Option<$crate::Size2>,
+            pub dimension: $crate::DimensionType,
             /// Aspect ratio of sprite, default unused.
             pub aspect: $crate::dsl::Aspect,
             /// Propagated font size.
@@ -495,6 +458,8 @@ macro_rules! widget_extension {
             /// The click detection area of the sprite.
             pub hitbox: Option<$crate::Hitbox>,
             /// The render layer of the sprite.
+            /// 
+            /// If this is `Some`, the default `dimension` is `Owned(0, 0)`.
             pub layer: Option<$crate::bevy::render::view::RenderLayers>,
             /// Layout of the widget's children.
             pub layout: Option<Box<dyn $crate::layout::Layout>>,

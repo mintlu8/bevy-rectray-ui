@@ -1,7 +1,7 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::{AouiPlugin, WorldExtension, dsl::AouiCommands};
-use bevy_matui::{MatuiPlugin, mbutton, mtoggle, widgets::{util::WidgetPalette, toggle::DialPalette, frame::WindowPalette}, palette, mwindow, mslider};
-
+use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, widgets::{util::WidgetPalette, toggle::DialPalette, frame::FramePalette}, palette, mwindow, mslider, minput};
+use bevy_aoui::layout::BoundsLayout;
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -27,7 +27,7 @@ pub fn init(mut commands: AouiCommands) {
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
-        color: color!(gold),
+        color: color!(black),
         extra: fps_channel(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
@@ -55,11 +55,11 @@ pub fn init(mut commands: AouiCommands) {
 
     mwindow!(commands {
         radius: 5,
-        palette: palette!(WindowPalette { 
+        palette: palette!(FramePalette { 
             background: white,
-            banner: purple, 
+            stroke: neutral400,
         }),
-        margin: size2!(0, 0.5 em),
+        margin: size2!(0, 0.2 em),
         z: 40,
         shadow: 12,
         collapse: collapse_recv,
@@ -102,7 +102,25 @@ pub fn init(mut commands: AouiCommands) {
                 palette: palette_idle,
                 palette_hover: palette_hover,
                 palette_pressed: palette_pressed,
-                text: "Click Me!"
+                text: "Click Me!",
+                child: mframe! { 
+                    anchor: TopLeft,
+                    palette: palette!(FramePalette { 
+                        background: white,
+                    }),
+                    radius: 5,
+                    shadow: 5,
+                    padding: 5,
+                    extra: TrackCursor::DEFAULT,
+                    extra: Detach,
+                    z: 100,
+                    layout: BoundsLayout::PADDING,
+                    extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
+                    child: text! {
+                        text: "Just please, click me, my friend!",
+                        color: color!(darkblue),
+                    }
+                }
             },
         },
         child: hstack! {
@@ -115,24 +133,36 @@ pub fn init(mut commands: AouiCommands) {
                 background_size: 1.0,
                 length: 2,
                 dial_size: 1.6,
+                dial_shadow: 2.0,
                 palette: palette!(DialPalette {
-                    background: white, 
+                    background: red300, 
                     dial: red500, 
                 }),
                 checked_palette: palette!(DialPalette {
                     background: red700, 
                     dial: red500, 
                 }),
-                dial_shadow: (4, color!(grey)),
             }
         },
 
         child: mslider! {
             range: (0..5),
+            dial_shadow: 2.0,
             palette: palette!(DialPalette {
                 background: grey, 
                 dial: red500, 
-            })
+            }),
+            hover_palette: palette!(DialPalette {
+                background: grey, 
+                dial: red600, 
+            }),
+        },
+
+        child: minput! {
+            text: "Hello, World!",
+            width: 20,
+            radius: 5,
+            palette: palette_idle,
         }
     });
 
@@ -151,14 +181,14 @@ pub fn init(mut commands: AouiCommands) {
         offset: [0, 100],
         palette: palette!(DialPalette {
             background: white, 
-            dial: red500, 
             background_stroke: red700, 
+            dial: red500, 
             icon: white,
         }),
         checked_palette: palette!(DialPalette {
             background: red700, 
-            dial: white, 
             background_stroke: red700,
+            dial: white, 
             icon: red700,
         }),
         icon: "cross.png",

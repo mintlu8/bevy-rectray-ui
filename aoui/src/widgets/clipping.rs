@@ -1,12 +1,23 @@
-use bevy::{render::{primitives::Frustum, texture::Image, color::Color}, transform::components::GlobalTransform};
-use bevy::core_pipeline::core_2d::Camera2dBundle;
+use crate::{dsl::CloneSplit, Anchor, BuildTransform, DimensionData};
 use bevy::asset::{AssetServer, Handle};
-use bevy::ecs::{component::Component, bundle::Bundle, system::Query, query::With};
-use bevy::render::render_resource::{Extent3d, TextureUsages, TextureDescriptor, TextureDimension, TextureFormat};
-use bevy::render::view::{VisibleEntities, RenderLayers};
-use bevy::render::camera::{Camera, CameraRenderGraph, OrthographicProjection, RenderTarget, ScalingMode};
-use bevy::core_pipeline::{core_2d::Camera2d, tonemapping::{Tonemapping, DebandDither}, clear_color::ClearColorConfig};
-use crate::{BuildTransform, Anchor, DimensionData, dsl::CloneSplit};
+use bevy::core_pipeline::core_2d::Camera2dBundle;
+use bevy::core_pipeline::{
+    clear_color::ClearColorConfig,
+    core_2d::Camera2d,
+    tonemapping::{DebandDither, Tonemapping},
+};
+use bevy::ecs::{bundle::Bundle, component::Component, query::With, system::Query};
+use bevy::render::camera::{
+    Camera, CameraRenderGraph, OrthographicProjection, RenderTarget, ScalingMode,
+};
+use bevy::render::render_resource::{
+    Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
+};
+use bevy::render::view::{RenderLayers, VisibleEntities};
+use bevy::{
+    render::{color::Color, primitives::Frustum, texture::Image},
+    transform::components::GlobalTransform,
+};
 
 use crate::dsl::DslInto;
 
@@ -32,9 +43,11 @@ pub struct ScopedCameraBundle {
     pub global: GlobalTransform,
 }
 
-
 /// Create an image suitable as a render target.
-pub fn render_target<T: CloneSplit<Handle<Image>>>(assets: impl AsRef<AssetServer>, [width, height]: [u32; 2]) -> T {
+pub fn render_target<T: CloneSplit<Handle<Image>>>(
+    assets: impl AsRef<AssetServer>,
+    [width, height]: [u32; 2],
+) -> T {
     let handle = assets.as_ref().add(Image {
         texture_descriptor: TextureDescriptor {
             label: None,
@@ -59,9 +72,12 @@ pub fn render_target<T: CloneSplit<Handle<Image>>>(assets: impl AsRef<AssetServe
 }
 
 impl ScopedCameraBundle {
-
-    /// Create a camera and its render target. 
-    pub fn new(assets: impl AsRef<AssetServer>, dimension: [u32; 2], layer: impl DslInto<RenderLayers>) -> (Self, Handle<Image>) {
+    /// Create a camera and its render target.
+    pub fn new(
+        assets: impl AsRef<AssetServer>,
+        dimension: [u32; 2],
+        layer: impl DslInto<RenderLayers>,
+    ) -> (Self, Handle<Image>) {
         let (cam, texture) = render_target(assets, dimension);
         (Self::from_image(cam, layer), texture)
     }
@@ -69,17 +85,19 @@ impl ScopedCameraBundle {
     /// Create a camera from a render target.
     pub fn from_image(target: Handle<Image>, layer: impl DslInto<RenderLayers>) -> Self {
         let bun = Camera2dBundle::default();
-        Self { 
-            clip: CameraClip, 
-            camera: Camera { 
+        Self {
+            clip: CameraClip,
+            camera: Camera {
                 target: RenderTarget::Image(target.clone()),
                 ..Default::default()
-            }, 
+            },
             camera_render_graph: bun.camera_render_graph,
             projection: bun.projection,
             visible_entities: bun.visible_entities,
             frustum: bun.frustum,
-            camera_2d: Camera2d {clear_color: ClearColorConfig::Custom(Color::NONE)}, 
+            camera_2d: Camera2d {
+                clear_color: ClearColorConfig::Custom(Color::NONE),
+            },
             tonemapping: bun.tonemapping,
             deband_dither: bun.deband_dither,
             render_layer: layer.dinto(),
@@ -93,9 +111,9 @@ pub fn sync_camera_dimension(
     mut query: Query<(&DimensionData, &mut OrthographicProjection), With<CameraClip>>,
 ) {
     for (dimension, mut proj) in query.iter_mut() {
-        proj.scaling_mode = ScalingMode::Fixed { 
-            width: dimension.size.x, 
-            height: dimension.size.y 
+        proj.scaling_mode = ScalingMode::Fixed {
+            width: dimension.size.x,
+            height: dimension.size.y,
         };
     }
 }

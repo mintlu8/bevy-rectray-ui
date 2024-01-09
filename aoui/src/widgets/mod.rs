@@ -11,9 +11,6 @@
 //! | [`CheckButton`](button::CheckButton) | Context, checked or unchecked for a `check_button`. |
 //! | [`RadioButton`](button::RadioButton) | Context for a `radio_button`. |
 //! | [`Payload`](button::Button) | Data sent by `EvButtonClick`. |
-//! | [`PropagateFocus`](button::PropagateFocus) | Propagate `CursorFocus` and `CheckButtonState`. |
-//! | [`SetCursor`](button::SetCursor) | Set cursor icon during some cursor events. |
-//! | [`DisplayIf`](button::DisplayIf) | Display if some condition is met. |
 //! | [`RadioButtonCancel`](button::RadioButtonCancel) | Allow clicking radio button again to remove its value. |
 //!
 //! # Scrolling
@@ -40,6 +37,14 @@
 //! | --------- | ----------- |
 //! | [`ScopedCameraBundle`](clipping::ScopedCameraBundle) | Bind a camera to a sprite's `RotatedRect`. |
 //! 
+//! # Misc
+//! 
+//! | Bundle | Description |
+//! | --------- | ----------- |
+//! | [`PropagateFocus`](util::PropagateFocus) | Propagate `CursorFocus` and `CheckButtonState`. |
+//! | [`SetCursor`](util::SetCursor) | Set cursor icon during some cursor events. |
+//! | [`DisplayIf`](util::DisplayIf) | Display if some condition is met. |
+//! 
 //! # InputBox
 //! 
 //! | Component | Description |
@@ -62,6 +67,7 @@ pub mod richtext;
 pub mod scroll;
 pub mod clipping;
 pub mod button;
+pub mod util;
 mod constraints;
 mod atlas;
 pub use atlas::DeferredAtlasBuilder;
@@ -69,9 +75,11 @@ pub use constraints::SharedPosition;
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::app::{Plugin, PreUpdate, Update, PostUpdate, Last};
 
-use crate::{schedule::{AouiButtonEventSet, AouiWidgetEventSet, AouiLoadInputSet, AouiStoreOutputSet, AouiCleanupSet, AouiEventSet}, events::{CursorAction, CursorFocus}};
+use crate::events::{CursorAction, CursorFocus};
+use crate::schedule::{AouiButtonEventSet, AouiWidgetEventSet, AouiLoadInputSet, AouiStoreOutputSet, AouiCleanupSet, AouiEventSet};
 
 use self::button::CheckButtonState;
+use self::inputbox::InputBoxFocus;
 
 pub(crate) struct WidgetsPlugin;
 
@@ -87,13 +95,16 @@ impl Plugin for WidgetsPlugin {
                 button::generate_check_button_state,
             ).in_set(AouiEventSet))
             .add_systems(PreUpdate, (
-                inputbox::text_on_mouse_down,
-                inputbox::text_on_click_outside,
-                inputbox::text_on_mouse_double_click,
-                inputbox::inputbox_keyboard,
-                button::propagate_focus::<CursorAction>,
-                button::propagate_focus::<CursorFocus>,
-                button::propagate_focus::<CheckButtonState>,
+                (   
+                    inputbox::text_on_mouse_down,
+                    inputbox::text_on_click_outside,
+                    inputbox::text_on_mouse_double_click,
+                    inputbox::inputbox_keyboard
+                ).before(util::propagate_focus::<InputBoxFocus>),
+                util::propagate_focus::<CursorAction>,
+                util::propagate_focus::<CursorFocus>,
+                util::propagate_focus::<CheckButtonState>,
+                util::propagate_focus::<InputBoxFocus>,
                 drag::drag_start,
                 drag::drag_end,
                 drag::dragging.after(drag::drag_start),
@@ -106,14 +117,17 @@ impl Plugin for WidgetsPlugin {
                 constraints::drag_constraint,
                 constraints::discrete_scroll_sync,
                 inputbox::update_inputbox_cursor,
-                button::set_cursor,
-                button::event_conditional_visibility,
-                button::check_conditional_visibility,
+                util::set_cursor,
+                util::event_conditional_visibility,
+                util::check_conditional_visibility,
+                inputbox::draw_input_box,
+                inputbox::text_propagate_focus,
+                inputbox::inputbox_conditional_visibility,
                 atlas::build_deferred_atlas,
             ))
             .add_systems(PostUpdate, richtext::synchronize_glyph_spaces.in_set(AouiLoadInputSet))
             .add_systems(PostUpdate, inputbox::sync_em_inputbox.in_set(AouiStoreOutputSet))
-            .add_systems(Last, button::remove_check_button_state.in_set(AouiCleanupSet))
+            .add_systems(Last, util::remove_all::<CheckButtonState>.in_set(AouiCleanupSet))
             .add_systems(Last, constraints::remove_position_changed.in_set(AouiCleanupSet))
         ;
     }

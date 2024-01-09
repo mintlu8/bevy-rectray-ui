@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, material_sprite};
+use bevy_aoui::{AouiPlugin, material_sprite, dsl::AouiCommands};
 use bevy_matui::{MatuiPlugin, shapes::{RoundedRectangleMaterial, RoundedShadowMaterial}};
 
 pub fn main() {
@@ -21,7 +21,7 @@ pub fn main() {
 
 pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
         anchor: TopRight,
@@ -32,11 +32,10 @@ pub fn init(mut commands: AouiCommands) {
         })
     });
 
-
     material_sprite!(commands {
         offset: size2!(0, 25%),
         dimension: size2!(20%, 20%),
-        material: RoundedRectangleMaterial::capsule_image(assets.load("bricks.png"), color!(white)),
+        material: RoundedRectangleMaterial::capsule_image(commands.load("bricks.png"), color!(white)),
         child: material_sprite! {
             dimension: size2!(1 + 40 px, 1 + 40 px),
             material: RoundedShadowMaterial::capsule(color!(black), 20.0),
@@ -47,7 +46,7 @@ pub fn init(mut commands: AouiCommands) {
     material_sprite!(commands {
         offset: size2!(25%, 25%),
         dimension: size2!(20%, 20%),
-        material: RoundedRectangleMaterial::from_image(assets.load("bricks.png"), color!(white), 20.0),
+        material: RoundedRectangleMaterial::from_image(commands.load("bricks.png"), color!(white), 20.0),
         child: material_sprite! {
             dimension: size2!(1 + 40 px, 1 + 40 px),
             material: RoundedShadowMaterial::new(color!(black), 20.0, 20.0),

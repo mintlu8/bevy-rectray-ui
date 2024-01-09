@@ -30,10 +30,13 @@ pub fn init(mut commands: AouiCommands) {
         font: "RobotoCondensed.ttf",
         color: color!(red),
         cursor_bar: rectangle! {
-            color: color!(gold),
+            color: color!(red),
             z: 0.1,
             dimension: size2!(2, 1 em),
-            extra: transition!(Color 0.5 QuadraticInOut loop [(transparent, 0.0), (gold, 1.0)] ),
+            extra: transition!(
+                Opacity 0.5 QuadraticInOut loop [(0.0, 0.0), (1.0, 0.5), (1.0, 1.0)];
+            ),
+            
         },
         cursor_area: rectangle! {
             color: color!(green) * 0.5,
@@ -56,10 +59,12 @@ pub fn init(mut commands: AouiCommands) {
         font: "ComicNeue-Regular.ttf",
         color: color!(red),
         cursor_bar: rectangle! {
-            color: color!(gold),
+            color: color!(red),
             z: 0.1,
             dimension: size2!(2, 1 em),
-            extra: transition!(Color 0.5 QuadraticInOut loop [(transparent, 0.0), (gold, 1.0)]),
+            extra: transition!(
+                Opacity 0.5 QuadraticInOut loop [(0.0, 0.0), (1.0, 0.5), (1.0, 1.0)];
+            ),
         },
         cursor_area: rectangle! {
             color: color!(green) * 0.5,

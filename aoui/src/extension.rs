@@ -1,5 +1,5 @@
 use bevy::{window::CursorIcon, app::{App, Update}, math::Vec2};
-use crate::{widgets::button::CursorDefault, events::ScrollScaling, dsl::DslInto};
+use crate::{widgets::util::CursorDefault, events::ScrollScaling, dsl::DslInto};
 
 /// Extension methods to `World` and `App`
 pub trait WorldExtension {

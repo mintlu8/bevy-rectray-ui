@@ -1,39 +1,39 @@
-use bevy::hierarchy::Children;
-use bevy::asset::{Handle, Assets};
-use bevy::input::{keyboard::KeyCode, Input};
-use bevy::ecs::{query::Changed, event::EventReader, system::Commands};
-use bevy::render::color::Color;
-use bevy::window::{Window, PrimaryWindow, ReceivedCharacter};
-use bevy::text::{Text, Font};
-use bevy::prelude::{Component, Query, Entity, With, Parent, Visibility, Without, Res};
-use crate::{DimensionData, Dimension};
+use std::mem;
+use crate::anim::VisibilityToggle;
 use crate::dimension::DimensionMut;
-use crate::signals::{KeyStorage, Invoke, ReceiveInvoke};
-use crate::{RotatedRect, Transform2D, bundles::AouiTextBundle};
-use crate::events::{CursorState, CursorFocus, CursorClickOutside, EventFlags, CursorAction, ActiveDetection, EvTextChange, EvTextSubmit, Handlers};
-use ab_glyph::Font as FontTrait;
+use crate::events::{
+    ActiveDetection, CursorAction, CursorClickOutside, CursorFocus, CursorState, EvTextChange,
+    EvTextSubmit, EventFlags, Handlers,
+};
+use crate::signals::{Invoke, KeyStorage, ReceiveInvoke};
+use crate::{RotatedRect, Transform2D, DimensionData};
+use ab_glyph::{Font as FontTrait, ScaleFont, point};
+use bevy::asset::{Assets, Handle};
+use bevy::ecs::query::Has;
+use bevy::ecs::system::ResMut;
+use bevy::ecs::{event::EventReader, query::Changed, system::Commands};
+use bevy::hierarchy::Children;
+use bevy::input::{keyboard::KeyCode, Input};
+use bevy::prelude::{Component, Entity, Parent, Query, Res, Visibility, With, Without};
+use bevy::reflect::Reflect;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::texture::Image;
+use bevy::text::{Font, Text};
+use bevy::window::ReceivedCharacter;
+use super::util::DisplayIf;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, Reflect)]
 enum LeftRight {
-    Left, #[default] Right,
+    Left,
+    #[default]
+    Right,
 }
 
-
-/// Color of an [`InputBox`].
-#[derive(Debug, Clone, Copy, Component)]
-pub struct TextColor(pub Color);
-
-impl TextColor {
-    pub fn get(&self) -> Color {
-        self.0
-    }
-    pub fn set(&mut self, color: Color) {
-        self.0 = color
-    }
-}
+#[derive(Debug, Default, Clone, Copy, Component, Reflect)]
+pub struct InputBoxFocus;
 
 /// If we deny overflowing input or not.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Reflect)]
 pub enum InputOverflow {
     /// Deny overflow.
     #[default]
@@ -48,16 +48,16 @@ pub enum InputOverflow {
 
 /// Context for a single line text input.
 /// Holds text and cursor information.
-/// 
+///
 /// InputBox requires 3 children to function properly:
-/// 
+///
 /// * [`InputBoxText`]: empty frame component containing individual glyphs.
 /// * [`InputBoxCursorBar`]: vertical bar of the cursor.
 /// * [`InputBoxCursorArea`]: select area of the cursor.
-/// 
+///
 /// Warning: This widget does not rebuild its glyph entities every frame,
 /// might not behave properly if tempered externally.
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Component, Default, Reflect)]
 pub struct InputBox {
     overflow: InputOverflow,
     cursor_start: usize,
@@ -68,6 +68,7 @@ pub struct InputBox {
     em: f32,
 }
 
+
 impl ReceiveInvoke for InputBox {
     type Type = ();
 }
@@ -77,24 +78,24 @@ impl ReceiveInvoke for InputBox {
 pub struct InputBoxText;
 
 /// Marker component for a vertical bar of the cursor.
-/// 
+///
 /// This component can be any sprite.
-/// 
+///
 /// Requires `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
 #[derive(Debug, Component, Default)]
 pub struct InputBoxCursorBar;
 
 /// Marker component for the area of the cursor.
-/// 
+///
 /// This component sets the `dimension` when area is changed, so anything that
 /// updates alongside dimension can be used here.
-/// 
+///
 /// Requires `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
 #[derive(Debug, Component, Default)]
 pub struct InputBoxCursorArea;
 
 impl InputBox {
-    pub fn new(s: impl Into<String>, overflow: InputOverflow) -> Self{
+    pub fn new(s: impl Into<String>, overflow: InputOverflow) -> Self {
         Self {
             text: s.into(),
             overflow,
@@ -141,7 +142,8 @@ impl InputBox {
     /// Get the selected portion of the string.
     pub fn selected(&self) -> &str {
         use substring::Substring;
-        self.text.substring(self.cursor_start, self.cursor_start + self.cursor_len)
+        self.text
+            .substring(self.cursor_start, self.cursor_start + self.cursor_len)
     }
 
     /// Select all text in the widget by setting widget to `[0, len]`.
@@ -168,7 +170,9 @@ impl InputBox {
 
     /// Try push char and obtain the string, may deny based on length.
     pub fn try_push(&self, c: char) -> String {
-        self.text.chars().take(self.cursor_start)
+        self.text
+            .chars()
+            .take(self.cursor_start)
             .chain(std::iter::once(c))
             .chain(self.text.chars().skip(self.cursor_start + self.cursor_len))
             .collect()
@@ -176,7 +180,10 @@ impl InputBox {
 
     /// Simulate the behavior of typing a char.
     pub fn push(&mut self, c: char) {
-        self.text = self.text.chars().take(self.cursor_start)
+        self.text = self
+            .text
+            .chars()
+            .take(self.cursor_start)
             .chain(std::iter::once(c))
             .chain(self.text.chars().skip(self.cursor_start + self.cursor_len))
             .collect();
@@ -185,8 +192,10 @@ impl InputBox {
     }
 
     /// Try push str and obtain the string, may deny based on length.
-    pub fn try_push_str(&self, c: &str) -> String{
-        self.text.chars().take(self.cursor_start)
+    pub fn try_push_str(&self, c: &str) -> String {
+        self.text
+            .chars()
+            .take(self.cursor_start)
             .chain(c.chars())
             .chain(self.text.chars().skip(self.cursor_start + self.cursor_len))
             .collect()
@@ -195,7 +204,10 @@ impl InputBox {
     /// Simulates the behavior of pasting.
     pub fn push_str(&mut self, c: &str) {
         let len = c.chars().count();
-        self.text = self.text.chars().take(self.cursor_start)
+        self.text = self
+            .text
+            .chars()
+            .take(self.cursor_start)
             .chain(c.chars())
             .chain(self.text.chars().skip(self.cursor_start + self.cursor_len))
             .collect();
@@ -213,13 +225,12 @@ impl InputBox {
 
     /// Simulates the behavior of clicking `right`.
     pub fn cursor_right(&mut self) {
-
         match self.cursor_len {
             0 => self.cursor_start = (self.cursor_start + 1).min(self.len()),
             _ => {
                 self.cursor_start += self.cursor_len;
                 self.cursor_len = 0;
-            },
+            }
         }
     }
 
@@ -227,19 +238,23 @@ impl InputBox {
     pub fn cursor_select_left(&mut self) {
         match (self.cursor_len, self.active) {
             (0, _) => {
-                if self.cursor_start == 0 { return }
+                if self.cursor_start == 0 {
+                    return;
+                }
                 self.active = LeftRight::Left;
                 self.cursor_start -= 1;
                 self.cursor_len += 1;
-            },
+            }
             (_, LeftRight::Left) => {
-                if self.cursor_start == 0 { return }
+                if self.cursor_start == 0 {
+                    return;
+                }
                 self.cursor_start -= 1;
                 self.cursor_len += 1;
-            },
+            }
             (_, LeftRight::Right) => {
                 self.cursor_len -= 1;
-            },
+            }
         }
     }
 
@@ -247,27 +262,30 @@ impl InputBox {
     pub fn cursor_select_right(&mut self) {
         match (self.cursor_len, self.active) {
             (0, _) => {
-                if self.cursor_start + self.cursor_len >= self.len() { return }
+                if self.cursor_start + self.cursor_len >= self.len() {
+                    return;
+                }
                 self.active = LeftRight::Right;
                 self.cursor_len += 1;
-            },
+            }
             (_, LeftRight::Left) => {
                 self.cursor_start += 1;
                 self.cursor_len -= 1;
-            },
+            }
             (_, LeftRight::Right) => {
-                if self.cursor_start + self.cursor_len >= self.len() { return }
+                if self.cursor_start + self.cursor_len >= self.len() {
+                    return;
+                }
                 self.cursor_len += 1;
-            },
+            }
         }
     }
-
 
     /// Simulate the behavior of clicking `backspace`.
     pub fn backspace(&mut self) {
         if self.cursor_len > 0 {
             self.swap_selected("");
-        } else if self.cursor_start > 0{
+        } else if self.cursor_start > 0 {
             self.cursor_start -= 1;
             self.cursor_len = 1;
             self.swap_selected("");
@@ -278,20 +296,25 @@ impl InputBox {
     pub fn delete(&mut self) {
         if self.cursor_len > 0 {
             self.swap_selected("");
-        } else if self.cursor_start < self.len() - 1{
+        } else if self.cursor_start < self.len() - 1 {
             self.cursor_len += 1;
             self.swap_selected("");
-        } 
+        }
     }
 
     /// Swap the selected area with another string.
     pub fn swap_selected(&mut self, swapped: &str) -> String {
         let len = swapped.chars().count();
-        let result = self.text.chars()
+        let result = self
+            .text
+            .chars()
             .skip(self.cursor_start)
             .take(self.cursor_len)
             .collect();
-        self.text = self.text.chars().take(self.cursor_start)
+        self.text = self
+            .text
+            .chars()
+            .take(self.cursor_start)
             .chain(swapped.chars())
             .chain(self.text.chars().skip(self.cursor_start + self.cursor_len))
             .collect();
@@ -302,25 +325,45 @@ impl InputBox {
 
 pub fn text_on_mouse_down(
     state: Res<CursorState>,
-    window: Query<&Window, With<PrimaryWindow>>,
-    mut query: Query<(Entity, &CursorFocus, &mut InputBox, &RotatedRect)>,
-    text: Query<(&Parent, &Children), With<InputBoxText>>,
-    glyphs: Query<&Transform2D>,
+    fonts: Res<Assets<Font>>,
+    mut query: Query<(&DimensionData, &CursorFocus, &mut InputBox, &Handle<Font>, &RotatedRect)>,
 ) {
-    let scale = window.get_single().map(|x| x.scale_factor() as f32).unwrap_or(1.0);
-    for (entity, focus, mut input_box, rect) in query.iter_mut() {
-        if !focus.intersects(EventFlags::LeftDrag) {continue;};
-        let Some((_, children)) = text.into_iter().find(|(p, ..)| p.get() == entity) else {continue;};
+    for (dim, focus, mut input_box, font, rect) in query.iter_mut() {
+        if !focus.intersects(EventFlags::LeftDrag) {
+            continue;
+        };
+        let Some(font) = fonts.get(font) else {continue};
+        // We only need to care about scale factor in rendering
+        let font = font.font.as_scaled(dim.em);
 
-        let cursor = rect.local_space(state.cursor_position()) * scale / 2.0; 
-        let down = rect.local_space(state.down_position()) * scale / 2.0;
+        let curr = rect.local_space(state.cursor_position()).x;
+        let down = rect.local_space(state.down_position()).x;
 
-        let start = glyphs.iter_many(children)
-            .position(|x| x.offset.raw().x > cursor.x)
-            .unwrap_or(children.len());
-        let end = glyphs.iter_many(children)
-            .position(|x| x.offset.raw().x > down.x)
-            .unwrap_or(children.len());
+        let mut start = None;
+        let mut end = None;
+        let mut last_char = font.glyph_id(' ');
+        let mut cursor = -dim.size.x / 2.0;
+        for (index, char) in input_box.text.chars().enumerate() {
+            let id = font.glyph_id(char);
+            cursor += font.kern(last_char, id);
+
+            let half = (font.h_advance(id) - font.h_side_bearing(id)) / 2.0;
+
+            if start.is_none() && curr < cursor + half {
+                start = Some(index)
+            }
+            if end.is_none() && down < cursor + half {
+                end = Some(index)
+            }
+            cursor += font.h_advance(id);
+            last_char = id;
+            if start.is_some() && end.is_some() {
+                break;
+            }
+        }
+        let count = input_box.text.chars().count();
+        let start = start.unwrap_or(count);
+        let end = end.unwrap_or(count);
 
         let (start, end) = if start > end {
             (end, start)
@@ -332,9 +375,7 @@ pub fn text_on_mouse_down(
     }
 }
 
-pub fn text_on_mouse_double_click(
-    mut query: Query<(&mut InputBox, &CursorAction)>
-) {
+pub fn text_on_mouse_double_click(mut query: Query<(&mut InputBox, &CursorAction)>) {
     for (mut input_box, action) in query.iter_mut() {
         if action.is(EventFlags::DoubleClick) {
             input_box.select_all();
@@ -343,11 +384,48 @@ pub fn text_on_mouse_double_click(
     }
 }
 
-pub fn measure_string<F: ab_glyph::Font>(font: &impl ab_glyph::ScaleFont<F>, string: String) -> f32 {
+pub fn text_propagate_focus(
+    mut commands: Commands,
+    query: Query<(Entity, &InputBox)>,
+    entities: Query<&Children>,
+) {
+    let mut queue = Vec::new();
+    for (entity, input_box) in query.iter() {
+        if input_box.has_focus() {
+            commands.entity(entity).insert(InputBoxFocus);
+            queue.push(entity);
+        }
+    }
+    while !queue.is_empty() {
+        for children in entities.iter_many(mem::take(&mut queue)) {
+            queue.extend(children.iter().map(|entity| {
+                commands.entity(*entity).insert(InputBoxFocus);
+                *entity
+            }))
+        }
+    }
+}
+
+pub fn inputbox_conditional_visibility(
+    mut query: Query<(Has<InputBoxFocus>, VisibilityToggle), With<DisplayIf<InputBoxFocus>>>,
+) {
+    query.iter_mut().for_each(|(has_focus, mut vis)| {
+        if has_focus {
+            vis.set_visible(true)
+        } else {
+            vis.set_visible(false)
+        }
+    })
+}
+
+pub fn measure_string<F: ab_glyph::Font>(
+    font: &impl ab_glyph::ScaleFont<F>,
+    string: &str,
+) -> f32 {
     let mut cursor = 0.0;
     let mut last = '\0';
     for c in string.chars() {
-        cursor += font.kern(font.glyph_id(last), font.glyph_id(c));            
+        cursor += font.kern(font.glyph_id(last), font.glyph_id(c));
         cursor += font.h_advance(font.glyph_id(c));
         last = c
     }
@@ -355,41 +433,40 @@ pub fn measure_string<F: ab_glyph::Font>(font: &impl ab_glyph::ScaleFont<F>, str
 }
 
 pub fn update_inputbox_cursor(
-    mut commands: Commands,
     fonts: Res<Assets<Font>>,
-    query: Query<(Entity, &InputBox, &DimensionData, &Handle<Font>, &TextColor, ActiveDetection), (Changed<InputBox>, Without<InputBoxCursorArea>, Without<Text>)>,
-    mut text: Query<(Entity, &Parent, Option<&Children>), (With<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>, Without<Text>, Without<InputBox>)>,
-    mut bar: Query<(&Parent, &mut Transform2D, &mut Visibility), (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<Text>, Without<InputBox>)>,
-    mut area: Query<(&Parent, &mut Transform2D, DimensionMut, &mut Visibility), (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<Text>, Without<InputBox>)>,
-    mut letters: Query<(Entity, &mut Transform2D, DimensionMut, &mut Text, &mut Visibility), (Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>
+    query: Query<(Entity, &InputBox, &DimensionData,
+            &Handle<Font>, ActiveDetection),
+        (Changed<InputBox>, Without<InputBoxCursorArea>,  Without<Text>)>,
+    mut bar: Query<(&Parent, &mut Transform2D, &mut Visibility),
+        (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, 
+            Without<Text>, Without<InputBox>,)>,
+    mut area: Query<(&Parent, &mut Transform2D, DimensionMut, &mut Visibility),
+        (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>,
+            Without<Text>, Without<InputBox>,)>
 ) {
-    use ab_glyph::ScaleFont as FontTrait;
     use bevy::prelude::*;
-    for (entity, input_box, dimension, font_handle, color, active) in query.iter() {
-        if !active.is_active() { continue; }
-        let font = match fonts.get(font_handle){
+    for (entity, input_box, dimension, font_handle, active) in query.iter() {
+        if !active.is_active() {
+            continue;
+        }
+        let font = match fonts.get(font_handle) {
             Some(font) => font.font.as_scaled(dimension.em),
             None => continue,
         };
-        let Some((glyph_container, _, children)) = text.iter_mut().find(|(_, p, ..)| p.get() == entity) else {continue;};
-        
-        let font_size = dimension.em;
-        let mut added = Vec::new();
+
         let mut cursor = -dimension.size.x / 2.0;
-        let mut entities = match children {
-            Some(children) => children.iter(),
-            None => [].iter(),
-        };
-        let (start_index, end_index) = (input_box.cursor_start, (input_box.cursor_start + input_box.cursor_len).saturating_sub(1));
+        let (start_index, end_index) = (
+            input_box.cursor_start,
+            (input_box.cursor_start + input_box.cursor_len).saturating_sub(1),
+        );
         let (mut start, mut end) = (cursor, cursor);
         let mut max = (0, 0.0);
         let mut last = '\0';
         for (index, chara) in input_box.text.chars().enumerate() {
             let glyph = font.scaled_glyph(chara);
-            cursor += font.kern(font.glyph_id(last), font.glyph_id(chara));            
+            cursor += font.kern(font.glyph_id(last), font.glyph_id(chara));
             last = chara;
             let bounds = font.glyph_bounds(&glyph);
-            let center = (bounds.min.x + bounds.max.x) / 2.0;
             if index == start_index {
                 start = cursor + bounds.min.x;
             }
@@ -397,97 +474,57 @@ pub fn update_inputbox_cursor(
                 end = cursor + bounds.max.x;
             }
             max = (index, end);
-            if let Some(entity) = entities.next(){
-                if let Ok((_, mut transform, mut dimension, mut text, mut vis)) = letters.get_mut(*entity){
-                    transform.offset.edit_raw(|v| v.x = cursor + center);
-                    dimension.edit_raw(|v| v.x = bounds.width());
-                    *vis = Visibility::Inherited;
-                    match text.sections.first_mut() {
-                        Some(first) => first.value = chara.to_string(),
-                        None => text.sections.push(TextSection { 
-                            value: chara.to_string(), 
-                            style: TextStyle { 
-                                font: font_handle.clone(), 
-                                font_size, 
-                                color: color.get(),
-                            } 
-                        }),
-                    }
-                } else {
-                    // fixing broken state makes little sense here.
-                    warn!("Glyph entity invalidated in textbox, aborting.");
-                    continue;
-                }
-            } else {
-                added.push(commands.spawn({
-                    AouiTextBundle {
-                        transform: Transform2D::UNIT.with_offset(Vec2::new(cursor + center, 0.0)),
-                        dimension: Dimension::owned(crate::size2!([{bounds.width()} px, 1 em])),
-                        text: Text::from_section(chara, TextStyle { 
-                            font: font_handle.clone(), 
-                            font_size, 
-                            color: color.get(),
-                        }),
-                        ..Default::default()
-                    }
-                }).id())
-            }
             cursor += font.h_advance(font.glyph_id(chara));
         }
-        
-        if start_index == max.0 + 1{
+
+        if start_index == max.0 + 1 {
             start = max.1;
         }
 
-        if end_index == max.0 + 1{
+        if end_index == max.0 + 1 {
             end = max.1;
         }
 
         if input_box.cursor_start + input_box.cursor_len == 0 {
             end = start;
         }
-        entities.for_each(|entity| if let Ok((.., mut vis)) = letters.get_mut(*entity){
-            *vis = Visibility::Hidden;
-        });
-        commands.entity(glyph_container).push_children(&added);
         if !input_box.focus {
             for (.., mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 *vis = Visibility::Hidden;
-            };
+            }
             for (.., mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 *vis = Visibility::Hidden;
-            };
+            }
             continue;
         }
         if input_box.cursor_len == 0 {
-            for (_, mut transform, mut vis, ) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
+            for (_, mut transform, mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
                 *vis = Visibility::Inherited;
-            };
+            }
             for (.., mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 *vis = Visibility::Hidden;
-            };
+            }
         } else {
             for (.., mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
                 *vis = Visibility::Hidden;
-            };
-            for (.., mut transform, mut dimension, mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
+            }
+            for (.., mut transform, mut dimension, mut vis) in
+                area.iter_mut().filter(|(p, ..)| p.get() == entity)
+            {
                 transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
                 dimension.edit_raw(|v| v.x = end - start);
                 *vis = Visibility::Inherited;
-            };
-
+            }
         }
     }
 }
-#[cfg(not(target_os="macos"))]
+#[cfg(not(target_os = "macos"))]
 const CONTROL: [KeyCode; 2] = [KeyCode::ControlLeft, KeyCode::ControlRight];
-#[cfg(target_os="macos")]
-const CONTROL: [KeyCode; 2] = [KeyCode::SuperLeft, KeyCode::SuperLeft]; 
+#[cfg(target_os = "macos")]
+const CONTROL: [KeyCode; 2] = [KeyCode::SuperLeft, KeyCode::SuperLeft];
 
-pub fn text_on_click_outside(
-    mut query: Query<&mut InputBox, With<CursorClickOutside>>,
-) {
+pub fn text_on_click_outside(mut query: Query<&mut InputBox, With<CursorClickOutside>>) {
     for mut input in query.iter_mut() {
         input.focus = false;
     }
@@ -496,16 +533,22 @@ pub fn inputbox_keyboard(
     mut commands: Commands,
     fonts: Res<Assets<Font>>,
     storage: Res<KeyStorage>,
-    mut query: Query<(Entity, &mut InputBox, &DimensionData, &Handle<Font>, 
-        Option<&Handlers<EvTextChange>>, 
-        Option<&Handlers<EvTextSubmit>>, 
-        Option<&Invoke<InputBox>>, 
-        ActiveDetection
+    mut query: Query<(
+        Entity,
+        &mut InputBox,
+        &DimensionData,
+        &Handle<Font>,
+        Option<&Handlers<EvTextChange>>,
+        Option<&Handlers<EvTextSubmit>>,
+        Option<&Invoke<InputBox>>,
+        ActiveDetection,
     )>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {
-    for (entity, mut inputbox, dimension, font_handle, change, submit, invoke, active) in query.iter_mut().filter(|(_, input, ..)| input.has_focus()) {
+    for (entity, mut inputbox, dimension, font_handle, change, submit, invoke, active) in
+        query.iter_mut().filter(|(_, input, ..)| input.has_focus())
+    {
         let mut commands = commands.entity(entity);
         if !active.is_active() {
             inputbox.focus = false;
@@ -523,11 +566,11 @@ pub fn inputbox_keyboard(
                     if let Ok(text) = clipboard.get_text() {
                         if inputbox.overflow == InputOverflow::Deny {
                             let string = inputbox.try_push_str(&text);
-                            let font = match fonts.get(font_handle){
+                            let font = match fonts.get(font_handle) {
                                 Some(font) => font.font.as_scaled(dimension.em),
                                 None => continue,
                             };
-                            let len = measure_string(&font, string);
+                            let len = measure_string(&font, &string);
                             if len > dimension.size.x {
                                 continue;
                             }
@@ -539,7 +582,7 @@ pub fn inputbox_keyboard(
                         }
                         inputbox.push_str(&text);
                         changed = true;
-                    }                   
+                    }
                 }
             } else if keys.just_pressed(KeyCode::X) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
@@ -550,15 +593,15 @@ pub fn inputbox_keyboard(
                 changed = true;
             } else if keys.just_pressed(KeyCode::A) {
                 inputbox.select_all()
-            } 
+            }
         } else if keys.just_pressed(KeyCode::Left) {
-            if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]){
+            if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
                 inputbox.cursor_select_left()
             } else {
                 inputbox.cursor_left()
             }
         } else if keys.just_pressed(KeyCode::Right) {
-            if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]){
+            if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
                 inputbox.cursor_select_right()
             } else {
                 inputbox.cursor_right()
@@ -567,20 +610,20 @@ pub fn inputbox_keyboard(
             for char in events.read() {
                 match char.char {
                     '\t' => (),
-                    '\r'|'\n' => {
+                    '\r' | '\n' => {
                         if let Some(submit) = submit {
                             submit.handle(&mut commands, &storage, inputbox.get().to_owned())
                         }
-                    },
-                    '\x08'|'\x7f' => inputbox.backspace(),
+                    }
+                    '\x08' | '\x7f' => inputbox.backspace(),
                     _ => {
                         if inputbox.overflow == InputOverflow::Deny {
                             let string = inputbox.try_push(char.char);
-                            let font = match fonts.get(font_handle){
+                            let font = match fonts.get(font_handle) {
                                 Some(font) => font.font.as_scaled(dimension.em),
                                 None => continue,
                             };
-                            let len = measure_string(&font, string);
+                            let len = measure_string(&font, &string);
                             if len > dimension.size.x {
                                 continue;
                             }
@@ -611,7 +654,6 @@ pub fn inputbox_keyboard(
     }
 }
 
-
 /// Copy em as text size.
 pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &DimensionData)>) {
     query.iter_mut().for_each(|(mut sp, dimension)| {
@@ -619,4 +661,50 @@ pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &DimensionData)>) {
             sp.em = dimension.em;
         }
     })
+}
+
+pub fn draw_input_box(
+    mut images: ResMut<Assets<Image>>,
+    fonts: Res<Assets<Font>>,
+    query: Query<(&Handle<Image>, &Handle<Font>, &DimensionData, &InputBox), Changed<InputBox>> 
+) {
+    for (image, font, dim, input_box) in query.iter() {
+        let Some(font) = fonts.get(font) else {continue};
+        let font = font.font.as_scaled(dim.em * 2.0);
+        let Some(image) = images.get_mut(image) else {continue};
+        let dimension = measure_string(&font, &input_box.text);
+        let height = font.height().ceil();
+        let width = (dimension.ceil() as usize).max(1);
+        let height = (height.ceil() as usize).max(1);
+        let mut buffer = vec![0u8; width * height * 4];
+
+        let mut cursor = 0.0;
+        let mut last = '\0';
+        for c in input_box.text.chars() {
+            let mut glyph = font.scaled_glyph(c);
+            glyph.position = point(cursor, 0.0 + font.ascent());
+            cursor += font.kern(font.glyph_id(last), font.glyph_id(c));
+            cursor += font.h_advance(font.glyph_id(c));
+            last = c;
+            if let Some(glyph) = font.outline_glyph(glyph) {
+                let bounds = glyph.px_bounds();
+                glyph.draw(|x, y, v| {
+                    let x = x as usize + bounds.min.x as usize;
+                    let y = y as usize + bounds.min.y as usize;
+                    if x < width && y < height {
+                        buffer[(x + y * width) * 4] = 255;
+                        buffer[(x + y * width) * 4 + 1] = 255;
+                        buffer[(x + y * width) * 4 + 2] =  255;
+                        buffer[(x + y * width) * 4 + 3] += (v * 255.0) as u8;
+                    }
+                })
+            }
+        }
+
+        *image = Image::new(Extent3d {
+            width: width as u32,
+            height: height as u32,
+            depth_or_array_layers: 1,
+        }, TextureDimension::D2, buffer, TextureFormat::Rgba8Unorm)
+    }
 }

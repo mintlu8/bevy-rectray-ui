@@ -1,20 +1,23 @@
+use std::mem;
+
 use bevy::ecs::component::Component;
 use bevy::math::Vec2;
-use bevy::asset::AssetServer;
 use bevy::ecs::entity::Entity;
 use bevy::render::color::Color;
 use bevy::render::texture::Image;
 use bevy::hierarchy::BuildChildren;
+use bevy::sprite::Mesh2dHandle;
+use bevy::transform::components::GlobalTransform;
 use bevy::window::CursorIcon;
 use bevy_aoui::anim::{Interpolate, Padding};
-use bevy_aoui::layout::Axis;
+use bevy_aoui::layout::{Axis, BoundsLayout};
 use bevy_aoui::layout::LayoutControl::IgnoreLayout;
-use bevy_aoui::signals::{channel, SignalBuilder, RawReceiver};
-use bevy_aoui::{material_sprite, Hitbox, vstack, Size2, Opacity, transition, Dimension, Anchor};
+use bevy_aoui::signals::{SignalBuilder, RawReceiver};
+use bevy_aoui::{material_sprite, Hitbox, Size2, Opacity, transition, Dimension, Anchor, BuildMeshTransform};
 use bevy_aoui::widgets::drag::{Dragging, DragConstraint};
-use bevy_aoui::{widget_extension, build_frame, size2, layout::StackLayout};
+use bevy_aoui::{frame, widget_extension, build_frame, size2, layout::StackLayout};
 use bevy_aoui::events::{EventFlags, Handlers, EvMouseDrag, Fetch, Evaluated};
-use bevy_aoui::dsl::{Widget, DslInto, AouiCommands};
+use bevy_aoui::dsl::{Widget, DslInto, AouiCommands, mesh_rectangle};
 use bevy_aoui::dsl::HandleOrString;
 use crate::shapes::RoundedRectangleMaterial;
 
@@ -42,7 +45,7 @@ impl Widget for Divider {
             },
             Axis::Vertical => {
                 let entity = material_sprite!(commands {
-                    dimension: size2!(0.1 em, {100.0 - self.inset * 200.0}%),
+                    dimension: size2!(0.2 em, {100.0 - self.inset * 200.0}%),
                     material: mat,
                 });
                 (entity, entity)
@@ -67,21 +70,57 @@ pub struct WindowDimensionQuery {
     pub total: RawReceiver<Vec2>,
 }
 
-
 #[derive(Debug, Default, Clone, Copy)]
-pub struct WindowPalette {
+pub struct FramePalette {
     pub background: Color,
-    pub banner: Color,
     pub stroke: Color,
 }
 
 use super::util::{OptionM, ShadowInfo};
+
+
+widget_extension!(
+    pub struct MFrameBuilder {
+        pub shadow: OptionM<ShadowInfo>,
+        pub palette: FramePalette,
+        pub stroke: f32,
+        pub radius: f32,
+    }
+);
+
+impl Widget for MFrameBuilder {
+    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+        self.z += 0.01;
+        if self.layout.is_none() {
+            self.layout = Some(Box::new(BoundsLayout::PADDING));
+        }
+        self.event = Some(EventFlags::BlockAll);
+        let mesh = commands.add(mesh_rectangle());
+        let material = commands.add(
+            RoundedRectangleMaterial::new(self.palette.background, self.radius)
+                .with_stroke((self.palette.stroke, self.stroke)));
+        let mut frame = build_frame!(commands, self);
+        let id = frame.insert((
+            Mesh2dHandle(mesh),
+            material,
+            GlobalTransform::IDENTITY,
+            BuildMeshTransform,
+        )).id();
+        if let OptionM::Some(shadow) = self.shadow {
+            let shadow = shadow.build_rect(commands, self.radius);
+            commands.entity(id).add_child(shadow);
+        }
+        (id, id)
+    }
+}
+
+
 widget_extension!(
     pub struct MWindowBuilder {
         pub cursor: Option<CursorIcon>,
         pub sprite: Option<HandleOrString<Image>>,
         /// This will set `color_pressed` if its not set
-        pub palette: WindowPalette,
+        pub palette: FramePalette,
         pub texture: HandleOrString<Image>,
         pub banner_texture: HandleOrString<Image>,
         pub collapse: Option<SignalBuilder<bool>>, 
@@ -97,11 +136,12 @@ widget_extension!(
 impl Widget for MWindowBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         self.z += 0.01;
-        self.layout = Some(Box::new(StackLayout::VSTACK));
+        let layout = mem::replace(&mut self.layout, Some(Box::new(StackLayout::VSTACK)));
         self.event = Some(EventFlags::BlockAll);
         let window_margin = self.window_margin.unwrap_or(Vec2::new(1.0, 0.5));
-        self.margin = Size2::em(0.0, window_margin.y).dinto();
-        self.padding = Size2::em(window_margin.x, window_margin.y).dinto();
+        let margin = mem::replace(&mut self.margin, Size2::em(0.0, window_margin.y).dinto());
+        let padding = mem::replace(&mut self.padding, Size2::em(window_margin.x, window_margin.y).dinto());
+        //self.dimension = Some(size2!(0, 0));
         let frame = build_frame!(commands, self);
         let style = self.palette;
         let frame = frame.id();
@@ -164,7 +204,7 @@ impl Widget for MWindowBuilder {
             commands.entity(frame).add_child(banner);
 
             let divider = divider!(commands{
-                inset: 0.1,
+                inset: 10,
                 axis: Axis::Horizontal,
                 color: self.palette.stroke,
             });
@@ -182,10 +222,11 @@ impl Widget for MWindowBuilder {
         }
         let container;
         let rest = bevy_aoui::padding!(commands {
-            child: vstack!{
+            child: frame!{
                 entity: container,
-                margin: self.margin,
-                padding: self.padding,
+                margin: margin,
+                padding: padding,
+                layout: layout.unwrap_or(Box::new(StackLayout::VSTACK)),
             }
         });
 
@@ -201,6 +242,16 @@ impl Widget for MWindowBuilder {
         commands.entity(frame).add_child(rest);
         (frame, container)
     }
+}
+
+
+#[macro_export]
+macro_rules! mframe {
+    ($ctx: tt {$($tt: tt)*}) => {
+        $crate::aoui::meta_dsl!($ctx [$crate::widgets::MFrameBuilder] {
+            $($tt)*
+        })
+    };
 }
 
 

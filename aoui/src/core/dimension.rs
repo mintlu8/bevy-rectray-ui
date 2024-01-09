@@ -9,21 +9,25 @@ use crate::{Size2, FontSize, SizeUnit};
 /// useful when paired with a dynamic sized item like text or atlas.
 /// 
 /// If `Owned` we will try to edit the dimension of the paired sprite
-#[derive(Debug, Clone, Reflect)]
+#[derive(Debug, Clone, Copy, Reflect, PartialEq, Default)]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum DimensionSize {
+pub enum DimensionType {
+    #[default]
     /// Copy `size` from sprite, rect, image, text, etc.
     Copied,
+    /// Generated from `Layout` and kept as reference for the next frame.
+    Dynamic,
     /// Governs size of sprite, rect, image, text, etc.
     Owned(Size2)
 }
+
 
 /// Controls the dimension of the sprite.
 #[derive(Debug, Clone, Component, Reflect)]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Dimension {
     /// Input for dimension.
-    pub dimension: DimensionSize,
+    pub dimension: DimensionType,
     /// Modifies font size `em`.
     pub font_size: FontSize,
     /// If set, always preserves the aspect ratio of the input sprite.
@@ -40,12 +44,6 @@ pub struct DimensionData {
     ///     
     /// This value is computed every frame. 
     pub size: Vec2,
-    /// A reliable min for '%' base dimensions.
-    ///     
-    /// This value is set by copied sources and dimension agnostic layouts.
-    /// 
-    /// If not set, the size would be 0 during the layout phase.
-    pub reliable_size: Vec2,
     /// Aspect ratio of the sprite.
     /// 
     /// If paired with a sprite this will be copied.
@@ -68,7 +66,7 @@ pub struct DimensionMut {
 impl Default for Dimension {
     fn default() -> Self {
         Self {
-            dimension: DimensionSize::Copied,
+            dimension: DimensionType::Copied,
             font_size: FontSize::None,
             preserve_aspect: false,
         }
@@ -79,14 +77,14 @@ impl Dimension {
 
     /// Dimension copied paired components.
     pub const COPIED: Self = Self {
-        dimension: DimensionSize::Copied,
+        dimension: DimensionType::Copied,
         font_size: FontSize::None,
         preserve_aspect: false,
     };
 
     /// Dimension inherited from parent.
     pub const INHERIT: Self = Self {
-        dimension: DimensionSize::Owned(Size2::FULL),
+        dimension: DimensionType::Owned(Size2::FULL),
         font_size: FontSize::None,
         preserve_aspect: false,
     };
@@ -95,7 +93,7 @@ impl Dimension {
     /// Owned dimension in pixels.
     pub const fn pixels(size: Vec2) -> Self {
         Self {
-            dimension: DimensionSize::Owned(Size2::pixels(size.x, size.y)),
+            dimension: DimensionType::Owned(Size2::pixels(size.x, size.y)),
             font_size: FontSize::None,
             preserve_aspect: false,
         }
@@ -104,7 +102,7 @@ impl Dimension {
     /// Owned dimension in percentage.
     pub const fn percentage(size: Vec2) -> Self {
         Self {
-            dimension: DimensionSize::Owned(Size2::percent(size.x, size.y)),
+            dimension: DimensionType::Owned(Size2::percent(size.x, size.y)),
             font_size: FontSize::None,
             preserve_aspect: false,
         }
@@ -113,7 +111,7 @@ impl Dimension {
     /// Owned dimension.
     pub const fn owned(size: Size2) -> Self {
         Self {
-            dimension: DimensionSize::Owned(size),
+            dimension: DimensionType::Owned(size),
             font_size: FontSize::None,
             preserve_aspect: false,
         }
@@ -142,8 +140,9 @@ impl Dimension {
     /// Has no effect if dimension is not owned.
     pub fn with_raw(&self, f: impl FnOnce(Vec2)) {
         match self.dimension {
-            DimensionSize::Copied => (),
-            DimensionSize::Owned(v) => f(v.raw()),
+            DimensionType::Copied => (),
+            DimensionType::Dynamic => (),
+            DimensionType::Owned(v) => f(v.raw()),
         }
     }
     /// Edit a contextless underlying value.
@@ -151,17 +150,18 @@ impl Dimension {
     /// Has no effect if dimension is not owned.
     pub fn edit_raw(&mut self, f: impl FnOnce(&mut Vec2)) {
         match &mut self.dimension {
-            DimensionSize::Copied => (),
-            DimensionSize::Owned(v) => v.edit_raw(f),
+            DimensionType::Copied => (),
+            DimensionType::Dynamic => (),
+            DimensionType::Owned(v) => v.edit_raw(f),
         }
     }
 
     pub fn is_owned(&self) -> bool {
-        matches!(self.dimension, DimensionSize::Owned(..))
+        matches!(self.dimension, DimensionType::Owned(..))
     }
 
     pub fn is_copied(&self) -> bool {
-        matches!(self.dimension, DimensionSize::Copied)
+        matches!(self.dimension, DimensionType::Copied)
     }
 }
 
@@ -174,15 +174,16 @@ impl DimensionMutReadOnlyItem<'_> {
     /// Obtain a contextless underlying value.
     pub fn raw(&self) -> Vec2 {
         match &self.source.dimension {
-            DimensionSize::Copied => self.dynamic.size,
-            DimensionSize::Owned(v) => v.raw(),
+            DimensionType::Copied => self.dynamic.size,
+            DimensionType::Dynamic => self.dynamic.size,
+            DimensionType::Owned(v) => v.raw(),
         }
     }
 
     /// Run a function if dimension is owned.
     pub fn run_if_owned(&self, f: impl FnOnce(Vec2)) {
         match self.source.dimension {
-            DimensionSize::Owned(_) => f(self.dynamic.size),
+            DimensionType::Owned(_) => f(self.dynamic.size),
             _ => (),
         }
     }
@@ -212,8 +213,9 @@ impl DimensionMutItem<'_> {
             FontSize::Rems(v) => rem * v,
         };
         match self.source.dimension {
-            DimensionSize::Copied => (data.size, data.em),
-            DimensionSize::Owned(v) if self.source.preserve_aspect => {
+            DimensionType::Copied => (data.size, data.em),
+            DimensionType::Dynamic => (data.size, data.em),
+            DimensionType::Owned(v) if self.source.preserve_aspect => {
                 let mut size = v.as_pixels(parent, data.em, rem);
                 let current_aspect = size.x / size.y;
                 if current_aspect > data.aspect {
@@ -226,14 +228,14 @@ impl DimensionMutItem<'_> {
                 }
                 (data.size, data.em)
             }
-            DimensionSize::Owned(v) => {
+            DimensionType::Owned(v) => {
                 data.size = v.as_pixels(parent, data.em, rem);
                 (data.size, data.em)
             }
         }
     }
 
-    /// Estimate size for dynamic layout, this notably does not use non-canon values.
+    /// Estimate size for a dynamic layout, this notably uses 0 for percentage size.
     pub fn estimate(&self, parent: Vec2, em: f32, rem: f32) -> Vec2 {
         let data = &self.dynamic;
         let em = match self.source.font_size{
@@ -243,8 +245,9 @@ impl DimensionMutItem<'_> {
             FontSize::Rems(v) => rem * v,
         };
         match self.source.dimension {
-            DimensionSize::Copied => data.size,
-            DimensionSize::Owned(v) if self.source.preserve_aspect => {
+            DimensionType::Copied => data.size,
+            DimensionType::Dynamic => data.size,
+            DimensionType::Owned(v) if self.source.preserve_aspect => {
                 let mut size = v.as_pixels(parent, em, rem);
                 let current_aspect = size.x / size.y;
                 if current_aspect > data.aspect {
@@ -256,20 +259,20 @@ impl DimensionMutItem<'_> {
                     return Vec2::ZERO;
                 }
                 if v.units().0 == SizeUnit::Percent {
-                    size.x = data.reliable_size.x;
+                    size.x = 0.0;
                 }
                 if v.units().0 == SizeUnit::Percent {
-                    size.x = data.reliable_size.x;
+                    size.x = 0.0;
                 }
                 size
             }
-            DimensionSize::Owned(v) => {
+            DimensionType::Owned(v) => {
                 let mut size = v.as_pixels(parent, em, rem);
                 if v.units().0 == SizeUnit::Percent {
-                    size.x = data.reliable_size.x;
+                    size.x = 0.0;
                 }
                 if v.units().0 == SizeUnit::Percent {
-                    size.x = data.reliable_size.x;
+                    size.x = 0.0;
                 }
                 size
             }
@@ -279,8 +282,9 @@ impl DimensionMutItem<'_> {
     /// Obtain a contextless underlying value.
     pub fn raw(&self) -> Vec2 {
         match &self.source.dimension {
-            DimensionSize::Copied => self.dynamic.size,
-            DimensionSize::Owned(v) => v.raw(),
+            DimensionType::Copied => self.dynamic.size,
+            DimensionType::Dynamic => self.dynamic.size,
+            DimensionType::Owned(v) => v.raw(),
         }
     }
 
@@ -289,8 +293,9 @@ impl DimensionMutItem<'_> {
     /// Has no effect if dimension is not owned.
     pub fn edit_raw(&mut self, f: impl FnOnce(&mut Vec2)) {
         match &mut self.source.dimension {
-            DimensionSize::Copied => (),
-            DimensionSize::Owned(v) => v.edit_raw(f),
+            DimensionType::Copied => (),
+            DimensionType::Dynamic => (),
+            DimensionType::Owned(v) => v.edit_raw(f),
         }
     }
 
@@ -302,15 +307,16 @@ impl DimensionMutItem<'_> {
     #[doc(hidden)]
     pub fn raw_mut(&mut self) -> &mut Vec2 {
         match &mut self.source.dimension {
-            DimensionSize::Copied => panic!("Cannot get raw of copied value."),
-            DimensionSize::Owned(v) => v.raw_mut(),
+            DimensionType::Copied => panic!("Cannot get raw of copied value."),
+            DimensionType::Dynamic => panic!("Cannot get raw of dynamic value."),
+            DimensionType::Owned(v) => v.raw_mut(),
         }
     }
     
     /// Run a function if dimension is owned.
     pub fn run_if_owned(&self, f: impl FnOnce(Vec2)) {
         match self.source.dimension {
-            DimensionSize::Owned(_) => f(self.dynamic.size),
+            DimensionType::Owned(_) => f(self.dynamic.size),
             _ => (),
         }
     }
@@ -320,11 +326,10 @@ impl DimensionMutItem<'_> {
     /// If `copied`, copy size. If `preserve_aspect`, copy aspect ratio.
     pub fn update_size(&mut self, value: impl FnOnce() -> Vec2) {
         match self.source.dimension {
-            DimensionSize::Copied => {
+            DimensionType::Copied => {
                 self.dynamic.size = value();
-                self.dynamic.reliable_size = self.dynamic.size;
             },
-            DimensionSize::Owned(_) if self.source.preserve_aspect => {
+            DimensionType::Owned(_) if self.source.preserve_aspect => {
                 let value = value();
                 self.dynamic.aspect = value.y / value.x;
             }

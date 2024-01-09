@@ -67,7 +67,7 @@ impl<'w, 's> AouiCommands<'w, 's> {
         &self.asset_server
     }
 
-    pub fn add<'a, T: Asset>(&self, item: T) -> Handle<T> {
+    pub fn add<T: Asset>(&self, item: T) -> Handle<T> {
         self.assets().add(item)
     }
 

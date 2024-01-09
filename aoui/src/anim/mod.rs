@@ -133,11 +133,8 @@ impl VisibilityToggleItem<'_> {
             },
             None => {
                 self.opacity.disabled = value;
-                *self.visibility = match value {
-                    true => Visibility::Inherited,
-                    false => Visibility::Hidden,
-                }
-            },
+                self.opacity.opacity = if value {1.0} else {0.0};
+            }
         }
     }
 }

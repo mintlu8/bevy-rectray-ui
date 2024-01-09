@@ -68,12 +68,34 @@ macro_rules! easing {
 #[macro_export]
 macro_rules! transition_impl {
     ({$($out: expr),*}) => {($($out),*)};
+    ({$($out: expr),*} Color $time:tt $ease:tt default ($value:expr) $(;$($rest:tt)*)?) => {
+        $crate::transition_impl!({   
+            $($out,)*
+            $crate::anim::Interpolate::<$crate::bevy::prelude::Color>::new(
+                $crate::easing!($ease), 
+                $value, 
+                $time as f32
+            )
+        }
+        $($($rest)*)?)
+    };
+    ({$($out: expr),*} Color $time:tt $ease:tt default {$value:expr} $(;$($rest:tt)*)?) => {
+        $crate::transition_impl!({   
+            $($out,)*
+            $crate::anim::Interpolate::<$crate::bevy::prelude::Color>::new(
+                $crate::easing!($ease), 
+                $value, 
+                $time as f32
+            )
+        }
+        $($($rest)*)?)
+    };
     ({$($out: expr),*} Color $time:tt $ease:tt default $value:expr $(;$($rest:tt)*)?) => {
         $crate::transition_impl!({   
             $($out,)*
             $crate::anim::Interpolate::<$crate::bevy::prelude::Color>::new(
                 $crate::easing!($ease), 
-                $crate::colorv4!($value), 
+                $crate::color!($value), 
                 $time as f32
             )
         }

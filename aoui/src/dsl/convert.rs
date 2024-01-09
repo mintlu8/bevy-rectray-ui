@@ -1,5 +1,5 @@
 use bevy::{prelude::{Vec2, UVec2, IVec2, Rect}, sprite::Anchor, render::view::{VisibilityBundle, Visibility, RenderLayers}};
-use crate::{Size2, Opacity, SizeUnit, FontSize};
+use crate::{Size2, Opacity, SizeUnit, FontSize, DimensionType};
 
 use super::OneOrTwo;
 
@@ -240,8 +240,21 @@ fvec2!(Size2, x, y, Size2::pixels(x, y));
 fvec2!(Option<Size2>, x, y, Some(Size2::pixels(x, y)));
 fvec2!(Anchor, x, y, Anchor::Custom(Vec2 { x, y }));
 fvec2!(Option<Anchor>, x, y, Some(Anchor::Custom(Vec2 { x, y })));
+fvec2!(DimensionType, x, y, DimensionType::Owned(Size2::pixels(x, y)));
 uvec2!(UVec2, x, y, UVec2 { x, y });
 ivec2!(IVec2, x, y, IVec2 { x, y });
+
+impl DslFrom<Size2> for DimensionType {
+    fn dfrom(value: Size2) -> Self {
+        DimensionType::Owned(value)
+    }
+}
+
+impl DslFrom<Vec2> for DimensionType {
+    fn dfrom(value: Vec2) -> Self {
+        DimensionType::Owned(value.into())
+    }
+}
 
 impl DslFrom<[f32; 4]> for Rect {
     fn dfrom([a, b, c, d]: [f32; 4]) -> Rect {

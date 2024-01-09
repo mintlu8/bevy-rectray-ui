@@ -1,8 +1,235 @@
+use std::fmt::Debug;
+use std::marker::PhantomData;
+
 use bevy::ecs::entity::Entity;
+use bevy::math::bool;
 use bevy::prelude::Vec2;
 use bevy::prelude::Reflect;
 
 use crate::{layout::LayoutControl, Anchor};
+
+pub trait Direction: Sized + Debug + Send + Sync + 'static {
+    type Pos: Direction;
+    fn unit() -> Vec2;
+    fn main(v: Vec2) -> Vec2;
+    fn main_vec(v: f32) -> Vec2;
+    fn len(v: Vec2) -> f32;
+    fn project(v: Vec2) -> f32;
+    fn off(v: Vec2) -> Vec2;
+    fn off_vec(v: f32) -> Vec2;
+    fn signum(v: Vec2) -> Vec2;
+    fn reversed() -> bool;
+    fn bucket(anc: Anchor) -> Trinary;
+}
+
+pub trait DirectionPair {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum X {}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Y {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rev<T> {
+    _Phantom(PhantomData<T>, X)
+}
+
+impl Direction for X {
+
+    type Pos = Self;
+
+    fn unit() -> Vec2 {
+        Vec2::new(1.0, 0.0)
+    }
+
+    fn main(v: Vec2) -> Vec2 {
+        Vec2::new(v.x, 0.0)
+    }
+
+    fn main_vec(v: f32) -> Vec2 {
+        Vec2::new(v, 0.0)
+    }
+
+    fn len(v: Vec2) -> f32 {
+        v.x
+    }
+
+    fn project(v: Vec2) -> f32 {
+        v.x
+    }
+
+    fn off(v: Vec2) -> Vec2 {
+        Vec2::new(0.0, v.y)
+    }
+
+    fn off_vec(v: f32) -> Vec2 {
+        Vec2::new(0.0, v)
+    }
+
+    fn signum(v: Vec2) -> Vec2 {
+        Vec2::new(v.x.signum(), 0.0)
+    }
+
+    fn reversed() -> bool {
+        false
+    }
+
+    fn bucket(anchor: Anchor) -> Trinary {
+        match anchor.x() {
+            x if x < -0.16 => Trinary::Neg,
+            x if x > 0.16 => Trinary::Pos,
+            _ => Trinary::Mid,
+        }
+    }
+}
+
+impl Direction for Y {
+
+    type Pos = Self;
+
+    fn unit() -> Vec2 {
+        Vec2::new(0.0, 1.0)
+    }
+
+    fn main(v: Vec2) -> Vec2 {
+        Vec2::new(0.0, v.y)
+    }
+
+    fn main_vec(v: f32) -> Vec2 {
+        Vec2::new(0.0, v)
+    }
+
+    fn len(v: Vec2) -> f32 {
+        v.y
+    }
+
+    fn project(v: Vec2) -> f32 {
+        v.x
+    }
+
+    fn off(v: Vec2) -> Vec2 {
+        Vec2::new(v.x, 0.0)
+    }
+
+    fn off_vec(v: f32) -> Vec2 {
+        Vec2::new(v, 0.0)
+    }
+
+    fn signum(v: Vec2) -> Vec2 {
+        Vec2::new(0.0, v.y.signum())
+    }
+
+    fn reversed() -> bool {
+        false
+    }
+
+    fn bucket(anchor: Anchor) -> Trinary {
+        match anchor.y() {
+            y if y < -0.16 => Trinary::Neg,
+            y if y > 0.16 => Trinary::Pos,
+            _ => Trinary::Mid,
+        }
+    }
+}
+
+
+impl<T: Direction> Direction for Rev<T> {
+
+    type Pos = T::Pos;
+
+    fn unit() -> Vec2 {
+        -T::unit()
+    }
+
+    fn main(v: Vec2) -> Vec2 {
+        -T::main(v)
+    }
+
+    fn main_vec(v: f32) -> Vec2 {
+        -T::main_vec(v)
+    }
+
+    fn len(v: Vec2) -> f32 {
+        T::len(v)
+    }
+
+    fn project(v: Vec2) -> f32 {
+        -T::project(v)
+    }
+
+    fn off(v: Vec2) -> Vec2 {
+        T::off(v)
+    }
+
+    fn off_vec(v: f32) -> Vec2 {
+        T::off_vec(v)
+    }
+
+    fn signum(v: Vec2) -> Vec2 {
+        -T::signum(v)
+    }
+
+    fn reversed() -> bool {
+        !T::reversed()
+    }
+
+    fn bucket(anc: Anchor) -> Trinary {
+        match T::bucket(anc) {
+            Trinary::Neg => Trinary::Pos,
+            Trinary::Mid => Trinary::Mid,
+            Trinary::Pos => Trinary::Neg,
+        }
+    }
+}
+
+impl DirectionPair for (X, Y) {}
+impl DirectionPair for (Rev<X>, Y) {}
+impl DirectionPair for (X, Rev<Y>) {}
+impl DirectionPair for (Rev<X>, Rev<Y>) {}
+
+pub trait StretchDir: Direction {
+    const STRETCH: bool;
+}
+
+impl StretchDir for X {
+    const STRETCH: bool = false;
+}
+
+impl StretchDir for Y {
+    const STRETCH: bool = false;
+}
+
+impl<T> StretchDir for Rev<T> where T: StretchDir {
+    const STRETCH: bool = T::STRETCH;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Stretch<T: Direction> {
+    _Phantom(PhantomData<T>)
+}
+
+impl<T> Direction for Stretch<T> where T: Direction {
+    type Pos = T::Pos;
+    fn unit() -> Vec2 { T::unit() }
+    fn main(v: Vec2) -> Vec2 { T::main(v) }
+    fn main_vec(v: f32) -> Vec2 { T::main_vec(v) }
+    fn len(v: Vec2) -> f32 { T::len(v) }
+    fn project(v: Vec2) -> f32 { T::project(v) }
+    fn off(v: Vec2) -> Vec2 { T::off(v) }
+    fn off_vec(v: f32) -> Vec2 { T::off_vec(v) }
+    fn signum(v: Vec2) -> Vec2 { T::signum(v) }
+    fn reversed() -> bool { T::reversed() }
+    fn bucket(anc: Anchor) -> Trinary { T::bucket(anc) }
+}
+
+impl<T> StretchDir for Stretch<T> where T: Direction {
+    const STRETCH: bool = true;
+}
+
+impl DirectionPair for (Stretch<X>, Y) {}
+impl DirectionPair for (Stretch<Rev<X>>, Y) {}
+impl DirectionPair for (Stretch<X>, Rev<Y>) {}
+impl DirectionPair for (Stretch<Rev<X>>, Rev<Y>) {}
 
 /// Horizontal or Vertical.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect, Default)]
@@ -131,8 +358,9 @@ pub struct LayoutItem {
     pub control: LayoutControl,
 }
 
+#[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum Trinary {
+pub enum Trinary {
     Neg, Mid, Pos
 }
 
