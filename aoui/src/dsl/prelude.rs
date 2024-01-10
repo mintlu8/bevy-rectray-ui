@@ -21,11 +21,11 @@ pub use interpolation::EaseFunction;
 pub use crate::events::{
     EventFlags,
     CustomCursor, TrackCursor,
-    EvLeftDown, EvLeftClick, 
-    EvMidDown, EvMidClick, 
+    EvLeftDown, EvLeftClick,
+    EvMidDown, EvMidClick,
     EvRightDown, EvRightClick,
     EvDragEnd, EvDrop, EvClickOutside,
-    EvHover, 
+    EvHover,
     EvLeftPressed, EvLeftDrag,
     EvMidPressed, EvMidDrag,
     EvRightPressed, EvRightDrag,
@@ -36,7 +36,7 @@ pub use crate::events::{
     EvPositionFactor,
     Handlers, Handler, OneShot, Mutation
 };
-pub use crate::signals::{channel, fps_channel, SignalSender, SignalReceiver};
+pub use crate::signals::{storage_signal, fps_channel, SignalSender, SignalReceiver};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::SharedPosition;
 pub use crate::widgets::button::{
@@ -44,7 +44,7 @@ pub use crate::widgets::button::{
     CheckButton, RadioButton
 };
 pub use crate::widgets::util::{
-    PropagateFocus, DisplayIf, SetCursor, 
+    PropagateFocus, DisplayIf, SetCursor,
 };
 pub use crate::widgets::scroll::{Scrolling, IntoScrollingBuilder};
 pub use crate::widgets::drag::IntoDraggingBuilder;

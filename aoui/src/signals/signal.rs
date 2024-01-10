@@ -3,12 +3,12 @@ use std::sync::{Arc, atomic::{AtomicBool, Ordering, AtomicU8}, Mutex};
 use super::{Object, AsObject};
 
 /// A Signal for sending and receiving data between entities.
-/// 
+///
 /// This simulates the "double buffered" behavior of bevy's events.
 /// If read, Signal lives for 1 frame, if not, lives for 2,
 #[derive(Debug, Clone)]
 #[doc(hidden)]
-pub struct Signal{ 
+pub struct Signal{
     pub(super) inner: Arc<SignalInner>,
 }
 
@@ -37,7 +37,7 @@ impl Signal {
     }
 
     pub(crate) fn try_clean(&self, flag: u8)  {
-        if self.inner.polled.load(Ordering::Relaxed) 
+        if self.inner.polled.load(Ordering::Relaxed)
                 || ![255, flag].contains(&self.inner.drop_flag.swap(flag, Ordering::Relaxed)) {
             self.inner.object.lock().unwrap().clean();
             self.inner.polled.store(false, Ordering::Relaxed);
@@ -62,5 +62,9 @@ impl Signal {
         let lock = self.inner.object.lock().unwrap();
         self.inner.polled.store(true, Ordering::Relaxed);
         lock.is_some()
+    }
+
+    pub(crate) fn polled(&self) -> bool {
+        self.inner.polled.load(Ordering::Relaxed)
     }
 }

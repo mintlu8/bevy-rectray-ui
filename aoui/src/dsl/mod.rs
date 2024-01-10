@@ -99,6 +99,10 @@ impl<'w, 's> AouiCommands<'w, 's> {
     pub fn named_signal<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self, name: &str) -> S {
         self.signals.named(name)
     }
+
+    pub fn shared_storage<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self, name: &str) -> S {
+        self.signals.shared_storage(name)
+    }
 }
 
 impl AsRef<AssetServer> for AouiCommands<'_, '_> {
@@ -114,7 +118,7 @@ impl<'w, 's> AsMut<Commands<'w, 's>> for AouiCommands<'w, 's> {
 }
 
 /// A widget for `bevy_aoui`.
-/// 
+///
 /// You can construct it with the [`widget_extension`](crate::widget_extension) macro.
 pub trait Widget: Sized {
     /// This function should panic if assets is needed but is `None`.
@@ -132,7 +136,7 @@ macro_rules! markers {
     };
 }
 
-/// Allow a struct to create many clones of itself as either 
+/// Allow a struct to create many clones of itself as either
 /// itself T, an array `[T; N]` or a tuple `(T, T, T, ...)`.
 pub trait CloneSplit<T: Clone> {
     fn clone_split(item: T) -> Self;

@@ -3,10 +3,10 @@ use once_cell::sync::Lazy;
 
 use crate::events::mutation::IntoMutationCommand;
 
-use super::{SignalSender, channel, receiver::SignalReceiver};
+use super::{SignalSender, storage_signal, receiver::SignalReceiver};
 
 pub(crate) static SIG_FPS: Lazy<SignalSender<f32>> = Lazy::new(|| {
-    let (send, _) = channel();
+    let (send, _) = storage_signal();
     send.send()
 });
 

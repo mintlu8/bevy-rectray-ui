@@ -134,7 +134,9 @@ impl Layout for BoundsLayout {
 pub struct StackLayout<D: Direction = X>(PhantomData<D>);
 
 impl StackLayout {
+    /// A left to right layout.
     pub const HSTACK: StackLayout<X> = StackLayout(PhantomData);
+    /// A top to bottom layout.
     pub const VSTACK: StackLayout<Rev<Y>> = StackLayout(PhantomData);
 }
 
@@ -150,7 +152,9 @@ impl<D: Direction> StackLayout<D> {
 pub struct SpanLayout<D: StretchDir = X>(PhantomData<D>);
 
 impl SpanLayout {
+    /// A left to right layout with fixed dimension.
     pub const HBOX: SpanLayout<X> = SpanLayout(PhantomData);
+    /// A top to bottom layout with fixed dimension.
     pub const VBOX: SpanLayout<Rev<Y>> = SpanLayout(PhantomData);
 }
 
@@ -180,6 +184,7 @@ impl<D: StretchDir> SpanLayout<D> {
 pub struct ParagraphLayout<D1: StretchDir=X, D2: Direction=Rev<Y>>(PhantomData<(D1, D2)>) where (D1, D2): DirectionPair;
 
 impl ParagraphLayout {
+    /// A left to right, top to bottom paragraph, similar to the default layout of a webpage.
     pub const PARAGRAPH: Self = Self(PhantomData);
 }
 

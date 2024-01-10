@@ -22,6 +22,14 @@ impl<T: AsObject> RawReceiver<T> {
     pub fn poll(&self) -> Option<T> {
         self.signal.read()
     }
+
+    pub fn poll_change(&self) -> Option<T> {
+        if !self.signal.polled() {
+            self.signal.read()
+        } else {
+            None
+        }
+    }
 }
 
 /// A signal receiver component that run a mutation function.
@@ -49,8 +57,8 @@ impl<const A: u8> SignalReceiver<A> {
 impl<T: AsObject> SignalBuilder<T> {
 
     /// A [`Mutation`](crate::events::Mutation) that gets run on receiving an event.
-    /// This requires the correct type for the `Mutation` to be called. 
-    /// 
+    /// This requires the correct type for the `Mutation` to be called.
+    ///
     /// If receiving type erased input, see
     /// [`recv_filter`](Self::recv_filter) or [`recv_select`](Self::recv_select).
     pub fn recv<A, B>(self, f: impl IntoMutationCommand<T, A, B>) -> SignalReceiver<0> {

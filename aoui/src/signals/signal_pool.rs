@@ -1,42 +1,34 @@
-use std::{sync::{RwLock, Arc}, marker::PhantomData, mem};
+use std::{sync::{RwLock, Arc}, marker::PhantomData};
 
-use bevy::{utils::HashMap, ecs::{component::Component, system::{Resource, ResMut, Local, Query, Commands}, entity::Entity}};
-use smallvec::SmallVec;
+use bevy::{utils::HashMap, ecs::system::{Resource, ResMut, Local}};
 
 use crate::dsl::CloneSplit;
 
 use super::{signal::Signal, SignalBuilder, AsObject};
 
-/// A pool of signals, 
-/// signals created here will be auto cleaned up at the end of the frame.
-/// 
+/// A pool of signals.
+///
+/// There are four types of signal.
+/// `named`, `unnamed`, `tracked` and `storage`.
+///
+/// * `tracked`: Signal value is cleaned up every frame.
+///     if polled, lives for `1` frame, if not, live for `2`.
+/// * `storage`: Signal value is not cleaned up and can be read and change detected anytime.
+/// * `named`: Named signals can be obtained from the signal pool anywhere by name.
+///
 /// Named signals can be obtained elsewhere.
-/// 
+///
 /// Unbound signals won't be cleaned up.
 #[derive(Debug, Resource, Default)]
 pub struct SignalPool {
     unnamed: RwLock<Vec<Signal>>,
     named: RwLock<HashMap<String, Signal>>,
+    storage: RwLock<HashMap<String, Signal>>,
 }
 
-/// Add signals to the [`SignalPool`], and remove this component once added.
-#[derive(Debug, Component, Default, Clone)]
-#[component(storage="SparseSet")]
-pub struct DeferredSignal(SmallVec<[Signal; 2]>);
-
-impl DeferredSignal {
-    pub const fn new() -> Self {
-        DeferredSignal(SmallVec::new_const())
-    }
-
-    pub fn push<T: AsObject>(&mut self, s: &SignalBuilder<T>) {
-        self.0.push(s.signal.clone())
-    }
-}
- 
 impl SignalPool {
 
-    /// Get or create a unnamed signal.
+    /// Create a `unnamed`, `tracked` signal.
     pub fn signal<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self) -> S{
         let signal = Signal::new();
         let mut unnamed = self.unnamed.write().unwrap();
@@ -47,7 +39,7 @@ impl SignalPool {
         })
     }
 
-    /// Get or create a named signal.
+    /// Get or create a `named`, `tracked` signal.
     pub fn named<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self, name: &str) -> S {
         let named = self.named.read().unwrap();
         S::clone_split(if let Some(signal) = named.get(name) {
@@ -74,38 +66,52 @@ impl SignalPool {
         })
     }
 
+    /// Get or create a `named`, `storage` signal.
+    pub fn shared_storage<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self, name: &str) -> S {
+        let storage = self.storage.read().unwrap();
+        S::clone_split(if let Some(signal) = storage.get(name) {
+            SignalBuilder {
+                signal: signal.clone(),
+                p: PhantomData,
+            }
+        } else {
+            drop(storage);
+            let mut storage = self.storage.write().unwrap();
+            if let Some(signal) = storage.get(name) {
+                SignalBuilder {
+                    signal: signal.clone(),
+                    p: PhantomData,
+                }
+            } else {
+                let signal = Signal::new();
+                storage.insert(name.to_owned(), signal.clone());
+                SignalBuilder {
+                    signal,
+                    p: PhantomData,
+                }
+            }
+        })
+    }
+
     pub fn system_signal_cleanup(
         mut flag: Local<u8>,
         mut res: ResMut<SignalPool>
     ){
         let f = *flag;
         res.unnamed.get_mut().unwrap()
-            .retain(|sig| if Arc::strong_count(&sig.inner) == 1 {
-                false
+            .retain(|sig| if Arc::strong_count(&sig.inner) > 1 {
+                sig.try_clean(f); true
             } else {
-                sig.try_clean(f);
-                true
+                false
             });
         res.named.get_mut().unwrap()
-            .retain(|_, sig| if Arc::strong_count(&sig.inner) == 1 {
-                false
+            .retain(|_, sig| if Arc::strong_count(&sig.inner) > 1 {
+                sig.try_clean(f); true
             } else {
-                sig.try_clean(f);
-                true
+                false
             });
+        res.storage.get_mut().unwrap()
+            .retain(|_, sig| Arc::strong_count(&sig.inner) > 1);
         *flag = 1 - *flag;
-    }
-
-    pub fn system_add_deferred(
-        mut commands: Commands,
-        mut pool: ResMut<SignalPool>,
-        mut query: Query<(Entity, &mut DeferredSignal)>,
-    ){
-        pool.unnamed.get_mut().unwrap().extend(
-            query.iter_mut().flat_map(|(entity, mut item)| {
-                commands.entity(entity).remove::<DeferredSignal>();
-                mem::take(&mut item.0).into_iter()
-            })
-        );
     }
 }
