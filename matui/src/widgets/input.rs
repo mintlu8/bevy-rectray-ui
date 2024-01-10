@@ -6,12 +6,13 @@ use bevy::sprite::Mesh2dHandle;
 use bevy::transform::components::GlobalTransform;
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
-use bevy_aoui::{Opacity, material_sprite, size2, BuildMeshTransform, color, inputbox};
-use bevy_aoui::widgets::inputbox::{InputOverflow, InputBoxFocus, InputBoxCursorArea, InputBoxCursorBar};
-use bevy_aoui::{widget_extension, build_frame};
+use bevy_aoui::widgets::TextFragment;
+use bevy_aoui::{Opacity, material_sprite, size2, BuildMeshTransform, color, inputbox, Anchor, text, Size2, rectangle};
+use bevy_aoui::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxCursorArea, InputBoxCursorBar, InputBoxText};
+use bevy_aoui::{size, widget_extension, build_frame};
 use bevy_aoui::anim::{Interpolate, Easing};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvTextChange, EvTextSubmit};
-use bevy_aoui::widgets::util::{PropagateFocus, DisplayIf};
+use bevy_aoui::widgets::util::DisplayIf;
 use bevy_aoui::dsl::{Widget, mesh_rectangle, AouiCommands, DslInto};
 use bevy_aoui::dsl::HandleOrString;
 use crate::shapes::{RoundedRectangleMaterial, StrokeColor};
@@ -29,11 +30,11 @@ pub struct CursorStateColors {
 
 impl Default for CursorStateColors {
     fn default() -> Self {
-        Self { 
-            idle: Color::NONE, 
-            hover: Color::NONE, 
-            pressed: Color::NONE, 
-            disabled: Color::NONE 
+        Self {
+            idle: Color::NONE,
+            hover: Color::NONE,
+            pressed: Color::NONE,
+            disabled: Color::NONE
         }
     }
 }
@@ -46,7 +47,7 @@ pub fn cursor_color_change(mut query: Query<(&CursorStateColors, &Opacity, Optio
         }
         match focus {
             Some(focus) if focus.is(EventFlags::Hover)=> color.interpolate_to(colors.hover),
-            Some(focus) if focus.intersects(EventFlags::LeftPressed|EventFlags::LeftDrag) 
+            Some(focus) if focus.intersects(EventFlags::LeftPressed|EventFlags::LeftDrag)
                 => color.interpolate_to(colors.pressed),
             _ => color.interpolate_to(colors.idle),
         }
@@ -82,6 +83,7 @@ pub struct InputStateColors {
 
 widget_extension!(
     pub struct MInputBuilder {
+        pub placeholder: String,
         pub text: String,
         /// Width of text, in em.
         pub width: f32,
@@ -96,6 +98,7 @@ widget_extension!(
         pub focus_palette: Option<WidgetPalette>,
         pub disabled_palette: Option<WidgetPalette>,
 
+        pub bottom_bar: Option<f32>,
     }
 );
 
@@ -109,52 +112,84 @@ impl Widget for MInputBuilder {
         let disabled_style = self.disabled_palette.unwrap_or(style);
 
         let rect = commands.add(
-            RoundedRectangleMaterial::new(style.background, [0.0, 0.0, self.radius, self.radius])
+            RoundedRectangleMaterial::new(style.background,
+                if self.bottom_bar.is_some() {
+                    [0.0, 0.0, self.radius, self.radius]
+                } else {
+                    [self.radius; 4]
+                }
+            )
         );
         let mesh = commands.add(mesh_rectangle());
-        let mut frame = build_frame!(commands, self);
-        frame.insert((
-            PropagateFocus,
-            rect,
-            Mesh2dHandle(mesh),
-            GlobalTransform::IDENTITY,
-            BuildMeshTransform,
-            InputStateColors {
+        let frame = build_frame!(commands, self).id();
+        let input_box = inputbox!(commands {
+            color: style.foreground,
+            text: &self.text,
+            overflow: self.overflow,
+            dimension: Size2::FULL,
+            font: self.font.clone(),
+            width: size!(1 - 1.6 em),
+            z: 0.01,
+            extra: Mesh2dHandle(mesh),
+            extra: rect,
+            extra: GlobalTransform::IDENTITY,
+            extra: BuildMeshTransform,
+            extra: InputStateColors {
                 idle: style.background,
                 focused: focus_style.background,
                 disabled: disabled_style.background,
             },
-            Interpolate::<Color>::new(
+            extra: Interpolate::<Color>::new(
                 Easing::Linear,
-                style.background, 
+                style.background,
                 0.15
             ),
-        ));
-        let frame = frame.id();
-        let input_box = inputbox!(commands {
-            z: 0.01,
-            dimension: size2!(1 - 1.6 em, 1 em),
-            color: style.foreground,
-            font: self.font,
-            text: self.text,
-            overflow: self.overflow,
             cursor_bar: material_sprite! {
-                z: 0.015,
+                z: 0.005,
                 dimension: size2!(0.15 em, 1.2 em),
                 material: RoundedRectangleMaterial::capsule(style.foreground),
                 extra: InputBoxCursorBar,
-                extra: DisplayIf::<InputBoxFocus>::default(),
+                extra: DisplayIf::<InputBoxState>(InputBoxState::Focus),
             },
             cursor_area: material_sprite! {
-                z: 0.005,
+                z: -0.005,
                 dimension: size2!(0, 1.2 em),
                 material: RoundedRectangleMaterial::new(color!(green300), 2.0),
                 extra: InputBoxCursorArea,
-                extra: DisplayIf::<InputBoxFocus>::default(),
+                extra: DisplayIf::<InputBoxState>(InputBoxState::Focus),
             },
+            text_area: rectangle! {
+                z: 0.01,
+                offset: size2!(0.8 em, 0.0),
+                color: style.foreground,
+                anchor: Anchor::CenterLeft,
+                extra: InputBoxText,
+                extra: TextFragment::new(self.text)
+                    .with_font(self.font.clone().get(commands))
+                    .with_color(style.foreground)
+            }
         });
+        let has_placeholder = !self.placeholder.is_empty();
+        if has_placeholder {
+            let placeholder = text!(commands {
+                anchor: Anchor::CenterLeft,
+                offset: size2!(0.8 em, 0),
+                font: self.font.clone(),
+                text: self.placeholder,
+            });
+            commands.entity(input_box).add_child(placeholder);
+        }
+        if let Some(bottom_bar) = self.bottom_bar {
+            let bottom_bar = material_sprite!(commands {
+                parent_anchor: Anchor::BottomCenter,
+                dimension: size2!(100%, bottom_bar em),
+                material: RoundedRectangleMaterial::capsule(color!(black)),
+            });
+            commands.entity(input_box).add_child(bottom_bar);
+        }
+
         commands.entity(frame).add_child(input_box);
-        (frame, frame)
+        (frame, input_box)
     }
 }
 

@@ -1,5 +1,7 @@
+use std::ops::{RangeFull, RangeInclusive, Range};
+
 use bevy::{prelude::{Vec2, UVec2, IVec2, Rect}, sprite::Anchor, render::view::{VisibilityBundle, Visibility, RenderLayers}};
-use crate::{Size2, Opacity, SizeUnit, FontSize, DimensionType};
+use crate::{Size2, Opacity, SizeUnit, FontSize, DimensionType, layout::LayoutRange};
 
 use super::OneOrTwo;
 
@@ -258,27 +260,27 @@ impl DslFrom<Vec2> for DimensionType {
 
 impl DslFrom<[f32; 4]> for Rect {
     fn dfrom([a, b, c, d]: [f32; 4]) -> Rect {
-        Rect { 
-            min: Vec2::new(a, b), 
-            max: Vec2::new(a + c, b + d), 
+        Rect {
+            min: Vec2::new(a, b),
+            max: Vec2::new(a + c, b + d),
         }
     }
 }
 
 impl DslFrom<[Vec2; 2]> for Rect {
     fn dfrom([min, dim]: [Vec2; 2]) -> Rect {
-        Rect { 
-            min, 
-            max: min + dim, 
+        Rect {
+            min,
+            max: min + dim,
         }
     }
 }
 
 impl DslFrom<(Vec2, Vec2)> for Rect {
     fn dfrom((min, dim): (Vec2, Vec2)) -> Rect {
-        Rect { 
-            min, 
-            max: min + dim, 
+        Rect {
+            min,
+            max: min + dim,
         }
     }
 }
@@ -319,6 +321,28 @@ impl DslFrom<Option<bool>> for VisibilityBundle {
     }
 }
 
+impl DslFrom<RangeFull> for LayoutRange {
+    fn dfrom(_: RangeFull) -> Self {
+        LayoutRange::Full
+    }
+}
+
+impl DslFrom<Range<usize>> for LayoutRange {
+    fn dfrom(value: Range<usize>) -> Self {
+        LayoutRange::Bounded { min: value.start, len: value.len() }
+    }
+}
+
+
+impl DslFrom<RangeInclusive<usize>> for LayoutRange {
+    fn dfrom(value: RangeInclusive<usize>) -> Self {
+        LayoutRange::Bounded {
+            min: *value.start(),
+            len: value.end() - value.start() + 1
+        }
+    }
+}
+
 impl DslFrom<u8> for RenderLayers {
     fn dfrom(value: u8) -> Self {
         RenderLayers::layer(value)
@@ -342,4 +366,3 @@ impl<const N: usize> DslFrom<[u8; N]> for Option<RenderLayers> {
         Some(RenderLayers::from_layers(&value))
     }
 }
-

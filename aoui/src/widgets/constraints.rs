@@ -11,21 +11,21 @@ use crate::DimensionData;
 use crate::dsl::CloneSplit;
 use crate::{signals::KeyStorage, AouiREM, Transform2D, Anchor, anim::Attr, layout::Container};
 use crate::anim::Offset;
-use crate::events::{Handlers, EvMouseWheel, MouseWheelAction, EvPositionFactor};
+use crate::events::{Handlers, EvMouseWheel, MovementUnits, EvPositionFactor};
 
 use super::{scroll::{Scrolling, ScrollDiscrete}, drag::Dragging};
 
 fn filter_nan(v: Vec2) -> Vec2 {
     Vec2::new(
-        if v.x.is_nan() {0.0} else {v.x}, 
+        if v.x.is_nan() {0.0} else {v.x},
         if v.y.is_nan() {0.0} else {v.y},
     )
 }
 
 fn flip_vec(v: Vec2, [x, y]: &[bool; 2]) -> Vec2 {
     Vec2::new(
-        if *x {1.0 - v.x} else {v.x}, 
-        if *y {1.0 - v.y} else {v.y}, 
+        if *x {1.0 - v.x} else {v.x},
+        if *y {1.0 - v.y} else {v.y},
     )
 }
 
@@ -35,7 +35,7 @@ fn flip_vec(v: Vec2, [x, y]: &[bool; 2]) -> Vec2 {
 pub struct PositionChanged;
 
 /// Remove [`PositionChanged`].
-pub fn remove_position_changed(mut commands: Commands, 
+pub fn remove_position_changed(mut commands: Commands,
     query: Query<Entity, With<PositionChanged>>,
 ) {
     for entity in query.iter() {
@@ -100,7 +100,7 @@ pub fn scroll_constraint(
     mut commands: Commands,
     storage: Res<KeyStorage>,
     rem: Option<Res<AouiREM>>,
-    query: Query<(Entity, &Scrolling, &DimensionData, Option<&SharedPosition>, &Children, 
+    query: Query<(Entity, &Scrolling, &DimensionData, Option<&SharedPosition>, &Children,
         Option<&Handlers<EvMouseWheel>>,
         Option<&Handlers<EvPositionFactor>>,
         Has<PositionChanged>,
@@ -136,12 +136,12 @@ pub fn scroll_constraint(
                 max = max.max(tr);
             }
             let constraint_min = Vec2::new(
-                if scroll.neg_x {f32::MIN} else {0.0}, 
-                if scroll.neg_y {f32::MIN} else {0.0}, 
+                if scroll.neg_x {f32::MIN} else {0.0},
+                if scroll.neg_y {f32::MIN} else {0.0},
             );
             let constraint_max = Vec2::new(
-                if scroll.pos_x {f32::MAX} else {0.0}, 
-                if scroll.pos_y {f32::MAX} else {0.0}, 
+                if scroll.pos_x {f32::MAX} else {0.0},
+                if scroll.pos_y {f32::MAX} else {0.0},
             );
             let (min, max) = (
                 (size_min - min).min(size_max - max).min(Vec2::ZERO).max(constraint_min),
@@ -178,7 +178,7 @@ pub fn scroll_constraint(
                     if let Some(piping) = scroll_handler {
                         let delta = offset - transform.get();
                         if delta != Vec2::ZERO {
-                            let action = MouseWheelAction {
+                            let action = MovementUnits {
                                 lines: IVec2::ZERO,
                                 pixels: delta,
                             };
@@ -187,7 +187,7 @@ pub fn scroll_constraint(
                     }
                     let fac = filter_nan((offset - min) / (max - min));
                     position.store(flip_vec(fac, flip), Ordering::Relaxed);
-    
+
                     match (scroll.x_scroll(), scroll.y_scroll()) {
                         (true, false) => {
                             let value = fac.x.clamp(0.0, 1.0);
@@ -213,7 +213,7 @@ pub fn scroll_constraint(
                     transform.force_set((max - min) * fac + min);
                 },
             }
-        }            
+        }
     }
 }
 
@@ -222,9 +222,9 @@ pub fn drag_constraint(
     window: Query<&Window, With<PrimaryWindow>>,
     storage: Res<KeyStorage>,
     rem: Option<Res<AouiREM>>,
-    mut query: Query<(Entity, &Dragging, Attr<Transform2D, Offset>, &DimensionData, 
+    mut query: Query<(Entity, &Dragging, Attr<Transform2D, Offset>, &DimensionData,
         Option<&SharedPosition>,
-        Option<&Parent>, 
+        Option<&Parent>,
         Option<&Handlers<EvPositionFactor>>,
         Has<PositionChanged>,
     ), With<DragConstraint>>,
@@ -240,10 +240,10 @@ pub fn drag_constraint(
             .map(|x| x.size)
             .or(window_size)
             else {continue};
-            
+
         let min = dimension * Anchor::BottomLeft;
         let max = dimension * Anchor::TopRight;
-        let origin = dimension * transform.component.get_parent_anchor() 
+        let origin = dimension * transform.component.get_parent_anchor()
             - dim.size * transform.component.anchor;
         let min = min + dim.size / 2.0 - origin;
         let max = max - dim.size / 2.0 - origin;
@@ -321,17 +321,12 @@ pub fn drag_constraint(
 pub fn discrete_scroll_sync(
     mut commands: Commands,
     storage: Res<KeyStorage>,
-    mut query: Query<(Entity, &ScrollDiscrete, &mut Container, &Children,
-        Option<&SharedPosition>,
-        Option<&Handlers<EvPositionFactor>>,
-        Has<PositionChanged>,
-    )>,
+    mut query: Query<(Entity, &ScrollDiscrete, &mut Container,
+        Option<&SharedPosition>, Option<&Handlers<EvPositionFactor>>, Has<PositionChanged>)>,
 ) {
-    for (entity, scroll, mut container, children, shared, fac_handler, changed) in query.iter_mut() {
+    for (entity, scroll, mut container, shared, fac_handler, changed) in query.iter_mut() {
         let mut commands = commands.entity(entity);
-        let Some(range) = container.range.as_mut() else {continue};
-        let len = children.len() - range.end;
-        let fac = if len == 0 {0.0} else {range.start as f32 / len as f32};
+        let fac = container.get_fac();
         match shared {
             Some(SharedPosition{ position, flip }) if changed => {
                 let mut fac2 = fac * scroll.get().as_vec2();
@@ -346,11 +341,7 @@ pub fn discrete_scroll_sync(
             Some(SharedPosition{ position, flip }) => {
                 let fac = flip_vec(position.load(Ordering::Relaxed), flip);
                 if fac.is_nan() { continue; }
-                let mut pos = (fac / scroll.get().as_vec2()).dot(Vec2::ONE);
-                if pos < 0.0 {
-                    pos += 1.0;
-                }
-                range.start = ((pos * len as f32).round() as usize).max(len);
+                container.set_fac(fac.x + fac.y);
             },
             None => (),
         }

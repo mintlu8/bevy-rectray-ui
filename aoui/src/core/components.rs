@@ -1,3 +1,4 @@
+
 use bevy::{prelude::*, reflect::Reflect, math::Affine2};
 
 /// Stores opacity of the widget, not used by default but
@@ -76,16 +77,16 @@ pub struct IgnoreAlpha;
 #[derive(Debug, Component, Default)]
 pub struct Clipping {
     /// If set, use this sprite's bounding rectangle to clip its children.
-    /// 
+    ///
     /// This currently only affect events, you need `clipping_layer` for
     /// render clipping. This might change in the future.
     pub clip: bool,
     /// Global space clipping, is the inverse of some parent's `RotatedRect`.
-    /// 
+    ///
     /// This occludes cursor events.
     pub global: Option<Affine2>,
     /// Local space clipping, between `0..=1`.
-    /// 
+    ///
     /// Experimental, unused currently.
     pub local: Option<Rect>,
 }
@@ -111,5 +112,7 @@ impl Clipping {
 }
 
 /// If specified, breaks hierarchy, making the sprite window space.
+///
+/// Does not affect opacity and event propagation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
 pub struct Detach;

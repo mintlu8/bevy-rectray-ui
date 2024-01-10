@@ -33,21 +33,21 @@ pub fn init(mut commands: AouiCommands) {
         })
     });
 
-    let palette_idle = WidgetPalette { 
-        background: color!(red500), 
-        foreground: color!(white), 
+    let palette_idle = WidgetPalette {
+        background: color!(red500),
+        foreground: color!(white),
         stroke: color!(none),
     };
 
-    let palette_hover = WidgetPalette { 
-        background: color!(red600), 
-        foreground: color!(white), 
+    let palette_hover = WidgetPalette {
+        background: color!(red600),
+        foreground: color!(white),
         stroke: color!(none),
     };
 
-    let palette_pressed = WidgetPalette { 
-        background: color!(red800), 
-        foreground: color!(white), 
+    let palette_pressed = WidgetPalette {
+        background: color!(red800),
+        foreground: color!(white),
         stroke: color!(none),
     };
 
@@ -55,7 +55,7 @@ pub fn init(mut commands: AouiCommands) {
 
     mwindow!(commands {
         radius: 5,
-        palette: palette!(FramePalette { 
+        palette: palette!(FramePalette {
             background: white,
             stroke: neutral400,
         }),
@@ -73,7 +73,7 @@ pub fn init(mut commands: AouiCommands) {
             child: check_button! {
                 anchor: Right,
                 offset: size2!(-1 em, 0),
-                dimension: size2!(1 em, 1 em),                    
+                dimension: size2!(1 em, 1 em),
                 checked: true,
                 on_change: collapse_send,
                 child: text! {
@@ -103,9 +103,9 @@ pub fn init(mut commands: AouiCommands) {
                 palette_hover: palette_hover,
                 palette_pressed: palette_pressed,
                 text: "Click Me!",
-                child: mframe! { 
+                child: mframe! {
                     anchor: TopLeft,
-                    palette: palette!(FramePalette { 
+                    palette: palette!(FramePalette {
                         background: white,
                     }),
                     radius: 5,
@@ -135,12 +135,12 @@ pub fn init(mut commands: AouiCommands) {
                 dial_size: 1.6,
                 dial_shadow: 2.0,
                 palette: palette!(DialPalette {
-                    background: red300, 
-                    dial: red500, 
+                    background: red300,
+                    dial: red500,
                 }),
                 checked_palette: palette!(DialPalette {
-                    background: red700, 
-                    dial: red500, 
+                    background: red700,
+                    dial: red500,
                 }),
             }
         },
@@ -149,17 +149,18 @@ pub fn init(mut commands: AouiCommands) {
             range: (0..5),
             dial_shadow: 2.0,
             palette: palette!(DialPalette {
-                background: grey, 
-                dial: red500, 
+                background: grey,
+                dial: red500,
             }),
             hover_palette: palette!(DialPalette {
-                background: grey, 
-                dial: red600, 
+                background: grey,
+                dial: red600,
             }),
         },
 
         child: minput! {
             text: "Hello, World!",
+            //placeholder: "Say Hello:",
             width: 20,
             radius: 5,
             palette: palette_idle,
@@ -180,15 +181,15 @@ pub fn init(mut commands: AouiCommands) {
     mtoggle!(commands{
         offset: [0, 100],
         palette: palette!(DialPalette {
-            background: white, 
-            background_stroke: red700, 
-            dial: red500, 
+            background: red300,
+            background_stroke: red700,
+            dial: red500,
             icon: white,
         }),
         checked_palette: palette!(DialPalette {
-            background: red700, 
+            background: red700,
             background_stroke: red700,
-            dial: white, 
+            dial: white,
             icon: red700,
         }),
         icon: "cross.png",
@@ -203,14 +204,13 @@ pub fn init(mut commands: AouiCommands) {
         length: 2,
         dial_size: 1.6,
         palette: palette!(DialPalette {
-            background: white, 
-            dial: red500, 
+            background: white,
+            dial: red500,
         }),
         checked_palette: palette!(DialPalette {
-            background: red700, 
-            dial: red500, 
+            background: red700,
+            dial: red500,
         }),
         dial_shadow: (4, color!(grey)),
     });
-
 }

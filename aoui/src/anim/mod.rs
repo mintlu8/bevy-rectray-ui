@@ -1,7 +1,7 @@
 //! Interpolation module for bevy_aoui.
-//! 
+//!
 //! # Getting Started:
-//! 
+//!
 //! We use a CSS-like syntax in the `transition!` macro:
 //! ```
 //! # /*
@@ -23,39 +23,39 @@
 //!     Field seconds Easing mode value
 //! )
 //! ```
-//! 
+//!
 //! ## Mode
-//! 
-//! * default: 
+//!
+//! * default:
 //! A watcher that you can write to either manually or with signals,
 //! value has to be a single value.
-//! 
+//!
 //! * init:
 //! A watcher that runs once on initialization.
-//! 
+//!
 //! * repeat
 //! Repeat the animation forever, time value is `0->1, 0->1, 0->1, ...`
-//! 
+//!
 //! * loop
 //! Repeat the animation forever, time value is `0->1->0->1->0->1, ...`
-//! 
-//! 
+//!
+//!
 //! ## Easing
-//! 
+//!
 //! * Linear
 //! * [Ease Functions](EaseFunction)
 //! * Cubic Bézier `[f32; 4]`
-//! 
+//!
 //! ## Value
-//! 
+//!
 //! * Single Value
 //! * Tuple `(T, T)`
 //! * Gradient `[(T, 0.0..=1.0); N]`
-//! 
+//!
 //! # Smart Tweening
-//! 
+//!
 //! `Interpolation` is a simple state machine. When setting a new target:
-//! 
+//!
 //! * If target is the same, ignore.
 //! * If target is the source of current animation, reverse.
 //! * Otherwise interpolate to the target.
@@ -69,7 +69,7 @@ pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Ind
 mod assoc;
 pub use assoc::{Attr, InterpolateAssociation};
 
-use crate::{Opacity, Transform2D, Dimension};
+use crate::{Opacity, Transform2D, Dimension, widgets::TextFragment};
 //mod state_machine;
 //pub use state_machine::WidgetState;
 
@@ -155,6 +155,7 @@ impl Plugin for AnimationPlugin {
                 <(Sprite, Color)>::system,
                 <(TextureAtlasSprite, Color)>::system,
                 <(Text, Color)>::system,
+                <(TextFragment, Color)>::system,
                 <(Sprite, Color)>::system,
                 <(Opacity, Color)>::system,
                 <(Opacity, Opacity)>::system.after(

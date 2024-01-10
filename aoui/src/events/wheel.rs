@@ -24,17 +24,26 @@ impl Default for ScrollScaling {
     }
 }
 
+/// Movement units associated with dragging or scrolling.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MovementUnits{
+    pub lines: IVec2,
+    pub pixels: Vec2,
+}
 
 /// This is relatively independent, as the mousewheel action does not take
 /// the drag target and the cursor action target into account.
 #[derive(Debug, Clone, Copy, PartialEq, Component)]
 #[component(storage="SparseSet")]
-pub struct MouseWheelAction{
-    pub lines: IVec2,
-    pub pixels: Vec2,
-}
+pub struct MouseWheelAction(pub MovementUnits);
 
 impl MouseWheelAction {
+    pub fn get(&self) -> MovementUnits {
+        self.0
+    }
+}
+
+impl MovementUnits {
     pub const ZERO: Self = Self {
         lines: IVec2::ZERO,
         pixels: Vec2::ZERO
@@ -74,20 +83,20 @@ pub fn mousewheel_event(
                 MouseScrollUnit::Line => {
                     let lines = Vec2::new(event.x, event.y);
                     let pixels = lines * scaling.line_to_pixels * scaling.pixel_scale;
-                    commands.entity(entity).insert(MouseWheelAction{
+                    commands.entity(entity).insert(MouseWheelAction(MovementUnits{
                         lines: lines.as_ivec2(),
                         pixels,
-                    });
+                    }));
                 },
                 MouseScrollUnit::Pixel => {
                     let pixels = Vec2::new(event.x, event.y) * scaling.pixel_scale;
                     *lines += pixels;
                     let count = (*lines / scaling.line_to_pixels).as_ivec2();
                     *lines %= scaling.line_to_pixels;
-                    commands.entity(entity).insert(MouseWheelAction{
+                    commands.entity(entity).insert(MouseWheelAction(MovementUnits{
                         lines: count,
                         pixels,
-                    });
+                    }));
                 },
             }
         }

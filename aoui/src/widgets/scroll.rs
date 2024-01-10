@@ -1,40 +1,45 @@
-use bevy::{hierarchy::Children, math::{Vec2, IVec2}, log::warn, reflect::Reflect, ecs::{query::With, system::Res, bundle::Bundle, entity::Entity}};
+use bevy::{hierarchy::Children, log::warn, reflect::Reflect};
+use bevy::ecs::{bundle::Bundle, entity::Entity};
+use bevy::ecs::query::{With, WorldQuery, QueryItem};
+use bevy::ecs::system::{Res, SystemParam};
+use bevy::math::{Vec2, IVec2};
 use bevy::ecs::{component::Component, query::Without};
 use bevy::ecs::system::{Query, Commands};
-use crate::{Transform2D, anim::Attr, anim::Offset, events::EvPositionFactor, AouiREM, DimensionData, signals::ReceiveInvoke};
-use crate::layout::{Container, LayoutControl};
+use crate::{Transform2D, anim::Attr, anim::Offset, AouiREM, DimensionData, signals::ReceiveInvoke};
+use crate::events::{EvPositionFactor, MouseWheelAction};
+use crate::layout::Container;
 use crate::events::{EvMouseWheel, Handlers};
 use crate::signals::{Invoke, KeyStorage};
 use crate::dsl::DslInto;
 
-use crate::events::MouseWheelAction;
+use crate::events::MovementUnits;
 pub use super::constraints::ScrollConstraint;
 
 use super::constraints::{SharedPosition, PositionChanged};
 
 /// Add mouse wheel scrolling support.
-/// 
+///
 /// This component moves children in this sprites
 /// bounding area.
-/// 
+///
 /// # Setup Requirements
-/// 
+///
 /// * add a single child with the `Size2::FULL` and
 /// `Anchor::Center`, which acts as a container.
 /// * add children to that child.
-/// 
+///
 /// # Supporting components
-/// 
+///
 /// * [`EventFlags`](crate::events::EventFlags): Requires `MouseWheel` to be set.
 /// * [`ScrollConstraint`]: If specified, the sprite cannot go over bounds of its parent.
-/// * [`Handlers<EvMouseWheel>`]: 
+/// * [`Handlers<EvMouseWheel>`]:
 ///     A signal that transfers the `being scrolled` status onto another entity.
 ///     This will trigger if either scrolled to the end or not scrollable to begin with.
-/// * [`Receiver<SigScroll>`]: 
+/// * [`Receiver<SigScroll>`]:
 ///     Receives `EvMouseWheel` on another scrollable sprite.
-/// * [`SharedPosition`]: Shares relative position in its parent's bounds with another widget. 
+/// * [`SharedPosition`]: Shares relative position in its parent's bounds with another widget.
 ///     For example synchronizing a scrollbar with a textbox.
-/// * [`Handlers<EvPositionFac>`]: A signal that sends a value 
+/// * [`Handlers<EvPositionFac>`]: A signal that sends a value
 ///     in `0..=1` in its constraints when being scrolled.
 #[derive(Debug, Clone, Copy, Component, Reflect)]
 pub struct Scrolling {
@@ -45,46 +50,46 @@ pub struct Scrolling {
 }
 
 impl Scrolling {
-    pub const X: Scrolling = Scrolling { 
-        pos_x: true, 
-        neg_x: true, 
-        pos_y: false, 
+    pub const X: Scrolling = Scrolling {
+        pos_x: true,
+        neg_x: true,
+        pos_y: false,
         neg_y: false,
     };
-    pub const Y: Scrolling = Scrolling { 
-        pos_x: false, 
-        neg_x: false, 
-        pos_y: true, 
+    pub const Y: Scrolling = Scrolling {
+        pos_x: false,
+        neg_x: false,
+        pos_y: true,
         neg_y: true,
     };
-    pub const NEG_X: Scrolling = Scrolling { 
-        pos_x: false, 
-        neg_x: true, 
-        pos_y: false, 
+    pub const NEG_X: Scrolling = Scrolling {
+        pos_x: false,
+        neg_x: true,
+        pos_y: false,
         neg_y: false,
     };
-    pub const NEG_Y: Scrolling = Scrolling { 
-        pos_x: false, 
-        neg_x: false, 
-        pos_y: false, 
+    pub const NEG_Y: Scrolling = Scrolling {
+        pos_x: false,
+        neg_x: false,
+        pos_y: false,
         neg_y: true,
     };
-    pub const POS_X: Scrolling = Scrolling { 
-        pos_x: true, 
-        neg_x: false, 
-        pos_y: false, 
+    pub const POS_X: Scrolling = Scrolling {
+        pos_x: true,
+        neg_x: false,
+        pos_y: false,
         neg_y: false,
     };
-    pub const POS_Y: Scrolling = Scrolling { 
-        pos_x: false, 
-        neg_x: false, 
-        pos_y: true, 
+    pub const POS_Y: Scrolling = Scrolling {
+        pos_x: false,
+        neg_x: false,
+        pos_y: true,
         neg_y: false,
     };
-    pub const BOTH: Scrolling = Scrolling { 
-        pos_x: true, 
-        neg_x: true, 
-        pos_y: true, 
+    pub const BOTH: Scrolling = Scrolling {
+        pos_x: true,
+        neg_x: true,
+        pos_y: true,
         neg_y: true,
     };
 
@@ -104,49 +109,70 @@ impl Default for Scrolling {
 }
 
 impl ReceiveInvoke for Scrolling {
-    type Type = MouseWheelAction;
+    type Type = MovementUnits;
 }
 
-pub fn scrolling_system(
+pub fn scrolling_senders(
     mut commands: Commands,
-    rem: Option<Res<AouiREM>>,
     storage: Res<KeyStorage>,
-    mut scroll: Query<(Entity, &Scrolling, &DimensionData, &Children, &MouseWheelAction)>,
-    sender: Query<(Entity, &MouseWheelAction, &Handlers<EvMouseWheel>), Without<Scrolling>>,
-    mut receiver: Query<(Entity, &Scrolling, &DimensionData, &Children, &Invoke<Scrolling>), Without<MouseWheelAction>>,
-    mut child_query: Query<Attr<Transform2D, Offset>, With<Children>>,
+    sender: Query<(Entity, &MouseWheelAction, &Handlers<EvMouseWheel>), Without<MouseWheelAction>>,
 ) {
-    let rem = rem.map(|x| x.get()).unwrap_or(16.0);
     for (entity, action, signal) in sender.iter() {
-        signal.handle(&mut commands.entity(entity), &storage, *action);
+        signal.handle(&mut commands.entity(entity), &storage, action.get());
     }
+}
+
+pub fn scrolling_system<'t, T: Movement>(
+    mut fetched: T::Ctx<'_, '_>,
+    mut scroll: Query<(T::Query<'t>, &MouseWheelAction)>,
+    mut receiver: Query<(T::Query<'t>, &Invoke<Scrolling>), Without<MouseWheelAction>>,
+) {
     let iter = scroll.iter_mut()
-        .map(|(entity, scroll, dim, children, action)| 
-            (entity, scroll, dim, children, *action))
-        .chain(receiver.iter_mut().filter_map(|(entity, scroll, dim, children, receiver)| 
-            Some((entity, scroll, dim, children, receiver.poll()?))));
-    for (entity, scroll, dim, children, delta) in iter {
+        .map(|(query, action)|
+            (query, action.get()))
+        .chain(receiver.iter_mut().filter_map(|(query, receiver)|
+            Some((query, receiver.poll()?)))); {
+    }
+    for (mut query, input) in iter {
+        T::run(&mut query, &mut fetched, input);
+    }
+}
+
+pub trait Movement {
+    type Query<'t>: WorldQuery;
+    type Ctx<'w, 's>: SystemParam;
+    fn run(this: &mut QueryItem<Self::Query<'_>>, ctx: &mut Self::Ctx::<'_, '_>, amount: MovementUnits);
+}
+
+impl Movement for Scrolling {
+    type Query<'t> = (Entity, &'t Scrolling, &'t DimensionData, &'t Children);
+    type Ctx<'w, 's> = (Commands<'w, 's>, Res<'w, AouiREM>, Query<'w, 's, Attr<Transform2D, Offset>, With<Children>>);
+
+    fn run(this: &mut QueryItem<Self::Query<'_>>, ctx: &mut Self::Ctx::<'_, '_>, delta: MovementUnits) {
+        let (entity, scroll, dim, children) = this;
+        let (commands, rem, child_query) = ctx;
         let delta_scroll = match (scroll.x_scroll(), scroll.y_scroll()) {
             (true, true) => delta.pixels,
             (true, false) => Vec2::new(delta.pixels.x + delta.pixels.y, 0.0),
             (false, true) => Vec2::new(0.0, delta.pixels.x + delta.pixels.y),
-            (false, false) => continue,
+            (false, false) => return,
         };
         if children.len() != 1 {
             warn!("Component 'Scrolling' requires exactly one child as a buffer.");
-            continue;
+            return;
         }
         let container = children[0];
         if let Ok(mut transform) = child_query.get_mut(container){
-            transform.force_set_pixels(transform.get_pixels(dim.size, dim.em, rem) + delta_scroll);
+            transform.force_set_pixels(transform.get_pixels(dim.size, dim.em, rem.get()) + delta_scroll);
         }
-        commands.entity(entity).insert(PositionChanged);
+        commands.entity(*entity).insert(PositionChanged);
     }
 }
 
-/// Marker component for making scrolling affect 
+
+/// Marker component for making scrolling affect
 /// the `range` value on a layout.
-/// 
+///
 /// This implementation has the benefit of not requiring clipping.
 #[derive(Debug, Clone, Copy, Component, Default, Reflect)]
 pub enum ScrollDiscrete {
@@ -172,49 +198,47 @@ impl ScrollDiscrete {
     }
 }
 
+impl Movement for ScrollDiscrete {
+    type Query<'t> = (Entity, &'t ScrollDiscrete, &'t mut Container);
 
-pub fn scrolling_discrete(
-    mut commands: Commands,
-    mut scroll: Query<(Entity, &ScrollDiscrete, &mut Container, &Children, &MouseWheelAction)>,
-    mut receiver: Query<(Entity, &ScrollDiscrete, &mut Container, &Children, &Invoke<Scrolling>), Without<MouseWheelAction>>,
-    child_query: Query<&LayoutControl>,
-) {
-    let iter = scroll.iter_mut()
-        .map(|(entity, scroll, container, children, action)| 
-            (entity, scroll, container, children, *action))
-        .chain(receiver.iter_mut().filter_map(|(entity, scroll, container, children, receiver)| 
-            Some((entity, scroll, container, children, receiver.poll()?))));
-    
-    for (entity, scroll, mut container, children, delta) in iter {
-        let Some(range) = container.range.clone() else {
-            warn!("ScrollDiscrete requires a range in `Container`.");
-            continue;
-        };
+    type Ctx<'w, 's> = Commands<'w, 's>;
+
+    fn run(this: &mut QueryItem<Self::Query<'_>>, commands: &mut Self::Ctx::<'_, '_>, delta: MovementUnits) {
+        let (entity, scroll, container) = this;
         let delta = delta.lines.dot(scroll.get());
-        let count = children.len() - child_query.iter_many(children).filter(|x| 
-             x == &&LayoutControl::IgnoreLayout
-        ).count();
-        let len = range.len();
-        if len > count {
-            container.range = Some(0..len);
-            continue;
-        }
-        let max = count - len;
         match delta {
             ..=-1 => {
-                let start = range.start.saturating_sub((-delta) as usize).clamp(0, max);
-                container.range = Some(start..start + len);
+                container.decrement();
             }
             1.. => {
-                let start = range.start.saturating_add(delta as usize).clamp(0, max);
-                container.range = Some(start..start + len);
-            } 
-            0 => continue,
+                container.increment();
+            }
+            0 => return,
         };
-        commands.entity(entity).insert(PositionChanged);
+        commands.entity(*entity).insert(PositionChanged);
     }
 }
 
+
+/// For a texture allow scrolling on the sprite's UV.
+/// [`Sprite::rect`](bevy::sprite::Sprite::rect).
+///
+/// ## Experimental
+#[derive(Debug, Clone, Copy, Component, Default, Reflect)]
+pub enum ScrollUV {
+    X, Y, #[default] XY
+}
+
+// impl Movement for ScrollUV {
+//     type Query<'t> = (Entity, &'t mut Sprite, &'t ScrollUV);
+
+//     type Ctx<'w, 's> = (Commands<'w, 's>, Res<'w, Assets<Image>>);
+
+//     fn run(this: &mut QueryItem<Self::Query<'_>>, ctx: &mut Self::Ctx::<'_, '_>, amount: MovementUnits) {
+//         let (entity, sprite, scroll) = this;
+
+//     }
+// }
 
 pub trait IntoScrollingBuilder: Bundle + Default {
 
@@ -242,7 +266,7 @@ pub trait IntoScrollingBuilder: Bundle + Default {
 impl IntoScrollingBuilder for Scrolling {}
 
 impl<T, A> IntoScrollingBuilder for (T, A) where T: IntoScrollingBuilder, A: Bundle + Default {
-    fn with_constraints(self) -> impl IntoScrollingBuilder { 
+    fn with_constraints(self) -> impl IntoScrollingBuilder {
         (T::with_constraints(self.0), self.1)
     }
 }

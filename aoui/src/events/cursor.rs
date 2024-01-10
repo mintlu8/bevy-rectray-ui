@@ -15,7 +15,7 @@ use super::AouiCamera;
 pub struct CustomCursor(pub CursorIcon);
 
 impl CustomCursor {
-    pub fn new(icon: CursorIcon) -> impl Bundle {
+    pub fn new_bundle(icon: CursorIcon) -> impl Bundle {
         (CustomCursor(icon), TrackCursor(Size2::ZERO))
     }
 
@@ -88,13 +88,13 @@ pub fn track_cursor(
     camera: CameraQuery,
     mut query: Query<(&TrackCursor, &mut Transform2D, &DimensionData)>
 ) {
-    let Ok(window) = windows.get_single() else { return };       
+    let Ok(window) = windows.get_single() else { return };
     let Some(mouse_pos) = window.cursor_position()
-        .and_then(|cursor| camera.viewport_to_world(cursor)) 
+        .and_then(|cursor| camera.viewport_to_world(cursor))
     else {return};
     let dim = Vec2::new(window.width(), window.height());
     for (cursor, mut transform, dimension) in query.iter_mut() {
-        transform.offset = (-dim * transform.get_parent_anchor() 
+        transform.offset = (-dim * transform.get_parent_anchor()
             //- dimension.size * transform.anchor
             + cursor.0.as_pixels(dim, dimension.em, rem.get())
             + mouse_pos

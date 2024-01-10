@@ -6,20 +6,21 @@ use crate::events::{
     EvTextSubmit, EventFlags, Handlers,
 };
 use crate::signals::{Invoke, KeyStorage, ReceiveInvoke};
-use crate::{RotatedRect, Transform2D, DimensionData};
-use ab_glyph::{Font as FontTrait, ScaleFont, point};
+use crate::{RotatedRect, Transform2D, DimensionData, Size, size, AouiREM};
+use ab_glyph::{Font as FontTrait, ScaleFont};
 use bevy::asset::{Assets, Handle};
-use bevy::ecs::query::Has;
-use bevy::ecs::system::ResMut;
+use bevy::ecs::query::Or;
+
 use bevy::ecs::{event::EventReader, query::Changed, system::Commands};
 use bevy::hierarchy::Children;
 use bevy::input::{keyboard::KeyCode, Input};
-use bevy::prelude::{Component, Entity, Parent, Query, Res, Visibility, With, Without};
+use bevy::prelude::{Component, Entity, Query, Res, Visibility, With, Without};
 use bevy::reflect::Reflect;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use bevy::render::texture::Image;
-use bevy::text::{Font, Text};
+
+use bevy::text::Font;
 use bevy::window::ReceivedCharacter;
+use super::TextFragment;
+use super::text::measure_string;
 use super::util::DisplayIf;
 
 #[derive(Debug, Default, Clone, Copy, Reflect)]
@@ -29,8 +30,20 @@ enum LeftRight {
     Right,
 }
 
-#[derive(Debug, Default, Clone, Copy, Component, Reflect)]
-pub struct InputBoxFocus;
+mod sealed {
+    use bevy::ecs::component::Component;
+
+    tlbf::tlbf!(
+        #[derive(Component)]
+        pub InputBoxState: u8 {
+            Focus,
+            Text,
+        }
+    );
+}
+
+pub use sealed::InputBoxState;
+
 
 /// If we deny overflowing input or not.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Reflect)]
@@ -65,6 +78,7 @@ pub struct InputBox {
     text: String,
     focus: bool,
     active: LeftRight,
+    max_len: Size,
     em: f32,
 }
 
@@ -73,7 +87,7 @@ impl ReceiveInvoke for InputBox {
     type Type = ();
 }
 
-/// Marker component for a empty frame containing individual glyphs.
+/// Marker component for a sprite containing renderred glyphs.
 #[derive(Debug, Component, Default)]
 pub struct InputBoxText;
 
@@ -99,8 +113,14 @@ impl InputBox {
         Self {
             text: s.into(),
             overflow,
+            max_len: size!(100%),
             ..Default::default()
         }
+    }
+
+    pub fn with_width(mut self, s: Size) -> Self {
+        self.max_len = s;
+        self
     }
 
     /// Get length of the text in the widget.
@@ -326,14 +346,17 @@ impl InputBox {
 pub fn text_on_mouse_down(
     state: Res<CursorState>,
     fonts: Res<Assets<Font>>,
-    mut query: Query<(&DimensionData, &CursorFocus, &mut InputBox, &Handle<Font>, &RotatedRect)>,
+    mut query: Query<(&CursorFocus, &mut InputBox, &Handle<Font>, &Children)>,
+    child: Query<(&DimensionData, &RotatedRect), With<InputBoxText>>
 ) {
-    for (dim, focus, mut input_box, font, rect) in query.iter_mut() {
+    for (focus, mut input_box, font, chiildren) in query.iter_mut() {
         if !focus.intersects(EventFlags::LeftDrag) {
             continue;
         };
         let Some(font) = fonts.get(font) else {continue};
         // We only need to care about scale factor in rendering
+
+        let Some((dim, rect)) = child.iter_many(chiildren).next() else {continue};
         let font = font.font.as_scaled(dim.em);
 
         let curr = rect.local_space(state.cursor_position()).x;
@@ -391,64 +414,62 @@ pub fn text_propagate_focus(
 ) {
     let mut queue = Vec::new();
     for (entity, input_box) in query.iter() {
-        if input_box.has_focus() {
-            commands.entity(entity).insert(InputBoxFocus);
-            queue.push(entity);
+        if input_box.has_focus() && !input_box.text.is_empty() {
+            commands.entity(entity).insert(InputBoxState::Focus | InputBoxState::Text);
+            queue.push((entity, InputBoxState::Focus | InputBoxState::Text));
+        } else if input_box.has_focus() {
+            commands.entity(entity).insert(InputBoxState::Focus);
+            queue.push((entity, InputBoxState::Focus));
+        } else if !input_box.text.is_empty() {
+            commands.entity(entity).insert(InputBoxState::Text);
+            queue.push((entity, InputBoxState::Text));
         }
     }
     while !queue.is_empty() {
-        for children in entities.iter_many(mem::take(&mut queue)) {
-            queue.extend(children.iter().map(|entity| {
-                commands.entity(*entity).insert(InputBoxFocus);
-                *entity
-            }))
+        for (entity, focus) in mem::take(&mut queue) {
+            commands.entity(entity).insert(focus);
+            if let Ok(children) = entities.get(entity) {
+                for entity in children {
+                    queue.push((*entity, focus))
+                }
+            }
         }
     }
 }
 
 pub fn inputbox_conditional_visibility(
-    mut query: Query<(Has<InputBoxFocus>, VisibilityToggle), With<DisplayIf<InputBoxFocus>>>,
+    mut query: Query<(Option<&InputBoxState>, &DisplayIf<InputBoxState>, VisibilityToggle)>,
 ) {
-    query.iter_mut().for_each(|(has_focus, mut vis)| {
-        if has_focus {
-            vis.set_visible(true)
+    query.iter_mut().for_each(|(focus, display_if, mut vis)| {
+        if let Some(flag) = focus {
+            if flag.contains(display_if.0) {
+                vis.set_visible(true)
+            } else {
+                vis.set_visible(false)
+            }
         } else {
             vis.set_visible(false)
         }
     })
 }
 
-pub fn measure_string<F: ab_glyph::Font>(
-    font: &impl ab_glyph::ScaleFont<F>,
-    string: &str,
-) -> f32 {
-    let mut cursor = 0.0;
-    let mut last = '\0';
-    for c in string.chars() {
-        cursor += font.kern(font.glyph_id(last), font.glyph_id(c));
-        cursor += font.h_advance(font.glyph_id(c));
-        last = c
-    }
-    cursor
-}
-
 pub fn update_inputbox_cursor(
     fonts: Res<Assets<Font>>,
-    query: Query<(Entity, &InputBox, &DimensionData,
-            &Handle<Font>, ActiveDetection),
-        (Changed<InputBox>, Without<InputBoxCursorArea>,  Without<Text>)>,
-    mut bar: Query<(&Parent, &mut Transform2D, &mut Visibility),
-        (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, 
-            Without<Text>, Without<InputBox>,)>,
-    mut area: Query<(&Parent, &mut Transform2D, DimensionMut, &mut Visibility),
-        (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>,
-            Without<Text>, Without<InputBox>,)>
+    query: Query<(&InputBox,  &Handle<Font>, ActiveDetection, &Children),
+        (Changed<InputBox>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>,
+    text: Query<(&Children, &DimensionData), With<InputBoxText>>,
+    mut bar: Query<(&mut Transform2D, &mut Visibility),
+        (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<InputBox>)>,
+    mut area: Query<(&mut Transform2D, DimensionMut, &mut Visibility),
+        (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBox>)>,
 ) {
     use bevy::prelude::*;
-    for (entity, input_box, dimension, font_handle, active) in query.iter() {
-        if !active.is_active() {
+    for (input_box, font_handle, active, children) in query.iter() {
+        if !active.is_active() || !input_box.focus {
             continue;
         }
+
+        let Some((children, dimension)) = text.iter_many(children).next() else {continue};
         let font = match fonts.get(font_handle) {
             Some(font) => font.font.as_scaled(dimension.em),
             None => continue,
@@ -488,30 +509,24 @@ pub fn update_inputbox_cursor(
         if input_box.cursor_start + input_box.cursor_len == 0 {
             end = start;
         }
-        if !input_box.focus {
-            for (.., mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
-                *vis = Visibility::Hidden;
-            }
-            for (.., mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
-                *vis = Visibility::Hidden;
-            }
-            continue;
-        }
         if input_box.cursor_len == 0 {
-            for (_, mut transform, mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
+            let mut iter = bar.iter_many_mut(children);
+            while let Some((mut transform, mut vis)) = iter.fetch_next() {
                 transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
                 *vis = Visibility::Inherited;
             }
-            for (.., mut vis) in area.iter_mut().filter(|(p, ..)| p.get() == entity) {
+
+            let mut iter = area.iter_many_mut(children);
+            while let Some((.., mut vis)) = iter.fetch_next() {
                 *vis = Visibility::Hidden;
             }
         } else {
-            for (.., mut vis) in bar.iter_mut().filter(|(p, ..)| p.get() == entity) {
+            let mut iter = bar.iter_many_mut(children);
+            while let Some((.., mut vis)) = iter.fetch_next() {
                 *vis = Visibility::Hidden;
             }
-            for (.., mut transform, mut dimension, mut vis) in
-                area.iter_mut().filter(|(p, ..)| p.get() == entity)
-            {
+            let mut iter = area.iter_many_mut(children);
+            while let Some((mut transform, mut dimension, mut vis)) = iter.fetch_next() {
                 transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
                 dimension.edit_raw(|v| v.x = end - start);
                 *vis = Visibility::Inherited;
@@ -531,25 +546,21 @@ pub fn text_on_click_outside(mut query: Query<&mut InputBox, With<CursorClickOut
 }
 pub fn inputbox_keyboard(
     mut commands: Commands,
+    rem: Res<AouiREM>,
     fonts: Res<Assets<Font>>,
     storage: Res<KeyStorage>,
-    mut query: Query<(
-        Entity,
-        &mut InputBox,
-        &DimensionData,
-        &Handle<Font>,
-        Option<&Handlers<EvTextChange>>,
-        Option<&Handlers<EvTextSubmit>>,
-        Option<&Invoke<InputBox>>,
-        ActiveDetection,
-    )>,
+    mut query: Query<(Entity, &DimensionData, &mut InputBox, &Handle<Font>,
+        Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>,
+        Option<&Invoke<InputBox>>, ActiveDetection)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
 ) {
-    for (entity, mut inputbox, dimension, font_handle, change, submit, invoke, active) in
-        query.iter_mut().filter(|(_, input, ..)| input.has_focus())
+    for (entity, dimension, mut inputbox, font_handle, change, submit, invoke, active) in
+        query.iter_mut().filter(|(_, _, input, ..)| input.has_focus())
     {
         let mut commands = commands.entity(entity);
+        let em = dimension.em;
+        let dimension = inputbox.max_len.as_pixels(dimension.size.x, dimension.em, rem.get());
         if !active.is_active() {
             inputbox.focus = false;
             continue;
@@ -567,11 +578,11 @@ pub fn inputbox_keyboard(
                         if inputbox.overflow == InputOverflow::Deny {
                             let string = inputbox.try_push_str(&text);
                             let font = match fonts.get(font_handle) {
-                                Some(font) => font.font.as_scaled(dimension.em),
+                                Some(font) => font.font.as_scaled(em),
                                 None => continue,
                             };
                             let len = measure_string(&font, &string);
-                            if len > dimension.size.x {
+                            if len > dimension {
                                 continue;
                             }
                         } else if let InputOverflow::Characters(c) = inputbox.overflow {
@@ -620,11 +631,11 @@ pub fn inputbox_keyboard(
                         if inputbox.overflow == InputOverflow::Deny {
                             let string = inputbox.try_push(char.char);
                             let font = match fonts.get(font_handle) {
-                                Some(font) => font.font.as_scaled(dimension.em),
+                                Some(font) => font.font.as_scaled(em),
                                 None => continue,
                             };
                             let len = measure_string(&font, &string);
-                            if len > dimension.size.x {
+                            if len > dimension {
                                 continue;
                             }
                         } else if let InputOverflow::Characters(c) = inputbox.overflow {
@@ -664,47 +675,15 @@ pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &DimensionData)>) {
 }
 
 pub fn draw_input_box(
-    mut images: ResMut<Assets<Image>>,
-    fonts: Res<Assets<Font>>,
-    query: Query<(&Handle<Image>, &Handle<Font>, &DimensionData, &InputBox), Changed<InputBox>> 
+    query: Query<(&Children, &Handle<Font>, &InputBox), Or<(Changed<InputBox>, Changed<Handle<Font>>)>>,
+    mut child: Query<&mut TextFragment, With<InputBoxText>>,
 ) {
-    for (image, font, dim, input_box) in query.iter() {
-        let Some(font) = fonts.get(font) else {continue};
-        let font = font.font.as_scaled(dim.em * 2.0);
-        let Some(image) = images.get_mut(image) else {continue};
-        let dimension = measure_string(&font, &input_box.text);
-        let height = font.height().ceil();
-        let width = (dimension.ceil() as usize).max(1);
-        let height = (height.ceil() as usize).max(1);
-        let mut buffer = vec![0u8; width * height * 4];
-
-        let mut cursor = 0.0;
-        let mut last = '\0';
-        for c in input_box.text.chars() {
-            let mut glyph = font.scaled_glyph(c);
-            glyph.position = point(cursor, 0.0 + font.ascent());
-            cursor += font.kern(font.glyph_id(last), font.glyph_id(c));
-            cursor += font.h_advance(font.glyph_id(c));
-            last = c;
-            if let Some(glyph) = font.outline_glyph(glyph) {
-                let bounds = glyph.px_bounds();
-                glyph.draw(|x, y, v| {
-                    let x = x as usize + bounds.min.x as usize;
-                    let y = y as usize + bounds.min.y as usize;
-                    if x < width && y < height {
-                        buffer[(x + y * width) * 4] = 255;
-                        buffer[(x + y * width) * 4 + 1] = 255;
-                        buffer[(x + y * width) * 4 + 2] =  255;
-                        buffer[(x + y * width) * 4 + 3] += (v * 255.0) as u8;
-                    }
-                })
-            }
+    for (children, font, input_box) in query.iter() {
+        for entity in children {
+            let Ok(mut fragment) = child.get_mut(*entity) else {continue};
+            TextFragment::set_text(&mut fragment, &input_box.text);
+            TextFragment::set_font(&mut fragment, font);
+            break
         }
-
-        *image = Image::new(Extent3d {
-            width: width as u32,
-            height: height as u32,
-            depth_or_array_layers: 1,
-        }, TextureDimension::D2, buffer, TextureFormat::Rgba8Unorm)
     }
 }

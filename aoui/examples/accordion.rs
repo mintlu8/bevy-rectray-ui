@@ -2,7 +2,7 @@ use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::WorldExtension;
 use bevy_aoui::AouiPlugin;
 use bevy_aoui::dsl::AouiCommands;
-use bevy_aoui::events::MouseWheelAction;
+use bevy_aoui::events::MovementUnits;
 use bevy_aoui::signals::Object;
 use bevy_aoui::signals::SignalBuilder;
 use bevy_aoui::widgets::button::RadioButton;
@@ -31,10 +31,10 @@ pub struct ScrollDimension(f32);
 
 
 pub fn accordion_page(
-    commands: &mut AouiCommands, 
+    commands: &mut AouiCommands,
     index: usize,
-    group: &RadioButton, 
-    scroll: &SignalBuilder<MouseWheelAction>,
+    group: &RadioButton,
+    scroll: &SignalBuilder<MovementUnits>,
     text: &str,
 ) -> [Entity; 2] {
     use bevy_aoui::dsl::prelude::*;
@@ -65,7 +65,7 @@ pub fn accordion_page(
                 child: text! {
                     text: "v",
                     layer: 1,
-                    extra: sig.clone().recv_select(index, 
+                    extra: sig.clone().recv_select(index,
                         Interpolate::<Rotation>::signal_to(PI),
                         Interpolate::<Rotation>::signal_to(0.0),
                     ),
@@ -75,7 +75,7 @@ pub fn accordion_page(
         }),
         hstack! (commands {
             anchor: Top,
-            extra: sig.clone().recv_select(index, 
+            extra: sig.clone().recv_select(index,
                 Interpolate::<Opacity>::signal_to(1.0),
                 Interpolate::<Opacity>::signal_to(0.0),
             ),
@@ -89,7 +89,7 @@ pub fn accordion_page(
                 coverage_px: cov_send,
                 coverage_percent: cov_percent_send,
                 extra: ScrollDimension(200.0),
-                extra: sig.clone().recv_select(index, 
+                extra: sig.clone().recv_select(index,
                     |dim: &ScrollDimension, interpolate: &mut Interpolate<Dimension>| {
                         interpolate.interpolate_to_y(dim.0)
                     },
@@ -163,8 +163,8 @@ pub fn init(mut commands: AouiCommands) {
     let texts = [TEXT, TEXT, "Hello, Hello, Hello!", &format!("{TEXT}{TEXT}"), "apple\norange\nbanana", TEXT];
 
     let children: Vec<_> = texts.into_iter().enumerate()
-        .map(|(idx, text)| accordion_page(&mut commands, idx, &group, &scroll_send, text))
-        .flatten().collect();
+        .flat_map(|(idx, text)| accordion_page(&mut commands, idx, &group, &scroll_send, text))
+        .collect();
 
     let (main_in, main_out) = commands.render_target([800, 800]);
     camera_frame!(commands{
@@ -186,5 +186,5 @@ pub fn init(mut commands: AouiCommands) {
             children: children,
         }
     });
-    
+
 }

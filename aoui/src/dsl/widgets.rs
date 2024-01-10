@@ -1,16 +1,16 @@
 use bevy::ecs::entity::Entity;
 use bevy::hierarchy::BuildChildren;
 use bevy::render::color::Color;
-use bevy::render::render_resource::{TextureFormat, Extent3d, TextureDimension};
-use bevy::render::texture::Image;
+
 use bevy::text::Font;
 use bevy::window::CursorIcon;
+use crate::widgets::TextFragment;
 use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel};
 use crate::widgets::util::{SetCursor, PropagateFocus, DisplayIf};
-use crate::{build_frame, sprite, Anchor};
+use crate::{build_frame, Anchor, rectangle, Size, size};
 use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit};
 use crate::widget_extension;
-use crate::widgets::inputbox::{InputOverflow, InputBoxFocus};
+use crate::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxText};
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea};
 
 use super::{Widget, HandleOrString, AouiCommands};
@@ -31,7 +31,9 @@ widget_extension!(
     pub struct InputBoxBuilder {
         pub text: String,
         pub font: HandleOrString<Font>,
-        pub color: Option<Color>,    
+        pub color: Option<Color>,
+        pub width: Option<Size>,
+        pub text_area: Option<Entity>,
         pub cursor_bar: Option<Entity>,
         pub cursor_area: Option<Entity>,
         pub on_change: Handlers<EvTextChange>,
@@ -47,22 +49,17 @@ impl Widget for InputBoxBuilder {
         inject_event!(self.event, EventFlags::Hover|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside);
         let font = self.font.get(commands);
 
-        let texture = commands.add(Image::new(Extent3d {
-            width: 1,
-            height: 1,
-            ..Default::default()
-        }, TextureDimension::D2, vec![255], TextureFormat::R8Unorm));
-        
         let mut entity = build_frame!(commands, self);
         entity.insert((
-            InputBox::new(&self.text, self.overflow),
+            PropagateFocus,
+            InputBox::new(&self.text, self.overflow)
+                .with_width(self.width.unwrap_or(size!(100%))),
             //TextColor(self.color.expect("color is required.")),
-            font,
+            font.clone(),
             SetCursor {
                 flags: EventFlags::Hover|EventFlags::LeftDrag,
                 icon: self.cursor_icon.unwrap_or(CursorIcon::Text),
             },
-            texture.clone(),
         ));
         if !self.on_submit.is_empty()  {
             entity.insert(self.on_submit);
@@ -71,29 +68,35 @@ impl Widget for InputBoxBuilder {
             entity.insert(self.on_change);
         }
         let entity = entity.id();
-        let children = [
-            sprite!(commands {
+        let text_area = self.text_area.unwrap_or(
+            rectangle!(commands {
                 color: self.color.expect("color is required."),
-                center: Anchor::CenterLeft,
-                scale: [0.5, 0.5],
-                sprite: texture,
                 anchor: Anchor::CenterLeft,
-            }),
-            commands.entity(self.cursor_bar.expect("cursor_bar is required."))
-                .insert((InputBoxCursorBar, DisplayIf::<InputBoxFocus>::default()))
-                .id(),
-            commands.entity(self.cursor_area.expect("cursor_area is required."))
-                .insert((InputBoxCursorArea, DisplayIf::<InputBoxFocus>::default()))
-                .id()
-        ];
-        commands.entity(entity).push_children(&children);
+                extra: InputBoxText,
+                extra: TextFragment {
+                    text: self.text,
+                    font,
+                    color: self.color.expect("color is required."),
+                    size: 0.0
+                }
+            })
+        );
+        let bar = commands.entity(self.cursor_bar.expect("cursor_bar is required."))
+            .insert((InputBoxCursorBar, DisplayIf(InputBoxState::Focus)))
+            .id();
+        let area = commands.entity(self.cursor_area.expect("cursor_area is required."))
+            .insert((InputBoxCursorArea, DisplayIf(InputBoxState::Focus)))
+            .id();
+        commands.entity(text_area).add_child(bar);
+        commands.entity(text_area).add_child(area);
+        commands.entity(entity).add_child(text_area);
         (entity, entity)
     }
 }
 /// Construct a `input_box`. The underlying struct is [`InputBoxBuilder`].
 #[macro_export]
 macro_rules! inputbox {
-    {$commands: tt {$($tt:tt)*}} => 
+    {$commands: tt {$($tt:tt)*}} =>
         {$crate::meta_dsl!($commands [$crate::dsl::builders::InputBoxBuilder] {$($tt)*})};
 }
 
@@ -137,7 +140,7 @@ widget_extension!(
         /// If set, `submit` sends its contents.
         pub payload: OptionX<Payload>,
         /// Sends a signal whenever the button is clicked and its value is `true`.
-        /// 
+        ///
         /// Like button, this sends either `()` or `Payload`.
         pub on_checked: Handlers<EvButtonClick>,
         /// Sends a `bool` signal whenever the button is clicked.
@@ -212,97 +215,97 @@ impl Widget for RadioButtonBuilder {
 }
 
 /// Construct a button. The underlying struct is [`ButtonBuilder`].
-/// 
+///
 /// # Features
-/// 
+///
 /// `button` is a widget primitive with no default look. You need to nest
 /// `sprite` or `text` as children to make `button` function properly.
-/// 
+///
 /// These are what `button` does compared to `frame`:
-/// 
+///
 /// * Add event listeners for `Hover` and `Click`
 /// * Change cursor icon when hovering or pressing.
 /// * Propagate its status `Down`, `Click`, `Hover`, `Pressed` to its descendants.
 /// * Allow usage of `EvButtonClick` event. Which uses the button's [`Payload`].
-/// 
+///
 /// You can use [`Handlers`] to handle clicks
-/// and use [`DisplayIf`](crate::widgets::button::DisplayIf) 
+/// and use [`DisplayIf`](crate::widgets::button::DisplayIf)
 /// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
-/// 
+///
 /// # Common Pitfall
-/// 
+///
 /// Do not nest `button`, `check_button` or `radio_button` inside a button.
 /// Button propagates its state to all its descendants and can inject unwanted state.
 /// Introduce a common parent instead.
 #[macro_export]
 macro_rules! button {
-    {$commands: tt {$($tt:tt)*}} => 
+    {$commands: tt {$($tt:tt)*}} =>
         {$crate::meta_dsl!($commands [$crate::dsl::builders::ButtonBuilder] {$($tt)*})};
 }
 
 
 /// Construct a `check_button`. The underlying struct is [`CheckButtonBuilder`].
-/// 
+///
 /// # Features
-/// 
+///
 /// `check_button` is a widget primitive with no default look. You need to nest
 /// `sprite` or `text` as children to make `check_button` function properly.
-/// 
+///
 /// These are what `check_button` does compared to `frame`:
-/// 
+///
 /// * Add event listeners for `Hover` and `Click`
 /// * Change cursor icon when hovering or pressing.
 /// * Propagate its status `Down`, `Click`, `Hover`, `Pressed` to its descendants.
-/// * Hold a boolean context value for if the button is checked or not. 
-/// * Generate `CheckButtonState` based on the context. 
+/// * Hold a boolean context value for if the button is checked or not.
+/// * Generate `CheckButtonState` based on the context.
 /// * Allow usage of `EvButtonClick` event. Which uses the button's [`Payload`].
-/// 
+///
 /// You can use [`Handlers`] to handle clicks
-/// and use [`DisplayIf`](crate::widgets::button::DisplayIf) 
+/// and use [`DisplayIf`](crate::widgets::button::DisplayIf)
 /// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
-/// 
+///
 /// # Common Pitfall
-/// 
+///
 /// Do not nest `button`, `check_button` or `radio_button` inside a button.
 /// Button propagates its state to all its descendants and can inject unwanted state.
 /// Introduce a common parent instead.
 #[macro_export]
 macro_rules! check_button {
-    {$commands: tt {$($tt:tt)*}} => 
+    {$commands: tt {$($tt:tt)*}} =>
         {$crate::meta_dsl!($commands [$crate::dsl::builders::CheckButtonBuilder] {$($tt)*})};
 }
 
 
 /// Construct a `radio_button`. The underlying struct is [`RadioButtonBuilder`].
-/// 
+///
 /// This is in fact very versatile and can be used for any exclusive UI elements
 /// like a dropdown select or an accordion.
-/// 
+///
 /// # Features
-/// 
+///
 /// `radio_button` is a widget primitive with no default look. You need to nest
 /// `sprite` or `text` as children to make `radio_button` function properly.
-/// 
+///
 /// These are what `radio_button` does compared to `frame`:
-/// 
+///
 /// * Add event listeners for `Hover` and `Click`
 /// * Change cursor icon when hovering or pressing.
 /// * Propagate its status `Down`, `Click`, `Hover`, `Pressed` to its descendants.
-/// * Hold a [`Payload`] value as a discriminant. 
-/// * Generate `CheckButtonState` based on the context and payload. 
+/// * Hold a [`Payload`] value as a discriminant.
+/// * Generate `CheckButtonState` based on the context and payload.
 /// * Send payload value through `EvButtonClick`.
-/// 
+///
 /// You can use [`Handlers`] to handle clicks
-/// and use [`DisplayIf`](crate::widgets::button::DisplayIf) 
+/// and use [`DisplayIf`](crate::widgets::button::DisplayIf)
 /// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
-/// 
+///
 /// # Common Pitfall
-/// 
+///
 /// Do not nest `button`, `check_button` or `radio_button` inside a button.
 /// Button propagates its state to all its descendants and can inject unwanted state.
 /// Introduce a common parent instead.
 #[macro_export]
 macro_rules! radio_button {
-    {$commands: tt {$($tt:tt)*}} => 
+    {$commands: tt {$($tt:tt)*}} =>
         {$crate::meta_dsl!($commands [$crate::dsl::builders::RadioButtonBuilder] {$($tt)*})};
 }

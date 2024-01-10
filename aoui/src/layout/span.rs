@@ -2,27 +2,30 @@ use std::{iter::repeat, mem};
 
 use crate::layout::{Layout, StackLayout, LayoutOutput, LayoutControl, SpanLayout, ParagraphLayout};
 
-use super::{util::*, LayoutInfo};
+use super::{util::*, LayoutInfo, LayoutRange};
 use bevy::{prelude::Vec2, ecs::entity::Entity};
 
 impl<D: Direction> Layout for StackLayout<D> {
-    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
+    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput {
         let margin = parent.margin;
-        stack::<D>(margin, entities).normalized()
+        range.resolve(entities.len());
+        stack::<D>(margin, &entities[range.to_range(entities.len())]).normalized().with_max(entities.len())
     }
 }
 
 impl<D: StretchDir> Layout for SpanLayout<D> {
-    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
+    fn place(&self, parent: &LayoutInfo, mut entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput {
         let margin = parent.margin;
         let dimension = parent.dimension;
-        let entity_anchors = span::<D>(dimension, margin, entities);
-        LayoutOutput { entity_anchors, dimension }.normalized()
+        range.resolve(entities.len());
+        let len = entities.len();
+        let entity_anchors = span::<D>(dimension, margin, &mut entities[range.to_range(len)]);
+        LayoutOutput { entity_anchors, dimension, max_count: entities.len() }.normalized().with_max(entities.len())
     }
 }
 
 impl<D1: StretchDir, D2: Direction> Layout for ParagraphLayout<D1, D2> where (D1, D2): DirectionPair {
-    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
+    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, _:  &mut LayoutRange) -> LayoutOutput {
         let margin = parent.margin;
         let dim = parent.dimension;
         paragraph::<D1, D2>(dim, margin, entities).normalized()
@@ -45,21 +48,21 @@ fn trim<T>(slice: &[T], mut f: impl FnMut(&T) -> bool) -> &[T]{
 
 pub(crate) fn stack<D: Direction>(
     margin: Vec2,
-    items: Vec<LayoutItem>,
+    items: &[LayoutItem]
 ) -> LayoutOutput {
     let mut result = Vec::new();
     let margin = D::main(margin);
     let mut cursor = -margin;
     let line_height = D::off_vec(1.0);
     let mut max_len = Vec2::ZERO;
-    let items = trim(&items, |x| x.control == LayoutControl::WhiteSpace);
+    let items = trim(items, |x| x.control == LayoutControl::WhiteSpace);
     for item in items {
         cursor += margin;
 
         let width = D::main(item.dimension);
         let size = width + line_height;
         max_len = max_len.max(item.dimension);
-        
+
         let anchor = cursor + (size / 2.0) + item.anchor.as_vec() * size.abs();
         result.push((item.entity, anchor));
         cursor += width;
@@ -75,17 +78,18 @@ pub(crate) fn stack<D: Direction>(
     LayoutOutput {
         entity_anchors: result,
         dimension: cursor.abs() + height_mult,
+        max_count: items.len()
     }
 }
 
 pub(crate) fn span<D: StretchDir>(
     size: Vec2,
     margin: Vec2,
-    mut items: Vec<LayoutItem>,
+    items: &mut [LayoutItem],
 ) -> Vec<(Entity, Vec2)>{
     let mut result = Vec::new();
 
-    let major_dim = D::Pos::main(size);    
+    let major_dim = D::Pos::main(size);
     let minor_dim = D::Pos::off(size);
 
     let mut neg_len = 0usize;
@@ -200,8 +204,9 @@ pub(crate) fn paragraph<D1: StretchDir, D2: Direction>(
     let mut cursor = Vec2::ZERO;
 
     let mut last_linebreak = false;
+    let mut lines = 0;
     for item in items {
-        if len + D1::len(item.dimension) > total 
+        if len + D1::len(item.dimension) > total
                 || item.control == LayoutControl::LinebreakMarker
                 || last_linebreak {
             last_linebreak = false;
@@ -209,7 +214,7 @@ pub(crate) fn paragraph<D1: StretchDir, D2: Direction>(
                 .map(|x: &LayoutItem| D2::main(x.dimension).abs())
                 .fold(Vec2::ZERO, |a, b| a.max(b));
             let line_size = D1::main(size) + line_height;
-            let mut span = span::<D1>(line_size, margin, mem::take(&mut buffer));
+            let mut span = span::<D1>(line_size, margin, &mut mem::take(&mut buffer));
             let line_height = if item.control == LayoutControl::LinebreakMarker {
                 D2::main(line_height.max(item.dimension))
             } else {
@@ -221,6 +226,7 @@ pub(crate) fn paragraph<D1: StretchDir, D2: Direction>(
             cursor += D2::main(margin);
             result.extend(span);
             len = D1::len(item.dimension) + margin_flat;
+            lines += 1;
         } else {
             len += D1::len(item.dimension) + margin_flat;
         }
@@ -236,12 +242,13 @@ pub(crate) fn paragraph<D1: StretchDir, D2: Direction>(
         let line_height = buffer.iter()
             .map(|x: &LayoutItem| D2::main(x.dimension).abs())
             .fold(Vec2::ZERO, |a, b| a.max(b));
-        let line_size = D1::main(size) + line_height;            
-        let mut span = span::<D1>(line_size, margin, buffer);
+        let line_size = D1::main(size) + line_height;
+        let mut span = span::<D1>(line_size, margin, &mut buffer);
         cursor += D2::main(line_height).min(Vec2::ZERO);
         span.iter_mut().for_each(|(_, x)| *x += cursor);
         cursor += D2::main(line_height).max(Vec2::ZERO);
         result.extend(span);
+        lines += 1;
     } else if cursor != Vec2::ZERO {
         cursor -= D2::main(margin);
     }
@@ -255,5 +262,6 @@ pub(crate) fn paragraph<D1: StretchDir, D2: Direction>(
     LayoutOutput {
         entity_anchors: result,
         dimension: cursor.abs() + D1::main(size),
+        max_count: lines
     }
 }

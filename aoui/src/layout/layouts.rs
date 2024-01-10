@@ -6,20 +6,20 @@ use bevy::prelude::{Vec2, UVec2};
 use downcast_rs::{impl_downcast, Downcast};
 use crate::{Size2, SizeUnit, Size};
 
-use super::{util::*, LayoutInfo};
+use super::{util::*, LayoutInfo, LayoutRange};
 
 // asserts layout is object safe
 const _: Option<Box<dyn Layout>> = None;
 
 /// A layout that accepts a one dimensional sequence of widgets.
-/// 
-/// The `Container` is usually a dynamic sized widget, 
-/// meaning it will update its size based on the size occupied by its children. 
+///
+/// The `Container` is usually a dynamic sized widget,
+/// meaning it will update its size based on the size occupied by its children.
 /// You can parent it to an anchor of
 /// a fixed sized widget for alignment.
 pub trait Layout: Downcast + Debug + Send + Sync + 'static {
     /// Place sprites in the layout.
-    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput;
+    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput;
 }
 
 impl_downcast!(Layout);
@@ -29,6 +29,8 @@ impl_downcast!(Layout);
 pub struct LayoutOutput {
     pub entity_anchors: Vec<(Entity, Vec2)>,
     pub dimension: Vec2,
+    /// Maximum value for the layout.
+    pub max_count: usize,
 }
 
 impl LayoutOutput {
@@ -36,11 +38,15 @@ impl LayoutOutput {
         self.entity_anchors.iter_mut().for_each(|(_, x)| *x = *x / self.dimension - 0.5);
         self
     }
+    pub fn with_max(mut self, max: usize) -> Self{
+        self.max_count = max;
+        self
+    }
 }
 
 /// A dynamic dimensioned `Frame` that by default have size equal
 /// to the maximum of its children.
-/// 
+///
 /// This layout usually should contain only one child with no offset.
 #[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
 pub struct BoundsLayout {
@@ -56,7 +62,7 @@ impl BoundsLayout {
     /// Ignore constraints and use `BoundsLayout` as padding.
     pub const PADDING: Self = Self {
         fixed: [false; 2],
-        min: Size2::ZERO, 
+        min: Size2::ZERO,
         max: Size2::MAX
     };
 
@@ -102,13 +108,14 @@ impl Default for BoundsLayout {
 }
 
 impl Layout for BoundsLayout {
-    fn place(&self, info: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
+    fn place(&self, info: &LayoutInfo, entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput {
         let mut max_dim = Vec2::ZERO;
-        let entity_anchors: Vec<_> = entities.into_iter().map(|x| {
+        range.resolve(entities.len());
+        let entity_anchors: Vec<_> = entities[range.to_range(entities.len())].iter().map(|x| {
             max_dim = max_dim.max(x.dimension);
             (x.entity, x.anchor.as_vec())
         }).collect();
-        
+
         let min = self.min.as_pixels(info.dimension, info.em, info.rem);
         let max = self.max.as_pixels(info.dimension, info.em, info.rem);
 
@@ -118,7 +125,7 @@ impl Layout for BoundsLayout {
             if !self.fixed[0] {dim.x} else {info.dimension.x},
             if !self.fixed[1] {dim.y} else {info.dimension.y},
         );
-        LayoutOutput { entity_anchors, dimension }
+        LayoutOutput { entity_anchors, dimension, max_count: entities.len() }
     }
 }
 
@@ -152,7 +159,7 @@ impl<D: StretchDir> SpanLayout<D> {
         SpanLayout(PhantomData)
     }
 
-    fn with_stretch(self) -> SpanLayout<Stretch<D>> {
+    pub fn with_stretch(self) -> SpanLayout<Stretch<D>> {
         SpanLayout(PhantomData)
     }
 }
@@ -177,17 +184,17 @@ impl ParagraphLayout {
 }
 
 impl<D1: StretchDir, D2: Direction> ParagraphLayout<D1, D2> where (D1, D2): DirectionPair {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self(PhantomData)
     }
 
-    fn with_stretch(self) -> ParagraphLayout<Stretch<D1>, D2> where (Stretch<D1>, D2): DirectionPair {
+    pub fn with_stretch(self) -> ParagraphLayout<Stretch<D1>, D2> where (Stretch<D1>, D2): DirectionPair {
         ParagraphLayout::<Stretch<D1>, D2>(PhantomData)
     }
 }
 
 /// A 2D grid wih even pre-subdivided cells.
-/// 
+///
 /// # Panics
 ///
 /// * If `row_dir` is not orthogonal to `column_dir`.
@@ -200,7 +207,7 @@ pub struct SizedGridLayout {
     /// The order of which rows are placed.
     pub column_dir: LayoutDir,
     /// How items in a incomplete row are aligned.
-    /// 
+    ///
     /// Significant when an early linebreak occurs.
     pub alignment: Alignment,
     /// if specified, adjust cell size to fill the grid without changing cell count.
@@ -208,7 +215,7 @@ pub struct SizedGridLayout {
 }
 
 /// A 2D grid wih even pre-subdivided cells.
-/// 
+///
 /// # Panics
 ///
 /// * If `row_dir` is not orthogonal to `column_dir`.
@@ -221,13 +228,13 @@ pub struct FixedGridLayout {
     /// The order of which rows are placed.
     pub column_dir: LayoutDir,
     /// How items in a incomplete row are aligned.
-    /// 
+    ///
     /// Significant when an early linebreak occurs.
     pub alignment: Alignment,
 }
 
 /// A 2D grid with unevenly subdivided cells.
-/// 
+///
 /// # Panics
 ///
 /// * If `row_dir` is not orthogonal to `column_dir`.
@@ -244,7 +251,7 @@ pub struct DynamicTableLayout {
 }
 
 /// A 2D grid with unevenly subdivided cells.
-/// 
+///
 /// # Panics
 ///
 /// * If `row_dir` is not orthogonal to `column_dir`.

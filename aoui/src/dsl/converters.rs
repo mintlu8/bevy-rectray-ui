@@ -4,7 +4,7 @@ use crate::{widgets::button::Payload, signals::AsObject};
 use super::{DslFrom, DslInto, AouiCommands};
 
 /// Extended `Option` for the DSL.
-/// 
+///
 /// Since we basically cannot extend `Option<T>`'s features
 /// due to a blanket impl, this provides specific implementation
 /// for a nullable struct.
@@ -46,7 +46,7 @@ impl<T: AsObject> DslFrom<T> for OptionX<Payload> {
 
 /// Handle, string or None,
 /// `get` returns the default asset on `None`, try_get returns `None`.
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum HandleOrString<T: Asset>{
     #[default]
     None,
@@ -140,7 +140,7 @@ impl<'t, T: Asset> DslInto<HandleOrString<T>> for Cow<'t, str> {
 
 /// Handle, Asset or None,
 /// `get` returns the default asset on `None`, try_get returns `None`.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub enum HandleOrAsset<T: Asset>{
     #[default]
     None,
@@ -206,4 +206,3 @@ impl<T: Asset> DslFrom<T> for HandleOrAsset<T>{
         HandleOrAsset::Asset(value)
     }
 }
-

@@ -6,6 +6,7 @@ use bevy::sprite::Mesh2dHandle;
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
 use bevy_aoui::Opacity;
+use bevy_aoui::layout::LayoutRange;
 use bevy_aoui::{widget_extension, build_frame, Hitbox, size2, text, layout::{Container, StackLayout}, sprite, BuildMeshTransform};
 use bevy_aoui::anim::{Interpolate, Easing};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvButtonClick};
@@ -29,11 +30,11 @@ pub struct CursorStateColors {
 
 impl Default for CursorStateColors {
     fn default() -> Self {
-        Self { 
-            idle: Color::NONE, 
-            hover: Color::NONE, 
-            pressed: Color::NONE, 
-            disabled: Color::NONE 
+        Self {
+            idle: Color::NONE,
+            hover: Color::NONE,
+            pressed: Color::NONE,
+            disabled: Color::NONE
         }
     }
 }
@@ -46,7 +47,7 @@ pub fn cursor_color_change(mut query: Query<(&CursorStateColors, &Opacity, Optio
         }
         match focus {
             Some(focus) if focus.is(EventFlags::Hover)=> color.interpolate_to(colors.hover),
-            Some(focus) if focus.intersects(EventFlags::LeftPressed|EventFlags::LeftDrag) 
+            Some(focus) if focus.intersects(EventFlags::LeftPressed|EventFlags::LeftDrag)
                 => color.interpolate_to(colors.pressed),
             _ => color.interpolate_to(colors.idle),
         }
@@ -117,7 +118,8 @@ impl Widget for MButtonBuilder {
                 layout: Box::new(StackLayout::HSTACK),
                 margin: size2!(0.5 em, 1 em),
                 padding: size2!(1 em, 0.75 em),
-                range: None,
+                range: LayoutRange::Full,
+                maximum: usize::MAX
             },
             CursorStateColors {
                 idle: style.background,
@@ -133,12 +135,12 @@ impl Widget for MButtonBuilder {
             }),
             Interpolate::<Color>::new(
                 Easing::Linear,
-                style.background, 
+                style.background,
                 0.15
             ),
             Interpolate::<StrokeColor>::new(
                 Easing::Linear,
-                style.stroke, 
+                style.stroke,
                 0.15
             ),
         ));
@@ -157,7 +159,7 @@ impl Widget for MButtonBuilder {
                 sprite: icon,
                 z: 0.01,
                 dimension: size2!(1.2 em, 1.2 em),
-                extra: CursorStateColors { 
+                extra: CursorStateColors {
                     idle: style.foreground,
                     hover: hover.foreground,
                     pressed: pressed.foreground,
@@ -165,7 +167,7 @@ impl Widget for MButtonBuilder {
                 },
                 extra: Interpolate::<Color>::new(
                     Easing::Linear,
-                    style.foreground, 
+                    style.foreground,
                     0.15
                 ),
             });
@@ -181,7 +183,7 @@ impl Widget for MButtonBuilder {
                 text: text,
                 z: 0.01,
                 font: self.font.get(commands),
-                extra: CursorStateColors { 
+                extra: CursorStateColors {
                     idle: style.foreground,
                     hover: hover.foreground,
                     pressed: pressed.foreground,
@@ -189,7 +191,7 @@ impl Widget for MButtonBuilder {
                 },
                 extra: Interpolate::<Color>::new(
                     Easing::Linear,
-                    style.foreground, 
+                    style.foreground,
                     0.15
                 ),
             });

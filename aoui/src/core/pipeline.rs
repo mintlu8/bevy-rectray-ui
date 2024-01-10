@@ -22,7 +22,7 @@ fn propagate(
     entity: Entity,
     rem: f32,
     mut_query: &mut Query<AouiEntity>,
-    flex_query: &Query<&Container>,
+    layout_query: &mut Query<&mut Container>,
     parent_query: &Query<&Parent>,
     child_query: &Query<&Children>,
     not_root: &Query<Entity, Without<Detach>>,
@@ -36,21 +36,20 @@ fn propagate(
     }
 
     // SAFETY: safe since double mut access is gated by the hierarchy check
-    let Ok((entity, mut dim, transform, mut orig, mut opacity, mut clipping, ..)) 
+    let Ok((entity, mut dim, transform, mut orig, mut opacity, mut clipping, ..))
         = (unsafe {mut_query.get_unchecked(entity)}) else {return};
 
     let (dimension, em) = dim.update(parent.dimension, parent.em, rem);
     let offset = transform.offset.as_pixels(parent.dimension, em, rem);
-    
+
     clipping.global = parent.clip;
 
     opacity.occluded = false;
 
-    if let Ok(layout) = flex_query.get(entity) {
+    if let Ok(mut layout) = layout_query.get_mut(entity) {
         let children = not_root.iter_many(child_query.get(entity).map(|x| x.iter()).into_iter().flatten());
         let mut other_entities = Vec::new();
         let mut args = Vec::new();
-        let mut index = 0;
         for child in children {
             if !mut_query.contains(child) { continue }
             if parent_query.get(child).ok().map(|x| x.get()) != Some(entity) {
@@ -59,34 +58,31 @@ fn propagate(
             // otherwise cloned property will recursively overflow this entire thing.
             let dimension = if dim.is_owned() {dimension} else {Vec2::ZERO};
 
-            let range = layout.range.clone().unwrap_or(0..usize::MAX);
             // SAFETY: safe since double mut access is gated by the hierarchy check
             if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { mut_query.get_unchecked(child) } {
                 match control_query.get(child) {
                     Ok(LayoutControl::IgnoreLayout) => other_entities.push((
-                        child, 
+                        child,
                         child_transform.get_parent_anchor()
                     )),
                     control => {
-                        if range.contains(&index) {
-                            let _ = child_dim.update(dimension, em, rem);
-                            args.push(LayoutItem {
-                                entity: child,
-                                anchor: child_transform.get_parent_anchor(),
-                                dimension: child_dim.estimate(dimension, em, rem),
-                                control: control.copied().unwrap_or_default(),
-                            });
-                        }
-                        index += 1;
+                        let _ = child_dim.update(dimension, em, rem);
+                        args.push(LayoutItem {
+                            entity: child,
+                            anchor: child_transform.get_parent_anchor(),
+                            dimension: child_dim.estimate(dimension, em, rem),
+                            control: control.copied().unwrap_or_default(),
+                        });
                     }
                 };
             }
         }
         let margin = layout.margin.as_pixels(parent.dimension, em, rem);
-        let LayoutOutput{ mut entity_anchors, dimension: size } = layout.place(
-            &LayoutInfo { dimension, em, rem, margin }, 
+        let LayoutOutput{ mut entity_anchors, dimension: size, max_count } = layout.place(
+            &LayoutInfo { dimension, em, rem, margin },
             args
         );
+        layout.maximum = max_count;
         let padding = layout.padding.as_pixels(parent.dimension, em, rem) * 2.0;
         let fac = size / (size + padding);
         let size = size + padding;
@@ -107,7 +103,7 @@ fn propagate(
                 parent.rect.z + transform.z
             } else {
                 parent.rect.z + Z_INCREMENT
-            }        
+            }
         );
 
         let info = ParentInfo {
@@ -144,7 +140,7 @@ fn propagate(
             parent.rect.z + Z_INCREMENT
         }
     );
-    
+
 
     if let Ok(children) = child_query.get(entity) {
         let info = ParentInfo {
@@ -166,7 +162,7 @@ fn propagate(
 }
 
 /// Query for finding the root rectangle of a `compute_aoui_transforms` pass.
-/// 
+///
 /// Usually `PrimaryWindow`.
 pub trait RootQuery<'t> {
     type Query: WorldQuery;
@@ -182,7 +178,7 @@ impl<'t> RootQuery<'t> for PrimaryWindow {
     fn as_rect(query: &Query<Self::Query, Self::ReadOnly>) -> (RotatedRect, Vec2) {
         let window = match query.get_single(){
             Ok(w) => w,
-            Err(_) => return Default::default(), 
+            Err(_) => return Default::default(),
         };
         let dim = Vec2::new(window.width(), window.height());
         (RotatedRect {
@@ -194,24 +190,21 @@ impl<'t> RootQuery<'t> for PrimaryWindow {
     }
 }
 
-pub(crate) type TRoot = Without<Parent>;
-pub(crate) type TAll = ();
-
 /// The main computation step.
-/// 
+///
 /// For custom usage,
-/// 
+///
 /// R: Get root rectangle,
-/// 
+///
 /// TRoot: Readonly query for child of root rectangle.
-/// 
+///
 /// TAll: Readonly query for all children, including TRoot.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_aoui_transforms<'t, R: RootQuery<'t>>(
     root: Query<R::Query, R::ReadOnly>,
     root_entities: Query<Entity, Or<(Without<Parent>, With<Detach>)>>,
     mut entity_query: Query<AouiEntity>,
-    flex_query: Query<&Container>,
+    mut layout_query: Query<&mut Container>,
     parent_query: Query<&Parent>,
     child_query: Query<&Children>,
     not_root: Query<Entity, Without<Detach>>,
@@ -238,15 +231,15 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>>(
 
     while !queue.is_empty() {
         for (entity, parent) in std::mem::take(&mut queue) {
-            propagate(parent, 
-                entity, 
-                rem, 
-                &mut entity_query, 
-                &flex_query, 
-                &parent_query, 
-                &child_query, 
+            propagate(parent,
+                entity,
+                rem,
+                &mut entity_query,
+                &mut layout_query,
+                &parent_query,
+                &child_query,
                 &not_root,
-                &control_query, 
+                &control_query,
                 &mut queue
             );
         }

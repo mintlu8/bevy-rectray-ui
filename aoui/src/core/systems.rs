@@ -1,9 +1,11 @@
+use bevy::ecs::system::SystemParam;
 use bevy::math::Affine3A;
 use bevy::sprite::{Sprite, TextureAtlasSprite};
 use bevy::text::{TextLayoutInfo, Text2dBounds};
 use bevy::prelude::*;
 
 use bevy::sprite::Anchor as BevyAnchor;
+use bevy::window::PrimaryWindow;
 use crate::dimension::DimensionMut;
 use crate::{RotatedRect, BuildTransform, Transform2D, Opacity, IgnoreAlpha, BuildMeshTransform, Anchor, DimensionData, Dimension};
 
@@ -22,25 +24,26 @@ pub fn copy_dimension_text(mut query: Query<(&TextLayoutInfo, DimensionMut)>) {
 }
 
 /// Copy our `Anchors` component's value to the `Sprite` component
-pub fn copy_anchor_sprite(mut query: Query<(&mut Sprite, &Transform2D)>) {
+pub fn copy_anchor_sprite(
+    mut query: Query<(&mut Sprite, &Transform2D)>
+) {
     query.iter_mut().for_each(|(mut sp, anc)| {
         sp.anchor = anc.anchor.into();
     })
 }
 
-/// Synchonize size between `Sprite` and `Dimension`
-pub fn copy_dimension_sprite(mut query: Query<(&Sprite, &Handle<Image>, DimensionMut)>, assets: Res<Assets<Image>>) {
-    query.iter_mut().for_each(|(sp, im, mut dimension)| {
-        dimension.update_size(|| {
-            match sp.custom_size {
-                Some(x) => x,
-                None => match sp.rect {
-                    Some(rect) => rect.max - rect.min,
-                    None => assets.get(im).map(|x|x.size().as_vec2()).unwrap_or(Vec2::ZERO),
-                },
-            }
-        });
-    })
+#[derive(SystemParam)]
+pub struct ScalingFactor<'w, 's> {
+    window: Query<'w, 's, &'static Window, With<PrimaryWindow>>,
+}
+
+impl ScalingFactor<'_, '_> {
+    pub fn get(&self) -> f32 {
+        self.window
+            .get_single()
+            .map(|x| x.scale_factor() as f32)
+            .unwrap_or(2.0)
+    }
 }
 
 /// Copy anchor to the `TextureAtlasSprite` component
@@ -50,40 +53,77 @@ pub fn copy_anchor_atlas(mut query: Query<(&mut TextureAtlasSprite, &Transform2D
     })
 }
 
-/// copy size between `TextureAtlasSprite` to `Dimension`
-pub fn copy_dimension_atlas(mut query: Query<(&TextureAtlasSprite, &Handle<TextureAtlas>, DimensionMut)>, assets: Res<Assets<TextureAtlas>>) {
-    query.iter_mut().for_each(|(sp, im, mut dimension)| {
+/// Synchonize size between `Sprite` and `Dimension`
+pub fn copy_dimension_sprite(
+    scaling_factor: ScalingFactor,
+    mut query: Query<(&mut Sprite, &Handle<Image>, DimensionMut)>,
+    assets: Res<Assets<Image>>
+) {
+    let scaling_factor = scaling_factor.get();
+    query.iter_mut().for_each(|(mut sp, im, mut dimension)| {
+        let copied = dimension.is_copied();
         dimension.update_size(|| {
-            match sp.custom_size {
-                Some(size) => size,
-                None => (|| -> Option<_> {
-                   let rect = assets.get(im)?.textures.get(sp.index)?;
-                   Some(rect.max - rect.min)
-                })().unwrap_or(Vec2::ZERO)
+            let pixels = match sp.rect {
+                Some(rect) => rect.max - rect.min,
+                None => assets.get(im).map(|x|x.size().as_vec2()).unwrap_or(Vec2::ZERO),
+            };
+            if copied {
+                sp.custom_size = Some(pixels / scaling_factor);
             }
+            pixels / scaling_factor
+        });
+    })
+}
+
+/// copy size between `TextureAtlasSprite` and `Dimension`
+pub fn copy_dimension_atlas(
+    scaling_factor: ScalingFactor,
+    mut query: Query<(&mut TextureAtlasSprite, &Handle<TextureAtlas>, DimensionMut)>,
+    assets: Res<Assets<TextureAtlas>>
+) {
+    let scaling_factor = scaling_factor.get();
+    query.iter_mut().for_each(|(mut sp, im, mut dimension)| {
+        let copied = dimension.is_copied();
+        dimension.update_size(|| {
+            let pixels = (|| -> Option<_> {
+                let rect = assets.get(im)?.textures.get(sp.index)?;
+                Some(rect.max - rect.min)
+            })().unwrap_or(Vec2::ZERO);
+            if copied {
+                sp.custom_size = Some(pixels / scaling_factor);
+            }
+            pixels / scaling_factor
         });
     })
 }
 
 /// Synchonize size from `Dimension` to `Sprite`
-pub fn sync_dimension_sprite(mut query: Query<(&mut Sprite, &Dimension, &DimensionData)>) {
+pub fn sync_dimension_sprite(
+    scaling_factor: ScalingFactor,
+    mut query: Query<(&mut Sprite, &Dimension, &DimensionData)>
+) {
+    let scaling_factor = scaling_factor.get();
     query.iter_mut().for_each(|(mut sp, dimension, data)| {
         if !dimension.is_copied() && sp.custom_size != Some(data.size) {
-            sp.custom_size = Some(data.size)
+            sp.custom_size = Some(data.size * scaling_factor)
         }
     })
 }
 
 /// Synchonize size from `Dimension` to `TextureAtlasSprite`
-pub fn sync_dimension_atlas(mut query: Query<(&mut TextureAtlasSprite, &Dimension, &DimensionData)>) {
+pub fn sync_dimension_atlas(
+    scaling_factor: ScalingFactor,
+    mut query: Query<(&mut TextureAtlasSprite, &Dimension, &DimensionData)>
+) {
+    let scaling_factor = scaling_factor.get();
     query.iter_mut().for_each(|(mut sp, dimension, data)| {
         if !dimension.is_copied() && sp.custom_size != Some(data.size) {
-            sp.custom_size = Some(data.size)
+            sp.custom_size = Some(data.size * scaling_factor)
         }
     })
 }
 
-/// Copy owned dimension as text bounds. 
+/// Copy owned dimension as text bounds.
 pub fn sync_dimension_text_bounds(mut query: Query<(&mut Text2dBounds, &Dimension, &DimensionData), Without<OptOutTextBoundsSync>>) {
     query.iter_mut().for_each(|(mut sp, dimension, data)| {
         if !dimension.is_copied() && sp.as_ref().size != data.size {
@@ -120,7 +160,9 @@ pub fn sync_em_text(mut query: Query<(&mut Text, &DimensionData), Without<OptOut
 /// Copy opacity as text alpha.
 pub fn sync_opacity_text(mut query: Query<(&Opacity, &mut Text), Without<IgnoreAlpha>>) {
     query.iter_mut().for_each(|(opacity, mut text)| {
-        text.sections.iter_mut().for_each(|x| {x.style.color.set_a(opacity.get());} )
+        if text.sections.iter().any(|x| x.style.color.a() != opacity.get()) {
+            text.sections.iter_mut().for_each(|x| {x.style.color.set_a(opacity.get());} )
+        }
     })
 }
 
@@ -141,10 +183,10 @@ pub fn sync_opacity_atlas(mut query: Query<(&Opacity, &mut TextureAtlasSprite), 
 pub fn build_mesh_2d_global_transform(
     mut query: Query<(&RotatedRect, &DimensionData, &mut GlobalTransform), With<BuildMeshTransform>>
 ) {
-    query.iter_mut().for_each(|(rect, dim, mut transform)| 
+    query.iter_mut().for_each(|(rect, dim, mut transform)|
         *transform = Affine3A::from_scale_rotation_translation(
-            (rect.scale * dim.size).extend(1.0), 
-            Quat::from_rotation_z(rect.rotation), 
+            (rect.scale * dim.size).extend(1.0),
+            Quat::from_rotation_z(rect.rotation),
             rect.anchor(Anchor::Center).extend(rect.z)
         ).into()
     );
@@ -156,8 +198,8 @@ pub fn build_global_transform(
 ) {
     query.iter_mut().for_each(|(build, transform, rect, mut global)| {
         *global = Affine3A::from_scale_rotation_translation(
-            rect.scale.extend(1.0), 
-            Quat::from_rotation_z(rect.rotation), 
+            rect.scale.extend(1.0),
+            Quat::from_rotation_z(rect.rotation),
             rect.anchor(build.0.or(transform.anchor)).extend(rect.z)
         ).into()
     });

@@ -4,6 +4,57 @@ use bevy::prelude::*;
 
 use crate::{Size2, layout::Layout};
 
+use super::LayoutOutput;
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum LayoutRange {
+    #[default]
+    Full,
+    // The maximum value is `min + len >= total`,
+    // going over that will be auto corrected.
+    Bounded {
+        min: usize,
+        len: usize,
+    },
+    // The maximum value is `total - min >= 1`,
+    // going over that will be auto corrected.
+    Capped {
+        min: usize,
+        len: usize,
+    },
+    // `min` is len * step, and
+    // The maximum value is `total - min >= 1`,
+    Stepped {
+        step: usize,
+        len: usize,
+    }
+}
+
+impl LayoutRange {
+
+    pub fn is_unbounded(&self) -> bool {
+        matches!(self, LayoutRange::Full)
+    }
+
+    pub fn resolve(&mut self, total: usize) {
+        match self {
+            LayoutRange::Full => (),
+            LayoutRange::Bounded { min, len } => *min = usize::min(*min, total.saturating_sub(*len)),
+            LayoutRange::Capped { min, .. } => *min = usize::min(*min, total.saturating_sub(1)),
+            LayoutRange::Stepped { step, len } => *step = usize::min(*step, total / *len),
+        }
+    }
+
+    pub fn to_range(&self, len: usize) -> Range<usize> {
+        match *self {
+            LayoutRange::Full => 0..len,
+            LayoutRange::Bounded { min, len } => min..(min+len).min(len),
+            LayoutRange::Capped { min, len } => min..(min+len).min(len),
+            LayoutRange::Stepped { step, len } => step*len..(step*len+step).min(len),
+        }
+    }
+}
+
 /// A configurable container that lays out a sequence of Entities.
 #[derive(Debug, Component)]
 pub struct Container {
@@ -15,7 +66,104 @@ pub struct Container {
     /// Padding around the container.
     pub padding: Size2,
     /// If set, only display a subset of children.
-    pub range: Option<Range<usize>>,
+    pub range: LayoutRange,
+    /// The runtime computed maximum of a layout, could be number of children, lines, pages, etc.
+    pub maximum: usize
+}
+
+impl Container {
+
+    pub fn place(&mut self, parent: &LayoutInfo, entities: Vec<super::LayoutItem>) -> LayoutOutput {
+        self.layout.place(parent, entities, &mut self.range)
+    }
+
+    pub fn get_fac(&self) -> f32 {
+        match self.range {
+            LayoutRange::Full => 0.0,
+            LayoutRange::Bounded { min, len } => {
+                if self.maximum <= len {
+                    0.0
+                } else {
+                    min as f32 / (self.maximum - len) as f32
+                }
+            },
+            LayoutRange::Capped { min, len:_ } => {
+                if self.maximum == 0 {
+                    0.0
+                } else {
+                    min as f32 / self.maximum as f32
+                }
+            },
+            LayoutRange::Stepped { step, len } => {
+                let count = self.maximum / len;
+                if count == 0 {
+                    0.0
+                } else {
+                    step as f32 / count as f32
+                }
+            }
+        }.clamp(0.0, 1.0)
+    }
+
+    pub fn set_fac(&mut self, fac: f32) {
+        let fac = fac.clamp(0.0, 1.0);
+        match &mut self.range {
+            LayoutRange::Full => (),
+            LayoutRange::Bounded { min, len } => {
+                if self.maximum > *len {
+                    *min = ((self.maximum - *len) as f32 * fac) as usize
+                } else {
+                    *min = 0
+                }
+            },
+            LayoutRange::Capped { min, len:_ } => {
+                if self.maximum == 0 {
+                    *min = 0
+                } else {
+                    *min = (self.maximum as f32 * fac) as usize
+                }
+            },
+            LayoutRange::Stepped { step, len } => {
+                let count = self.maximum / *len;
+                if count == 0 {
+                    *step = 0
+                } else {
+                    *step = (count as f32 * fac) as usize
+                }
+            }
+        }
+    }
+
+    pub fn decrement(&mut self) {
+        match &mut self.range {
+            LayoutRange::Full => (),
+            LayoutRange::Bounded { min, .. } => {
+                *min = min.saturating_sub(1)
+            },
+            LayoutRange::Capped { min, .. } => {
+                *min = min.saturating_sub(1)
+            },
+            LayoutRange::Stepped { step, .. } => {
+                *step = step.saturating_sub(1)
+            }
+        }
+    }
+
+    pub fn increment(&mut self) {
+        // range doesn't matter since this will be resolved in `pipeline`.
+        match &mut self.range {
+            LayoutRange::Full => (),
+            LayoutRange::Bounded { min, .. } => {
+                *min += 1;
+            },
+            LayoutRange::Capped { min, .. } => {
+                *min += 1;
+            },
+            LayoutRange::Stepped { step, .. } => {
+                *step += 1;
+            }
+        }
+    }
 }
 
 /// Dimension info of a layout parent.
@@ -24,14 +172,6 @@ pub struct LayoutInfo {
     pub em: f32,
     pub rem: f32,
     pub margin: Vec2
-}
-
-impl std::ops::Deref for Container {
-    type Target = dyn Layout;
-
-    fn deref(&self) -> &Self::Target {
-        self.layout.as_ref()
-    }
 }
 
 #[derive(Debug, Clone, Copy, Component, Default, Reflect, PartialEq, Eq)]
@@ -44,15 +184,15 @@ pub enum LayoutControl {
     /// Breaks the line in a container after rendering this item.
     Linebreak,
     /// Breaks the line in a container without taking up space.
-    /// 
+    ///
     /// Dimension is used to determine line height.
-    /// 
+    ///
     /// The sprite will not be rendered and its children will not be updated.
     LinebreakMarker,
     /// Ignore layout and use default rendering.
     IgnoreLayout,
     /// For `compact`, `span` and `paragraph`, trim WhiteSpace at the beginning and end of each layout.
-    /// 
+    ///
     /// If removed this way, the sprite will not be rendered and its children will not be updated.
     WhiteSpace,
     /// Experimental: Unimplemented.

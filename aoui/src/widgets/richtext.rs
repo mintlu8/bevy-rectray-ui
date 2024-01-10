@@ -609,7 +609,8 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                                         layout: Box::new(StackLayout::HSTACK),
                                         margin: Size2::ZERO,
                                         padding: Size2::ZERO,
-                                        range: None,
+                                        range: Default::default(),
+                                        maximum: usize::MAX,
                                     }
                                 ))
                                 .insert(Transform2D::UNIT.with_anchor(anchor))

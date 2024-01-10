@@ -1,20 +1,24 @@
-use bevy::{ecs::{component::Component, query::WorldQuery, system::Query}, sprite::{TextureAtlasSprite, Sprite}, render::color::Color, text::Text, math::Vec2};
-
-use crate::{Transform2D, Dimension, Opacity};
-
+use bevy::{render::color::Color, text::Text, math::Vec2};
+use bevy::ecs::{component::Component, system::Query};
+use bevy::sprite::{TextureAtlasSprite, Sprite};
+use bevy::ecs::query::{WorldQuery, ReadOnlyWorldQuery, Without};
+use crate::{Transform2D, Dimension, Opacity, widgets::TextFragment};
 use super::{Interpolation, Interpolate, Offset, Rotation, Scale, Index};
 
 
 pub trait InterpolateAssociation {
     type Component: Component;
     type Interpolation: Interpolation;
+    type Condition: ReadOnlyWorldQuery;
 
-    fn set(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd); 
-    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd; 
+    fn set(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd);
+    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd;
 
-    fn system(mut query: Query<(&mut Self::Component, &Interpolate<Self::Interpolation>)>) {
+    fn system(mut query: Query<(&mut Self::Component, &Interpolate<Self::Interpolation>), Self::Condition>) {
         query.iter_mut().for_each(|(mut comp, inter)| {
-            Self::set(comp.as_mut(), inter.get())
+            if Self::get(comp.as_ref()) != inter.get() {
+                Self::set(comp.as_mut(), inter.get())
+            }
         })
     }
 
@@ -23,6 +27,7 @@ pub trait InterpolateAssociation {
 impl InterpolateAssociation for (Transform2D, Offset) {
     type Component = Transform2D;
     type Interpolation = Offset;
+    type Condition = ();
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.offset.edit_raw(|x| *x = value);
@@ -36,6 +41,7 @@ impl InterpolateAssociation for (Transform2D, Offset) {
 impl InterpolateAssociation for (Transform2D, Rotation) {
     type Component = Transform2D;
     type Interpolation = Rotation;
+    type Condition = ();
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.rotation = value;
@@ -49,6 +55,7 @@ impl InterpolateAssociation for (Transform2D, Rotation) {
 impl InterpolateAssociation for (Transform2D, Scale) {
     type Component = Transform2D;
     type Interpolation = Scale;
+    type Condition = ();
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.scale = value;
@@ -62,6 +69,7 @@ impl InterpolateAssociation for (Transform2D, Scale) {
 impl InterpolateAssociation for (Dimension, Dimension) {
     type Component = Dimension;
     type Interpolation = Dimension;
+    type Condition = ();
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.edit_raw(|x| *x = value);
@@ -69,9 +77,9 @@ impl InterpolateAssociation for (Dimension, Dimension) {
 
     fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
         match component.dimension {
-            crate::DimensionType::Copied => 
+            crate::DimensionType::Copied =>
                 panic!("Cannot interpolate `copied` dimension."),
-            crate::DimensionType::Dynamic => 
+            crate::DimensionType::Dynamic =>
                 panic!("Cannot interpolate `dynamic` dimension."),
             crate::DimensionType::Owned(v) => v.raw(),
         }
@@ -81,6 +89,7 @@ impl InterpolateAssociation for (Dimension, Dimension) {
 impl InterpolateAssociation for (TextureAtlasSprite, Index) {
     type Component = TextureAtlasSprite;
     type Interpolation = Index;
+    type Condition = ();
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.index = value
@@ -94,6 +103,7 @@ impl InterpolateAssociation for (TextureAtlasSprite, Index) {
 impl InterpolateAssociation for (Opacity, Opacity) {
     type Component = Opacity;
     type Interpolation = Opacity;
+    type Condition = ();
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.opacity = value
@@ -107,6 +117,7 @@ impl InterpolateAssociation for (Opacity, Opacity) {
 impl InterpolateAssociation for (Opacity, Color) {
     type Component = Opacity;
     type Interpolation = Color;
+    type Condition = ();
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.opacity = value.a()
@@ -122,6 +133,7 @@ impl InterpolateAssociation for (Opacity, Color) {
 impl InterpolateAssociation for (Sprite, Color) {
     type Component = Sprite;
     type Interpolation = Color;
+    type Condition = Without<TextFragment>;
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.color = value
@@ -135,6 +147,7 @@ impl InterpolateAssociation for (Sprite, Color) {
 impl InterpolateAssociation for (TextureAtlasSprite, Color) {
     type Component = TextureAtlasSprite;
     type Interpolation = Color;
+    type Condition = Without<TextFragment>;
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.color = value
@@ -148,6 +161,7 @@ impl InterpolateAssociation for (TextureAtlasSprite, Color) {
 impl InterpolateAssociation for (Text, Color) {
     type Component = Text;
     type Interpolation = Color;
+    type Condition = Without<TextFragment>;
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         for section in &mut component.sections {
@@ -160,6 +174,20 @@ impl InterpolateAssociation for (Text, Color) {
     }
 }
 
+impl InterpolateAssociation for (TextFragment, Color) {
+    type Component = TextFragment;
+    type Interpolation = Color;
+    type Condition = ();
+
+    fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
+        component.color = value;
+    }
+
+    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
+        component.color
+    }
+}
+
 /// Query for either setting a field or setting its associated interpolation.
 #[derive(Debug, WorldQuery)]
 #[world_query(mutable)]
@@ -168,7 +196,7 @@ pub struct Attr<A: Component, B: Interpolation> where (A, B): InterpolateAssocia
     pub interpolate: Option<&'static mut Interpolate<B>>,
 }
 
-impl<A: Component, B: Interpolation> AttrItem<'_, A, B> 
+impl<A: Component, B: Interpolation> AttrItem<'_, A, B>
         where (A, B): InterpolateAssociation<Component = A, Interpolation = B> {
 
     /// Set the value or move the interpolation.
@@ -206,7 +234,7 @@ impl<A: Component, B: Interpolation> AttrItem<'_, A, B>
 }
 
 
-impl<A: Component, B: Interpolation> AttrReadOnlyItem<'_, A, B> 
+impl<A: Component, B: Interpolation> AttrReadOnlyItem<'_, A, B>
         where (A, B): InterpolateAssociation<Component = A, Interpolation = B> {
 
     pub fn get(&self) -> B::FrontEnd {

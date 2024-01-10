@@ -1,11 +1,11 @@
 use bevy::{prelude::*, window::{Window, PrimaryWindow}};
 
-use super::{*, cursor::CameraQuery};
+use super::{*, cursor::CameraQuery, wheel::MouseWheelAction};
 
 
 /// Remove [`CursorFocus`], [`CursorAction`], [`CursorClickOutside`] and [`Submit`];
-pub fn remove_focus(mut commands: Commands, 
-    query1: Query<Entity, With<CursorFocus>>, 
+pub fn remove_focus(mut commands: Commands,
+    query1: Query<Entity, With<CursorFocus>>,
     query2: Query<Entity, With<CursorAction>>,
     query3: Query<Entity, With<CursorClickOutside>>,
     query4: Query<Entity, With<MouseWheelAction>>,
@@ -124,7 +124,7 @@ pub fn mouse_button_input(
             .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         }
     } else if buttons.pressed(MouseButton::Left) {
-        if buttons.just_pressed(MouseButton::Left) { 
+        if buttons.just_pressed(MouseButton::Left) {
             state.down_pos = mouse_pos;
             let [_, last] = state.last_lmb_down_time;
             state.last_lmb_down_time = [last, time.elapsed_seconds()];
@@ -154,7 +154,7 @@ pub fn mouse_button_input(
             }
         }
     } else if buttons.pressed(MouseButton::Right) {
-        if buttons.just_pressed(MouseButton::Right) { 
+        if buttons.just_pressed(MouseButton::Right) {
             state.down_pos = mouse_pos
         }
         if let Some((entity, flag)) = iter(EventFlags::RightDrag|EventFlags::RightClick)
@@ -181,8 +181,8 @@ pub fn mouse_button_input(
             }
         }
     } else if buttons.pressed(MouseButton::Middle) {
-        if buttons.just_pressed(MouseButton::Middle) { 
-            state.down_pos = mouse_pos 
+        if buttons.just_pressed(MouseButton::Middle) {
+            state.down_pos = mouse_pos
         }
         if let Some((entity, flag)) = iter(EventFlags::MidDrag|EventFlags::MidClick)
             .filter(|(.., hitbox)| hitbox.contains(mouse_pos))
@@ -214,7 +214,7 @@ pub fn mouse_button_input(
             iter(EventFlags::LeftClick)
                 .filter(|(.., hitbox)| hitbox.contains(mouse_pos) && hitbox.contains(down))
                 .max_by(|(.., a), (.., b)| a.compare(b))
-                .map(|(entity, flags, _)| 
+                .map(|(entity, flags, _)|
                     if flags.contains(EventFlags::DoubleClick) && time.elapsed_seconds() - state.last_lmb_down_time[0] <= double_click.get() {
                         commands.entity(entity).insert(CursorAction(EventFlags::DoubleClick));
                         state.clear_dbl_click();
@@ -257,5 +257,5 @@ pub fn mouse_button_input(
                 })
                 .exec(|| state.caught = true);
         }
-    }   
+    }
 }

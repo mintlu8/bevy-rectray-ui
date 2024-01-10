@@ -468,7 +468,7 @@ macro_rules! widget_extension {
             /// Margin of the widget's layout, has no effect if widget has no layout.
             pub padding: $crate::dsl::OneOrTwo<$crate::Size2>,
             /// Displayed range of children, default is all.
-            pub children_range: Option<::std::ops::Range<usize>>,
+            pub children_range: $crate::layout::LayoutRange,
             $($(#[$($attr)*])* $vis $field: $ty),*
         }
     };

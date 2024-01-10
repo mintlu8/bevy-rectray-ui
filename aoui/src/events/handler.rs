@@ -280,7 +280,7 @@ mod sealed {
 }
 
 impl EventHandling for EvMouseWheel {
-    type Data = MouseWheelAction;
+    type Data = MovementUnits;
     type Context = ();
     fn new_context() -> Self::Context {}
 }

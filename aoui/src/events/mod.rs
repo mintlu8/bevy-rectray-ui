@@ -75,7 +75,7 @@ pub use event::*;
 pub use state::*;
 use systems::*;
 pub use handler::*;
-pub use wheel::{MouseWheelAction, ScrollScaling};
+pub use wheel::{MovementUnits, ScrollScaling, MouseWheelAction};
 pub use cursor::{CustomCursor, TrackCursor};
 pub use mutation::Mutation;
 pub use oneshot::OneShot;

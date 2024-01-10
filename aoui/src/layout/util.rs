@@ -384,24 +384,6 @@ impl From<&Alignment> for Trinary {
     }
 }
 
-
-pub(super) fn hbucket(anchor: &Anchor) -> Trinary {
-    match anchor.x() {
-        x if x < -0.16 => Trinary::Neg,
-        x if x > 0.16 => Trinary::Pos,
-        _ => Trinary::Mid,
-    }
-}
-
-
-pub(super) fn vbucket(anchor: &Anchor) -> Trinary {
-    match anchor.y() {
-        y if y < -0.16 => Trinary::Neg,
-        y if y > 0.16 => Trinary::Pos,
-        _ => Trinary::Mid,
-    }
-}
-
 pub(super) fn posx(v: Vec2) -> Vec2 {
     Vec2::new(v.x, 0.0)
 }

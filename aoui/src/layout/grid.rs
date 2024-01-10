@@ -1,10 +1,11 @@
+//! Warn: These will be reworked later.
 use std::ops::Range;
 use bevy::math::*;
 use itertools::Itertools;
 
 use crate::layout::{LayoutItem, LayoutControl};
 
-use super::{Layout, FixedGridLayout, Binary, Trinary, LayoutDir, Axis, LayoutOutput, posx, posy, negx, negy, SizedGridLayout, LayoutInfo, TableLayout, DynamicTableLayout};
+use super::{Layout, FixedGridLayout, Binary, Trinary, LayoutDir, Axis, LayoutOutput, posx, posy, negx, negy, SizedGridLayout, LayoutInfo, TableLayout, DynamicTableLayout, LayoutRange};
 
 const R: LayoutDir = LayoutDir::LeftToRight;
 const L: LayoutDir = LayoutDir::RightToLeft;
@@ -12,7 +13,7 @@ const T: LayoutDir = LayoutDir::BottomToTop;
 const B: LayoutDir = LayoutDir::TopToBottom;
 
 impl Layout for FixedGridLayout {
-    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
+    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, _: &mut LayoutRange) -> LayoutOutput {
         let cell_size = parent.dimension / self.cells.as_vec2();
         let margin = parent.margin;
         let align = match (self.row_dir.into(), self.alignment.into()) {
@@ -42,7 +43,7 @@ impl Layout for FixedGridLayout {
 }
 
 impl Layout for SizedGridLayout {
-    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
+    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, _: &mut LayoutRange) -> LayoutOutput {
         let dimension = parent.dimension;
         let cell_size = self.cell_size.as_pixels(dimension, parent.em, parent.em);
         let margin = parent.margin;
@@ -80,7 +81,7 @@ impl Layout for SizedGridLayout {
 }
 
 impl Layout for TableLayout {
-    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
+    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, _: &mut LayoutRange) -> LayoutOutput {
         let dim = parent.dimension;
         let margin = parent.margin;
         let stretch = self.stretch;
@@ -108,7 +109,7 @@ impl Layout for TableLayout {
 }
 
 impl Layout for DynamicTableLayout {
-    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>) -> LayoutOutput {
+    fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, _: &mut LayoutRange) -> LayoutOutput {
         let dim = parent.dimension;
         let margin = parent.margin;
         let stretch = self.stretch;
@@ -183,6 +184,7 @@ pub(crate) fn grid(
     LayoutOutput {
         entity_anchors: result,
         dimension,
+        max_count: 0,
     }
 }
 
@@ -247,6 +249,7 @@ pub(crate) fn table(
     LayoutOutput {
         entity_anchors: result,
         dimension: max + cursor.abs(),
+        max_count: 0,
     }
 }
 
