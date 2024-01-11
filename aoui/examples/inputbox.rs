@@ -25,7 +25,7 @@ pub fn init(mut commands: AouiCommands) {
     inputbox! (commands {
         dimension: size2!(400, 1 em),
         font_size: em(4),
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         text: "Hello, World!",
         font: "RobotoCondensed.ttf",
         color: color!(red),
@@ -36,7 +36,7 @@ pub fn init(mut commands: AouiCommands) {
             extra: transition!(
                 Opacity 0.5 QuadraticInOut loop [(0.0, 0.0), (1.0, 0.5), (1.0, 1.0)];
             ),
-            
+
         },
         cursor_area: rectangle! {
             color: color!(green) * 0.5,
@@ -54,7 +54,7 @@ pub fn init(mut commands: AouiCommands) {
         offset: [-400, 0],
         rotation: degrees(45),
         font_size: em(4),
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         text: "I'm rotated!",
         font: "ComicNeue-Regular.ttf",
         color: color!(red),

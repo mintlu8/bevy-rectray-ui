@@ -8,6 +8,7 @@ use bevy::prelude::Reflect;
 
 use crate::{layout::LayoutControl, Anchor};
 
+/// Direction of a layout.
 pub trait Direction: Sized + Debug + Send + Sync + 'static {
     type Pos: Direction;
     fn unit() -> Vec2;
@@ -15,20 +16,26 @@ pub trait Direction: Sized + Debug + Send + Sync + 'static {
     fn main_vec(v: f32) -> Vec2;
     fn len(v: Vec2) -> f32;
     fn project(v: Vec2) -> f32;
-    fn off(v: Vec2) -> Vec2;
-    fn off_vec(v: f32) -> Vec2;
+    fn side(v: Vec2) -> Vec2;
+    fn side_vec(v: f32) -> Vec2;
     fn signum(v: Vec2) -> Vec2;
     fn reversed() -> bool;
     fn bucket(anc: Anchor) -> Trinary;
 }
 
+
+/// A pair of orthogonal direction.
 pub trait DirectionPair {}
 
+/// The direction +X, left to right.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum X {}
+
+/// The direction +Y, bottom to top.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Y {}
 
+/// Reverse a direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rev<T> {
     _Phantom(PhantomData<T>, X)
@@ -58,11 +65,11 @@ impl Direction for X {
         v.x
     }
 
-    fn off(v: Vec2) -> Vec2 {
+    fn side(v: Vec2) -> Vec2 {
         Vec2::new(0.0, v.y)
     }
 
-    fn off_vec(v: f32) -> Vec2 {
+    fn side_vec(v: f32) -> Vec2 {
         Vec2::new(0.0, v)
     }
 
@@ -107,11 +114,11 @@ impl Direction for Y {
         v.x
     }
 
-    fn off(v: Vec2) -> Vec2 {
+    fn side(v: Vec2) -> Vec2 {
         Vec2::new(v.x, 0.0)
     }
 
-    fn off_vec(v: f32) -> Vec2 {
+    fn side_vec(v: f32) -> Vec2 {
         Vec2::new(v, 0.0)
     }
 
@@ -157,12 +164,12 @@ impl<T: Direction> Direction for Rev<T> {
         -T::project(v)
     }
 
-    fn off(v: Vec2) -> Vec2 {
-        T::off(v)
+    fn side(v: Vec2) -> Vec2 {
+        T::side(v)
     }
 
-    fn off_vec(v: f32) -> Vec2 {
-        T::off_vec(v)
+    fn side_vec(v: f32) -> Vec2 {
+        T::side_vec(v)
     }
 
     fn signum(v: Vec2) -> Vec2 {
@@ -187,6 +194,7 @@ impl DirectionPair for (Rev<X>, Y) {}
 impl DirectionPair for (X, Rev<Y>) {}
 impl DirectionPair for (Rev<X>, Rev<Y>) {}
 
+/// Direction and stretch of a layout.
 pub trait StretchDir: Direction {
     const STRETCH: bool;
 }
@@ -203,6 +211,7 @@ impl<T> StretchDir for Rev<T> where T: StretchDir {
     const STRETCH: bool = T::STRETCH;
 }
 
+/// A direction that also signifies stretch.
 #[derive(Debug, Clone, Copy)]
 pub enum Stretch<T: Direction> {
     _Phantom(PhantomData<T>)
@@ -215,8 +224,8 @@ impl<T> Direction for Stretch<T> where T: Direction {
     fn main_vec(v: f32) -> Vec2 { T::main_vec(v) }
     fn len(v: Vec2) -> f32 { T::len(v) }
     fn project(v: Vec2) -> f32 { T::project(v) }
-    fn off(v: Vec2) -> Vec2 { T::off(v) }
-    fn off_vec(v: f32) -> Vec2 { T::off_vec(v) }
+    fn side(v: Vec2) -> Vec2 { T::side(v) }
+    fn side_vec(v: f32) -> Vec2 { T::side_vec(v) }
     fn signum(v: Vec2) -> Vec2 { T::signum(v) }
     fn reversed() -> bool { T::reversed() }
     fn bucket(anc: Anchor) -> Trinary { T::bucket(anc) }

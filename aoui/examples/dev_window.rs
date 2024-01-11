@@ -28,14 +28,14 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_channel(|fps: f32, text: &mut Text| {
+        extra: fps_signal(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
 
     let (send, recv) = commands.signal();
     vstack!(commands {
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         extra: Dragging::BOTH,
         extra: recv.invoke::<Dragging>(),
         child: rectangle! {
@@ -47,8 +47,8 @@ pub fn init(mut commands: AouiCommands) {
         child: text! {
             text: "Egui? Just kidding!",
             event: EventFlags::LeftDrag | EventFlags::Hover,
-            extra: SetCursor { 
-                flags: EventFlags::Hover|EventFlags::LeftDrag, 
+            extra: SetCursor {
+                flags: EventFlags::Hover|EventFlags::LeftDrag,
                 icon: CursorIcon::Hand,
             },
             extra: Handlers::<EvMouseDrag>::new(send),

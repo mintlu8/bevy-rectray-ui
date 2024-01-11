@@ -7,8 +7,8 @@ use super::{EventHandling, Handlers};
 
 /// An signal sender that calculates how many pixels of the sprite's bounding
 /// rectangle is covered by children's **offset** or **dimension**.
-/// 
-/// This calculates a min bound and a max bound of all children's 
+///
+/// This calculates a min bound and a max bound of all children's
 /// anchor, min bound, and max bound,
 /// ignores rotation and scaling.
 #[derive(Debug, Clone)]
@@ -17,8 +17,8 @@ pub enum FetchCoveragePx {}
 
 /// An signal sender that calculates how many percentage of the sprite's bounding
 /// rectangle is covered by children's **offset** or **dimension**.
-/// 
-/// This calculates a min bound and a max bound of all children's 
+///
+/// This calculates a min bound and a max bound of all children's
 /// anchor, min bound, and max bound,
 /// ignores rotation and scaling.
 #[derive(Debug, Clone)]
@@ -40,10 +40,10 @@ impl EventHandling for FetchCoveragePercent {
 pub fn calculate_coverage(
     rem: Res<AouiREM>,
     query: Query<(&Transform2D, &DimensionData, Option<&Children>,
-        Option<&Handlers<FetchCoveragePercent>>, 
+        Option<&Handlers<FetchCoveragePercent>>,
         Option<&Handlers<FetchCoveragePx>>)>
 ) {
-    
+
     let rem = rem.get();
     for (_, dimension, children, percent, px) in query.iter() {
         if percent.is_none() && px.is_none() { continue; }
@@ -65,8 +65,8 @@ pub fn calculate_coverage(
             let anchor = size * transform.get_parent_anchor();
             let center = anchor - dimension.size * transform.anchor;
             let offset = transform.offset.as_pixels(size, em, rem);
-            let bl = center + offset + dimension.size * Anchor::BottomLeft;
-            let tr = center + offset + dimension.size * Anchor::TopRight;
+            let bl = center + offset + dimension.size * Anchor::BOTTOM_LEFT;
+            let tr = center + offset + dimension.size * Anchor::TOP_RIGHT;
             min = min.min(bl).min(anchor);
             max = max.max(tr).max(anchor);
         }

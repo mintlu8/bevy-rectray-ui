@@ -79,10 +79,7 @@
 
 mod dto;
 mod mpmc;
-//pub mod types;
 mod globals;
-//mod systems;
-mod storage;
 mod signal;
 mod signal_pool;
 
@@ -91,7 +88,6 @@ pub use globals::*;
 pub use dto::{Object, AsObject};
 pub use mpmc::*;
 pub use receiver::*;
-pub use storage::KeyStorage;
 pub mod receiver;
 pub(crate) use signal::Signal;
 
@@ -110,7 +106,6 @@ pub(crate) struct SignalsPlugin;
 impl Plugin for SignalsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
-            .init_resource::<KeyStorage>()
             .init_resource::<SignalPool>()
             .add_systems(PreUpdate, globals::send_fps.in_set(AouiEventSet))
             .add_systems(Update, (
@@ -121,7 +116,6 @@ impl Plugin for SignalsPlugin {
                 signal_receive::<4>,
                 signal_receive::<5>,
             ))
-            .add_systems(Last, KeyStorage::system_reset_changed_status)
             .add_systems(Last, SignalPool::system_signal_cleanup.in_set(AouiCleanupSet))
         ;
     }

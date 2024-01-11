@@ -8,7 +8,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension};
 use crate::{DimensionType, Transform2D, Anchor, Dimension};
 use crate::{widget_extension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
 
-use super::{Widget, DslInto, HandleOrString, AouiCommands, Aspect, OneOrTwo};
+use super::{Widget, DslInto, HandleOrString, AouiCommands, Aspect};
 
 widget_extension!(pub struct FrameBuilder {});
 widget_extension!(
@@ -66,13 +66,10 @@ impl Widget for FrameBuilder {
                 transform: Transform2D {
                     center: self.center,
                     anchor: self.anchor,
-                    parent_anchor: self.parent_anchor.unwrap_or(Anchor::Inherit),
+                    parent_anchor: self.parent_anchor.unwrap_or(Anchor::INHERIT),
                     offset: self.offset,
                     rotation: self.rotation,
-                    scale: match self.scale{
-                        Some(OneOrTwo(vec)) => vec,
-                        None => Vec2::ONE,
-                    },
+                    scale: self.scale.0,
                     z: self.z
                 },
                 dimension: Dimension {

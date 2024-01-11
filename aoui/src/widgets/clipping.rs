@@ -101,7 +101,7 @@ impl ScopedCameraBundle {
             tonemapping: bun.tonemapping,
             deband_dither: bun.deband_dither,
             render_layer: layer.dinto(),
-            build: BuildTransform(Anchor::Center),
+            build: BuildTransform(Anchor::CENTER),
             global: GlobalTransform::default(),
         }
     }

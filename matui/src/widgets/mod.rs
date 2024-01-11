@@ -4,9 +4,10 @@ pub mod frame;
 pub mod util;
 pub mod slider;
 pub mod input;
+pub mod dropdown;
 pub use button::MButtonBuilder;
 pub use toggle::MToggleBuilder;
-pub use frame::{MFrameBuilder, MWindowBuilder};
+pub use frame::{MFrameBuilder, MWindowBuilder, Divider};
 pub use slider::MSliderBuilder;
 pub use input::MInputBuilder;
 

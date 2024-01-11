@@ -118,7 +118,7 @@ impl Widget for MButtonBuilder {
                 layout: Box::new(StackLayout::HSTACK),
                 margin: size2!(0.5 em, 1 em),
                 padding: size2!(1 em, 0.75 em),
-                range: LayoutRange::Full,
+                range: LayoutRange::All,
                 maximum: usize::MAX
             },
             CursorStateColors {

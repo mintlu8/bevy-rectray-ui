@@ -27,7 +27,7 @@ pub fn init(mut commands: AouiCommands) {
         dimension: size2!(800, 1 em),
         offset: [0, 200],
         font_size: em(4),
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         text: "Type here and press Enter.",
         font: commands.load::<Font>("RobotoCondensed.ttf"),
         color: color!(red),

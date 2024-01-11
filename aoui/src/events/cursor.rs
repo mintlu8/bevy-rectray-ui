@@ -9,8 +9,7 @@ use crate::widgets::clipping::CameraClip;
 use super::AouiCamera;
 
 
-/// Must be unparented to work correctly.
-/// Disabling system cursor is outside the scope of this crate
+/// Displays only when the window's CursorIcon is this.
 #[derive(Debug, Clone, Copy, Component, Reflect)]
 pub struct CustomCursor(pub CursorIcon);
 
@@ -30,6 +29,7 @@ impl Default for CustomCursor {
     }
 }
 
+/// Make entity track cursor's movement.
 #[derive(Debug, Clone, Copy, Component, Default, Reflect)]
 pub struct TrackCursor(pub Size2);
 
@@ -40,6 +40,7 @@ impl TrackCursor {
     }
 }
 
+/// A query that finds a camera used for cursor handling.
 #[derive(Debug, SystemParam)]
 pub struct CameraQuery<'w, 's> {
     marked_camera: Query<'w, 's, (&'static Camera, &'static GlobalTransform), With<AouiCamera>>,

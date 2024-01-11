@@ -37,21 +37,6 @@ impl Hitbox {
 }
 
 impl Hitbox {
-
-    pub fn rect(scale: f32) -> Self {
-        Self {
-            shape: HitboxShape::Rect,
-            scale: Vec2::splat(scale),
-        }
-    }
-
-    pub fn ellipse(scale: f32) -> Self {
-        Self {
-            shape: HitboxShape::Ellipse,
-            scale: Vec2::splat(scale),
-        }
-    }
-
     pub fn contains(&self, rect: &RotatedRect, point: Vec2) -> bool {
         let local = point - rect.center();
         let x = rect.affine.transform_vector2(Vec2::new(0.5, 0.0)) / self.scale.x;

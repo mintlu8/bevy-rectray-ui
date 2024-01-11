@@ -4,24 +4,23 @@ use std::ops::Mul;
 use bevy::{math::{Vec2, Affine2, Rect}, reflect::Reflect, prelude::Component, ecs::entity::Entity, };
 
 /// Anchor of a sprite, this is a more concise implementation than bevy's.
-/// 
+///
 /// If a field is `Inherit` it will use `anchor` if possible.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Reflect)]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Anchor(Vec2);
 
-#[allow(non_upper_case_globals)]
 impl Anchor {
-    pub const Inherit: Self = Self(Vec2::NAN);
-    pub const BottomLeft: Self = Self(Vec2::new(-0.5, -0.5));
-    pub const BottomCenter: Self = Self(Vec2::new(0.0, -0.5));
-    pub const BottomRight: Self = Self(Vec2::new(0.5, -0.5));
-    pub const CenterLeft: Self = Self(Vec2::new(-0.5, 0.0));
-    pub const Center: Self = Self(Vec2::ZERO);
-    pub const CenterRight: Self = Self(Vec2::new(0.5, 0.0));
-    pub const TopLeft: Self = Self(Vec2::new(-0.5, 0.5));
-    pub const TopCenter: Self = Self(Vec2::new(0.0, 0.5));
-    pub const TopRight: Self = Self(Vec2::new(0.5, 0.5));
+    pub const INHERIT: Self = Self(Vec2::NAN);
+    pub const BOTTOM_LEFT: Self = Self(Vec2::new(-0.5, -0.5));
+    pub const BOTTOM_CENTER: Self = Self(Vec2::new(0.0, -0.5));
+    pub const BOTTOM_RIGHT: Self = Self(Vec2::new(0.5, -0.5));
+    pub const CENTER_LEFT: Self = Self(Vec2::new(-0.5, 0.0));
+    pub const CENTER: Self = Self(Vec2::ZERO);
+    pub const CENTER_RIGHT: Self = Self(Vec2::new(0.5, 0.0));
+    pub const TOP_LEFT: Self = Self(Vec2::new(-0.5, 0.5));
+    pub const TOP_CENTER: Self = Self(Vec2::new(0.0, 0.5));
+    pub const TOP_RIGHT: Self = Self(Vec2::new(0.5, 0.5));
 
     pub const fn new(v: Vec2) -> Self {
         Self(v)
@@ -103,7 +102,7 @@ impl From<&Anchor> for bevy::sprite::Anchor {
 }
 
 /// A rotated 2D rectangle.
-/// 
+///
 /// Note: `scale` is pre-multiplied into `dimension`.
 #[derive(Debug, Clone, Copy, Component, PartialEq, Default, Reflect)]
 #[non_exhaustive]
@@ -180,12 +179,12 @@ impl RotatedRect {
     /// and an `Affine3A` that converts into the `GlobalTransform` suitable from the screen space
     pub fn construct(parent: &ParentInfo, parent_anchor: Anchor, anchor: Anchor, offset: Vec2, dim: Vec2,
             center: Anchor, rotation: f32, scale: Vec2, z: f32) -> Self{
-        let parent_anchor = parent.anchor.unwrap_or_else(|| 
+        let parent_anchor = parent.anchor.unwrap_or_else(||
             parent.rect.affine.transform_point2(parent_anchor.or(anchor).as_vec())
         );
         // apply offset and dimension
         let self_center = offset + (center.as_vec() - anchor.as_vec()) * dim;
-        let dir = (Anchor::Center.as_vec() - center.as_vec()) * dim;
+        let dir = (Anchor::CENTER.as_vec() - center.as_vec()) * dim;
 
         let out_center = Vec2::from_angle(parent.rect.rotation).rotate(self_center * parent.rect.scale) + parent_anchor;
         let rotation = parent.rect.rotation + rotation;
@@ -194,8 +193,8 @@ impl RotatedRect {
 
         Self {
             affine: Affine2::from_scale_angle_translation(
-                dim * scale, 
-                rotation, 
+                dim * scale,
+                rotation,
                 out_origin
             ),
             z,
@@ -211,8 +210,8 @@ const _: () = {
     impl Serialize for RotatedRect {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
             let [a, b, c, d, e, f] = self.affine.to_cols_array();
-            [a, b, c, d, e, f, 
-                self.rotation, self.z, 
+            [a, b, c, d, e, f,
+                self.rotation, self.z,
                 self.scale.x, self.scale.y
             ].serialize(serializer)
         }
@@ -221,8 +220,8 @@ const _: () = {
 
     impl<'de> Deserialize<'de> for RotatedRect {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
-            let [a,b,c,d,e,f,r,z,sx,sy] = <_>::deserialize(deserializer)?; 
-            Ok(Self { 
+            let [a,b,c,d,e,f,r,z,sx,sy] = <_>::deserialize(deserializer)?;
+            Ok(Self {
                 affine: Affine2::from_cols_array(&[a, b, c, d, e, f]),
                 rotation: r, z,
                 scale: Vec2::new(sx, sy),

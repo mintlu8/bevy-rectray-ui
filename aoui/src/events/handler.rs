@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 
 use crate::dsl::{DslFrom, DslInto};
 use crate::events::*;
-use crate::signals::{SignalSender, SignalMapper, SignalBuilder, KeyStorage, Object, AsObject};
+use crate::signals::{SignalSender, SignalBuilder, Object, AsObject};
 use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;
@@ -16,7 +16,7 @@ use super::mutation::{Mutation, IntoMutationCommand};
 use super::oneshot::OneShot;
 use super::{EvLoseFocus, EvObtainFocus, EvButtonClick, EvTextSubmit, EvTextChange, EvToggleChange, EvMouseDrag, EvPositionFactor};
 
-/// Event handlers.
+/// A collection of event handlers.
 #[derive(Debug, Component)]
 pub struct Handlers<T: EventHandling> {
     pub context: T::Context,
@@ -25,13 +25,14 @@ pub struct Handlers<T: EventHandling> {
 
 impl<T: EventHandling> Default for Handlers<T> {
     fn default() -> Self {
-        Self { 
-            context: Default::default(), 
+        Self {
+            context: Default::default(),
             handlers: Default::default(),
         }
     }
 }
 
+/// A single event handler.
 #[derive(Debug)]
 pub enum Handler<T: EventHandling> {
     /// Run a oneshot system, currently characterized by being agnostic to the caller.
@@ -40,8 +41,6 @@ pub enum Handler<T: EventHandling> {
     Mutation(Mutation<T::Data>),
     /// Send a signal with the associated data.
     Signal(SignalSender<T::Data>),
-    /// Set a key-value pair in a [storage](crate::signals::KeyStorage).
-    GlobalKey(String, SignalMapper),
 }
 
 impl<T: EventHandling> DslFrom<OneShot> for Handler<T> {
@@ -59,18 +58,6 @@ impl<T: EventHandling> DslFrom<SignalBuilder<T::Data>> for Handler<T> {
 impl<T: EventHandling> DslFrom<SignalSender<T::Data>> for Handler<T> {
     fn dfrom(value: SignalSender<T::Data>) -> Self {
         Handler::Signal(value)
-    }
-}
-
-impl<T: EventHandling> DslFrom<String> for Handler<T> {
-    fn dfrom(value: String) -> Self {
-        Handler::GlobalKey(value, SignalMapper::None)
-    }
-}
-
-impl<T: EventHandling> DslFrom<&str> for Handler<T> {
-    fn dfrom(value: &str) -> Self {
-        Handler::GlobalKey(value.to_owned(), SignalMapper::None)
     }
 }
 
@@ -121,7 +108,7 @@ impl<T: EventHandling> Handlers<T> {
     }
 
     pub fn oneshot<'w, 's, M: Send + Sync + 'static>(
-        mut commands: impl AsMut<Commands<'w, 's>>, 
+        mut commands: impl AsMut<Commands<'w, 's>>,
         handler: impl IntoSystem<(), (), M> + Send + Sync + 'static
     ) -> Self {
         Self {
@@ -133,7 +120,7 @@ impl<T: EventHandling> Handlers<T> {
 
     pub fn and_oneshot<M: Send + Sync + 'static>(
         mut self,
-        commands: &mut Commands, 
+        commands: &mut Commands,
         handler: impl IntoSystem<(), (), M> + Send + Sync + 'static
     ) -> Self {
         self.handlers.push(OneShot::new(commands, handler).dinto());
@@ -167,7 +154,7 @@ impl<T: EventHandling> Handlers<T> {
         }
     }
 
-    pub fn handle(&self, commands: &mut EntityCommands, keys: &KeyStorage, data: T::Data) {
+    pub fn handle(&self, commands: &mut EntityCommands, data: T::Data) {
         for handler in self.handlers.iter() {
             match handler {
                 Handler::OneShotSystem(system) => {
@@ -181,14 +168,11 @@ impl<T: EventHandling> Handlers<T> {
                 Handler::Signal(signal) => {
                     signal.send(data.clone());
                 },
-                Handler::GlobalKey(name, mapper) => {
-                    keys.set_dyn(name, mapper.map(Object::new(data.clone())));
-                },
             }
         }
     }
 
-    pub fn handle_dyn(&self, commands: &mut EntityCommands, keys: &KeyStorage, data: Object) {
+    pub fn handle_dyn(&self, commands: &mut EntityCommands, data: Object) {
         for handler in self.handlers.iter() {
             match handler {
                 Handler::OneShotSystem(system) => {
@@ -204,19 +188,15 @@ impl<T: EventHandling> Handlers<T> {
                 Handler::Signal(signal) => {
                     signal.send_dyn(data.clone())
                 },
-                Handler::GlobalKey(name, mapper) => {
-                    keys.set_dyn(name, mapper.map(data.clone()));
-                },
             }
         }
     }
 
-    pub fn cleanup(&self, drop_flag: u8){ 
+    pub fn cleanup(&self, drop_flag: u8){
         self.handlers.iter().for_each(|x| match x {
             Handler::OneShotSystem(_) => (),
             Handler::Mutation(_) => (),
             Handler::Signal(sig) => sig.try_cleanup(drop_flag),
-            Handler::GlobalKey(_, _) => (),
         })
     }
 }
@@ -231,13 +211,12 @@ pub trait EventHandling: 'static {
 /// Register a `type<T>` that can handle certain events.
 pub fn handle_event<T: EventQuery + Send + Sync + 'static> (
     mut commands: Commands,
-    keys: Res<KeyStorage>,
     query: Query<(Entity, &T::Component, &Handlers<T>)>,
 ) {
     for (entity, action, system) in query.iter() {
         let mut commands = commands.entity(entity);
         if T::validate(&system.context, action) {
-            system.handle(&mut commands, &keys, T::get_data(&system.context, action));
+            system.handle(&mut commands, T::get_data(&system.context, action));
         }
     }
 }
@@ -260,10 +239,10 @@ mod sealed {
                 type Context = ();
                 fn new_context() -> Self::Context {}
             }
-            
+
             impl EventQuery for $crate::events::sealed::$ident {
                 type Component = CursorAction;
-            
+
                 fn validate(_: &Self::Context, other: &Self::Component) -> bool {
                     EventFlags::$ident.contains(other.flags())
                 }
@@ -317,7 +296,7 @@ macro_rules! impl_entity_query_for_mouse_state {
         }
         impl EventQuery for $crate::events::sealed::$ident {
             type Component = CursorFocus;
-        
+
             fn validate(_: &Self::Context, other: &Self::Component) -> bool {
                 EventFlags::$ident.contains(other.flags())
             }
@@ -376,7 +355,6 @@ impl EventHandling for EvPositionFactor {
 
 pub fn obtain_focus_detection(
     mut commands: Commands,
-    keys: Res<KeyStorage>,
     mut focused: Query<(Entity, &mut Handlers<EvObtainFocus>), With<CursorFocus>>,
     mut unfocused: Query<&mut Handlers<EvObtainFocus>, Without<CursorFocus>>,
 ) {
@@ -384,7 +362,7 @@ pub fn obtain_focus_detection(
         if handlers.context { continue; }
         handlers.context = true;
         let mut commands = commands.entity(entity);
-        handlers.handle(&mut commands, &keys, ());
+        handlers.handle(&mut commands, ());
     }
     for mut handlers in unfocused.iter_mut() {
         handlers.context = false;
@@ -393,12 +371,11 @@ pub fn obtain_focus_detection(
 
 pub fn lose_focus_detection(
     mut commands: Commands,
-    keys: Res<KeyStorage>,
     mut removed: RemovedComponents<CursorFocus>,
     actions: Query<(Entity, &Handlers<EvLoseFocus>), Without<CursorFocus>>,
 ) {
     for (entity, handlers) in actions.iter_many(removed.read()) {
         let mut commands = commands.entity(entity);
-        handlers.handle(&mut commands, &keys, ());
+        handlers.handle(&mut commands, ());
     }
 }

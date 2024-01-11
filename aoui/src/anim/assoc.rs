@@ -6,6 +6,7 @@ use crate::{Transform2D, Dimension, Opacity, widgets::TextFragment};
 use super::{Interpolation, Interpolate, Offset, Rotation, Scale, Index};
 
 
+/// Associate a component with an interpolation.
 pub trait InterpolateAssociation {
     type Component: Component;
     type Interpolation: Interpolation;

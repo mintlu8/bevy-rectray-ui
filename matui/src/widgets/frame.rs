@@ -17,12 +17,13 @@ use bevy_aoui::{material_sprite, Hitbox, Size2, Opacity, transition, Dimension, 
 use bevy_aoui::widgets::drag::{Dragging, DragConstraint};
 use bevy_aoui::{frame, widget_extension, build_frame, size2, layout::StackLayout};
 use bevy_aoui::events::{EventFlags, Handlers, EvMouseDrag, Fetch, Evaluated};
-use bevy_aoui::dsl::{Widget, DslInto, AouiCommands, mesh_rectangle};
+use bevy_aoui::dsl::{Widget, AouiCommands, mesh_rectangle};
 use bevy_aoui::dsl::HandleOrString;
 use crate::shapes::RoundedRectangleMaterial;
 
 #[derive(Debug, Default)]
 pub struct Divider {
+    pub width: Option<f32>,
     pub inset: f32,
     pub axis: Axis,
     pub color: Color,
@@ -35,17 +36,18 @@ impl Widget for Divider {
         } else {
             RoundedRectangleMaterial::capsule(self.color)
         };
+        let width = self.width.unwrap_or(0.1);
         match self.axis {
             Axis::Horizontal => {
                 let entity = material_sprite!(commands {
-                    dimension: size2!({100.0 - self.inset * 2.0}%, 0.1 em),
+                    dimension: size2!({100.0 - self.inset * 2.0}%, width em),
                     material: mat,
                 });
                 (entity, entity)
             },
             Axis::Vertical => {
                 let entity = material_sprite!(commands {
-                    dimension: size2!(0.2 em, {100.0 - self.inset * 200.0}%),
+                    dimension: size2!(width em, {100.0 - self.inset * 200.0}%),
                     material: mat,
                 });
                 (entity, entity)
@@ -54,10 +56,10 @@ impl Widget for Divider {
     }
 }
 
-
+#[macro_export]
 macro_rules! divider {
     ($ctx: tt {$($tt: tt)*}) => {
-        $crate::aoui::meta_dsl!($ctx [Divider] {
+        $crate::aoui::meta_dsl!($ctx [$crate::widgets::Divider] {
             $($tt)*
         })
     };
@@ -123,7 +125,7 @@ widget_extension!(
         pub palette: FramePalette,
         pub texture: HandleOrString<Image>,
         pub banner_texture: HandleOrString<Image>,
-        pub collapse: Option<SignalBuilder<bool>>, 
+        pub collapse: Option<SignalBuilder<bool>>,
         pub stroke: f32,
         pub banner_stroke: f32,
         pub radius: f32,
@@ -139,8 +141,8 @@ impl Widget for MWindowBuilder {
         let layout = mem::replace(&mut self.layout, Some(Box::new(StackLayout::VSTACK)));
         self.event = Some(EventFlags::BlockAll);
         let window_margin = self.window_margin.unwrap_or(Vec2::new(1.0, 0.5));
-        let margin = mem::replace(&mut self.margin, Size2::em(0.0, window_margin.y).dinto());
-        let padding = mem::replace(&mut self.padding, Size2::em(window_margin.x, window_margin.y).dinto());
+        let margin = mem::replace(&mut self.margin.0, Size2::em(0.0, window_margin.y));
+        let padding = mem::replace(&mut self.padding.0, Size2::em(window_margin.x, window_margin.y));
         //self.dimension = Some(size2!(0, 0));
         let frame = build_frame!(commands, self);
         let style = self.palette;
@@ -156,7 +158,7 @@ impl Widget for MWindowBuilder {
         ));
         let background = material_sprite!(commands {
             z: -0.05,
-            anchor: Anchor::TopCenter,
+            anchor: Anchor::TOP_CENTER,
             dimension: Size2::FULL,
             material: mat,
             extra: IgnoreLayout,
@@ -213,8 +215,8 @@ impl Widget for MWindowBuilder {
             if let Some(collapse) = &self.collapse {
                 commands.entity(divider).insert((
                     transition!(Opacity 0.2 CubicOut default 1.0),
-                    collapse.clone().recv_select(true, 
-                        Interpolate::<Opacity>::signal_to(1.0), 
+                    collapse.clone().recv_select(true,
+                        Interpolate::<Opacity>::signal_to(1.0),
                         Interpolate::<Opacity>::signal_to(0.0)
                     ),
                 ));
@@ -233,8 +235,8 @@ impl Widget for MWindowBuilder {
         if let Some(collapse) = self.collapse {
             commands.entity(rest).insert((
                 transition!(Opacity 0.2 CubicInOut default 1.0),
-                collapse.recv_select(true, 
-                    Interpolate::<Opacity>::signal_to(1.0), 
+                collapse.recv_select(true,
+                    Interpolate::<Opacity>::signal_to(1.0),
                     Interpolate::<Opacity>::signal_to(0.0)
                 )
             ));

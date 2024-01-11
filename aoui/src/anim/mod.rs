@@ -63,6 +63,7 @@
 use bevy::{ecs::{schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, query::WorldQuery}, app::{Update, Plugin}, render::{color::Color, view::Visibility}, sprite::{Sprite, TextureAtlasSprite}, text::Text};
 
 use ::interpolation::Ease;
+/// Enum for easing functions.
 pub use ::interpolation::EaseFunction;
 mod interpolation;
 pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Index, Padding, Margin};
@@ -70,8 +71,6 @@ mod assoc;
 pub use assoc::{Attr, InterpolateAssociation};
 
 use crate::{Opacity, Transform2D, Dimension, widgets::TextFragment};
-//mod state_machine;
-//pub use state_machine::WidgetState;
 
 /// A easing function.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -116,6 +115,7 @@ pub struct InterpolationSet;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, SystemSet)]
 pub struct InterpolationUpdateSet;
 
+/// A query for gracefully toggling visibility.
 #[derive(Debug, WorldQuery)]
 #[world_query(mutable)]
 pub struct VisibilityToggle {

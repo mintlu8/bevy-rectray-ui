@@ -3,7 +3,7 @@ use bevy::{prelude::*, reflect::Reflect, math::Affine2};
 
 /// Stores opacity of the widget, not used by default but
 /// can be used by implementors.
-#[derive(Debug, Clone, Component, Reflect)]
+#[derive(Debug, Clone, Copy, PartialEq, Component, Reflect)]
 pub struct Opacity {
     /// User specified opacity of the widget.
     pub opacity: f32,
@@ -74,7 +74,7 @@ impl Default for Opacity {
 pub struct IgnoreAlpha;
 
 /// Data related to clipping.
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Clone, Copy, Component, Default)]
 pub struct Clipping {
     /// If set, use this sprite's bounding rectangle to clip its children.
     ///
@@ -85,10 +85,6 @@ pub struct Clipping {
     ///
     /// This occludes cursor events.
     pub global: Option<Affine2>,
-    /// Local space clipping, between `0..=1`.
-    ///
-    /// Experimental, unused currently.
-    pub local: Option<Rect>,
 }
 
 impl Clipping {
@@ -96,7 +92,6 @@ impl Clipping {
         Clipping {
             clip,
             global: None,
-            local: None,
         }
     }
 

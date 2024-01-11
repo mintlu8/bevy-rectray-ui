@@ -1,9 +1,33 @@
 use std::ops::{RangeFull, RangeInclusive, Range};
 
-use bevy::{prelude::{Vec2, UVec2, IVec2, Rect}, sprite::Anchor, render::view::{VisibilityBundle, Visibility, RenderLayers}};
+use bevy::{prelude::{Vec2, UVec2, IVec2, Rect}, sprite::Anchor, render::view::{VisibilityBundle, Visibility, RenderLayers}, ecs::entity::Entity};
 use crate::{Size2, Opacity, SizeUnit, FontSize, DimensionType, layout::LayoutRange};
 
-use super::OneOrTwo;
+use super::{WidgetBuilder, AouiCommands};
+
+pub trait DslConvert<B, const N: u8> {
+    fn parse(self) -> B;
+}
+
+impl<T, U> DslConvert<U, 0> for T where T:DslInto<U> {
+    fn parse(self) -> U {
+        self.dinto()
+    }
+}
+
+impl<F, T> DslConvert<WidgetBuilder<T>, 1> for F
+        where F: (Fn(&mut AouiCommands, T) -> Entity) + Send + Sync + 'static {
+    fn parse(self) -> WidgetBuilder<T> {
+        WidgetBuilder::new(self)
+    }
+}
+
+impl<F> DslConvert<WidgetBuilder<()>, 2> for F
+        where F: (Fn(&mut AouiCommands) -> Entity) + Send + Sync + 'static {
+    fn parse(self) -> WidgetBuilder<()> {
+        WidgetBuilder::new(self)
+    }
+}
 
 /// The `From` trait for `bevy_aoui`'s DSL.
 pub trait DslFrom<T> {
@@ -237,7 +261,6 @@ macro_rules! fvec2 {
 
 fvec2!(Vec2, x, y, Vec2 {x, y});
 fvec2!(Option<Vec2>, x, y, Some(Vec2 {x, y}));
-fvec2!(Option<OneOrTwo<Vec2>>, x, y, Some(OneOrTwo(Vec2 {x, y})));
 fvec2!(Size2, x, y, Size2::pixels(x, y));
 fvec2!(Option<Size2>, x, y, Some(Size2::pixels(x, y)));
 fvec2!(Anchor, x, y, Anchor::Custom(Vec2 { x, y }));
@@ -323,7 +346,7 @@ impl DslFrom<Option<bool>> for VisibilityBundle {
 
 impl DslFrom<RangeFull> for LayoutRange {
     fn dfrom(_: RangeFull) -> Self {
-        LayoutRange::Full
+        LayoutRange::All
     }
 }
 

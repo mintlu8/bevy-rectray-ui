@@ -1,5 +1,5 @@
 /// this maps `macro! {}` into `macro! (ctx {})`
-/// 
+///
 /// and `child: #macro!{}` into `children: quote_syntax! (ctx macro! {})`
 #[doc(hidden)]
 #[macro_export]
@@ -17,17 +17,15 @@ macro_rules! inline_context {
     ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($out: tt)*] child: #$macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
         $crate::inline_context!($ctx [$($path)*] [$($entity)?] [
             $($out)*
-            children: $crate::quote_syntax!($ctx $macro { $($expr)* }),
+            child: $crate::quote_syntax!($ctx $macro { $($expr)* }),
         ] $($($rest)*)?)
     };
     ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
         $crate::inline_context!($ctx [$($path)*] [$($entity)?] [
             $($out)*
-            $field: $macro! (
-                $ctx {
-                    $($expr)*
-                }
-            ),
+            $field: $macro! ($ctx {
+                $($expr)*
+            }),
         ] $($($rest)*)?)
     };
     ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($out: tt)*] $field: ident: $head: expr $(,$($rest: tt)*)?) => {
@@ -53,242 +51,223 @@ macro_rules! quote_syntax {
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [($($a: tt)*) $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [($($a: tt)*) $($b: tt)*]
             [(:#$var: ident ! {$($m:tt)*} $($x: tt)*) $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [($($a)* :#$var! {$($m)*}) $($b)*] 
-            [($($x)*) $($y)*] 
+            [($($a)* :#$var! {$($m)*}) $($b)*]
+            [($($x)*) $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [[$($a: tt)*] $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [[$($a: tt)*] $($b: tt)*]
             [[:#$var: ident ! {$($m:tt)*} $($x: tt)*] $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [[$($a)* :#$var! {$($m)*}] $($b)*] 
-            [[$($x)*] $($y)*] 
+            [[$($a)* :#$var! {$($m)*}] $($b)*]
+            [[$($x)*] $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [{$($a: tt)*} $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [{$($a: tt)*} $($b: tt)*]
             [{:#$var: ident ! {$($m:tt)*} $($x: tt)*} $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [{$($a)* :#$var! {$($m)*}} $($b)*] 
-            [{$($x)*} $($y)*] 
+            [{$($a)* :#$var! {$($m)*}} $($b)*]
+            [{$($x)*} $($y)*]
         )
     };
 
     // `var` is the hygienic version of the original,
     // can't use the original name because duplicate
     // See `izip` in itertools.
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [($($a: tt)*) $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [($($a: tt)*) $($b: tt)*]
             [(#$var: ident $($x: tt)*) $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap,)* $var) ($($vars,)* var)
-            [($($a)* var) $($b)*] 
-            [($($x)*) $($y)*] 
+            [($($a)* var) $($b)*]
+            [($($x)*) $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [[$($a: tt)*] $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [[$($a: tt)*] $($b: tt)*]
             [[#$var: ident $($x: tt)* ] $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap,)* $var) ($($vars,)* var)
-            [[$($a)* var] $($b)*] 
-            [[$($x)*] $($y)*] 
+            [[$($a)* var] $($b)*]
+            [[$($x)*] $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [{$($a: tt)*} $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [{$($a: tt)*} $($b: tt)*]
             [{#$var: ident $($x: tt)* } $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap,)* $var) ($($vars,)* var)
-            [{$($a)* var} $($b)*] 
-            [{$($x)*} $($y)*] 
+            [{$($a)* var} $($b)*]
+            [{$($x)*} $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [($($a: tt)*) $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [($($a: tt)*) $($b: tt)*]
             [(#$var: ident $($x: tt)*) $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap,)* $var) ($($vars,)* var)
-            [($($a)* var) $($b)*] 
-            [($($x)*) $($y)*] 
+            [($($a)* var) $($b)*]
+            [($($x)*) $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [[$($a: tt)*] $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [[$($a: tt)*] $($b: tt)*]
             [[#$var: ident $($x: tt)*] $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap,)* $var) ($($vars,)* var)
-            [[$($a)* var] $($b)*] 
-            [{$($x)*} $($y)*] 
+            [[$($a)* var] $($b)*]
+            [{$($x)*} $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [{$($a: tt)*} $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [{$($a: tt)*} $($b: tt)*]
             [{#$var: ident $($x: tt)*} $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap,)* $var) ($($vars,)* var)
-            [{$($a)* var} $($b)*] 
-            [{$($x)*} $($y)*] 
+            [{$($a)* var} $($b)*]
+            [{$($x)*} $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$($a: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$($a: tt)*]
             [(($($f: tt)*) $($x: tt)*) $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [() $($a)*] 
-            [($($f)*) ($($x)*) $($y)*] 
+            [() $($a)*]
+            [($($f)*) ($($x)*) $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$($a: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$($a: tt)*]
             [([$($f: tt)*] $($x: tt)*) $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [[] $($a)*] 
-            [[$($f)*] ($($x)*) $($y)*] 
+            [[] $($a)*]
+            [[$($f)*] ($($x)*) $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$($a: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$($a: tt)*]
             [({$($f: tt)*} $($x: tt)*) $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [{} $($a)*] 
-            [{$($f)*} ($($x)*) $($y)*] 
+            [{} $($a)*]
+            [{$($f)*} ($($x)*) $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$($a: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$($a: tt)*]
             [[($($f: tt)*) $($x: tt)*] $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [() $($a)*] 
-            [($($f)*) [$($x)*] $($y)*] 
+            [() $($a)*]
+            [($($f)*) [$($x)*] $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$($a: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$($a: tt)*]
             [[[$(f: tt)*] $($x: tt)*] $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [[] $($a)*] 
-            [[$($f)*] [$($x)*] $($y)*] 
+            [[] $($a)*]
+            [[$($f)*] [$($x)*] $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$($a: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$($a: tt)*]
             [[{$($f: tt)*} $($x: tt)*] $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [{} $($a)*] 
-            [{$($f)*} [$($x)*] $($y)*] 
+            [{} $($a)*]
+            [{$($f)*} [$($x)*] $($y)*]
         )
     };
-    
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$($a: tt)*] 
+
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$($a: tt)*]
             [{($($f: tt)*) $($x: tt)*} $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [() $($a)*] 
+            [() $($a)*]
             [($($f)*) {$($x)*} $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$($a: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$($a: tt)*]
             [{[$($f: tt)*] $($x: tt)*} $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [[] $($a)*] 
-            [[$($f)*] {$($x)*} $($y)*] 
+            [[] $($a)*]
+            [[$($f)*] {$($x)*} $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$($a: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$($a: tt)*]
             [{{$($f: tt)*} $($x: tt)*} $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [{} $($a)*] 
-            [{$($f)*} {$($x)*} $($y)*] 
+            [{} $($a)*]
+            [{$($f)*} {$($x)*} $($y)*]
         )
     };
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [($($a: tt)*) $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [($($a: tt)*) $($b: tt)*]
             [($head: tt $($x: tt)*) $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [($($a)* $head) $($b)*] 
-            [($($x)*) $($y)*] 
+            [($($a)* $head) $($b)*]
+            [($($x)*) $($y)*]
         )
     };
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [[$($a: tt)*] $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [[$($a: tt)*] $($b: tt)*]
             [[$head: tt $($x: tt)*] $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [[$($a)* $head] $($b)*] 
-            [[$($x)*] $($y)*] 
+            [[$($a)* $head] $($b)*]
+            [[$($x)*] $($y)*]
         )
     };
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [{$($a: tt)*} $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [{$($a: tt)*} $($b: tt)*]
             [{$head: tt $($x: tt)*} $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [{$($a)* $head} $($b)*] 
-            [{$($x)*} $($y)*] 
+            [{$($a)* $head} $($b)*]
+            [{$($x)*} $($y)*]
         )
     };
 
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$head: tt ($($a: tt)*) $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$head: tt ($($a: tt)*) $($b: tt)*]
             [$empty: tt ($($x: tt)*) $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [($($a)* $head) $($b)*] 
-            [($($x)*) $($y)*] 
+            [($($a)* $head) $($b)*]
+            [($($x)*) $($y)*]
         )
     };
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$head: tt [$($a: tt)*] $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$head: tt [$($a: tt)*] $($b: tt)*]
             [$empty: tt [$($x: tt)*] $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [[$($a)* $head] $($b)*] 
-            [[$($x)*] $($y)*] 
+            [[$($a)* $head] $($b)*]
+            [[$($x)*] $($y)*]
         )
     };
-    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*) 
-            [$head: tt {$($a: tt)*} $($b: tt)*] 
+    ($ctx: tt $macro:ident ($($cap: ident),*) ($($vars: ident),*)
+            [$head: tt {$($a: tt)*} $($b: tt)*]
             [$empty: tt {$($x: tt)*} $($y: tt)*]) => {
         $crate::quote_syntax!($ctx $macro ($($cap),*) ($($vars),*)
-            [{$($a)* $head} $($b)*] 
-            [{$($x)*} $($y)*] 
+            [{$($a)* $head} $($b)*]
+            [{$($x)*} $($y)*]
         )
-    };
-}
-
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! parse_children {
-    ($ctx: tt $ident: ident {} {$($stmt: stmt;)*}) => {
-        {
-            let mut $ident = ::std::vec::Vec::new();
-            $($stmt;)*
-            $ident
-        }
-    };
-    ($ctx: tt $ident: ident {child: $expr: expr $(,$($rest:tt)*)?} {$($stmt: stmt;)*}) => {
-        $crate::parse_children!($ctx $ident {$($($rest)*)?} {$($stmt;)* $ident.push($expr);} )
-    };
-    ($ctx: tt $ident: ident {children: $expr: expr $(,$($rest:tt)*)?} {$($stmt: stmt;)*}) => {
-        $crate::parse_children!($ctx $ident {$($($rest)*)?} {$($stmt;)* $ident.extend($expr.into_iter().map(|x| x.clone()));} )
     };
 }
 
 /// The core macro for creating DSL for widgets.
-/// 
+///
 /// To create a custom widget macro:
 /// ```
 /// # /*
@@ -313,7 +292,7 @@ macro_rules! meta_dsl {
         {extra: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
-        {$($child_type: ident: $children: expr),*}
+        {$($children: expr),*}
         {$($out:ident)?}
     ) => {
         $crate::meta_dsl!($commands
@@ -321,7 +300,7 @@ macro_rules! meta_dsl {
             {$($f: $e),*}
             {$($f2: $e2),*}
             {$($extras,)* $expr}
-            {$($child_type: $children),*}
+            {$($children),*}
             {$($out)?}
         )
     };
@@ -330,7 +309,7 @@ macro_rules! meta_dsl {
         {child: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
-        {$($child_type: ident: $children: expr),*}
+        {$($children: expr),*}
         {$($out:ident)?}
     ) => {
         $crate::meta_dsl!($commands
@@ -338,24 +317,7 @@ macro_rules! meta_dsl {
             {$($f: $e),*}
             {$($f2: $e2),*}
             {$($extras),*}
-            {$($child_type: $children,)* child: $expr}
-            {$($out)?}
-        )
-    };
-
-    ($commands: tt [$($path: tt)*]
-        {children: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
-        {$($f2: ident: $e2: expr),*}
-        {$($extras: expr),*}
-        {$($child_type: ident: $children: expr),*}
-        {$($out:ident)?}
-    ) => {
-        $crate::meta_dsl!($commands
-            [$($path)*]
-            {$($f: $e),*}
-            {$($f2: $e2),*}
-            {$($extras),*}
-            {$($child_type: $children,)* children: $expr}
+            {$($children,)* $expr}
             {$($out)?}
         )
     };
@@ -364,7 +326,7 @@ macro_rules! meta_dsl {
         {$field: ident: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
-        {$($child_type: ident: $children: expr),*}
+        {$($children: expr),*}
         {$($out:ident)?}
     ) => {
         $crate::meta_dsl!($commands
@@ -372,7 +334,7 @@ macro_rules! meta_dsl {
             {$($f: $e),*}
             {$($f2: $e2,)* $field: $expr}
             {$($extras),*}
-            {$($child_type: $children),*}
+            {$($children),*}
             {$($out)?}
         )
     };
@@ -380,17 +342,19 @@ macro_rules! meta_dsl {
     ($commands: tt [$($path: tt)*] {$(,)?}
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*}
-        {$($child_type: ident: $children: expr),*}
+        {$($children: expr),*}
         {$($out:ident)?}
     ) => {
         {
             #[allow(clippy::needless_update)]
             let entity = $($path)* {
-                $($field: $crate::dsl::DslInto::dinto($expr),)*
+                $($field: $crate::dsl::parse($expr),)*
                 ..Default::default()
             };
             let extras = ($($extras),*);
-            let children = $crate::parse_children!($commands _children {$($child_type: $children),*} {});
+            #[allow(unused_mut)]
+            let mut children = ::std::vec::Vec::new();
+            $(children.extend($crate::dsl::into_children($children));)*
             let out = $commands.spawn_aoui(
                 entity,
                 extras,
@@ -403,7 +367,7 @@ macro_rules! meta_dsl {
 }
 
 /// Create a widget builder based on the definition of a primitive widget `Frame`.
-/// 
+///
 /// Use `build_frame!` to utilize this definition.
 #[macro_export]
 macro_rules! widget_extension {
@@ -435,15 +399,15 @@ macro_rules! widget_extension {
             /// Rotation of the sprite from `center`.
             pub rotation: f32,
             /// Scale of the sprite from `center`.
-            pub scale: Option<$crate::dsl::OneOrTwo<$crate::bevy::math::Vec2>>,
+            pub scale: $crate::dsl::Scale,
             /// Z depth of the sprite.
             pub z: f32,
             /// If true, clips its children, currently only affects events.
             pub clipping: Option<bool>,
             /// Owned dimension of the sprite.
-            /// 
+            ///
             /// If not set, size is fetched dynamically from various sources.
-            /// 
+            ///
             /// The `size` field from `SpriteBuilder` sets the size of the underlying sprite instead.
             pub dimension: $crate::DimensionType,
             /// Aspect ratio of sprite, default unused.
@@ -451,23 +415,23 @@ macro_rules! widget_extension {
             /// Propagated font size.
             pub font_size: $crate::FontSize,
             /// Sets up which event this receives.
-            /// 
-            /// Due to this being a confusing footgun, 
-            /// setting event here automatically sets hitbox to `Rect(1)` if not set manually.
+            ///
+            /// Due to this being a confusing footgun,
+            /// setting event here automatically sets hitbox to `Hitbox::rect(1)` if not set manually.
             pub event: Option<$crate::events::EventFlags>,
             /// The click detection area of the sprite.
             pub hitbox: Option<$crate::Hitbox>,
             /// The render layer of the sprite.
-            /// 
-            /// If this is `Some`, the default `dimension` is `Owned(0, 0)`.
             pub layer: Option<$crate::bevy::render::view::RenderLayers>,
             /// Layout of the widget's children.
+            ///
+            /// If this is `Some`, the default `dimension` is `Dynamic` instead of `Copied`.
             pub layout: Option<Box<dyn $crate::layout::Layout>>,
             /// Margin of the widget's layout, has no effect if widget has no layout.
             pub margin: $crate::dsl::OneOrTwo<$crate::Size2>,
             /// Margin of the widget's layout, has no effect if widget has no layout.
             pub padding: $crate::dsl::OneOrTwo<$crate::Size2>,
-            /// Displayed range of children, default is all.
+            /// Displayed range of children, default is all, has no effect if widget has no layout.
             pub children_range: $crate::layout::LayoutRange,
             $($(#[$($attr)*])* $vis $field: $ty),*
         }

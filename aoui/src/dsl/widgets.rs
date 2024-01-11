@@ -18,7 +18,7 @@ use super::converters::OptionX;
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! inject_event {
+macro_rules! inject_events {
     ($this: expr, $flags: expr) => {
         match &mut $this {
             Some(event) => *event |= $flags,
@@ -46,7 +46,7 @@ widget_extension!(
 
 impl Widget for InputBoxBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        inject_event!(self.event, EventFlags::Hover|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside);
+        inject_events!(self.event, EventFlags::Hover|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside);
         let font = self.font.get(commands);
 
         let mut entity = build_frame!(commands, self);
@@ -71,7 +71,7 @@ impl Widget for InputBoxBuilder {
         let text_area = self.text_area.unwrap_or(
             rectangle!(commands {
                 color: self.color.expect("color is required."),
-                anchor: Anchor::CenterLeft,
+                anchor: Anchor::CENTER_LEFT,
                 extra: InputBoxText,
                 extra: TextFragment {
                     text: self.text,
@@ -113,7 +113,7 @@ widget_extension!(
 
 impl Widget for ButtonBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftClick);
+        inject_events!(self.event, EventFlags::Hover|EventFlags::LeftClick);
         let mut entity = build_frame!(commands, self);
         entity.insert((
             PropagateFocus,
@@ -152,7 +152,7 @@ widget_extension!(
 
 impl Widget for CheckButtonBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftClick);
+        inject_events!(self.event, EventFlags::Hover|EventFlags::LeftClick);
         let mut  entity = build_frame!(commands, self);
         entity.insert((
             PropagateFocus,
@@ -192,7 +192,7 @@ widget_extension!(
 
 impl Widget for RadioButtonBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        inject_event!(self.event, EventFlags::Hover|EventFlags::LeftClick);
+        inject_events!(self.event, EventFlags::Hover|EventFlags::LeftClick);
         let mut entity = build_frame!(commands, self);
 
         entity.insert((

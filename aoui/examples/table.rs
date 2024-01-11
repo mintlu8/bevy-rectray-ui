@@ -42,14 +42,14 @@ pub fn init(mut commands: AouiCommands) {
     commands.spawn_bundle(Camera2dBundle::default());
     vstack! (commands {
         anchor: Top,
-        margin: 4,
-        child: text! { 
+        margin: [4, 4],
+        child: text! {
             anchor: Top,
             text: "Fixed Table Demo",
         },
-        child: text! { 
+        child: text! {
             anchor: Top,
-            text: "5 columns of 20%, 10%, 20%, 30%, 20%" 
+            text: "5 columns of 20%, 10%, 20%, 30%, 20%"
         },
     });
     frame! (commands {
@@ -58,10 +58,10 @@ pub fn init(mut commands: AouiCommands) {
         z: 1,
         layout: TableLayout::from_columns(
             [
-                (SizeUnit::Percent, 0.2), 
-                (SizeUnit::Percent, 0.1), 
-                (SizeUnit::Percent, 0.2), 
-                (SizeUnit::Percent, 0.3), 
+                (SizeUnit::Percent, 0.2),
+                (SizeUnit::Percent, 0.1),
+                (SizeUnit::Percent, 0.2),
+                (SizeUnit::Percent, 0.3),
                 (SizeUnit::Percent, 0.2)
             ]
         ),

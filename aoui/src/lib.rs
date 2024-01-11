@@ -24,7 +24,13 @@
 //! # */
 //! ```
 //!
-//! If you don't like the DSL you can use our [bundles] or [widget builders](crate::dsl::builders).;
+//! ## Why a DSL?
+//!
+//! `bevy_aoui`'s DSL is a very simple `macro_rules` macro that reorganizes arguments in a way to make
+//! `commands` usable anywhere during the macro invocation, without the need to bend over backwards
+//! to create children/bundles before parents. As a result we have a simple rust-like syntax
+//! that is intuitive and enjoyable to write.
+//! If you don't like the DSL you can use our [bundles] or [widget builders](crate::dsl::builders),
 //!
 //! Create a sprite:
 //!
@@ -133,7 +139,7 @@
 //!
 //! * No styling
 //!
-//! `   Styling is outside the scope of this crate.
+//!     Styling is outside the scope of this crate.
 //!
 //! # Container
 //!
@@ -178,21 +184,22 @@
 //! # */
 //! ```
 //!
-//! much nicer, right?
-//!
-//! `commands` is the context, if `AssetServer` is needed
-//! we can put `commands` there, which should be the
-//! case most of the time.
+//! much cleaner, right?
 //!
 //! # DSL Syntax
 //!
 //! The DSL have a few special fields that makes it much more powerful than
 //! a simple struct constructor.
+//! 
+//! ## commands 
+//! 
+//! At the root level, the DSL takes a [`AouiCommands`](dsl::AouiCommands),
+//! which is a combination of `Commands`, `AssetServer` and [`SignalPool`](signals::SignalPool).
 //!
-//! ## child and children
+//! ## child
 //!
-//! `child:` is a special field that can be repeated, it accepts an `Entity`
-//! and inserts it as a child.
+//! `child:` is a special field that can be repeated, it accepts an `Entity`,
+//! an iterator of `Entity` or `&Entity` and inserts it/them as a child/children.
 //!
 //! ```
 //! # /*
@@ -204,6 +211,11 @@
 //!     child: text! {
 //!         text: "Hello, World!!"
 //!     },
+//!     child: "Hello".chars().map(|c|
+//!         text! (commands {
+//!             text: c,
+//!         })
+//!     )
 //! });
 //! # */
 //! ```
@@ -223,10 +235,6 @@
 //! ```
 //!
 //! Which serves as context propagation.
-//!
-//! `children:` adds an iterator as children to the entity.
-//! Iterators of `Entity` and `&Entity` are both accepted.
-//! Child and children guarantees insertion order.
 //!
 //! ## extra
 //!
@@ -259,7 +267,37 @@
 //! });
 //! # */
 //! ```
+//! 
+//! ## `quote!` syntax
 //!
+//! We have support for a syntax inspired by the `quote!` crate,
+//! that can be used to repeat a child by an iterator.
+//! 
+//! ```
+//! # /*
+//! vstack! (commands {
+//!     child: #rectangle! {
+//!         dimension: #dimensions,
+//!         color: #colors,
+//!     }
+//! });
+//! # */
+//! ```
+//! 
+//! This zips `colors` and `dimensions` and 
+//! iterate through them to create multiple rectangles.
+//! 
+//! ### Note
+//! 
+//! The dsl normally functions on the field level, which is
+//! performant and editor friendly, but using `quote!` syntax
+//! requires running a `tt` muncher, which may cause editors to give up
+//! or break your recursion limit. You can use 
+//! ```
+//! #![recursion_limit="256"]
+//! ``` 
+//! to increase your recursion limit.
+//! 
 //! # Next Steps
 //!
 //! Checkout our modules for more documentations and examples.

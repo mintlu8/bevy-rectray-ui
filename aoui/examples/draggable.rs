@@ -42,14 +42,14 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_channel(|fps: f32, text: &mut Text| {
+        extra: fps_signal(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
 
     material_sprite! (commands {
         dimension: [100, 100],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         z: 10,
         material: Circle {
             fill: Color::RED,
@@ -57,8 +57,8 @@ pub fn init(mut commands: AouiCommands) {
         },
         event: EventFlags::Hover|EventFlags::LeftDrag,
         extra: DragBoth.with_snap_back(),
-        extra: SetCursor { 
-            flags: EventFlags::Hover|EventFlags::LeftDrag, 
+        extra: SetCursor {
+            flags: EventFlags::Hover|EventFlags::LeftDrag,
             icon: CursorIcon::Hand,
         },
         extra: transition!(Offset 4.0 BounceOut default Vec2::ZERO),
@@ -75,8 +75,8 @@ pub fn init(mut commands: AouiCommands) {
             center: Center,
             color: color!(aqua),
             event: EventFlags::Hover|EventFlags::LeftDrag,
-            extra: SetCursor { 
-                flags: EventFlags::Hover|EventFlags::LeftDrag, 
+            extra: SetCursor {
+                flags: EventFlags::Hover|EventFlags::LeftDrag,
                 icon: CursorIcon::Hand,
             },
             extra: DragX.with_handler(
@@ -116,14 +116,14 @@ pub fn init(mut commands: AouiCommands) {
     material_sprite! (commands {
         dimension: [100, 100],
         offset: [-300, -100],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         event: EventFlags::Hover|EventFlags::LeftDrag,
         material: Circle {
             fill: color!(aqua),
             stroke: color!(blue),
         },
-        extra: SetCursor { 
-            flags: EventFlags::Hover|EventFlags::LeftDrag, 
+        extra: SetCursor {
+            flags: EventFlags::Hover|EventFlags::LeftDrag,
             icon: CursorIcon::Hand,
         },
         extra: Handlers::<EvMouseDrag>::new(send2),

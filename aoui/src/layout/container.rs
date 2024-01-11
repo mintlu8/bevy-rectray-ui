@@ -6,10 +6,14 @@ use crate::{Size2, layout::Layout};
 
 use super::LayoutOutput;
 
+/// Range of content displayed in the layout, default is `All`.
+/// 
+/// This means different things with different layout, could be
+/// entities, rows or pages.
 #[derive(Debug, Clone, Copy, Default)]
 pub enum LayoutRange {
     #[default]
-    Full,
+    All,
     // The maximum value is `min + len >= total`,
     // going over that will be auto corrected.
     Bounded {
@@ -33,12 +37,12 @@ pub enum LayoutRange {
 impl LayoutRange {
 
     pub fn is_unbounded(&self) -> bool {
-        matches!(self, LayoutRange::Full)
+        matches!(self, LayoutRange::All)
     }
 
     pub fn resolve(&mut self, total: usize) {
         match self {
-            LayoutRange::Full => (),
+            LayoutRange::All => (),
             LayoutRange::Bounded { min, len } => *min = usize::min(*min, total.saturating_sub(*len)),
             LayoutRange::Capped { min, .. } => *min = usize::min(*min, total.saturating_sub(1)),
             LayoutRange::Stepped { step, len } => *step = usize::min(*step, total / *len),
@@ -47,7 +51,7 @@ impl LayoutRange {
 
     pub fn to_range(&self, len: usize) -> Range<usize> {
         match *self {
-            LayoutRange::Full => 0..len,
+            LayoutRange::All => 0..len,
             LayoutRange::Bounded { min, len } => min..(min+len).min(len),
             LayoutRange::Capped { min, len } => min..(min+len).min(len),
             LayoutRange::Stepped { step, len } => step*len..(step*len+step).min(len),
@@ -79,7 +83,7 @@ impl Container {
 
     pub fn get_fac(&self) -> f32 {
         match self.range {
-            LayoutRange::Full => 0.0,
+            LayoutRange::All => 0.0,
             LayoutRange::Bounded { min, len } => {
                 if self.maximum <= len {
                     0.0
@@ -108,7 +112,7 @@ impl Container {
     pub fn set_fac(&mut self, fac: f32) {
         let fac = fac.clamp(0.0, 1.0);
         match &mut self.range {
-            LayoutRange::Full => (),
+            LayoutRange::All => (),
             LayoutRange::Bounded { min, len } => {
                 if self.maximum > *len {
                     *min = ((self.maximum - *len) as f32 * fac) as usize
@@ -136,7 +140,7 @@ impl Container {
 
     pub fn decrement(&mut self) {
         match &mut self.range {
-            LayoutRange::Full => (),
+            LayoutRange::All => (),
             LayoutRange::Bounded { min, .. } => {
                 *min = min.saturating_sub(1)
             },
@@ -152,7 +156,7 @@ impl Container {
     pub fn increment(&mut self) {
         // range doesn't matter since this will be resolved in `pipeline`.
         match &mut self.range {
-            LayoutRange::Full => (),
+            LayoutRange::All => (),
             LayoutRange::Bounded { min, .. } => {
                 *min += 1;
             },

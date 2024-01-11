@@ -23,11 +23,11 @@ pub trait SliderData {}
 
 
 impl SliderData for i32 {
-    
+
 }
 
 impl SliderData for f32 {
-    
+
 }
 
 widget_extension!(
@@ -43,7 +43,7 @@ widget_extension!(
 
         /// The length the dial travels in em, default is 1.25 em.
         pub length: Option<f32>,
-        
+
         pub palette: DialPalette,
         pub hover_palette: Option<DialPalette>,
         pub drag_palette: Option<DialPalette>,
@@ -113,7 +113,7 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
             material: RoundedRectangleMaterial::capsule(palette.background)
                 .with_stroke((palette.background_stroke, self.background_stroke)),
             child: material_sprite!{
-                anchor: Anchor::CenterLeft,
+                anchor: Anchor::CENTER_LEFT,
                 dimension: size2!(0%, thickness em),
                 z: 0.01,
                 material: RoundedRectangleMaterial::capsule(palette.dial)
@@ -149,8 +149,8 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
                     material: RoundedRectangleMaterial::capsule(palette.dial)
                         .with_stroke((palette.dial_stroke, self.dial_stroke)),
                     event: EventFlags::LeftDrag | EventFlags::Hover,
-                    hitbox: Ellipse(1),
-                    extra: CursorStateColors { 
+                    hitbox: Hitbox::ellipse(1),
+                    extra: CursorStateColors {
                         idle: palette.dial,
                         hover: hover_palette.dial,
                         pressed: drag_palette.dial,
@@ -158,8 +158,8 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
                     },
                     extra: transition!(Color 0.2 CubicInOut default {palette.dial}),
                     extra: Handlers::<EvMouseDrag>::new(drag_send_dial),
-                    extra: SetCursor { 
-                        flags: EventFlags::LeftDrag | EventFlags::Hover | EventFlags::LeftDown, 
+                    extra: SetCursor {
+                        flags: EventFlags::LeftDrag | EventFlags::Hover | EventFlags::LeftDown,
                         icon: CursorIcon::Hand,
                     }
                 }

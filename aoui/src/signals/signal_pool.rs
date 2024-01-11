@@ -15,10 +15,7 @@ use super::{signal::Signal, SignalBuilder, AsObject};
 ///     if polled, lives for `1` frame, if not, live for `2`.
 /// * `storage`: Signal value is not cleaned up and can be read and change detected anytime.
 /// * `named`: Named signals can be obtained from the signal pool anywhere by name.
-///
-/// Named signals can be obtained elsewhere.
-///
-/// Unbound signals won't be cleaned up.
+/// * `unnamed`: Unnamed signals cannot be recreated by the `SignalPool`.
 #[derive(Debug, Resource, Default)]
 pub struct SignalPool {
     unnamed: RwLock<Vec<Signal>>,

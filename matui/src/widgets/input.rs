@@ -104,7 +104,7 @@ widget_extension!(
 
 impl Widget for MInputBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        bevy_aoui::inject_event!(self.event, EventFlags::Hover|EventFlags::LeftDrag);
+        bevy_aoui::inject_events!(self.event, EventFlags::Hover|EventFlags::LeftDrag);
 
         self.dimension = size2!({self.width} em, 2.8 em).dinto();
         let style = self.palette;
@@ -162,7 +162,7 @@ impl Widget for MInputBuilder {
                 z: 0.01,
                 offset: size2!(0.8 em, 0.0),
                 color: style.foreground,
-                anchor: Anchor::CenterLeft,
+                anchor: Anchor::CENTER_LEFT,
                 extra: InputBoxText,
                 extra: TextFragment::new(self.text)
                     .with_font(self.font.clone().get(commands))
@@ -172,7 +172,7 @@ impl Widget for MInputBuilder {
         let has_placeholder = !self.placeholder.is_empty();
         if has_placeholder {
             let placeholder = text!(commands {
-                anchor: Anchor::CenterLeft,
+                anchor: Anchor::CENTER_LEFT,
                 offset: size2!(0.8 em, 0),
                 font: self.font.clone(),
                 text: self.placeholder,
@@ -181,7 +181,7 @@ impl Widget for MInputBuilder {
         }
         if let Some(bottom_bar) = self.bottom_bar {
             let bottom_bar = material_sprite!(commands {
-                parent_anchor: Anchor::BottomCenter,
+                parent_anchor: Anchor::BOTTOM_CENTER,
                 dimension: size2!(100%, bottom_bar em),
                 material: RoundedRectangleMaterial::capsule(color!(black)),
             });

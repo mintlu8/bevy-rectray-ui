@@ -5,7 +5,7 @@ use crate::events::{
     ActiveDetection, CursorAction, CursorClickOutside, CursorFocus, CursorState, EvTextChange,
     EvTextSubmit, EventFlags, Handlers,
 };
-use crate::signals::{Invoke, KeyStorage, ReceiveInvoke};
+use crate::signals::{Invoke, ReceiveInvoke};
 use crate::{RotatedRect, Transform2D, DimensionData, Size, size, AouiREM};
 use ab_glyph::{Font as FontTrait, ScaleFont};
 use bevy::asset::{Assets, Handle};
@@ -548,7 +548,6 @@ pub fn inputbox_keyboard(
     mut commands: Commands,
     rem: Res<AouiREM>,
     fonts: Res<Assets<Font>>,
-    storage: Res<KeyStorage>,
     mut query: Query<(Entity, &DimensionData, &mut InputBox, &Handle<Font>,
         Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>,
         Option<&Invoke<InputBox>>, ActiveDetection)>,
@@ -623,7 +622,7 @@ pub fn inputbox_keyboard(
                     '\t' => (),
                     '\r' | '\n' => {
                         if let Some(submit) = submit {
-                            submit.handle(&mut commands, &storage, inputbox.get().to_owned())
+                            submit.handle(&mut commands, inputbox.get().to_owned())
                         }
                     }
                     '\x08' | '\x7f' => inputbox.backspace(),
@@ -653,13 +652,13 @@ pub fn inputbox_keyboard(
         if let Some(invoke) = invoke {
             if invoke.poll().is_some() {
                 if let Some(submit) = submit {
-                    submit.handle(&mut commands, &storage, inputbox.get().to_owned())
+                    submit.handle(&mut commands, inputbox.get().to_owned())
                 }
             }
         }
         if changed {
             if let Some(change) = change {
-                change.handle(&mut commands, &storage, inputbox.get().to_owned())
+                change.handle(&mut commands, inputbox.get().to_owned())
             }
         }
     }

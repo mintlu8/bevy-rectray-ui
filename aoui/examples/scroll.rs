@@ -26,7 +26,7 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_channel(|fps: f32, text: &mut Text| {
+        extra: fps_signal(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
@@ -39,11 +39,11 @@ pub fn init(mut commands: AouiCommands) {
         text: "Scroll this! =>",
         extra: recv1.recv(|x: f32, text: &mut Text| format_widget!(text, "This has value {:.2}! =>", x))
     });
-    
+
     sprite! (commands {
         dimension: [200, 60],
         offset: [-200, 200],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
         extra: Scrolling::X.with_handler(send1),
@@ -59,7 +59,7 @@ pub fn init(mut commands: AouiCommands) {
     sprite! (commands {
         dimension: [100, 100],
         offset: [0, 200],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
         extra: Scrolling::BOTH.with_constraints(),
@@ -75,7 +75,7 @@ pub fn init(mut commands: AouiCommands) {
     sprite! (commands {
         dimension: [60, 100],
         offset: [200, 200],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
         extra: Scrolling::X.with_constraints(),
@@ -91,7 +91,7 @@ pub fn init(mut commands: AouiCommands) {
     sprite! (commands {
         dimension: [200, 200],
         offset: [-200, 0],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
         extra: Scrolling::BOTH.with_constraints(),
@@ -106,7 +106,7 @@ pub fn init(mut commands: AouiCommands) {
     });
     sprite! (commands {
         dimension: [200, 200],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
         extra: Scrolling::BOTH.with_constraints(),
@@ -135,7 +135,7 @@ pub fn init(mut commands: AouiCommands) {
     sprite! (commands {
         dimension: [100, 100],
         offset: [200, 0],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         extra: EventFlags::MouseWheel,
         extra: Scrolling::BOTH.with_constraints(),
@@ -162,7 +162,7 @@ pub fn init(mut commands: AouiCommands) {
     sprite! (commands {
         dimension: [60, 200],
         offset: [-200, -200],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
         extra: Scrolling::Y.with_handler(send2),
@@ -179,7 +179,7 @@ pub fn init(mut commands: AouiCommands) {
     sprite! (commands {
         dimension: [100, 100],
         offset: [0, -200],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
         extra: Scrolling::BOTH.with_constraints(),
@@ -196,7 +196,7 @@ pub fn init(mut commands: AouiCommands) {
     sprite! (commands {
         dimension: [100, 60],
         offset: [200, -200],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
         extra: Scrolling::Y.with_constraints(),

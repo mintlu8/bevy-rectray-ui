@@ -9,7 +9,7 @@ use crate::{Transform2D, anim::Attr, anim::Offset, AouiREM, DimensionData, signa
 use crate::events::{EvPositionFactor, MouseWheelAction};
 use crate::layout::Container;
 use crate::events::{EvMouseWheel, Handlers};
-use crate::signals::{Invoke, KeyStorage};
+use crate::signals::Invoke;
 use crate::dsl::DslInto;
 
 use crate::events::MovementUnits;
@@ -114,11 +114,10 @@ impl ReceiveInvoke for Scrolling {
 
 pub fn scrolling_senders(
     mut commands: Commands,
-    storage: Res<KeyStorage>,
     sender: Query<(Entity, &MouseWheelAction, &Handlers<EvMouseWheel>), Without<MouseWheelAction>>,
 ) {
     for (entity, action, signal) in sender.iter() {
-        signal.handle(&mut commands.entity(entity), &storage, action.get());
+        signal.handle(&mut commands.entity(entity), action.get());
     }
 }
 

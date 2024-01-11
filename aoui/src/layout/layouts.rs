@@ -170,16 +170,7 @@ impl<D: StretchDir> SpanLayout<D> {
 
 
 
-/// A statically sized mono-directional HBox or VBox
-///
-/// # Rules
-///
-/// Children are ordered by their main axis alignment,
-/// then by their index in the Children component.
-///
-/// # Panics
-///
-/// * When supplied a [`Anchor::Custom`](bevy::sprite::Anchor) Anchor.
+/// A multiline version of the `span` layout, similar to the layout of a paragraph.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ParagraphLayout<D1: StretchDir=X, D2: Direction=Rev<Y>>(PhantomData<(D1, D2)>) where (D1, D2): DirectionPair;
 

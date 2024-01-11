@@ -30,7 +30,7 @@ pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
 
-    let text = [ 
+    let text = [
         "Layout Demo",
         "Insertion Order: light to dark.",
         "Anchor: circle.",
@@ -46,8 +46,8 @@ pub fn init(mut commands: AouiCommands) {
 
     vstack! (commands {
         anchor: Top,
-        margin: 4,
-        child: #text! { 
+        margin: [4, 4],
+        child: #text! {
             anchor: Top,
             text: #text,
             color: #colors,

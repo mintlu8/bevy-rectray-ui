@@ -34,14 +34,14 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_channel(|fps: f32, text: &mut Text| {
+        extra: fps_signal(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
     let mut last = commands.spawn_bundle((AouiSpriteBundle {
-        transform: Transform2D::UNIT.with_anchor(Anchor::Center).with_z(0.1),
+        transform: Transform2D::UNIT.with_anchor(Anchor::CENTER).with_z(0.1),
         sprite: Sprite {
             color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5),
             custom_size: Some(Vec2::new(10.0, 10.0)),
@@ -53,10 +53,10 @@ pub fn init(mut commands: AouiCommands) {
     for _ in 0..120 {
         let curr = commands.spawn_bundle(AouiSpriteBundle {
             transform: Transform2D::UNIT
-                .with_anchor(Anchor::CenterLeft)
-                .with_center(Anchor::CenterLeft)
+                .with_anchor(Anchor::CENTER_LEFT)
+                .with_center(Anchor::CENTER_LEFT)
                 // We use parent anchor for skeletal animation.
-                .with_parent_anchor(Anchor::CenterRight),
+                .with_parent_anchor(Anchor::CENTER_RIGHT),
             sprite: Sprite {
                 color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5),
                 custom_size: Some(Vec2::new(10.0, 10.0)),
@@ -68,7 +68,7 @@ pub fn init(mut commands: AouiCommands) {
         let marker = commands.spawn_bundle((AouiSpriteBundle {
             transform: Transform2D::UNIT
                 .with_offset(Vec2::new(1.0, 0.0))
-                .with_anchor(Anchor::CenterRight)
+                .with_anchor(Anchor::CENTER_RIGHT)
                 .with_z(1.0),
             sprite: Sprite {
                 color: Color::WHITE,
@@ -84,8 +84,8 @@ pub fn init(mut commands: AouiCommands) {
 }
 
 
-pub fn egui_window(mut ctx: EguiContexts, 
-    mut root: Query<&mut Transform2D, With<Root>>, 
+pub fn egui_window(mut ctx: EguiContexts,
+    mut root: Query<&mut Transform2D, With<Root>>,
     mut query: Query<&mut Transform2D, (Without<AnchorMarker>, Without<Root>)>,
 ) {
     let mut rotation = root.single().rotation;

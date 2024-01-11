@@ -9,7 +9,7 @@ use bevy::hierarchy::{Children, Parent};
 use bevy::ecs::{component::Component, system::{Commands, Res, Query}};
 use crate::DimensionData;
 use crate::dsl::CloneSplit;
-use crate::{signals::KeyStorage, AouiREM, Transform2D, Anchor, anim::Attr, layout::Container};
+use crate::{AouiREM, Transform2D, Anchor, anim::Attr, layout::Container};
 use crate::anim::Offset;
 use crate::events::{Handlers, EvMouseWheel, MovementUnits, EvPositionFactor};
 
@@ -98,7 +98,6 @@ pub struct ScrollConstraint;
 
 pub fn scroll_constraint(
     mut commands: Commands,
-    storage: Res<KeyStorage>,
     rem: Option<Res<AouiREM>>,
     query: Query<(Entity, &Scrolling, &DimensionData, Option<&SharedPosition>, &Children,
         Option<&Handlers<EvMouseWheel>>,
@@ -117,21 +116,21 @@ pub fn scroll_constraint(
         }
         let container = children[0];
         if let Ok((_, transform, Some(children))) = child_query.get(container){
-            if transform.component.anchor != Anchor::Center {
+            if transform.component.anchor != Anchor::CENTER {
                 warn!("Component 'Scrolling' requires its child to have Anchor::Center.");
                 continue;
             }
             let offset = transform.get();
-            let size_min = size * Anchor::BottomLeft;
-            let size_max = size * Anchor::TopRight;
+            let size_min = size * Anchor::BOTTOM_LEFT;
+            let size_max = size * Anchor::TOP_RIGHT;
             let mut min = Vec2::ZERO;
             let mut max = Vec2::ZERO;
             for (dimension, transform, ..) in child_query.iter_many(children) {
                 let anc = size * transform.component.get_parent_anchor();
                 let offset = transform.get_pixels(size, dimension.em, rem);
                 let center = anc + offset - dimension.size * transform.component.anchor;
-                let bl = center + dimension.size * Anchor::BottomLeft;
-                let tr = center + dimension.size * Anchor::TopRight;
+                let bl = center + dimension.size * Anchor::BOTTOM_LEFT;
+                let tr = center + dimension.size * Anchor::TOP_RIGHT;
                 min = min.min(bl);
                 max = max.max(tr);
             }
@@ -157,13 +156,13 @@ pub fn scroll_constraint(
                         (true, false) => {
                             let value = fac.x.clamp(0.0, 1.0);
                             if let Some(signal) = fac_handler {
-                                signal.handle(&mut commands, &storage, value)
+                                signal.handle(&mut commands, value)
                             }
                         },
                         (false, true) => {
                             let value = fac.y.clamp(0.0, 1.0);
                             if let Some(signal) = fac_handler {
-                                signal.handle(&mut commands, &storage, value)
+                                signal.handle(&mut commands, value)
                             }
                         },
                         (true, true) if fac_handler.is_some() => {
@@ -182,7 +181,7 @@ pub fn scroll_constraint(
                                 lines: IVec2::ZERO,
                                 pixels: delta,
                             };
-                            piping.handle(&mut commands, &storage, action);
+                            piping.handle(&mut commands, action);
                         }
                     }
                     let fac = filter_nan((offset - min) / (max - min));
@@ -192,13 +191,13 @@ pub fn scroll_constraint(
                         (true, false) => {
                             let value = fac.x.clamp(0.0, 1.0);
                             if let Some(signal) = fac_handler {
-                                signal.handle(&mut commands, &storage, value)
+                                signal.handle(&mut commands, value)
                             }
                         },
                         (false, true) => {
                             let value = fac.y.clamp(0.0, 1.0);
                             if let Some(signal) = fac_handler {
-                                signal.handle(&mut commands, &storage, value)
+                                signal.handle(&mut commands, value)
                             }
                         },
                         (true, true) if fac_handler.is_some() => {
@@ -220,7 +219,6 @@ pub fn scroll_constraint(
 pub fn drag_constraint(
     mut commands: Commands,
     window: Query<&Window, With<PrimaryWindow>>,
-    storage: Res<KeyStorage>,
     rem: Option<Res<AouiREM>>,
     mut query: Query<(Entity, &Dragging, Attr<Transform2D, Offset>, &DimensionData,
         Option<&SharedPosition>,
@@ -241,8 +239,8 @@ pub fn drag_constraint(
             .or(window_size)
             else {continue};
 
-        let min = dimension * Anchor::BottomLeft;
-        let max = dimension * Anchor::TopRight;
+        let min = dimension * Anchor::BOTTOM_LEFT;
+        let max = dimension * Anchor::TOP_RIGHT;
         let origin = dimension * transform.component.get_parent_anchor()
             - dim.size * transform.component.anchor;
         let min = min + dim.size / 2.0 - origin;
@@ -265,13 +263,13 @@ pub fn drag_constraint(
                     (true, false) => {
                         let value = fac.x.clamp(0.0, 1.0);
                         if let Some(signal) = fac_handler {
-                            signal.handle(&mut commands, &storage, value)
+                            signal.handle(&mut commands, value)
                         }
                     },
                     (false, true) => {
                         let value = fac.y.clamp(0.0, 1.0);
                         if let Some(signal) = fac_handler {
-                            signal.handle(&mut commands, &storage, value)
+                            signal.handle(&mut commands, value)
                         }
                     },
                     (true, true) if fac_handler.is_some() => {
@@ -287,13 +285,13 @@ pub fn drag_constraint(
                     (true, false) => {
                         let value = fac.x.clamp(0.0, 1.0);
                         if let Some(signal) = fac_handler {
-                            signal.handle(&mut commands, &storage, value)
+                            signal.handle(&mut commands, value)
                         }
                     },
                     (false, true) => {
                         let value = fac.y.clamp(0.0, 1.0);
                         if let Some(signal) = fac_handler {
-                            signal.handle(&mut commands, &storage, value)
+                            signal.handle(&mut commands, value)
                         }
                     },
                     (true, true) if fac_handler.is_some() => {
@@ -303,7 +301,7 @@ pub fn drag_constraint(
                 }
             },
             Some(SharedPosition { position, flip }) => {
-                let fac = flip_vec(dbg!(position.load(Ordering::Relaxed)), flip);
+                let fac = flip_vec(position.load(Ordering::Relaxed), flip);
                 if fac.is_nan() { continue; }
                 if drag.x {
                     pos.x = (max.x - min.x) * fac.x + min.x;
@@ -320,7 +318,6 @@ pub fn drag_constraint(
 
 pub fn discrete_scroll_sync(
     mut commands: Commands,
-    storage: Res<KeyStorage>,
     mut query: Query<(Entity, &ScrollDiscrete, &mut Container,
         Option<&SharedPosition>, Option<&Handlers<EvPositionFactor>>, Has<PositionChanged>)>,
 ) {
@@ -335,7 +332,7 @@ pub fn discrete_scroll_sync(
                 }
                 position.store(flip_vec(fac2, flip), Ordering::Relaxed);
                 if let Some(signal) = fac_handler {
-                    signal.handle(&mut commands, &storage, fac)
+                    signal.handle(&mut commands, fac)
                 }
             },
             Some(SharedPosition{ position, flip }) => {

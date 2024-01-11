@@ -187,7 +187,7 @@ pub fn build_mesh_2d_global_transform(
         *transform = Affine3A::from_scale_rotation_translation(
             (rect.scale * dim.size).extend(1.0),
             Quat::from_rotation_z(rect.rotation),
-            rect.anchor(Anchor::Center).extend(rect.z)
+            rect.anchor(Anchor::CENTER).extend(rect.z)
         ).into()
     );
 }

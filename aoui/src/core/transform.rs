@@ -14,13 +14,13 @@ pub struct Transform2D{
     pub anchor: Anchor,
     /// The anchor matched on the parent side.
     /// By default and in idiomatic use, this is the same as `anchor`.
-    /// 
+    ///
     /// Unless doing skeletal animations,
     /// try avoid using this field if possible.
     pub parent_anchor: Anchor,
     /// Center of `rotation` and `scale`.
     ///
-    /// By default this is `Center`, 
+    /// By default this is `Center`,
     /// If set to `Inherit`, would be the same as `anchor`.
     pub center: Anchor,
     /// Offset from parent's anchor.
@@ -45,9 +45,9 @@ impl Transform2D {
     }
 
     pub const UNIT: Self = Self {
-        anchor: Anchor::Center,
-        parent_anchor: Anchor::Center,
-        center: Anchor::Inherit,
+        anchor: Anchor::CENTER,
+        parent_anchor: Anchor::CENTER,
+        center: Anchor::INHERIT,
         offset: Size2::ZERO,
         rotation: 0.0,
         z: 0.0,
@@ -85,7 +85,7 @@ impl Transform2D {
     }
 
     /// Set parent anchor.
-    ///  
+    ///
     /// This is discouraged in idiomatic use.
     pub fn with_parent_anchor(mut self, anchor: Anchor) -> Self {
         self.parent_anchor = anchor;
@@ -111,12 +111,12 @@ pub struct BuildTransform(pub Anchor);
 
 impl Default for BuildTransform {
     fn default() -> Self {
-        Self(Anchor::Inherit)
+        Self(Anchor::INHERIT)
     }
 }
 
 
-/// Builds a `GlobalTransform` for `Mesh2d`, 
+/// Builds a `GlobalTransform` for `Mesh2d`,
 /// this always uses `Anchor::Center` and converts dimension to scale.
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct BuildMeshTransform;

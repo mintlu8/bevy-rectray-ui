@@ -10,4 +10,4 @@ bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite",
 bevy_aoui = {version = "0.3.0", path = "../aoui"}
 
 [dev-dependencies]
-bevy = { version = "^0.12", default-features = false, features = ["multi-threaded", "png"]}
+bevy = { version = "^0.12", features = ["multi-threaded", "png", "bevy_winit"]}

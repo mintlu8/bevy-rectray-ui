@@ -23,9 +23,9 @@ pub fn main() {
 }
 
 static ANCHORS: &[Anchor] = &[
-    Anchor::TopLeft, Anchor::TopCenter, Anchor::TopRight,
-    Anchor::CenterLeft, Anchor::Center, Anchor::CenterRight,
-    Anchor::BottomLeft, Anchor::BottomCenter, Anchor::BottomRight,
+    Anchor::TOP_LEFT, Anchor::TOP_CENTER, Anchor::TOP_RIGHT,
+    Anchor::CENTER_LEFT, Anchor::CENTER, Anchor::CENTER_RIGHT,
+    Anchor::BOTTOM_LEFT, Anchor::BOTTOM_CENTER, Anchor::BOTTOM_RIGHT,
 ];
 
 pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, enitity: Entity, texture: Handle<Image>) {
@@ -41,7 +41,7 @@ pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, enitity: 
                 custom_size: Some(Vec2::new(size, size)),
                 ..Default::default()
             },
-            transform: Transform2D { 
+            transform: Transform2D {
                 anchor: *anchor,
                 ..Default::default()
             },
@@ -63,7 +63,7 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_channel(|fps: f32, text: &mut Text| {
+        extra: fps_signal(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
@@ -84,7 +84,7 @@ pub fn init(mut commands: AouiCommands) {
     spawn_fractal(commands.commands(), 5, 250.0, enitity, texture.clone());
 }
 
-pub fn egui_window(mut ctx: EguiContexts, 
+pub fn egui_window(mut ctx: EguiContexts,
     mut query: Query<&mut Transform2D, Without<Text>>,
 ) {
     let sp = query.iter().next().unwrap();

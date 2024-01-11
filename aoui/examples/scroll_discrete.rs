@@ -28,16 +28,16 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_channel(|fps: f32, text: &mut Text| {
+        extra: fps_signal(|fps: f32, text: &mut Text| {
             format_widget!(text, "FPS: {:.2}", fps);
         })
     });
 
     let s = "abcdefghijklmnopqrstuvwxyz".chars();
-    
+
     vstack! (commands {
         dimension: [200, 60],
-        hitbox: Rect(1),
+        hitbox: Hitbox::rect(1),
         event: EventFlags::MouseWheel,
         children_range: 0..5,
         font_size: em(4),
@@ -47,5 +47,3 @@ pub fn init(mut commands: AouiCommands) {
         }
     });
 }
-
-    

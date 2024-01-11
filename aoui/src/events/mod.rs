@@ -1,58 +1,58 @@
 //! This module provides cursor related event detection for `bevy_aoui`.
-//! 
+//!
 //! # Event Listeners
-//! 
+//!
 //! Add components `Hitbox` and `EventFlags` to a sprite, this allows a sprite to
 //! listen to a subset of events.
-//! 
+//!
 //! Only a subset of EventFlags are valid event listeners,
 //! `*` is Left, Mid or Center, other mouse buttons are ignored.
-//! 
+//!
 //! * `Hover` listens for `Hover`,
 //! * `*Click` listens for `*Down`, `*Up` and `*Pressed`
 //! * `*Drag` listens for `*Down`, `*Drag` and `DragEnd`
 //! * `*DoubleClick` listens for `DoubleClick`, which replaces `LeftClick` or `DragEnd`
 //! * `Drop` listens for `Drop`
 //! * `ClickOutside` listens for mouse up outside of the sprite's boundary.
-//! 
+//!
 //! # Event Propagation
-//! 
+//!
 //! We use component insertion to send events to widgets. These are
 //! `CursorFocus`, `CursorAction`, `CursorClickOutside` and `MouseWheelAction`.
 //! You can use these with queries.
-//! 
+//!
 //! They should be safe to use during `Update` and `PostUpdate`.
-//! 
+//!
 //! * `CursorFocus`: Stores a persistent state like `Hover` or `Pressed`.
 //! The [`DisplayIf`](crate::widgets::button::DisplayIf)
 //! component can be used to change visibility status based on [`CursorFocus`]
-//! 
+//!
 //! * `CursorAction`: Stores a single frame event like `Click` or `Down`.
 //! * `CursorClickOutside`: Mouse up outside of the sprite's boundary.
 //! * `MouseWheelAction`: Stores the value of mouse wheel scrolling.
-//! 
+//!
 //! # Event Handlers
-//! 
+//!
 //! A [`Handlers`] listens for `CursorAction` and `CursorFocus`,
 //! pseudo-events like `EvObtainFocus` and `EvLoseFocus`,
 //! widget events like `EvButtonChange` etc and can perform.
 //! many action based on the event and its associated input.
-//! 
+//!
 //! Events starting with `Ev` are one-shot events.
 //! They should be registered with `register_event` to be removed at the end of the frame.
-//! 
+//!
 //! Additionally [`Fetch<T>`] is a persistent channel that transfers data.
-//! 
+//!
 //! Event handlers can do the following things:
-//! 
+//!
 //! * Run a [one-shot system](OneShot).
 //! * [Mutate](Mutation) components associated with the entity.
 //! * Send a signal.
 //! * Write signal input to a [`KeyStorage`](crate::signals::KeyStorage).
-//! 
+//!
 //! # What about Keyboard Events or Joysticks?
-//! 
-//! We provide abstractions that you can use for other types of input, 
+//!
+//! We provide abstractions that you can use for other types of input,
 //! but these are outside the scope of this crate.
 
 use bevy::{prelude::*, ecs::query::WorldQuery};
@@ -79,14 +79,14 @@ pub use wheel::{MovementUnits, ScrollScaling, MouseWheelAction};
 pub use cursor::{CustomCursor, TrackCursor};
 pub use mutation::Mutation;
 pub use oneshot::OneShot;
-pub use fetch::*;
+pub use fetch::{Fetch, Evaluated};
 pub use cursor::CameraQuery;
 
 use self::cursor::{custom_cursor_controller, track_cursor};
 pub use coverage::{FetchCoveragePercent, FetchCoveragePx};
 
 /// Marker component for Aoui's camera, optional.
-/// 
+///
 /// Used for cursor detection and has no effect on rendering.
 /// If not present, we will try the `.get_single()` method instead.
 #[derive(Debug, Clone, Copy, Component, Default)]
@@ -118,7 +118,7 @@ pub struct CursorDetection {
 
 impl CursorDetectionItem<'_> {
     pub fn contains(&self, pos: Vec2) -> bool{
-        self.hitbox.contains(self.rect, pos) 
+        self.hitbox.contains(self.rect, pos)
             && self.clipping.contains(pos)
     }
 

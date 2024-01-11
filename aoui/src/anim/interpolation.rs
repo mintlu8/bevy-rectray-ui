@@ -18,7 +18,7 @@ pub struct Interpolate<T: Interpolation>{
     /// Easing function of the tweener.
     curve: Easing,
     /// Interpolates through these keyframes.
-    /// 
+    ///
     /// Invariant: this field must have at least 1 value.
     range: SmallVec<[(T::Data, f32); 1]>,
     /// Current time.
@@ -214,8 +214,8 @@ impl<T: Interpolation> Interpolate<T> {
 
     /// If end of `range` is the current target, ignore.
     /// If end of `range` is the current source, reverse.
-    /// Otherwise interpolate with range, using the current position as range[0].
-    /// 
+    /// Otherwise interpolate with range, using the current position as `range[0]`.
+    ///
     /// Write directly if this behavior is not desired.
     pub fn interpolate(&mut self, range: impl IntoInterpolate<T>) {
         let mut range = range.into_interpolate();
@@ -223,18 +223,26 @@ impl<T: Interpolation> Interpolate<T> {
             self.reverse()
         } else if !opt_eq::<T>(self.range.last(), range.last()) {
             let pos = self.get_data();
-            range[0] = (pos, 0.0);
+            if range[0].1 == 0.0 {
+                range[0] = (pos, 0.0);
+            } else {
+                range.insert(0, (pos, 0.0))
+            }
             self.range = range;
             self.current = 0.0;
             self.time = self.default_time;
         }
     }
-    
-    /// Interpolate to a target, overwriting default time, 
+
+    /// Interpolate to a target, overwriting default time,
     pub fn interpolate_with_time(&mut self, range: impl IntoInterpolate<T>, time: f32) {
         let mut range = range.into_interpolate();
         let pos = self.get_data();
-        range[0] = (pos, 0.0);
+        if range[0].1 == 0.0 {
+            range[0] = (pos, 0.0);
+        } else {
+            range.insert(0, (pos, 0.0))
+        }
         self.range = range;
         self.current = 0.0;
         self.time = time;
@@ -251,16 +259,16 @@ impl<T: Interpolation<FrontEnd = Vec2>> Interpolate<T>  {
         let target = self.target();
         self.interpolate_to(Vec2::new(target.x, value));
     }
-    
+
     pub fn signal_to_x(value: f32) -> impl Fn(&mut Self) + Clone{
-        move |comp| { 
+        move |comp| {
             let target = comp.target();
             comp.interpolate_to(Vec2::new(value, target.y));
         }
     }
 
     pub fn signal_to_y(value: f32) -> impl Fn(&mut Self) + Clone{
-        move |comp| { 
+        move |comp| {
             let target = comp.target();
             comp.interpolate_to(Vec2::new(target.x, value));
         }
@@ -295,16 +303,21 @@ pub trait Interpolation: Sized + 'static {
     }
 }
 
+/// Marker for offset.
 #[derive(Debug)]
 pub enum Offset{}
+/// Marker for rotation.
 #[derive(Debug)]
 pub enum Rotation{}
-#[derive(Debug)]
-pub enum Scale{}
+/// Marker for scale.
+pub type Scale = crate::dsl::Scale;
+/// Marker for index of a spritesheet.
 #[derive(Debug)]
 pub enum Index{}
+/// Marker for margin.
 #[derive(Debug)]
 pub enum Margin{}
+/// Marker for paddings.
 #[derive(Debug)]
 pub enum Padding{}
 

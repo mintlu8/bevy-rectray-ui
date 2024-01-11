@@ -1,8 +1,8 @@
 //! The bread and butter of `bevy_aoui`.
-//! 
+//!
 //! The parent sprite is parented to the window,
 //! the child sprite is parented to the parent.
-//! 
+//!
 //! You can experiment on how each parameter affects this simple system.
 #![allow(clippy::type_complexity)]
 
@@ -61,23 +61,23 @@ fn anchor_ui(ui: &mut Ui, anchor: &mut Anchor, name: &str) {
         }
     );
 
-    
+
     *anchor = match anc {
-        "BottomLeft" => Anchor::BottomLeft,
-        "BottomCenter" =>  Anchor::BottomCenter,
-        "BottomRight" => Anchor::BottomRight,
-        "CenterLeft" => Anchor::CenterLeft,
-        "Center" => Anchor::Center,
-        "CenterRight" => Anchor::CenterRight,
-        "TopLeft" => Anchor::TopLeft,
-        "TopCenter" => Anchor::TopCenter,
-        "TopRight" => Anchor::TopRight,
+        "BottomLeft" => Anchor::BOTTOM_LEFT,
+        "BottomCenter" =>  Anchor::BOTTOM_CENTER,
+        "BottomRight" => Anchor::BOTTOM_RIGHT,
+        "CenterLeft" => Anchor::CENTER_LEFT,
+        "Center" => Anchor::CENTER,
+        "CenterRight" => Anchor::CENTER_RIGHT,
+        "TopLeft" => Anchor::TOP_LEFT,
+        "TopCenter" => Anchor::TOP_CENTER,
+        "TopRight" => Anchor::TOP_RIGHT,
         _ => unreachable!()
     };
 }
 
 
-pub fn egui_window(mut ctx: EguiContexts, 
+pub fn egui_window(mut ctx: EguiContexts,
     mut root: Query<(&mut Transform2D, DimensionMut), (With<A>, Without<B>)>,
     mut child: Query<(&mut Transform2D, DimensionMut), (With<B>, Without<A>)>,
 ) {
@@ -105,21 +105,21 @@ pub fn egui_window(mut ctx: EguiContexts,
         ui.add(Slider::new(&mut child.scale.x, 0.0..=10.0).text("Scale X"));
         ui.add(Slider::new(&mut child.scale.y, 0.0..=10.0).text("Scale Y"));
         if ui.button("Reset Parent").clicked() {
-            root.anchor = Anchor::Center;
-            root.center = Anchor::Center;
+            root.anchor = Anchor::CENTER;
+            root.center = Anchor::CENTER;
             root.offset = Size2::ZERO;
             root.rotation = 0.0;
             root.scale = Vec2::ONE;
             *root_dim.raw_mut() = Vec2::new(200.0, 200.0);
         }
         if ui.button("Reset Child").clicked() {
-            child.anchor = Anchor::Center;
-            child.center = Anchor::Center;
+            child.anchor = Anchor::CENTER;
+            child.center = Anchor::CENTER;
             child.offset = Size2::ZERO;
             child.rotation = 0.0;
             child.scale = Vec2::ONE;
             *child_dim.raw_mut() = Vec2::new(50.0, 50.0);
         }
     });
-    
+
 }

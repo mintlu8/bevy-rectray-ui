@@ -37,8 +37,8 @@ macro_rules! mutation {
             #[doc(hidden)]
             pub enum Disambiguate {}
             #[allow(unused_parens, non_snake_case)]
-            impl<T: AsObject, Func, $($i: Component),*> IntoMutationCommand<T, ($($i),*), Disambiguate> 
-                for Func 
+            impl<T: AsObject, Func, $($i: Component),*> IntoMutationCommand<T, ($($i),*), Disambiguate>
+                for Func
                     where Func: Fn($($e1),*) + Send + Sync + Clone + 'static {
 
                 fn into_command(self, entity: Entity, _: T) -> impl Command {
@@ -53,10 +53,10 @@ macro_rules! mutation {
             }
 
             #[allow(unused_parens, non_snake_case)]
-            impl<Ctx: 'static, T: AsObject, Func, $($i: Component),*> IntoMutationCommandWithCtx<Ctx, T, ($($i),*), Disambiguate> 
-                for Func 
+            impl<Ctx: 'static, T: AsObject, Func, $($i: Component),*> IntoMutationCommandWithCtx<Ctx, T, ($($i),*), Disambiguate>
+                for Func
                     where Func: Fn(Ctx, $($e1),*) + Send + Sync + Clone + 'static {
-                        
+
                 fn into_command<M>(self, entity: Entity, _: T, ctx: impl IntoSystem<(), Ctx, M> + Send + Sync + 'static) -> impl Command {
                     move |w: &mut World| {
                         let ctx = w.run_system_once(ctx);
@@ -73,8 +73,8 @@ macro_rules! mutation {
             pub enum DisambiguateData {}
 
             #[allow(unused_parens, non_snake_case)]
-            impl<T: AsObject, Func, $($i: Component),*> IntoMutationCommand<T, ($($i),*), DisambiguateData> 
-                for Func 
+            impl<T: AsObject, Func, $($i: Component),*> IntoMutationCommand<T, ($($i),*), DisambiguateData>
+                for Func
                     where Func: Fn(T, $($e1),*) + Send + Sync + Clone + 'static {
 
                 fn into_command(self, entity: Entity, data: T) -> impl Command {
@@ -89,8 +89,8 @@ macro_rules! mutation {
             }
 
             #[allow(unused_parens, non_snake_case)]
-            impl<Ctx: 'static, T: AsObject, Func, $($i: Component),*> IntoMutationCommandWithCtx<Ctx, T, ($($i),*), DisambiguateData> 
-                for Func 
+            impl<Ctx: 'static, T: AsObject, Func, $($i: Component),*> IntoMutationCommandWithCtx<Ctx, T, ($($i),*), DisambiguateData>
+                for Func
                     where Func: Fn(Ctx, T, $($e1),*) + Send + Sync + Clone + 'static {
 
                 fn into_command<M>(self, entity: Entity, data: T, ctx: impl IntoSystem<(), Ctx, M> + Send + Sync + 'static) -> impl Command {
@@ -118,6 +118,7 @@ macro_rules! mutation {
 
 multi_mutation!(A, B, C, D, E, F);
 
+/// A function thet mutates associated components based on inputs.
 pub struct Mutation<T: AsObject>(Box<dyn Fn(&mut EntityCommands, T) + Send + Sync>);
 
 impl<T: AsObject> Debug for Mutation<T> {
@@ -129,7 +130,7 @@ impl<T: AsObject> Debug for Mutation<T> {
 impl<T: AsObject> Mutation<T> {
 
     /// Construct a mutation for associated components.
-    /// 
+    ///
     /// # Example
     /// ```
     /// # use bevy_aoui::{Transform2D, Dimension, events::Mutation};
@@ -138,9 +139,9 @@ impl<T: AsObject> Mutation<T> {
     ///     transform.rotation += 1.0;
     /// });
     /// ```
-    /// 
+    ///
     /// # Note
-    /// 
+    ///
     /// If input is type erased, aka `Payload`, use `Mutation::dynamic` instead.
     pub fn new<M, N>(f: impl IntoMutationCommand<T, M, N>) -> Self{
         Mutation(Box::new(move |commands: &mut EntityCommands, data: T| {
@@ -148,7 +149,7 @@ impl<T: AsObject> Mutation<T> {
             commands.commands().add(f.clone().into_command(entity, data));
         }))
     }
-    
+
     pub fn with_context<Ctx, M, N, U> (
         ctx: impl IntoSystem<(), Ctx, U> + Send + Sync + Clone + 'static,
         f: impl IntoMutationCommandWithCtx<Ctx, T, M, N>

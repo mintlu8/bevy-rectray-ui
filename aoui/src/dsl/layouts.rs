@@ -68,7 +68,7 @@ macro_rules! padding {
     };
 }
 
-/// Construct a horizontal left to right compact layout. 
+/// Construct a horizontal left to right compact layout.
 /// The Underlying struct is [`FrameBuilder`](super::builders::FrameBuilder).
 #[macro_export]
 macro_rules! hstack {

@@ -53,7 +53,7 @@ pub(crate) fn stack<D: Direction>(
     let mut result = Vec::new();
     let margin = D::main(margin);
     let mut cursor = -margin;
-    let line_height = D::off_vec(1.0);
+    let line_height = D::side_vec(1.0);
     let mut max_len = Vec2::ZERO;
     let items = trim(items, |x| x.control == LayoutControl::WhiteSpace);
     for item in items {
@@ -68,7 +68,7 @@ pub(crate) fn stack<D: Direction>(
         cursor += width;
     }
 
-    let height_mult = D::off(max_len) + D::main(Vec2::ONE).abs();
+    let height_mult = D::side(max_len) + D::main(Vec2::ONE).abs();
     result.iter_mut().for_each(|(_, x)| *x *= height_mult);
 
     if cursor.cmplt(Vec2::ZERO).any(){
@@ -90,7 +90,7 @@ pub(crate) fn span<D: StretchDir>(
     let mut result = Vec::new();
 
     let major_dim = D::Pos::main(size);
-    let minor_dim = D::Pos::off(size);
+    let minor_dim = D::Pos::side(size);
 
     let mut neg_len = 0usize;
     let mut mid_len = 0usize;

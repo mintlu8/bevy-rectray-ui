@@ -1,64 +1,64 @@
 //! WIP Rich Text implementation for `bevy_aoui`.
-//! 
+//!
 //! Format
-//! 
+//!
 //! # Markdown
-//! 
+//!
 //! We use a subset of markdown syntax
-//! 
+//!
 //! * Italics: `*text*`
 //! * Bold: `**text**`
 //! * Bold Italics: `***text***`
 //! * Underline: `__text__` (not implemented)
 //! * Strikethrough: `~~text~~` (not implemented)
-//! 
+//!
 //! Ascii whitespaces are either rendered as one space or linebreaks.
 //! Use a unicode space if you want multiple spaces. Leading and trailing
 //! whitespaces are always trimmed. Tabs are not supported.
-//! 
+//!
 //! `N` consecutive newlines will be rendered as `N-1` newlines.
-//! 
+//!
 //! # Control Codes
-//! 
+//!
 //! The general syntax is {code} or {code:text}. All control codes
-//! are case insensitive. {code} is in effect until overwritten, 
+//! are case insensitive. {code} is in effect until overwritten,
 //! {code:text} is in effect until it goes out of scope.
-//! 
+//!
 //! * `{br}`
-//! 
+//!
 //! Insert a new line.
-//! 
+//!
 //! * `{*}` `{_}` `{~}`
-//! 
+//!
 //! Escape for '*', '_', '~'
-//! 
+//!
 //! `{left}` or `{topleft}`
-//! 
+//!
 //! This modifies the anchor of text segments. Changes on the horizontal
 //! axis will modify the text's alignment.
-//! 
+//!
 //! * `{red}` or `{#FFAABBCC}`
-//! 
+//!
 //! This modifies the color of text segments.
-//! 
+//!
 //! * `{@OpenSans}`
-//! 
+//!
 //! This modifies the font.
-//! 
+//!
 //! * `{+14}`
-//! 
+//!
 //! This sets the font size to 14
-//! 
+//!
 //! * `{*2}`
-//! 
+//!
 //! This sets the font size to 2 em
-//! 
+//!
 //! * `{0}` - `{9}`
-//! 
+//!
 //! Spawn an empty entity for future insertion.
-//! 
+//!
 //! * `{zip: {red:a}.}`
-//! 
+//!
 //! Zip prevents linebreaks inside by wrapping its contents inside a `compact` layout.
 //! This is needed to preserve linebreak behavior across style groups.
 //! Changing anchor inside is unspecified behavior.
@@ -88,7 +88,7 @@ pub fn synchronize_glyph_spaces(mut query: Query<(&GlyphSpace, DimensionMut)>, f
             let height = font.height();
             dimension.source.dimension = DimensionType::Owned(Size2::pixels(width, height));
         }
-    }) 
+    })
 }
 
 
@@ -151,20 +151,20 @@ const _: () = {
             HashMap::get(self, name).cloned().unwrap_or_default()
         }
     }
-    
+
     impl<'t> FontFetcher for HashMap<&'t str, Handle<Font>> {
         fn get(&self, name: &str, _: FontStyle) -> Handle<Font> {
             HashMap::get(self, name).cloned().unwrap_or_default()
         }
     }
-    
+
     impl<'t> FontFetcher for HashMap<(&'t str, FontStyle), Handle<Font>> {
         fn get(&self, name: &str, style: FontStyle) -> Handle<Font> {
             HashMap::get(self, &(name, style)).cloned().unwrap_or_else(
                 || HashMap::get(self, &(name, FontStyle::None)).cloned().unwrap_or_default())
         }
     }
-    
+
     impl FontFetcher for HashMap<(String, FontStyle), Handle<Font>> {
         fn get(&self, name: &str, style: FontStyle) -> Handle<Font> {
             HashMap::get(self, &(name.to_owned(), style)).cloned().unwrap_or_else(
@@ -207,7 +207,7 @@ fn hex2(a: u8, b: u8) -> Result<f32, RichTextError> {
             b'0'..=b'9' => a - b'0',
             b'a'..=b'z' => a - b'a' + 10_u8,
             _ => return Err(RichTextError::InvalidHexDigit(a))
-        } * 16 + 
+        } * 16 +
         match b {
             b'0'..=b'9' => b - b'0',
             b'a'..=b'z' => b - b'a' + 10_u8,
@@ -236,18 +236,18 @@ pub struct RichTextBuilder<'t, 'w, 's, F: FontFetcher, B: Bundle + Clone = ()>{
 
 impl<'a, 'w, 's, F: FontFetcher> RichTextBuilder<'a, 'w, 's, F> {
     pub fn new(commands: &'a mut AouiCommands<'w, 's>, font: F) -> Self {
-        Self { 
-            bundle: (), 
+        Self {
+            bundle: (),
             line_gap: (font.default(), FontSize::None),
-            commands, 
-            font, 
-            style: FontStyle::None, 
+            commands,
+            font,
+            style: FontStyle::None,
             color_stack: Vec::new(),
             size_stack: Vec::new(),
             font_stack: Vec::new(),
             anchor_stack: Vec::new(),
             zip: None,
-            buffer: Vec::new(), 
+            buffer: Vec::new(),
             pop_stack: Vec::new(),
             layer: 0,
         }
@@ -397,7 +397,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
     }
 
     fn anchor(&self) -> Anchor {
-        self.anchor_stack.last().copied().unwrap_or(Anchor::CenterLeft)
+        self.anchor_stack.last().copied().unwrap_or(Anchor::CENTER_LEFT)
     }
 
     pub fn push_bundle(&mut self, bun: impl Bundle) {
@@ -457,7 +457,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
 
         macro_rules! space {
             () => {
-                if self.buffer.len() != last_space { 
+                if self.buffer.len() != last_space {
                     last_space = self.buffer.len() + 1;
                     let entity = frame!((self.commands) {
                         anchor: self.anchor(),
@@ -524,19 +524,19 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                     match cc.to_lowercase().as_str() {
                         "br" => line_gap!(),
                         "zip" => self.push_zip()?,
-                        "left" => self.push_anchor(Anchor::CenterLeft, scoped),
-                        "right" => self.push_anchor(Anchor::CenterRight, scoped),
-                        "top" => self.push_anchor(Anchor::TopCenter, scoped),
-                        "bottom" => self.push_anchor(Anchor::BottomCenter, scoped),
-                        "center" => self.push_anchor(Anchor::Center, scoped),
-                        "centerleft" => self.push_anchor(Anchor::CenterLeft, scoped),
-                        "centerright" => self.push_anchor(Anchor::CenterRight, scoped),
-                        "topcenter" => self.push_anchor(Anchor::TopCenter, scoped),
-                        "bottomcenter" => self.push_anchor(Anchor::BottomCenter, scoped),
-                        "topleft" => self.push_anchor(Anchor::TopLeft, scoped),
-                        "topright" => self.push_anchor(Anchor::TopRight, scoped),
-                        "bottomleft" => self.push_anchor(Anchor::BottomLeft, scoped),
-                        "bottomright" => self.push_anchor(Anchor::BottomRight, scoped),
+                        "left" => self.push_anchor(Anchor::CENTER_LEFT, scoped),
+                        "right" => self.push_anchor(Anchor::CENTER_RIGHT, scoped),
+                        "top" => self.push_anchor(Anchor::TOP_CENTER, scoped),
+                        "bottom" => self.push_anchor(Anchor::BOTTOM_CENTER, scoped),
+                        "center" => self.push_anchor(Anchor::CENTER, scoped),
+                        "centerleft" => self.push_anchor(Anchor::CENTER_LEFT, scoped),
+                        "centerright" => self.push_anchor(Anchor::CENTER_RIGHT, scoped),
+                        "topcenter" => self.push_anchor(Anchor::TOP_CENTER, scoped),
+                        "bottomcenter" => self.push_anchor(Anchor::BOTTOM_CENTER, scoped),
+                        "topleft" => self.push_anchor(Anchor::TOP_LEFT, scoped),
+                        "topright" => self.push_anchor(Anchor::TOP_RIGHT, scoped),
+                        "bottomleft" => self.push_anchor(Anchor::BOTTOM_LEFT, scoped),
+                        "bottomright" => self.push_anchor(Anchor::BOTTOM_RIGHT, scoped),
                         cc => match prefix {
                             Some('@') => self.push_font(cc.to_owned(), scoped),
                             Some('+') => {

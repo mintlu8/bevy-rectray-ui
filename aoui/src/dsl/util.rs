@@ -1,36 +1,28 @@
 use bevy::math::Vec2;
 use bevy::text::Text;
 use crate::layout::Layout;
+use crate::widgets::TextFragment;
 use crate::widgets::inputbox::InputBox;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit, Size};
 use crate::{Size2, FontSize, layout::Alignment, layout::LayoutDir};
 
 
 use super::DslFrom;
-use super::convert::DslInto;
+use super::convert::{DslInto, DslConvert};
 
-/// Syntax for constructing a hitbox.
-#[doc(hidden)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DslHitbox<T: DslInto<OneOrTwo<Vec2>>> {
-    /// A rectangular hitbox.
-    Rect(T),
-    /// An elliptical hitbox.
-    Ellipse(T),
-}
+impl Hitbox {
+    pub fn rect(value: impl DslInto<OneOrTwo<Vec2>>) -> Self {
+        Hitbox {
+            shape: HitboxShape::Rect,
+            scale: value.dinto().0,
+        }
+    }
 
-impl<T: DslInto<OneOrTwo<Vec2>>> DslInto<Option<Hitbox>> for DslHitbox<T> {
-    fn dinto(self) -> Option<Hitbox> {
-        Some(match self {
-            DslHitbox::Rect(scale) => Hitbox {
-                shape: HitboxShape::Rect,
-                scale: scale.dinto().0,
-            },
-            DslHitbox::Ellipse(scale) =>  Hitbox {
-                shape: HitboxShape::Rect,
-                scale: scale.dinto().0,
-            },
-        })
+    pub fn ellipse(value: impl DslInto<OneOrTwo<Vec2>>) -> Self {
+        Hitbox {
+            shape: HitboxShape::Ellipse,
+            scale: value.dinto().0,
+        }
     }
 }
 
@@ -41,6 +33,7 @@ pub enum Aspect {
     None,
     /// Preserves the aspect from the associated sprite.
     Preserve,
+    /// Experimental, does nothing.
     Owned(f32),
 }
 
@@ -63,7 +56,7 @@ impl<T> DslFrom<T> for Option<Box<dyn Layout>> where T: Layout {
 }
 
 /// Unified constants for various enums used by `Aoui`.
-/// 
+///
 /// Note `Left` can be used as `CenterLeft`, etc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AouiSpacialConsts {
@@ -89,19 +82,19 @@ pub enum AouiSpacialConsts {
 impl DslFrom<AouiSpacialConsts> for Anchor {
     fn dfrom(value: AouiSpacialConsts) -> Self {
         match value {
-            AouiSpacialConsts::TopLeft => Anchor::TopLeft,
-            AouiSpacialConsts::TopCenter => Anchor::TopCenter,
-            AouiSpacialConsts::TopRight => Anchor::TopRight,
-            AouiSpacialConsts::CenterLeft => Anchor::CenterLeft,
-            AouiSpacialConsts::Center => Anchor::Center,
-            AouiSpacialConsts::CenterRight => Anchor::CenterRight,
-            AouiSpacialConsts::BottomLeft => Anchor::BottomLeft,
-            AouiSpacialConsts::BottomCenter => Anchor::BottomCenter,
-            AouiSpacialConsts::BottomRight => Anchor::BottomRight,
-            AouiSpacialConsts::Top => Anchor::TopCenter,
-            AouiSpacialConsts::Bottom => Anchor::BottomCenter,
-            AouiSpacialConsts::Left => Anchor::CenterLeft,
-            AouiSpacialConsts::Right => Anchor::CenterRight,
+            AouiSpacialConsts::TopLeft => Anchor::TOP_LEFT,
+            AouiSpacialConsts::TopCenter => Anchor::TOP_CENTER,
+            AouiSpacialConsts::TopRight => Anchor::TOP_RIGHT,
+            AouiSpacialConsts::CenterLeft => Anchor::CENTER_LEFT,
+            AouiSpacialConsts::Center => Anchor::CENTER,
+            AouiSpacialConsts::CenterRight => Anchor::CENTER_RIGHT,
+            AouiSpacialConsts::BottomLeft => Anchor::BOTTOM_LEFT,
+            AouiSpacialConsts::BottomCenter => Anchor::BOTTOM_CENTER,
+            AouiSpacialConsts::BottomRight => Anchor::BOTTOM_RIGHT,
+            AouiSpacialConsts::Top => Anchor::TOP_CENTER,
+            AouiSpacialConsts::Bottom => Anchor::BOTTOM_CENTER,
+            AouiSpacialConsts::Left => Anchor::CENTER_LEFT,
+            AouiSpacialConsts::Right => Anchor::CENTER_RIGHT,
             c => panic!("{:?} is not an Anchor.", c),
         }
     }
@@ -110,19 +103,19 @@ impl DslFrom<AouiSpacialConsts> for Anchor {
 impl DslFrom<AouiSpacialConsts> for Option<Anchor> {
     fn dfrom(value: AouiSpacialConsts) -> Self {
         Some(match value {
-            AouiSpacialConsts::TopLeft => Anchor::TopLeft,
-            AouiSpacialConsts::TopCenter => Anchor::TopCenter,
-            AouiSpacialConsts::TopRight => Anchor::TopRight,
-            AouiSpacialConsts::CenterLeft => Anchor::CenterLeft,
-            AouiSpacialConsts::Center => Anchor::Center,
-            AouiSpacialConsts::CenterRight => Anchor::CenterRight,
-            AouiSpacialConsts::BottomLeft => Anchor::BottomLeft,
-            AouiSpacialConsts::BottomCenter => Anchor::BottomCenter,
-            AouiSpacialConsts::BottomRight => Anchor::BottomRight,
-            AouiSpacialConsts::Top => Anchor::TopCenter,
-            AouiSpacialConsts::Bottom => Anchor::BottomCenter,
-            AouiSpacialConsts::Left => Anchor::CenterLeft,
-            AouiSpacialConsts::Right => Anchor::CenterRight,
+            AouiSpacialConsts::TopLeft => Anchor::TOP_LEFT,
+            AouiSpacialConsts::TopCenter => Anchor::TOP_CENTER,
+            AouiSpacialConsts::TopRight => Anchor::TOP_RIGHT,
+            AouiSpacialConsts::CenterLeft => Anchor::CENTER_LEFT,
+            AouiSpacialConsts::Center => Anchor::CENTER,
+            AouiSpacialConsts::CenterRight => Anchor::CENTER_RIGHT,
+            AouiSpacialConsts::BottomLeft => Anchor::BOTTOM_LEFT,
+            AouiSpacialConsts::BottomCenter => Anchor::BOTTOM_CENTER,
+            AouiSpacialConsts::BottomRight => Anchor::BOTTOM_RIGHT,
+            AouiSpacialConsts::Top => Anchor::TOP_CENTER,
+            AouiSpacialConsts::Bottom => Anchor::BOTTOM_CENTER,
+            AouiSpacialConsts::Left => Anchor::CENTER_LEFT,
+            AouiSpacialConsts::Right => Anchor::CENTER_RIGHT,
             c => panic!("{:?} is not an Anchor.", c),
         })
     }
@@ -202,9 +195,9 @@ impl DslInto<Option<LayoutDir>> for AouiSpacialConsts {
 }
 
 /// Color construction macro, see [`colorthis`].
-/// 
+///
 /// Input is `RgbaLinear`, but immediately cast into `Rgba`(sRGB).
-/// 
+///
 /// ```
 /// # use bevy_aoui::color;
 /// color!(red400);
@@ -215,7 +208,7 @@ macro_rules! color {
         {
             #[allow(clippy::excessive_precision)]
             $crate::dsl::rgbaf!(
-                $crate::bevy::prelude::Color::RgbaLinear, 
+                $crate::bevy::prelude::Color::RgbaLinear,
                 $color => {red, green, blue, alpha}
             ).as_rgba()
         }
@@ -269,7 +262,7 @@ pub fn rem(f: impl DslInto<f32>) -> Size {
 }
 
 /// Set font size by `%`.
-/// 
+///
 /// Provide values like `40`, not `0.4`.
 pub fn percent(f: impl DslInto<f32>) -> Size {
     Size::new(SizeUnit::Percent, f.dinto() / 100.0)
@@ -290,21 +283,15 @@ impl DslFrom<Size> for FontSize {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct OneOrTwo<T>(pub T);
 
-impl<T> DslFrom<T> for OneOrTwo<T> {
-    fn dfrom(value: T) -> Self {
-        OneOrTwo(value)
-    }
-}
-
-impl<T> DslFrom<T> for OneOrTwo<[T; 2]> where T: Clone {
-    fn dfrom(value: T) -> Self {
-        OneOrTwo([value.clone(), value])
+impl<A, T> DslConvert<OneOrTwo<T>, 1> for A where A: DslInto<T>{
+    fn parse(self) -> OneOrTwo<T> {
+        OneOrTwo(self.dinto())
     }
 }
 
 macro_rules! impl_one_or_two {
     ($ty: ty, $x: ident, $y: ident, $expr: expr) => {
-        
+
 impl DslInto<OneOrTwo<$ty>> for i32 {
     fn dinto(self) -> OneOrTwo<$ty> {
         let $x = self;
@@ -321,54 +308,46 @@ impl DslInto<OneOrTwo<$ty>> for f32 {
     }
 }
 
-impl DslInto<OneOrTwo<$ty>> for [i32; 2] {
-    fn dinto(self) -> OneOrTwo<$ty> {
-        let [$x, $y] = self;
-        OneOrTwo($expr)
-    }
-}
-
-impl DslInto<OneOrTwo<$ty>> for [f32; 2] {
-    fn dinto(self) -> OneOrTwo<$ty> {
-        let [$x, $y] = self;
-        OneOrTwo($expr)
-    }
-}
-
-impl DslInto<OneOrTwo<$ty>> for (i32, i32) {
-    fn dinto(self) -> OneOrTwo<$ty> {
-        let ($x, $y) = self;
-        OneOrTwo($expr)
-    }
-}
-
-impl DslInto<OneOrTwo<$ty>> for (f32, i32) {
-    fn dinto(self) -> OneOrTwo<$ty> {
-        let ($x, $y) = self;
-        OneOrTwo($expr)
-    }
-}
-
-impl DslInto<OneOrTwo<$ty>> for (i32, f32) {
-    fn dinto(self) -> OneOrTwo<$ty> {
-        let ($x, $y) = self;
-        OneOrTwo($expr)
-    }
-}
-
-impl DslInto<OneOrTwo<$ty>> for (f32, f32) {
-    fn dinto(self) -> OneOrTwo<$ty> {
-        let ($x, $y) = self;
-        OneOrTwo($expr)
-    }
-}
     };
 }
 
 impl_one_or_two!(Vec2, x, y, Vec2::new(x as f32, y as f32));
 impl_one_or_two!(Size2, x, y, Size2::pixels(x as f32, y as f32));
 
-#[doc(hidden)]
+impl DslInto<OneOrTwo<Size2>> for Size {
+    fn dinto(self) -> OneOrTwo<Size2> {
+        OneOrTwo(Size2::new(self, self))
+    }
+}
+
+/// A `OneOrTwo<Vec2>` with default value 1.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Scale(pub Vec2);
+impl Default for Scale{
+    fn default() -> Self {
+        Self(Vec2::ONE)
+    }
+}
+
+impl<A> DslConvert<Scale, 1> for A where A: DslInto<Vec2>{
+    fn parse(self) -> Scale {
+        Scale(self.dinto())
+    }
+}
+
+impl DslInto<Scale> for i32 {
+    fn dinto(self) -> Scale {
+        Scale(Vec2::splat(self as f32))
+    }
+}
+
+impl DslInto<Scale> for f32 {
+    fn dinto(self) -> Scale {
+        Scale(Vec2::splat(self))
+    }
+}
+
+/// Construct a [`Size`](crate::Size) through CSS like syntax.
 #[macro_export]
 macro_rules! size {
     (infer) => {
@@ -426,7 +405,7 @@ macro_rules! size {
 
 
 /// Construct a [`Size2`](crate::Size2) through CSS like syntax.
-/// 
+///
 /// # Examples
 /// ```
 /// # use bevy_aoui::size2;
@@ -449,9 +428,9 @@ macro_rules! size {
 /// // or expressed as
 /// size2!(1 - [4.5, 6.6] px);
 /// ```
-/// 
+///
 /// # Note
-/// 
+///
 /// * `1px` is not valid rust syntax, always use `1 px`.
 #[macro_export]
 macro_rules! size2 {
@@ -505,8 +484,14 @@ impl WidgetWrite for InputBox {
     }
 }
 
+impl WidgetWrite for TextFragment {
+    fn write(&mut self, s: String) {
+        self.text = s
+    }
+}
+
 /// Write to a text widget component using `format!` syntax.
-/// 
+///
 /// The component must implement [`WidgetWrite`].
 #[macro_export]
 macro_rules! format_widget {

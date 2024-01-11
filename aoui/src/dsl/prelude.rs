@@ -6,7 +6,6 @@ pub use crate::{color, colors, gradient, transition, size2, markers};
 pub use crate::format_widget;
 pub use super::DslInto;
 pub use super::util::*;
-pub use super::util::DslHitbox::*;
 pub use super::util::AouiSpacialConsts::*;
 pub use super::AouiCommands;
 pub use bevy::prelude::BuildChildren;
@@ -14,7 +13,7 @@ pub use std::f32::consts::PI;
 pub const INFINITY: f32 = f32::INFINITY;
 pub const EPS: f32 = f32::EPSILON;
 pub use bevy::prelude::Color;
-pub use crate::{Transform2D, Dimension, Opacity, Detach, SizeUnit, Size2};
+pub use crate::{Transform2D, Hitbox, Dimension, Opacity, Detach, SizeUnit, Size2};
 pub use crate::layout::LayoutControl::{Linebreak, IgnoreLayout};
 pub use crate::anim::{Interpolate, Offset, Rotation, Scale, Index};
 pub use interpolation::EaseFunction;
@@ -36,7 +35,7 @@ pub use crate::events::{
     EvPositionFactor,
     Handlers, Handler, OneShot, Mutation
 };
-pub use crate::signals::{storage_signal, fps_channel, SignalSender, SignalReceiver};
+pub use crate::signals::{storage_signal, fps_signal, SignalSender, SignalReceiver};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::SharedPosition;
 pub use crate::widgets::button::{
@@ -66,7 +65,7 @@ pub const ScrollPosX: crate::widgets::scroll::Scrolling = crate::widgets::scroll
 pub const ScrollPosY: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::POS_Y;
 
 pub const ScrollBoth: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::BOTH;
-pub const Inherit: Anchor = Anchor::Inherit;
+pub const Inherit: Anchor = Anchor::INHERIT;
 
 pub use crate::widgets::inputbox::InputOverflow;
 pub use super::atlas::AtlasRectangles::Grid as AtlasGrid;
