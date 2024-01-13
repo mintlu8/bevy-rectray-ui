@@ -4,7 +4,7 @@ use crate::widgets::{scroll::IntoScrollingBuilder, clipping::ScopedCameraBundle}
 use super::{Widget, AouiCommands};
 
 widget_extension!(
-    /// A camera with its viewport bound to a sprite's `RotatedRect`.`
+    /// A camera with its viewport bound to a sprite's `RotatedRect`.
     pub struct CameraFrameBuilder {
         /// Render target of the camera.
         pub render_target: Option<Handle<Image>>,
@@ -65,24 +65,24 @@ impl<B: IntoScrollingBuilder> Widget for ScrollingFrameBuilder<B> {
 }
 
 
-/// Constructs a camera with its viewport bound to a sprite's `RotatedRect`.`
-/// 
+/// Constructs a camera with its viewport bound to a sprite's `RotatedRect`.
+///
 /// See [`CameraFrameBuilder`].
 #[macro_export]
 macro_rules! camera_frame {
-    {$commands: tt {$($tt:tt)*}} => 
+    {$commands: tt {$($tt:tt)*}} =>
         {$crate::meta_dsl!($commands [$crate::dsl::builders::CameraFrameBuilder] {$($tt)*})};
 }
 
 
 /// Constructs a layer that clips its inner content.
-/// 
+///
 /// See [`ScrollingFrameBuilder`].
-/// 
+///
 /// This spawns a camera, uses a new render layer
-/// and renders to a new render target. 
+/// and renders to a new render target.
 #[macro_export]
 macro_rules! scrolling {
-    {$commands: tt {$($tt:tt)*}} => 
+    {$commands: tt {$($tt:tt)*}} =>
         {$crate::meta_dsl!($commands [$crate::dsl::builders::ScrollingFrameBuilder] {$($tt)*})};
 }

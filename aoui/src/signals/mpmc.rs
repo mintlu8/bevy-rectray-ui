@@ -77,7 +77,7 @@ impl Clone for SignalMapper {
     }
 }
 
-
+/// A function that converts into a signal mapper.
 pub trait SignalMapperFn: Send + Sync + 'static {
     fn call(&self, obj: &mut Object);
     fn dyn_clone(&self) -> Box<dyn SignalMapperFn>;
@@ -93,6 +93,7 @@ impl<F> SignalMapperFn for F where F: Fn(&mut Object) + Clone + Send + Sync + 's
     }
 }
 
+/// A signal wrapper that can be turned into either a sender or a receiver.
 #[derive(Debug)]
 pub struct SignalBuilder<T: AsObject> {
     pub(super) signal: Signal,
@@ -115,9 +116,9 @@ impl<T: AsObject> SignalBuilder<T> {
     }
 
     pub fn send(self) -> SignalSender<T>{
-        SignalSender { 
-            signal: self.signal, 
-            map: SignalMapper::None, 
+        SignalSender {
+            signal: self.signal,
+            map: SignalMapper::None,
             p: PhantomData,
         }
     }
@@ -154,7 +155,7 @@ impl<T: AsObject> SignalBuilder<T> {
 }
 
 /// A signal sender, unlike receiver this is not a component.
-/// 
+///
 /// Use event handler instead.
 #[derive(Clone)]
 pub struct SignalSender<T: AsObject> {
@@ -182,16 +183,16 @@ impl<T: AsObject> SignalSender<T> {
 
     /// Create a new receiver of the underlying signal.
     pub fn new_receiver(&self) -> SignalBuilder<T> {
-        SignalBuilder { 
-            signal: self.signal.clone(), 
-            p: PhantomData 
+        SignalBuilder {
+            signal: self.signal.clone(),
+            p: PhantomData
         }
     }
 
     /// Try remove the underlying item if polled.
-    /// 
+    ///
     /// This simulates bevy's double buffered events.
-    /// 
+    ///
     /// Drop flag is updated every frame to achieve a 'double_buffered' effect.
     pub fn try_cleanup(&self, drop_flag: u8) {
         self.signal.try_clean(drop_flag);
@@ -205,9 +206,9 @@ impl<T: AsObject> SignalSender<T> {
 impl SignalSender<Object> {
     /// Create a new receiver of the underlying signal.
     pub fn specialize_receiver<T: AsObject>(&self) -> SignalBuilder<T> {
-        SignalBuilder { 
-            signal: self.signal.clone(), 
-            p: PhantomData 
+        SignalBuilder {
+            signal: self.signal.clone(),
+            p: PhantomData
         }
     }
 }

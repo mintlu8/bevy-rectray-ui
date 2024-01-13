@@ -34,10 +34,10 @@ pub enum AtlasRectangles {
 
 widget_extension!(pub struct AtlasBuilder {
     /// Either the atlas or the rectangle of the atlas.
-    /// 
+    ///
     /// # Accepts
-    /// 
-    /// * File name: `String` or `&str` 
+    ///
+    /// * File name: `String` or `&str`
     /// (requires an importer for `TextureAtlas`)
     /// * Handle: `Handle<TextureAtlas>`
     /// * Struct: `TextureAtlas`
@@ -47,9 +47,9 @@ widget_extension!(pub struct AtlasBuilder {
     /// * Unspecified: Builds a atlas with `sprites`
     pub atlas: AtlasRectangles,
     /// Sprites supporting the atlas
-    /// 
+    ///
     /// # Accepts
-    /// 
+    ///
     /// * File name: `String`
     /// * Handle: `Handle<Image>`
     /// * File names: `Vec<String>`
@@ -88,7 +88,7 @@ impl Widget for AtlasBuilder {
                 ));
             },
             AtlasRectangles::AtlasStruct(atlas) => {
-                let asset: Handle<TextureAtlas> = commands.add(atlas);
+                let asset: Handle<TextureAtlas> = commands.add_asset(atlas);
                 commands.entity(entity).insert((
                     asset,
                     sprite
@@ -133,7 +133,7 @@ impl Widget for AtlasBuilder {
                 };
                 let [x, y] = count;
                 let atlas = TextureAtlas::from_grid(image, size, y, x, self.atlas_padding, Some(offset));
-                let atlas = commands.add(atlas);
+                let atlas = commands.add_asset(atlas);
                 commands.entity(entity).insert((
                     sprite,
                     atlas,
@@ -147,10 +147,10 @@ impl Widget for AtlasBuilder {
                 };
                 commands.entity(entity).insert((
                     sprite,
-                    DeferredAtlasBuilder::Subdivide { 
+                    DeferredAtlasBuilder::Subdivide {
                         image,
                         padding: self.atlas_padding,
-                        count: slices, 
+                        count: slices,
                     },
                 ));
             }
@@ -306,7 +306,7 @@ impl DslFrom<UVec2> for AtlasRectangles {
 impl<const N: usize> DslFrom<[[i32; 4]; N]> for AtlasRectangles {
     fn dfrom(value: [[i32; 4]; N]) -> Self {
         AtlasRectangles::Rectangles(value.into_iter()
-            .map(|[x, y, w, h]| Rect { 
+            .map(|[x, y, w, h]| Rect {
                 min: Vec2::new(x as f32, y as f32),
                 max: Vec2::new((x + w) as f32, (y + h) as f32),
             })
@@ -318,8 +318,8 @@ impl<const N: usize> DslFrom<[[i32; 4]; N]> for AtlasRectangles {
 impl<const N: usize> DslFrom<[[f32; 4]; N]> for AtlasRectangles {
     fn dfrom(value: [[f32; 4]; N]) -> Self {
         AtlasRectangles::Rectangles(value.into_iter()
-            .map(|[x, y, w, h]| Rect { 
-                min: Vec2::new(x, y), 
+            .map(|[x, y, w, h]| Rect {
+                min: Vec2::new(x, y),
                 max: Vec2::new(x + w, y + h),
             })
             .collect()

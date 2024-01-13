@@ -9,9 +9,12 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/mintlu8/bevy-aoui"
 description = """
-A rectangular anchor-offset based 2D and UI solution for the bevy engine.
+A native rectangular anchor-offset based 2D and UI solution for the bevy engine.
 """
 keywords = ["bevy", "2d", "ui", "widgets"]
+
+[lib]
+doctest = false
 
 [dependencies]
 bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite", "bevy_text", "trace"] }
@@ -20,7 +23,7 @@ itertools = "^0.12"
 serde = { version = "^1", optional = true }
 ab_glyph = "^0.2.23"
 arboard = { version = "^3.2", default-features = false }
-colorthis = {version = "^0.1.1", features=["compact"]}
+colorthis = { version = "^0.1.1", features=["compact"] }
 substring = "^1.4"
 tlbf = "^0.3.3"
 interpolation = "^0.3"

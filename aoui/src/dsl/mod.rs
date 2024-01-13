@@ -1,5 +1,5 @@
 //! `bevy_aoui`'s DSL.
-//! 
+//!
 //! See the [main page](crate) for documentation.
 
 mod convert;
@@ -7,10 +7,11 @@ mod util;
 mod core;
 
 use std::iter::Copied;
+use std::sync::Arc;
 
 use bevy::hierarchy::DespawnRecursiveExt;
 use bevy::prelude::{Commands, Entity, BuildChildren, Bundle};
-use bevy::ecs::system::{SystemParam, Res, EntityCommands};
+use bevy::ecs::system::{SystemParam, Res, EntityCommands, Command};
 use bevy::asset::{AssetServer, Asset, Handle, AssetPath};
 use bevy::render::texture::Image;
 #[doc(hidden)]
@@ -26,10 +27,9 @@ mod converters;
 mod clipping;
 //mod rich_text;
 
-pub use converters::*;
 
-#[doc(hidden)]
 pub use util::{OneOrTwo, Scale, Aspect, WidgetWrite};
+pub use converters::{OptionEx, DslFromOptionEx, IntoAsset};
 #[doc(hidden)]
 pub use itertools::izip;
 
@@ -63,7 +63,7 @@ pub struct AouiCommands<'w, 's> {
 }
 
 /// A dynamic function that builds an entity.
-pub struct WidgetBuilder<T>(Box<dyn Fn(&mut AouiCommands, T) -> Entity + Send + Sync + 'static>);
+pub struct WidgetBuilder<T>(Arc<dyn Fn(&mut AouiCommands, T) -> Entity + Send + Sync + 'static>);
 
 impl<T> std::fmt::Debug for WidgetBuilder<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -71,7 +71,7 @@ impl<T> std::fmt::Debug for WidgetBuilder<T> {
     }
 }
 
-/// Trait for functions that are considered function builders.
+/// Trait for functions that can create an entity with an argument.
 pub trait IntoWidgetBuilder<T, const N: u8> {
     fn into_builder(self) -> impl Fn(&mut AouiCommands, T) -> Entity + Send + Sync + 'static;
 }
@@ -90,7 +90,7 @@ impl<F, T> IntoWidgetBuilder<T, 1> for F where F: Fn(&mut AouiCommands, T) -> En
 
 impl<T> WidgetBuilder<T> {
     pub fn new<const M: u8>(f: impl IntoWidgetBuilder<T, M>) -> Self {
-        Self(Box::new(f.into_builder()))
+        Self(Arc::new(f.into_builder()))
     }
 
     /// Build a widget entity with commands.
@@ -99,9 +99,10 @@ impl<T> WidgetBuilder<T> {
     }
 }
 
-/// A powerful auto convert function, uses `DslInto` as the normal backend
-/// while specializes for functions.
-#[doc(hidden)]
+/// The auto convert function for bevy_aoui's DSL,
+/// uses `DslInto` as the normal backend
+/// while specializes for functions
+/// and some other cases normally requiring specialization with a single trait.
 pub fn parse<A, B, const N: u8>(item: A) -> B where A: DslConvert<B, N> {
     item.parse()
 }
@@ -123,8 +124,13 @@ impl<'w, 's> AouiCommands<'w, 's> {
     }
 
     /// Add an [`Asset`].
-    pub fn add<T: Asset>(&self, item: T) -> Handle<T> {
+    pub fn add_asset<T: Asset>(&self, item: T) -> Handle<T> {
         self.assets().add(item)
+    }
+
+    /// Add a [`Command`].
+    pub fn add_command<T: Command>(&mut self, command: T) {
+        self.commands().add(command)
     }
 
     /// Load an [`Asset`] from an asset path.
@@ -166,7 +172,7 @@ impl<'w, 's> AouiCommands<'w, 's> {
         self.signals.shared_storage(name)
     }
 
-    /// Recursively despawn an entity, calls `despawn_recursive`. 
+    /// Recursively despawn an entity, calls `despawn_recursive`.
     pub fn despawn(&mut self, entity: Entity) {
         self.commands.entity(entity).despawn_recursive()
     }
@@ -221,6 +227,20 @@ impl IntoChildren<'static, 0> for Entity {
     }
 }
 
+impl IntoChildren<'static, 1> for Option<Entity> {
+    type Out = Option<Entity>;
+    fn into_entities(self) -> Self::Out {
+        self
+    }
+}
+
+impl<'t> IntoChildren<'t, 1> for Option<&'t Entity> {
+    type Out = Option<Entity>;
+    fn into_entities(self) -> Self::Out {
+        self.copied()
+    }
+}
+
 impl<'t, T> IntoChildren<'t, 2> for T where T: IntoIterator<Item = Entity> + 't, T::IntoIter: 't {
     type Out = T;
     fn into_entities(self) -> Self::Out {
@@ -241,7 +261,7 @@ pub fn into_children<'t, E: IntoChildren<'t, M>, const M:u8>(entity: E) -> E::Ou
 }
 
 /// Allow a struct to create many clones of itself as either
-/// itself T, an array `[T; N]` or a tuple `(T, T, T, ...)`.
+/// itself `T`, an array `[T; N]` or a tuple `(T, T, T, ...)`.
 pub trait CloneSplit<T: Clone> {
     fn clone_split(item: T) -> Self;
 }

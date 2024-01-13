@@ -50,7 +50,6 @@
 //! | Component | Description |
 //! | --------- | ----------- |
 //! | [`InputBox`](inputbox::InputBox) | Context of an `input_box`, holding the text and cursor information. |
-//! | [`TextColor`](inputbox::TextColor) | Color of an `input_box`. |
 //! | [`InputBoxText`](inputbox::InputBoxText) | Marker for a container of glyphs in an `input_box` |
 //! | [`InputBoxCursorBar`](inputbox::InputBoxCursorBar) | Bar for a cursor. |
 //! | [`InputBoxCursorArea`](inputbox::InputBoxCursorArea) | Area for a cursor. |
@@ -110,8 +109,11 @@ impl Plugin for WidgetsPlugin {
                 drag::drag_start,
                 drag::drag_end,
                 drag::dragging.after(drag::drag_start),
-                scroll::scrolling_system::<Scrolling>,
-                scroll::scrolling_system::<ScrollDiscrete>,
+                scroll::scrolling_senders,
+                (
+                    scroll::scrolling_system::<Scrolling>,
+                    scroll::scrolling_system::<ScrollDiscrete>,
+                ).after(scroll::scrolling_senders),
                 clipping::sync_camera_dimension,
             ).in_set(AouiWidgetEventSet))
             .add_systems(Update, (

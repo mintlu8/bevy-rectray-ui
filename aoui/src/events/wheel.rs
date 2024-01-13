@@ -16,10 +16,10 @@ pub struct ScrollScaling{
 
 impl Default for ScrollScaling {
     fn default() -> Self {
-        Self { 
+        Self {
             line_to_pixels: Vec2::new(16.0, 16.0),
             // Satisfies bevy's coordinate system
-            pixel_scale: Vec2::new(1.0, -1.0), 
+            pixel_scale: Vec2::new(1.0, -1.0),
         }
     }
 }
@@ -50,7 +50,7 @@ impl MovementUnits {
     };
 }
 
-pub fn mousewheel_event(
+pub(crate) fn mousewheel_event(
     mut commands: Commands,
     scaling: Res<ScrollScaling>,
     windows: Query<&Window, With<PrimaryWindow>>,
@@ -67,7 +67,7 @@ pub fn mousewheel_event(
             Err(_) => return,
         },
     };
-    let Ok(window) = windows.get_single() else { return };       
+    let Ok(window) = windows.get_single() else { return };
     let Some(mouse_pos) = window.cursor_position()
         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
         .map(|ray| ray.origin.truncate()) else {return;};
@@ -75,7 +75,7 @@ pub fn mousewheel_event(
         .filter(|(_, flags, active, hitbox)| flags.contains(EventFlags::MouseWheel) && active.is_active() && hitbox.contains(mouse_pos))
         .max_by(|(.., a), (.., b)| a.compare(b))
         .map(|(entity,..)| entity) {
-        
+
         let mut count = 0;
         for event in reader.read() {
             count += 1;

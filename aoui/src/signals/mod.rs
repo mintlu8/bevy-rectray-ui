@@ -57,7 +57,7 @@
 //! Keep this in mind if you try to read a signal in multiple places.
 //!
 //! Although usually typed, signals in fact holds a dynamic value
-//! [`Box<dyn DataTransfer>`](DataTransfer), and can be type erased.
+//! `Box<dyn DataTransfer>`, and can be type erased.
 //! When working with type erased signals, especially those emitted by buttons,
 //! invalid values will be **ignored**. It is better to keep this in mind.
 //!
@@ -82,13 +82,13 @@ mod mpmc;
 mod globals;
 mod signal;
 mod signal_pool;
+mod receiver;
 
 use bevy::{app::{Plugin, Update, PreUpdate, Last}, ecs::schedule::IntoSystemConfigs};
 pub use globals::*;
 pub use dto::{Object, AsObject};
 pub use mpmc::*;
 pub use receiver::*;
-pub mod receiver;
 pub(crate) use signal::Signal;
 
 use crate::{schedule::{AouiEventSet, AouiCleanupSet}, dsl::CloneSplit};

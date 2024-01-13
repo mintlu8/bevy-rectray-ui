@@ -10,6 +10,7 @@ pub use toggle::MToggleBuilder;
 pub use frame::{MFrameBuilder, MWindowBuilder, Divider};
 pub use slider::MSliderBuilder;
 pub use input::MInputBuilder;
+pub use dropdown::{MMenuBuilder, MenuItem};
 
 pub(crate) use button::cursor_color_change;
 pub(crate) use toggle::{toggle_color_change, toggle_dial_change};

@@ -160,6 +160,7 @@ pub fn signal_receive<const S: u8>(
     })
 }
 
+/// Invoke a widget's behavior with an event.
 #[derive(Component)]
 pub struct Invoke<T: ReceiveInvoke>{
     signal: Signal,

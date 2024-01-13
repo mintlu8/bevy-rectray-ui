@@ -13,8 +13,7 @@ use crate::widget_extension;
 use crate::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxText};
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea};
 
-use super::{Widget, HandleOrString, AouiCommands};
-use super::converters::OptionX;
+use super::{Widget, AouiCommands, IntoAsset};
 
 #[doc(hidden)]
 #[macro_export]
@@ -30,7 +29,7 @@ macro_rules! inject_events {
 widget_extension!(
     pub struct InputBoxBuilder {
         pub text: String,
-        pub font: HandleOrString<Font>,
+        pub font: IntoAsset<Font>,
         pub color: Option<Color>,
         pub width: Option<Size>,
         pub text_area: Option<Entity>,
@@ -47,7 +46,7 @@ widget_extension!(
 impl Widget for InputBoxBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         inject_events!(self.event, EventFlags::Hover|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside);
-        let font = self.font.get(commands);
+        let font = commands.load_or_default(self.font);
 
         let mut entity = build_frame!(commands, self);
         entity.insert((
@@ -107,7 +106,7 @@ widget_extension!(
         /// Sends a signal whenever the button is clicked.
         pub on_click: Handlers<EvButtonClick>,
         /// If set, `submit` sends its contents.
-        pub payload: OptionX<Payload>,
+        pub payload: Option<Payload>,
     }
 );
 
@@ -126,7 +125,7 @@ impl Widget for ButtonBuilder {
         if !self.on_click.is_empty()  {
             entity.insert(self.on_click);
         }
-        if let OptionX::Some(payload) = self.payload  {
+        if let Some(payload) = self.payload  {
             entity.insert(payload);
         }
         (entity.id(), entity.id())
@@ -138,7 +137,7 @@ widget_extension!(
         /// Sets the CursorIcon when hovering this button, default is `Hand`
         pub cursor: Option<CursorIcon>,
         /// If set, `submit` sends its contents.
-        pub payload: OptionX<Payload>,
+        pub payload: Option<Payload>,
         /// Sends a signal whenever the button is clicked and its value is `true`.
         ///
         /// Like button, this sends either `()` or `Payload`.
@@ -168,7 +167,7 @@ impl Widget for CheckButtonBuilder {
         if !self.on_change.is_empty() {
             entity.insert(self.on_change);
         }
-        if let OptionX::Some(payload) = self.payload  {
+        if let Some(payload) = self.payload  {
             entity.insert(payload);
         }
         (entity.id(), entity.id())
@@ -184,7 +183,7 @@ widget_extension!(
         /// If true, behave like a `CheckButton` and set context to `None` if already checked.
         pub cancellable: bool,
         /// Discriminant for this button's value, must be comparable.
-        pub value: OptionX<Payload>,
+        pub value: Option<Payload>,
         /// Sends a signal whenever the button is clicked.
         pub on_click: Handlers<EvButtonClick>,
     }
@@ -229,7 +228,7 @@ impl Widget for RadioButtonBuilder {
 /// * Allow usage of `EvButtonClick` event. Which uses the button's [`Payload`].
 ///
 /// You can use [`Handlers`] to handle clicks
-/// and use [`DisplayIf`](crate::widgets::button::DisplayIf)
+/// and use [`DisplayIf`](crate::widgets::util::DisplayIf)
 /// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
 ///
 /// # Common Pitfall
@@ -261,7 +260,7 @@ macro_rules! button {
 /// * Allow usage of `EvButtonClick` event. Which uses the button's [`Payload`].
 ///
 /// You can use [`Handlers`] to handle clicks
-/// and use [`DisplayIf`](crate::widgets::button::DisplayIf)
+/// and use [`DisplayIf`](crate::widgets::util::DisplayIf)
 /// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
 ///
 /// # Common Pitfall
@@ -296,7 +295,7 @@ macro_rules! check_button {
 /// * Send payload value through `EvButtonClick`.
 ///
 /// You can use [`Handlers`] to handle clicks
-/// and use [`DisplayIf`](crate::widgets::button::DisplayIf)
+/// and use [`DisplayIf`](crate::widgets::util::DisplayIf)
 /// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
 ///
 /// # Common Pitfall

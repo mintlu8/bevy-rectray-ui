@@ -209,7 +209,7 @@ pub trait EventHandling: 'static {
 }
 
 /// Register a `type<T>` that can handle certain events.
-pub fn handle_event<T: EventQuery + Send + Sync + 'static> (
+pub(crate) fn handle_event<T: EventQuery + Send + Sync + 'static> (
     mut commands: Commands,
     query: Query<(Entity, &T::Component, &Handlers<T>)>,
 ) {
@@ -353,7 +353,7 @@ impl EventHandling for EvPositionFactor {
     fn new_context() -> Self::Context {}
 }
 
-pub fn obtain_focus_detection(
+pub(crate) fn obtain_focus_detection(
     mut commands: Commands,
     mut focused: Query<(Entity, &mut Handlers<EvObtainFocus>), With<CursorFocus>>,
     mut unfocused: Query<&mut Handlers<EvObtainFocus>, Without<CursorFocus>>,
@@ -369,7 +369,7 @@ pub fn obtain_focus_detection(
     }
 }
 
-pub fn lose_focus_detection(
+pub(crate) fn lose_focus_detection(
     mut commands: Commands,
     mut removed: RemovedComponents<CursorFocus>,
     actions: Query<(Entity, &Handlers<EvLoseFocus>), Without<CursorFocus>>,

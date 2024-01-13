@@ -1,5 +1,6 @@
 use bevy::{ecs::{system::{Resource, Commands, EntityCommands}, entity::Entity}, math::Vec2, input::mouse::MouseButton};
 
+/// Time threshold in seconds for double click.
 #[derive(Debug, Resource)]
 pub struct DoubleClickThreshold(f32);
 
@@ -37,15 +38,15 @@ pub struct CursorState{
 
 impl Default for CursorState {
     fn default() -> Self {
-        Self { 
-            last_lmb_down_time: [0.0, 0.0], 
-            cursor_pos: Vec2::ZERO, 
-            up_pos: Vec2::ZERO, 
-            down_pos: Vec2::ZERO, 
-            blocked: false, 
-            dragging: false, 
-            drag_button: MouseButton::Left, 
-            drag_target: None, 
+        Self {
+            last_lmb_down_time: [0.0, 0.0],
+            cursor_pos: Vec2::ZERO,
+            up_pos: Vec2::ZERO,
+            down_pos: Vec2::ZERO,
+            blocked: false,
+            dragging: false,
+            drag_button: MouseButton::Left,
+            drag_target: None,
             focused: None,
             caught: false,
             drag_dbl_click: false,
@@ -61,7 +62,7 @@ impl CursorState {
     }
 
     /// Call if some external system caught mouse events this frame before this.
-    /// 
+    ///
     /// Does not cancel dragging.
     pub fn block(&mut self) {
         if !self.dragging {
@@ -71,7 +72,7 @@ impl CursorState {
     }
 
     /// Call if some external system caught mouse events this frame before this.
-    /// 
+    ///
     /// Force dragging to end.
     pub fn block_force(&mut self) {
         self.last_lmb_down_time = [0.0, 0.0];
@@ -84,7 +85,7 @@ impl CursorState {
     pub fn cancel_drag(&mut self) {
         self.drag_target = None;
     }
-    
+
     /// Cancels dragging of the current entity, does not reset mouse state.
     pub fn clear_dbl_click(&mut self) {
         self.last_lmb_down_time = [0.0, 0.0];

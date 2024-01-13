@@ -1,3 +1,5 @@
+
+
 use bevy::math::Vec2;
 use bevy::text::Text;
 use crate::layout::Layout;
@@ -5,7 +7,6 @@ use crate::widgets::TextFragment;
 use crate::widgets::inputbox::InputBox;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit, Size};
 use crate::{Size2, FontSize, layout::Alignment, layout::LayoutDir};
-
 
 use super::DslFrom;
 use super::convert::{DslInto, DslConvert};
@@ -223,7 +224,7 @@ macro_rules! colors {
     };
 }
 
-/// Color construction macro, see [`colorthis`]. This constructs a vector4.
+/// Construct a list of colors used with interpolation.
 #[macro_export]
 macro_rules! gradient {
     [$(($color: tt, $frac: expr)),* $(,)?] => {
@@ -246,24 +247,24 @@ pub fn angle(f: impl DslInto<Vec2>) -> f32{
     f32::atan2(v.y, v.x)
 }
 
-/// Set font size by `px`.
+/// One dimensional size by `px`.
 pub fn px(f: impl DslInto<f32>) -> Size {
     Size::new(SizeUnit::Pixels, f.dinto())
 }
 
-/// Set font size by `em`.
+/// One dimensional size by `em`.
 pub fn em(f: impl DslInto<f32>) -> Size {
     Size::new(SizeUnit::Em, f.dinto())
 }
 
-/// Set font size by `rem`.
+/// One dimensional size by `rem`.
 pub fn rem(f: impl DslInto<f32>) -> Size {
     Size::new(SizeUnit::Rem, f.dinto())
 }
 
-/// Set font size by `%`.
+/// One dimensional size by `%`.
 ///
-/// Provide values like `40`, not `0.4`.
+/// Use values like `40`, not `0.4`.
 pub fn percent(f: impl DslInto<f32>) -> Size {
     Size::new(SizeUnit::Percent, f.dinto() / 100.0)
 }
@@ -320,7 +321,7 @@ impl DslInto<OneOrTwo<Size2>> for Size {
     }
 }
 
-/// A `OneOrTwo<Vec2>` with default value 1.
+/// A `OneOrTwo<Vec2>` with default value `1`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Scale(pub Vec2);
 impl Default for Scale{
@@ -466,6 +467,7 @@ macro_rules! size2 {
     };
 }
 
+/// Format trait for a widget.
 pub trait WidgetWrite {
     fn write(&mut self, s: String);
 }

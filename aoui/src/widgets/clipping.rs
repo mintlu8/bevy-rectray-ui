@@ -107,7 +107,7 @@ impl ScopedCameraBundle {
     }
 }
 
-pub fn sync_camera_dimension(
+pub(crate) fn sync_camera_dimension(
     mut query: Query<(&DimensionData, &mut OrthographicProjection), With<CameraClip>>,
 ) {
     for (dimension, mut proj) in query.iter_mut() {

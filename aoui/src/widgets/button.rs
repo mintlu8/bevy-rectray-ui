@@ -27,7 +27,7 @@ pub enum CheckButton {
 }
 
 /// State of a CheckButton or a RadioButton,
-/// this propagates to children and can be used in [`DisplayIf`]
+/// this propagates to children and can be used in [`DisplayIf`](super::util::DisplayIf)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
 pub enum CheckButtonState {
     Unchecked,
@@ -128,7 +128,7 @@ impl PartialEq<Payload> for RadioButton {
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct RadioButtonCancel;
 
-pub fn button_on_click(
+pub(crate) fn button_on_click(
     mut commands: Commands,
     query: Query<(Entity, &CursorAction, &Handlers<EvButtonClick>, Option<&Payload>), With<Button>>,
 ) {
@@ -145,7 +145,7 @@ pub fn button_on_click(
     }
 }
 
-pub fn check_button_on_click(
+pub(crate) fn check_button_on_click(
     mut commands: Commands,
     mut query: Query<(Entity, &CursorAction, &mut CheckButton,
         Option<&Handlers<EvToggleChange>>,
@@ -175,7 +175,7 @@ pub fn check_button_on_click(
     }
 }
 
-pub fn radio_button_on_click(
+pub(crate) fn radio_button_on_click(
     mut commands: Commands,
     mut query: Query<(
         Entity,
@@ -204,7 +204,7 @@ pub fn radio_button_on_click(
     }
 }
 
-pub fn generate_check_button_state(
+pub(crate) fn generate_check_button_state(
     mut commands: Commands,
     query1: Query<(Entity, &CheckButton)>,
     query2: Query<(Entity, &RadioButton, &Payload)>,

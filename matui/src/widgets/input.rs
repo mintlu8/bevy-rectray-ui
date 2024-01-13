@@ -13,8 +13,7 @@ use bevy_aoui::{size, widget_extension, build_frame};
 use bevy_aoui::anim::{Interpolate, Easing};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvTextChange, EvTextSubmit};
 use bevy_aoui::widgets::util::DisplayIf;
-use bevy_aoui::dsl::{Widget, mesh_rectangle, AouiCommands, DslInto};
-use bevy_aoui::dsl::HandleOrString;
+use bevy_aoui::dsl::{Widget, mesh_rectangle, AouiCommands, DslInto, IntoAsset};
 use crate::shapes::{RoundedRectangleMaterial, StrokeColor};
 
 use super::util::{StrokeColors, WidgetPalette};
@@ -87,7 +86,7 @@ widget_extension!(
         pub text: String,
         /// Width of text, in em.
         pub width: f32,
-        pub font: HandleOrString<Font>,
+        pub font: IntoAsset<Font>,
         pub radius: f32,
         pub on_change: Handlers<EvTextChange>,
         pub on_submit: Handlers<EvTextSubmit>,
@@ -111,7 +110,7 @@ impl Widget for MInputBuilder {
         let focus_style = self.focus_palette.unwrap_or(style);
         let disabled_style = self.disabled_palette.unwrap_or(style);
 
-        let rect = commands.add(
+        let rect = commands.add_asset(
             RoundedRectangleMaterial::new(style.background,
                 if self.bottom_bar.is_some() {
                     [0.0, 0.0, self.radius, self.radius]
@@ -120,7 +119,7 @@ impl Widget for MInputBuilder {
                 }
             )
         );
-        let mesh = commands.add(mesh_rectangle());
+        let mesh = commands.add_asset(mesh_rectangle());
         let frame = build_frame!(commands, self).id();
         let input_box = inputbox!(commands {
             color: style.foreground,
@@ -165,7 +164,7 @@ impl Widget for MInputBuilder {
                 anchor: Anchor::CENTER_LEFT,
                 extra: InputBoxText,
                 extra: TextFragment::new(self.text)
-                    .with_font(self.font.clone().get(commands))
+                    .with_font(commands.load_or_default(self.font.clone()))
                     .with_color(style.foreground)
             }
         });

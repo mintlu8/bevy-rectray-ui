@@ -7,14 +7,14 @@ use bevy::{render::texture::Image, window::CursorIcon, ecs::entity::Entity};
 use bevy_aoui::signals::SignalSender;
 use bevy_aoui::widgets::drag::Dragging;
 use bevy_aoui::RotatedRect;
-use bevy_aoui::dsl::{Widget, AouiCommands};
-use bevy_aoui::{widget_extension, build_frame, material_sprite, layout::Axis, events::EvPositionFactor, Anchor, dsl::HandleOrString};
+use bevy_aoui::dsl::{Widget, AouiCommands, OptionEx, IntoAsset};
+use bevy_aoui::{widget_extension, build_frame, material_sprite, layout::Axis, events::EvPositionFactor, Anchor};
 use bevy_aoui::events::{Handlers, CursorState};
 
 use crate::shapes::RoundedRectangleMaterial;
 use crate::widgets::button::CursorStateColors;
 
-use super::{util::{OptionM, ShadowInfo}, toggle::DialPalette};
+use super::{util::ShadowInfo, toggle::DialPalette};
 
 #[derive(Debug, Clone, Component)]
 pub struct SliderRebase(SignalSender<Vec2>);
@@ -51,18 +51,18 @@ widget_extension!(
 
         pub thickness: Option<f32>,
         pub background_size: Option<f32>,
-        pub background_texture: HandleOrString<Image>,
+        pub background_texture: IntoAsset<Image>,
         pub background_stroke: f32,
 
         /// Size of the dial, default is 1.4 em.
         pub dial_size: Option<f32>,
-        pub dial_texture: HandleOrString<Image>,
+        pub dial_texture: IntoAsset<Image>,
         pub dial_stroke: f32,
 
         /// Shadow for background.
-        pub background_shadow: OptionM<ShadowInfo>,
+        pub background_shadow: OptionEx<ShadowInfo>,
         /// Shadow for the dial.
-        pub dial_shadow: OptionM<ShadowInfo>,
+        pub dial_shadow: OptionEx<ShadowInfo>,
     }
 );
 
@@ -124,7 +124,7 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
                 extra: transition!(Color 0.2 CubicInOut default {palette.dial}),
             }
         });
-        if let OptionM::Some(shadow) = self.background_shadow {
+        if let OptionEx::Some(shadow) = self.background_shadow {
             let shadow = shadow.build_capsule(commands);
             commands.entity(background).add_child(shadow);
         }
@@ -165,11 +165,11 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
                 }
             },
         });
-        if let OptionM::Some(shadow) = self.background_shadow {
+        if let OptionEx::Some(shadow) = self.background_shadow {
             let shadow = shadow.build_capsule(commands);
             commands.entity(background).add_child(shadow);
         }
-        if let OptionM::Some(shadow) = self.dial_shadow {
+        if let OptionEx::Some(shadow) = self.dial_shadow {
             let shadow = shadow.build_capsule(commands);
             commands.entity(dial).add_child(shadow);
         }

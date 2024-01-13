@@ -1,6 +1,6 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::{AouiPlugin, WorldExtension, dsl::AouiCommands};
-use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, widgets::{util::WidgetPalette, toggle::DialPalette, frame::FramePalette}, palette, mwindow, mslider, minput};
+use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, widgets::{util::WidgetPalette, toggle::DialPalette, frame::FramePalette}, palette, mwindow, mslider, minput, mmenu, menu_items};
 use bevy_aoui::layout::BoundsLayout;
 pub fn main() {
     App::new()
@@ -164,7 +164,20 @@ pub fn init(mut commands: AouiCommands) {
             width: 20,
             radius: 5,
             palette: palette_idle,
-        }
+        },
+        child: mmenu! {
+            palette: palette!(FramePalette {
+                background: blue,
+                stroke: green,
+            }),
+            hover_palette: palette!(FramePalette {
+                background: blue,
+                stroke: green,
+            }),
+            items: menu_items!(
+                "Hello", "Hi", |, "Good Bye"
+            ),
+        },
     });
 
     mbutton!(commands{

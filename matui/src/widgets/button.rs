@@ -12,12 +12,10 @@ use bevy_aoui::anim::{Interpolate, Easing};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvButtonClick};
 use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
 use bevy_aoui::widgets::button::{Button, Payload};
-use bevy_aoui::dsl::{Widget, mesh_rectangle, AouiCommands};
-use bevy_aoui::dsl::HandleOrString;
-use bevy_aoui::dsl::OptionX;
+use bevy_aoui::dsl::{Widget, mesh_rectangle, AouiCommands, OptionEx, IntoAsset};
 use crate::shapes::{RoundedRectangleMaterial, StrokeColor};
 
-use super::util::{OptionM, ShadowInfo, StrokeColors, WidgetPalette};
+use super::util::{ShadowInfo, StrokeColors, WidgetPalette};
 
 /// A simple state machine that changes depending on status.
 #[derive(Debug, Component, Clone, Copy)]
@@ -76,24 +74,24 @@ pub struct ColorOnClick;
 widget_extension!(
     pub struct MButtonBuilder {
         pub cursor: Option<CursorIcon>,
-        pub sprite: Option<HandleOrString<Image>>,
+        pub sprite: Option<IntoAsset<Image>>,
         /// This will set `color_pressed` if its not set
         pub palette: WidgetPalette,
         pub palette_hover: Option<WidgetPalette>,
         pub palette_pressed: Option<WidgetPalette>,
         pub palette_disabled: Option<WidgetPalette>,
         pub text: Option<String>,
-        pub font: HandleOrString<Font>,
-        pub texture: HandleOrString<Image>,
-        pub icon: HandleOrString<Image>,
-        pub icon_hover: HandleOrString<Image>,
-        pub icon_pressed: HandleOrString<Image>,
+        pub font: IntoAsset<Font>,
+        pub texture: IntoAsset<Image>,
+        pub icon: IntoAsset<Image>,
+        pub icon_hover: IntoAsset<Image>,
+        pub icon_pressed: IntoAsset<Image>,
         pub stroke: f32,
         pub signal: Handlers<EvButtonClick>,
-        pub payload: OptionX<Payload>,
+        pub payload: Option<Payload>,
         pub capsule: bool,
         pub radius: f32,
-        pub shadow: OptionM<ShadowInfo>,
+        pub shadow: OptionEx<ShadowInfo>,
     }
 );
 
@@ -150,11 +148,11 @@ impl Widget for MButtonBuilder {
         if !self.signal.is_empty() {
             frame.insert(self.signal);
         }
-        if let OptionX::Some(payload) = self.payload  {
+        if let Option::Some(payload) = self.payload  {
             frame.insert(payload);
         };
         let frame = frame.id();
-        if let Some(icon) = self.icon.try_get(commands) {
+        if let Some(icon) = commands.try_load(self.icon) {
             let child = sprite!(commands{
                 sprite: icon,
                 z: 0.01,
@@ -182,7 +180,7 @@ impl Widget for MButtonBuilder {
             let child = text!(commands{
                 text: text,
                 z: 0.01,
-                font: self.font.get(commands),
+                font: commands.load_or_default(self.font),
                 extra: CursorStateColors {
                     idle: style.foreground,
                     hover: hover.foreground,
@@ -203,38 +201,38 @@ impl Widget for MButtonBuilder {
 
         match (self.capsule, self.radius) {
             (true, ..) => {
-                let mat = commands.add(if let Some(im) = self.texture.try_get(commands) {
+                let mat = commands.add_asset(if let Some(im) = commands.try_load(self.texture) {
                     RoundedRectangleMaterial::capsule_image(im, style.background)
                 } else {
                     RoundedRectangleMaterial::capsule(style.background)
                 }.with_stroke((self.stroke, self.palette.stroke)));
-                let rect = commands.add(mesh_rectangle());
+                let rect = commands.add_asset(mesh_rectangle());
                 commands.entity(frame).insert((
                     mat,
                     Mesh2dHandle(rect),
                     GlobalTransform::IDENTITY,
                     BuildMeshTransform,
                 ));
-                if let OptionM::Some(shadow) = self.shadow {
+                if let OptionEx::Some(shadow) = self.shadow {
                     let shadow = shadow.build_capsule(commands);
                     commands.entity(frame).add_child(shadow);
                 }
                 (frame, frame)
             },
             (_, radius, ..) => {
-                let mat = commands.add(if let Some(im) = self.texture.try_get(commands) {
+                let mat = commands.add_asset(if let Some(im) = commands.try_load(self.texture) {
                     RoundedRectangleMaterial::from_image(im, style.background, radius)
                 } else {
                     RoundedRectangleMaterial::new(style.background, radius)
                 }.with_stroke((self.stroke, self.palette.stroke)));
-                let rect = commands.add(mesh_rectangle());
+                let rect = commands.add_asset(mesh_rectangle());
                 commands.entity(frame).insert((
                     mat,
                     Mesh2dHandle(rect),
                     GlobalTransform::IDENTITY,
                     BuildMeshTransform,
                 ));
-                if let OptionM::Some(shadow) = self.shadow {
+                if let OptionEx::Some(shadow) = self.shadow {
                     let shadow = shadow.build_rect(commands, radius);
                     commands.entity(frame).add_child(shadow);
                 }

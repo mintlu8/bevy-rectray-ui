@@ -24,7 +24,7 @@
 //! They should be safe to use during `Update` and `PostUpdate`.
 //!
 //! * `CursorFocus`: Stores a persistent state like `Hover` or `Pressed`.
-//! The [`DisplayIf`](crate::widgets::button::DisplayIf)
+//! The [`DisplayIf`](crate::widgets::util::DisplayIf)
 //! component can be used to change visibility status based on [`CursorFocus`]
 //!
 //! * `CursorAction`: Stores a single frame event like `Click` or `Down`.
@@ -48,7 +48,6 @@
 //! * Run a [one-shot system](OneShot).
 //! * [Mutate](Mutation) components associated with the entity.
 //! * Send a signal.
-//! * Write signal input to a [`KeyStorage`](crate::signals::KeyStorage).
 //!
 //! # What about Keyboard Events or Joysticks?
 //!

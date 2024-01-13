@@ -17,8 +17,7 @@ use bevy_aoui::{material_sprite, Hitbox, Size2, Opacity, transition, Dimension, 
 use bevy_aoui::widgets::drag::{Dragging, DragConstraint};
 use bevy_aoui::{frame, widget_extension, build_frame, size2, layout::StackLayout};
 use bevy_aoui::events::{EventFlags, Handlers, EvMouseDrag, Fetch, Evaluated};
-use bevy_aoui::dsl::{Widget, AouiCommands, mesh_rectangle};
-use bevy_aoui::dsl::HandleOrString;
+use bevy_aoui::dsl::{Widget, AouiCommands, mesh_rectangle, OptionEx, IntoAsset};
 use crate::shapes::RoundedRectangleMaterial;
 
 #[derive(Debug, Default)]
@@ -57,7 +56,7 @@ impl Widget for Divider {
 }
 
 #[macro_export]
-macro_rules! divider {
+macro_rules! mdivider {
     ($ctx: tt {$($tt: tt)*}) => {
         $crate::aoui::meta_dsl!($ctx [$crate::widgets::Divider] {
             $($tt)*
@@ -78,12 +77,12 @@ pub struct FramePalette {
     pub stroke: Color,
 }
 
-use super::util::{OptionM, ShadowInfo};
+use super::util::ShadowInfo;
 
 
 widget_extension!(
     pub struct MFrameBuilder {
-        pub shadow: OptionM<ShadowInfo>,
+        pub shadow: OptionEx<ShadowInfo>,
         pub palette: FramePalette,
         pub stroke: f32,
         pub radius: f32,
@@ -97,8 +96,8 @@ impl Widget for MFrameBuilder {
             self.layout = Some(Box::new(BoundsLayout::PADDING));
         }
         self.event = Some(EventFlags::BlockAll);
-        let mesh = commands.add(mesh_rectangle());
-        let material = commands.add(
+        let mesh = commands.add_asset(mesh_rectangle());
+        let material = commands.add_asset(
             RoundedRectangleMaterial::new(self.palette.background, self.radius)
                 .with_stroke((self.palette.stroke, self.stroke)));
         let mut frame = build_frame!(commands, self);
@@ -108,7 +107,7 @@ impl Widget for MFrameBuilder {
             GlobalTransform::IDENTITY,
             BuildMeshTransform,
         )).id();
-        if let OptionM::Some(shadow) = self.shadow {
+        if let OptionEx::Some(shadow) = self.shadow {
             let shadow = shadow.build_rect(commands, self.radius);
             commands.entity(id).add_child(shadow);
         }
@@ -120,16 +119,16 @@ impl Widget for MFrameBuilder {
 widget_extension!(
     pub struct MWindowBuilder {
         pub cursor: Option<CursorIcon>,
-        pub sprite: Option<HandleOrString<Image>>,
+        pub sprite: Option<IntoAsset<Image>>,
         /// This will set `color_pressed` if its not set
         pub palette: FramePalette,
-        pub texture: HandleOrString<Image>,
-        pub banner_texture: HandleOrString<Image>,
+        pub texture: IntoAsset<Image>,
+        pub banner_texture: IntoAsset<Image>,
         pub collapse: Option<SignalBuilder<bool>>,
         pub stroke: f32,
         pub banner_stroke: f32,
         pub radius: f32,
-        pub shadow: OptionM<ShadowInfo>,
+        pub shadow: OptionEx<ShadowInfo>,
         pub banner: Option<Entity>,
         pub window_margin: Option<Vec2>,
     }
@@ -147,7 +146,7 @@ impl Widget for MWindowBuilder {
         let frame = build_frame!(commands, self);
         let style = self.palette;
         let frame = frame.id();
-        let mat = if let Some(im) = self.texture.try_get(commands) {
+        let mat = if let Some(im) = commands.try_load(self.texture) {
             RoundedRectangleMaterial::from_image(im, style.background, self.radius)
         } else {
             RoundedRectangleMaterial::new(style.background, self.radius)
@@ -188,7 +187,7 @@ impl Widget for MWindowBuilder {
                 Handlers::<Fetch<Evaluated<Padding>>>::new(padding_send)
             ));
         }
-        if let OptionM::Some(shadow) = self.shadow {
+        if let OptionEx::Some(shadow) = self.shadow {
             let shadow = shadow.build_rect(commands, self.radius);
             commands.entity(background).add_child(shadow);
         }
@@ -205,7 +204,7 @@ impl Widget for MWindowBuilder {
             ));
             commands.entity(frame).add_child(banner);
 
-            let divider = divider!(commands{
+            let divider = mdivider!(commands{
                 inset: 10,
                 axis: Axis::Horizontal,
                 color: self.palette.stroke,

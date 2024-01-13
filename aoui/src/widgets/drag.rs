@@ -13,22 +13,22 @@ use super::{SharedPosition, constraints::PositionChanged};
 pub use super::constraints::DragConstraint;
 
 
-/// A component that enables dragging and dropping. 
+/// A component that enables dragging and dropping.
 /// By default the sprite can be dragged anywhere with no restriction.
-/// 
+///
 /// This works with all mouse buttons as long as
 /// you add the corresponding `EventFlags`.
-/// 
+///
 /// # Supporting components
-/// 
+///
 /// * [`EventFlags`]: Requires `Drag` to be set.
 /// * [`DragConstraint`]: If specified, the sprite cannot go over bounds of its parent.
 /// * [`DragSnapBack`]: Move the sprite back to its original position when dropped.
 /// * [`Handlers<EvMouseDrag>`]: A signal that transfers the `being dragged` status onto another entity.
-/// * [`Receiver<SigDrag>`]: 
+/// * [`Invoke<SigDrag>`]:
 ///     Receives `EvMouseDrag` on a draggable sprite with no event listener.
 ///     This is useful for creating a small draggable area, like a banner.
-/// * [`SharedPosition`]: Shares relative position in its parent's bounds with another widget. 
+/// * [`SharedPosition`]: Shares relative position in its parent's bounds with another widget.
 ///     For example synchronizing scrollbar with a textbox.
 /// * [`Handlers<EvPositionFac>`]: A signal that sends a value in `0..=1` in its constraints when being dragged.
 
@@ -40,17 +40,17 @@ pub struct Dragging {
 }
 
 impl Dragging {
-    pub const X: Self = Self { 
+    pub const X: Self = Self {
         x: true,
         y: false,
         drag_start: Vec2::ZERO
     };
-    pub const Y: Self = Self { 
+    pub const Y: Self = Self {
         x: false,
         y: true,
         drag_start: Vec2::ZERO
     };
-    pub const BOTH: Self = Self { 
+    pub const BOTH: Self = Self {
         x: true,
         y: true,
         drag_start: Vec2::ZERO
@@ -69,7 +69,7 @@ impl Default for Dragging {
     }
 }
 
-/// Component that moves the sprite back to its original position if dropped. 
+/// Component that moves the sprite back to its original position if dropped.
 #[derive(Debug, Clone, Copy, Component, Default)]
 pub struct DragSnapBack {
     drag_start: Option<Vec2>,
@@ -84,7 +84,7 @@ impl DragSnapBack {
 }
 
 
-pub fn drag_start(
+pub(crate) fn drag_start(
     mut commands: Commands,
     send: Query<(Entity, &CursorAction, &Handlers<EvMouseDrag>), Without<Dragging>>,
     mut receive: Query<(&Invoke<Dragging>, &mut Dragging, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
@@ -119,7 +119,7 @@ pub fn drag_start(
                 drag.set(pixels);
                 if let Some(snap) = &mut snap {
                     snap.set(transform.take());
-                    
+
                 }
             },
             None => panic!("Draggable sprites must have pixel units."),
@@ -140,7 +140,7 @@ impl ReceiveInvoke for Dragging {
     type Type = DragState;
 }
 
-pub fn dragging(
+pub(crate) fn dragging(
     mut commands: Commands,
     state: Res<CursorState>,
     send: Query<(Entity, &CursorFocus, &Handlers<EvMouseDrag>), Without<Dragging>>,
@@ -170,8 +170,8 @@ pub fn dragging(
         if !(drag.x || drag.y) { continue; }
         let pos = drag.last_drag_start() + {
             Vec2::new(
-                if drag.x {delta.x} else {0.0}, 
-                if drag.y {delta.y} else {0.0}, 
+                if drag.x {delta.x} else {0.0},
+                if drag.y {delta.y} else {0.0},
             )
         };
         transform.force_set(pos);
@@ -181,7 +181,7 @@ pub fn dragging(
 
 
 
-pub fn drag_end(
+pub(crate) fn drag_end(
     mut commands: Commands,
     send: Query<(Entity, &CursorAction, &Handlers<EvMouseDrag>), Without<Dragging>>,
     mut receive: Query<(&mut DragSnapBack, Attr<Transform2D, Offset>, &Invoke<Dragging>), Without<CursorAction>>,
@@ -194,7 +194,7 @@ pub fn drag_end(
         }
         send.handle(&mut commands, DragState::End);
     }
-    
+
     let iter = query.iter_mut()
         .filter_map(|(action, drag, transform)| {
             if action.intersects(EventFlags::DragEnd) {
@@ -224,7 +224,7 @@ pub trait IntoDraggingBuilder: Bundle + Default {
     fn with_constraints(self) -> impl IntoDraggingBuilder {
         (self, DragConstraint)
     }
-    
+
     fn with_snap_back(self) -> impl IntoDraggingBuilder {
         (DragSnapBack::DEFAULT, self)
     }
@@ -249,8 +249,8 @@ pub trait IntoDraggingBuilder: Bundle + Default {
 impl IntoDraggingBuilder for Dragging {}
 
 impl<T> IntoDraggingBuilder for (DragSnapBack, T) where T: IntoDraggingBuilder {
-    fn with_constraints(self) -> impl IntoDraggingBuilder { 
-        (self.0, T::with_constraints(self.1)) 
+    fn with_constraints(self) -> impl IntoDraggingBuilder {
+        (self.0, T::with_constraints(self.1))
     }
 }
 

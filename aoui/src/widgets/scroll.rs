@@ -35,7 +35,7 @@ use super::constraints::{SharedPosition, PositionChanged};
 /// * [`Handlers<EvMouseWheel>`]:
 ///     A signal that transfers the `being scrolled` status onto another entity.
 ///     This will trigger if either scrolled to the end or not scrollable to begin with.
-/// * [`Receiver<SigScroll>`]:
+/// * [`Invoke<SigScroll>`]:
 ///     Receives `EvMouseWheel` on another scrollable sprite.
 /// * [`SharedPosition`]: Shares relative position in its parent's bounds with another widget.
 ///     For example synchronizing a scrollbar with a textbox.
@@ -112,7 +112,7 @@ impl ReceiveInvoke for Scrolling {
     type Type = MovementUnits;
 }
 
-pub fn scrolling_senders(
+pub(crate) fn scrolling_senders(
     mut commands: Commands,
     sender: Query<(Entity, &MouseWheelAction, &Handlers<EvMouseWheel>), Without<MouseWheelAction>>,
 ) {
@@ -121,7 +121,7 @@ pub fn scrolling_senders(
     }
 }
 
-pub fn scrolling_system<'t, T: Movement>(
+pub(crate) fn scrolling_system<'t, T: Movement>(
     mut fetched: T::Ctx<'_, '_>,
     mut scroll: Query<(T::Query<'t>, &MouseWheelAction)>,
     mut receiver: Query<(T::Query<'t>, &Invoke<Scrolling>), Without<MouseWheelAction>>,
@@ -239,6 +239,7 @@ pub enum ScrollUV {
 //     }
 // }
 
+/// Builder trait for a scrollable widget.
 pub trait IntoScrollingBuilder: Bundle + Default {
 
     fn with_constraints(self) -> impl IntoScrollingBuilder {

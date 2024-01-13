@@ -1,208 +1,150 @@
-use std::borrow::Cow;
 use bevy::asset::{Asset, Handle};
 use crate::{widgets::button::Payload, signals::AsObject};
-use super::{DslFrom, DslInto, AouiCommands};
+use super::{AouiCommands, convert::DslConvert};
+
 
 /// Extended `Option` for the DSL.
 ///
-/// Since we basically cannot extend `Option<T>`'s features
-/// due to a blanket impl, this provides specific implementation
-/// for a nullable struct.
-#[derive(Debug, Default)]
-pub enum OptionX<T> {
+/// Since dependants of this crate cannot implemnt `DslFrom` on `Option<T>` with foreigh types,
+/// [`DslFromOptionEx`](super::DslFromOptionEx) can be used to make conversion to OptionX.
+///
+/// Using a crate local option type also works here.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum OptionEx<T> {
     Some(T),
     #[default]
     None,
 }
 
-impl<T> OptionX<T> {
+impl<T> OptionEx<T> {
     pub fn expect(self, s: &str) -> T {
         match self {
-            OptionX::Some(v) => v,
-            OptionX::None => panic!("{}", s),
+            OptionEx::Some(v) => v,
+            OptionEx::None => panic!("{}", s),
         }
     }
 
     pub fn unwrap_or(self, or: T) -> T {
         match self {
-            OptionX::Some(v) => v,
-            OptionX::None => or,
+            OptionEx::Some(v) => v,
+            OptionEx::None => or,
         }
     }
 
     pub fn unwrap_or_else(self, or: impl FnOnce() -> T) -> T {
         match self {
-            OptionX::Some(v) => v,
-            OptionX::None => or(),
+            OptionEx::Some(v) => v,
+            OptionEx::None => or(),
+        }
+    }
+
+    pub fn into_option(self) -> Option<T> {
+        match self {
+            OptionEx::Some(x) => Some(x),
+            OptionEx::None => None,
         }
     }
 }
 
-impl<T: AsObject> DslFrom<T> for OptionX<Payload> {
-    fn dfrom(value: T) -> Self {
-        OptionX::Some(Payload::new(value))
+/// For downstream crates,
+/// implement this for specialized `Option` conversion with [`OptionEx`].
+///
+/// Enables conversion from `T` to [`OptionEx<Self>`].
+pub trait DslFromOptionEx<T> {
+    fn dfrom_option(value: T) -> Self;
+}
+
+impl<T, U> DslConvert<OptionEx<U>, 5> for T where U: DslFromOptionEx<T> {
+    fn parse(self) -> OptionEx<U> {
+        OptionEx::Some(U::dfrom_option(self))
     }
 }
 
-/// Handle, string or None,
-/// `get` returns the default asset on `None`, try_get returns `None`.
+impl<T> DslConvert<Option<Payload>, 2> for T where T: AsObject{
+    fn parse(self) -> Option<Payload> {
+        Some(Payload::new(self))
+    }
+}
+
+/// An [`Asset`], [`Handle<Asset>`], string path of an asset or none/default.
 #[derive(Debug, Clone, Default, PartialEq)]
-pub enum HandleOrString<T: Asset>{
+pub enum IntoAsset<T: Asset>{
     #[default]
     None,
+    Raw(T),
     Handle(Handle<T>),
     String(String),
 }
 
-impl<T: Asset> HandleOrString<T> {
-    /// This uses the default behavior of treating unspecified as the default asset.
-    pub fn get(self, assets: &AouiCommands) -> Handle<T>{
-        match self {
-            HandleOrString::None => Default::default(),
-            HandleOrString::Handle(handle) => handle,
-            HandleOrString::String(string) => {
-                assets.load(string)
-            },
+impl<T> DslConvert<IntoAsset<T>, 1> for T where T: Asset {
+    fn parse(self) -> IntoAsset<T> {
+        IntoAsset::Raw(self)
+    }
+}
+
+impl<T> DslConvert<IntoAsset<T>, 1> for Handle<T> where T: Asset {
+    fn parse(self) -> IntoAsset<T> {
+        IntoAsset::Handle(self)
+    }
+}
+
+impl<T> DslConvert<IntoAsset<T>, 1> for &Handle<T> where T: Asset {
+    fn parse(self) -> IntoAsset<T> {
+        IntoAsset::Handle(self.clone())
+    }
+}
+
+impl<T> DslConvert<IntoAsset<T>, 2> for String where T: Asset {
+    fn parse(self) -> IntoAsset<T> {
+        IntoAsset::String(self)
+    }
+}
+
+impl<T> DslConvert<IntoAsset<T>, 2> for &str where T: Asset {
+    fn parse(self) -> IntoAsset<T> {
+        IntoAsset::String(self.to_owned())
+    }
+}
+
+impl AouiCommands<'_, '_>{
+    /// Load a dsl `IntoAsset`, if `None`, returns the default value.
+    pub fn load_or_default<T: Asset>(&self, asset: IntoAsset<T>) -> Handle<T> {
+        match asset {
+            IntoAsset::None => Default::default(),
+            IntoAsset::Raw(val) => self.add_asset(val),
+            IntoAsset::Handle(handle) => handle,
+            IntoAsset::String(string) => self.load(string),
         }
     }
 
-    pub fn expect(self, assets: &AouiCommands, err: &str) -> Handle<T>{
-        match self {
-            HandleOrString::None => panic!("{}", err),
-            HandleOrString::Handle(handle) => handle,
-            HandleOrString::String(string) => {
-                assets.load(string)
-            },
+    /// Load a dsl `IntoAsset`, if `None`, panic.
+    pub fn load_or_panic<T: Asset>(&self, asset: IntoAsset<T>, err_msg: &str) -> Handle<T> {
+        match asset {
+            IntoAsset::None => panic!("{}", err_msg),
+            IntoAsset::Raw(val) => self.add_asset(val),
+            IntoAsset::Handle(handle) => handle,
+            IntoAsset::String(string) => self.load(string),
         }
     }
 
-    pub fn try_get(self, assets: &AouiCommands) -> Option<Handle<T>>{
-        match self {
-            HandleOrString::None => None,
-            HandleOrString::Handle(handle) => Some(handle),
-            HandleOrString::String(string) => {
-                Some(assets.load(string))
-            },
+    /// Load a dsl `IntoAsset`, returns an `Option`.
+    pub fn try_load<T: Asset>(&self, asset: IntoAsset<T>) -> Option<Handle<T>> {
+        match asset {
+            IntoAsset::None => None,
+            IntoAsset::Raw(val) => Some(self.add_asset(val)),
+            IntoAsset::Handle(handle) => Some(handle),
+            IntoAsset::String(string) => Some(self.load(string)),
         }
     }
+}
 
+
+impl<T: Asset> IntoAsset<T> {
     pub fn is_some(&self) -> bool{
         !matches!(self, Self::None)
     }
 
     pub fn is_none(&self) -> bool{
         matches!(self, Self::None)
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for Handle<T> {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::Handle(self)
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for &Handle<T> {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::Handle(self.clone())
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for &str {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::String(self.to_owned())
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for String {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::String(self)
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for &&str {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::String((*self).to_owned())
-    }
-}
-
-impl<T: Asset> DslInto<HandleOrString<T>> for &String {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::String(self.clone())
-    }
-}
-
-impl<'t, T: Asset> DslInto<HandleOrString<T>> for Cow<'t, str> {
-    fn dinto(self) -> HandleOrString<T> {
-        HandleOrString::String(self.into_owned())
-    }
-}
-
-
-/// Handle, Asset or None,
-/// `get` returns the default asset on `None`, try_get returns `None`.
-#[derive(Debug, Clone, Default)]
-pub enum HandleOrAsset<T: Asset>{
-    #[default]
-    None,
-    Handle(Handle<T>),
-    Asset(T),
-}
-
-impl<T: Asset> HandleOrAsset<T> {
-    pub fn get(self, assets: &AouiCommands) -> Handle<T>{
-        match self {
-            HandleOrAsset::None => Default::default(),
-            HandleOrAsset::Handle(handle) => handle,
-            HandleOrAsset::Asset(asset) => {
-                assets.add(asset)
-            },
-        }
-    }
-
-    pub fn expect(self, assets: &AouiCommands, msg: &str) -> Handle<T>{
-        match self {
-            HandleOrAsset::None => panic!("{}", msg),
-            HandleOrAsset::Handle(handle) => handle,
-            HandleOrAsset::Asset(asset) => {
-                assets.add(asset)
-            },
-        }
-    }
-
-    pub fn try_get(self, assets: &AouiCommands) -> Option<Handle<T>>{
-        match self {
-            HandleOrAsset::None => None,
-            HandleOrAsset::Handle(handle) => Some(handle),
-            HandleOrAsset::Asset(asset) => {
-                Some(assets.add(asset))
-            },
-        }
-    }
-
-    pub fn is_some(&self) -> bool{
-        !matches!(self, Self::None)
-    }
-
-    pub fn is_none(&self) -> bool{
-        matches!(self, Self::None)
-    }
-}
-
-impl<T: Asset> DslFrom<Handle<T>> for HandleOrAsset<T>{
-    fn dfrom(value: Handle<T>) -> Self {
-        HandleOrAsset::Handle(value)
-    }
-}
-
-impl<T: Asset> DslFrom<&Handle<T>> for HandleOrAsset<T>{
-    fn dfrom(value: &Handle<T>) -> Self {
-        HandleOrAsset::Handle(value.clone())
-    }
-}
-
-
-impl<T: Asset> DslFrom<T> for HandleOrAsset<T>{
-    fn dfrom(value: T) -> Self {
-        HandleOrAsset::Asset(value)
     }
 }

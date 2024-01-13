@@ -8,13 +8,13 @@ use bevy::render::render_resource::{Extent3d, TextureDimension};
 use crate::{DimensionType, Transform2D, Anchor, Dimension};
 use crate::{widget_extension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
 
-use super::{Widget, DslInto, HandleOrString, AouiCommands, Aspect};
+use super::{Widget, DslInto, AouiCommands, Aspect, IntoAsset};
 
 widget_extension!(pub struct FrameBuilder {});
 widget_extension!(
     pub struct SpriteBuilder {
         /// Handle of the image asset.
-        pub sprite: HandleOrString<Image>,
+        pub sprite: IntoAsset<Image>,
         /// Size of the image.
         pub size: Option<Vec2>,
         /// Color of the image.
@@ -41,7 +41,7 @@ widget_extension!(
         /// The text string.
         pub text: String,
         /// Handle of the font asset.
-        pub font: HandleOrString<Font>,
+        pub font: IntoAsset<Font>,
         /// Bounds of the text, should not be set most of the time.
         ///
         /// If not specified this is `UNBOUNDED`.
@@ -110,7 +110,7 @@ impl Widget for FrameBuilder {
 
 impl Widget for SpriteBuilder {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        let sprite = self.sprite.get(commands);
+        let sprite = commands.load_or_default(self.sprite);
         let mut frame = build_frame!(commands, self);
         frame.insert((
             Sprite {
@@ -136,7 +136,7 @@ impl Widget for RectangleBuilder {
             height: 1,
             ..Default::default()
         }, TextureDimension::D2, vec![255, 255, 255, 255], BevyDefault::bevy_default());
-        let texture = commands.add(texture);
+        let texture = commands.add_asset(texture);
         let frame = build_frame!(commands, self)
             .insert((
             Sprite {
@@ -153,7 +153,7 @@ impl Widget for RectangleBuilder {
 
 impl Widget for TextBuilder {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        let font = self.font.get(commands);
+        let font = commands.load_or_default(self.font);
         let mut frame = build_frame!(commands, self);
         frame.insert((
             Text {

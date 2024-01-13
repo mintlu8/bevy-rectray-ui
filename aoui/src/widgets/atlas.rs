@@ -9,6 +9,7 @@ use bevy::{
 };
 use std::mem;
 
+/// A deferred [`TextureAtlas`] builder that waits for all its sprites to be loaded.
 #[derive(Debug, Component)]
 pub enum DeferredAtlasBuilder {
     Subdivide {
@@ -23,7 +24,7 @@ pub enum DeferredAtlasBuilder {
     },
 }
 
-pub fn build_deferred_atlas(
+pub(crate) fn build_deferred_atlas(
     mut commands: Commands,
     mut atlas: Query<(Entity, &mut DeferredAtlasBuilder)>,
     server: Res<AssetServer>,

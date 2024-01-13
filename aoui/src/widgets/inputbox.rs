@@ -343,7 +343,7 @@ impl InputBox {
     }
 }
 
-pub fn text_on_mouse_down(
+pub(crate) fn text_on_mouse_down(
     state: Res<CursorState>,
     fonts: Res<Assets<Font>>,
     mut query: Query<(&CursorFocus, &mut InputBox, &Handle<Font>, &Children)>,
@@ -398,7 +398,7 @@ pub fn text_on_mouse_down(
     }
 }
 
-pub fn text_on_mouse_double_click(mut query: Query<(&mut InputBox, &CursorAction)>) {
+pub(crate) fn text_on_mouse_double_click(mut query: Query<(&mut InputBox, &CursorAction)>) {
     for (mut input_box, action) in query.iter_mut() {
         if action.is(EventFlags::DoubleClick) {
             input_box.select_all();
@@ -407,7 +407,7 @@ pub fn text_on_mouse_double_click(mut query: Query<(&mut InputBox, &CursorAction
     }
 }
 
-pub fn text_propagate_focus(
+pub(crate) fn text_propagate_focus(
     mut commands: Commands,
     query: Query<(Entity, &InputBox)>,
     entities: Query<&Children>,
@@ -437,7 +437,7 @@ pub fn text_propagate_focus(
     }
 }
 
-pub fn inputbox_conditional_visibility(
+pub(crate) fn inputbox_conditional_visibility(
     mut query: Query<(Option<&InputBoxState>, &DisplayIf<InputBoxState>, VisibilityToggle)>,
 ) {
     query.iter_mut().for_each(|(focus, display_if, mut vis)| {
@@ -453,7 +453,7 @@ pub fn inputbox_conditional_visibility(
     })
 }
 
-pub fn update_inputbox_cursor(
+pub(crate) fn update_inputbox_cursor(
     fonts: Res<Assets<Font>>,
     query: Query<(&InputBox,  &Handle<Font>, ActiveDetection, &Children),
         (Changed<InputBox>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>,
@@ -539,12 +539,12 @@ const CONTROL: [KeyCode; 2] = [KeyCode::ControlLeft, KeyCode::ControlRight];
 #[cfg(target_os = "macos")]
 const CONTROL: [KeyCode; 2] = [KeyCode::SuperLeft, KeyCode::SuperLeft];
 
-pub fn text_on_click_outside(mut query: Query<&mut InputBox, With<CursorClickOutside>>) {
+pub(crate) fn text_on_click_outside(mut query: Query<&mut InputBox, With<CursorClickOutside>>) {
     for mut input in query.iter_mut() {
         input.focus = false;
     }
 }
-pub fn inputbox_keyboard(
+pub(crate) fn inputbox_keyboard(
     mut commands: Commands,
     rem: Res<AouiREM>,
     fonts: Res<Assets<Font>>,
@@ -665,7 +665,7 @@ pub fn inputbox_keyboard(
 }
 
 /// Copy em as text size.
-pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &DimensionData)>) {
+pub(crate) fn sync_em_inputbox(mut query: Query<(&mut InputBox, &DimensionData)>) {
     query.iter_mut().for_each(|(mut sp, dimension)| {
         if sp.as_ref().em != dimension.em {
             sp.em = dimension.em;
@@ -673,7 +673,7 @@ pub fn sync_em_inputbox(mut query: Query<(&mut InputBox, &DimensionData)>) {
     })
 }
 
-pub fn draw_input_box(
+pub(crate) fn draw_input_box(
     query: Query<(&Children, &Handle<Font>, &InputBox), Or<(Changed<InputBox>, Changed<Handle<Font>>)>>,
     mut child: Query<&mut TextFragment, With<InputBoxText>>,
 ) {

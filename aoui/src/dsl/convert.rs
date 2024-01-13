@@ -22,10 +22,17 @@ impl<F, T> DslConvert<WidgetBuilder<T>, 1> for F
     }
 }
 
-impl<F> DslConvert<WidgetBuilder<()>, 2> for F
+impl<F, T> DslConvert<Option<WidgetBuilder<T>>, 1> for F
+        where F: (Fn(&mut AouiCommands, T) -> Entity) + Send + Sync + 'static {
+    fn parse(self) -> Option<WidgetBuilder<T>> {
+        Some(WidgetBuilder::new(self))
+    }
+}
+
+impl<F> DslConvert<Option<WidgetBuilder<()>>, 2> for F
         where F: (Fn(&mut AouiCommands) -> Entity) + Send + Sync + 'static {
-    fn parse(self) -> WidgetBuilder<()> {
-        WidgetBuilder::new(self)
+    fn parse(self) -> Option<WidgetBuilder<()>> {
+        Some(WidgetBuilder::new(self))
     }
 }
 

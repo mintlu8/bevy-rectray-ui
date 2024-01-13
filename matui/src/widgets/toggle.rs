@@ -1,14 +1,14 @@
 use bevy::{render::{color::Color, texture::Image}, window::CursorIcon, ecs::{component::Component, system::Query, entity::Entity}, hierarchy::BuildChildren, math::Vec2};
-use bevy_aoui::{widget_extension, build_frame, Hitbox, Dimension, Size2, material_sprite, sprite, size2, dsl::AouiCommands};
+use bevy_aoui::{widget_extension, build_frame, Hitbox, Dimension, Size2, material_sprite, sprite, size2, dsl::{AouiCommands, OptionEx, IntoAsset}};
 use bevy_aoui::anim::{Interpolate, Easing, Offset, EaseFunction};
 use bevy_aoui::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange};
 use bevy_aoui::widgets::button::{CheckButton, Payload, CheckButtonState};
 use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
-use bevy_aoui::dsl::{Widget, HandleOrString, OptionX};
+use bevy_aoui::dsl::Widget;
 
 use crate::shapes::{RoundedRectangleMaterial, StrokeColor};
 
-use super::util::{OptionM, ShadowInfo, StrokeColors};
+use super::util::{ShadowInfo, StrokeColors};
 
 #[derive(Debug, Component, Clone, Copy)]
 pub struct DialPalette {
@@ -21,12 +21,12 @@ pub struct DialPalette {
 
 impl Default for DialPalette {
     fn default() -> Self {
-        Self { 
-            background: Color::NONE, 
-            dial: Color::NONE, 
-            background_stroke: Color::NONE, 
-            dial_stroke: Color::NONE, 
-            icon: Color::NONE 
+        Self {
+            background: Color::NONE,
+            dial: Color::NONE,
+            background_stroke: Color::NONE,
+            dial_stroke: Color::NONE,
+            icon: Color::NONE
         }
     }
 }
@@ -84,9 +84,9 @@ widget_extension!(
         /// Sets the CursorIcon when hovering this button, default is `Hand`
         pub cursor: Option<CursorIcon>,
         /// If set, `submit` sends its contents.
-        pub payload: OptionX<Payload>,
+        pub payload: Option<Payload>,
         /// Sends a signal whenever the button is clicked and its value is `true`.
-        /// 
+        ///
         /// Like button, this sends either `()` or `Payload`.
         pub on_checked: Handlers<EvButtonClick>,
         /// Sends a `bool` signal whenever the button is clicked.
@@ -96,32 +96,32 @@ widget_extension!(
 
         /// The length the dial travels in em, default is 1.25 em.
         pub length: Option<f32>,
-        
+
         pub palette: DialPalette,
         pub checked_palette: Option<DialPalette>,
-        
+
         /// Size of the background in em, default is `Full` (evaluates to 2.0 em).
         pub background_size: Option<f32>,
-        pub background_texture: HandleOrString<Image>,
+        pub background_texture: IntoAsset<Image>,
         pub background_stroke: f32,
 
         /// Size of the dial, default is 1.4 em.
         pub dial_size: Option<f32>,
-        pub dial_texture: HandleOrString<Image>,
+        pub dial_texture: IntoAsset<Image>,
         pub dial_stroke: f32,
 
         /// Icon of the dial, if `icon_checked` exists, fade out when checked.
-        pub icon: HandleOrString<Image>,
+        pub icon: IntoAsset<Image>,
         /// Icon of the dial, fade in when checked.
-        pub icon_checked: HandleOrString<Image>,
-        
+        pub icon_checked: IntoAsset<Image>,
+
         /// Changes the size of dial when checked, in em.
         pub checked_size: Option<f32>,
 
         /// Shadow for background.
-        pub shadow: OptionM<ShadowInfo>,
+        pub shadow: OptionEx<ShadowInfo>,
         /// Shadow for the dial.
-        pub dial_shadow: OptionM<ShadowInfo>,
+        pub dial_shadow: OptionEx<ShadowInfo>,
     }
 );
 
@@ -136,7 +136,7 @@ impl Widget for MToggleBuilder {
         } else {
             unchecked_palette
         };
-        
+
         let horiz_len = self.length.unwrap_or(1.25);
         frame.insert((
             Dimension::owned(Size2::em(2.0 + horiz_len, 2.0)),
@@ -157,7 +157,7 @@ impl Widget for MToggleBuilder {
         if !self.on_toggle.is_empty()  {
             frame.insert(self.on_toggle);
         }
-        if let OptionX::Some(payload) = self.payload  {
+        if let Some(payload) = self.payload  {
             frame.insert(payload);
         };
         let frame = frame.id();
@@ -179,16 +179,16 @@ impl Widget for MToggleBuilder {
             }),
             extra: Interpolate::<Color>::new(
                 Easing::Linear,
-                background, 
+                background,
                 0.25
             ),
             extra: Interpolate::<StrokeColor>::new(
                 Easing::Linear,
-                background_stroke, 
+                background_stroke,
                 0.25
             ),
         });
-        if let OptionM::Some(shadow) = self.shadow {
+        if let OptionEx::Some(shadow) = self.shadow {
             let shadow = shadow.build_capsule(commands);
             commands.entity(background).add_child(shadow);
         }
@@ -209,20 +209,20 @@ impl Widget for MToggleBuilder {
                 inactive: unchecked_palette.dial_stroke,
                 active: checked_palette.dial_stroke,
             }),
-            extra: ToggleDial { 
-                inactive_offset: Vec2::new(-horiz_len / 2.0, 0.0), 
+            extra: ToggleDial {
+                inactive_offset: Vec2::new(-horiz_len / 2.0, 0.0),
                 inactive_dimension: Vec2::new(dial_size, dial_size),
-                active_offset: Vec2::new(horiz_len / 2.0, 0.0), 
+                active_offset: Vec2::new(horiz_len / 2.0, 0.0),
                 active_dimension: Vec2::new(checked_size, checked_size),
             },
             extra: Interpolate::<Color>::new(
                 Easing::Ease(EaseFunction::CubicInOut),
-                dial, 
+                dial,
                 0.25
             ),
             extra: Interpolate::<StrokeColor>::new(
                 Easing::Ease(EaseFunction::CubicInOut),
-                dial_stroke, 
+                dial_stroke,
                 0.25
             ),
             extra: Interpolate::<Offset>::new(
@@ -244,7 +244,7 @@ impl Widget for MToggleBuilder {
                 0.25
             ),
         });
-        if let OptionM::Some(shadow) = self.dial_shadow {
+        if let OptionEx::Some(shadow) = self.dial_shadow {
             let shadow = shadow.build_capsule(commands);
             commands.entity(dial).add_child(shadow);
         }
@@ -254,11 +254,11 @@ impl Widget for MToggleBuilder {
                 dimension: size2!(66.6%, 66.6%),
                 extra: Interpolate::<Color>::new(
                     Easing::Ease(EaseFunction::CubicInOut),
-                    icon_color, 
+                    icon_color,
                     0.25
                 ),
-                extra: ToggleColors { 
-                    inactive: unchecked_palette.icon, 
+                extra: ToggleColors {
+                    inactive: unchecked_palette.icon,
                     active: checked_palette.icon,
                 }
             });
@@ -269,26 +269,26 @@ impl Widget for MToggleBuilder {
                 dimension: size2!(66.6%, 66.6%),
                 extra: Interpolate::<Color>::new(
                     Easing::Ease(EaseFunction::CubicInOut),
-                    if self.checked { Color::NONE } else { unchecked_palette.icon }, 
+                    if self.checked { Color::NONE } else { unchecked_palette.icon },
                     0.25
                 ),
-                extra: ToggleColors { 
-                    inactive: unchecked_palette.icon, 
+                extra: ToggleColors {
+                    inactive: unchecked_palette.icon,
                     active: Color::NONE,
                 }
             });
             commands.entity(dial).add_child(icon);
-        } 
+        }
         if self.icon_checked.is_some() {
             let icon = sprite!(commands {
                 sprite: self.icon_checked,
                 dimension: size2!(66.6%, 66.6%),
                 extra: Interpolate::<Color>::new(
                     Easing::Ease(EaseFunction::CubicInOut),
-                    if !self.checked { Color::NONE } else { checked_palette.icon }, 
+                    if !self.checked { Color::NONE } else { checked_palette.icon },
                     0.25
                 ),
-                extra: ToggleColors { 
+                extra: ToggleColors {
                     inactive: Color::NONE,
                     active: checked_palette.icon,
                 }

@@ -19,8 +19,8 @@ impl DslFrom<Color> for OptionX<Fill>{
 
 impl DslFrom<(Color, i32)> for OptionX<Stroke>{
     fn dfrom((color, size): (Color, i32)) -> Self {
-        OptionX::Some(Stroke { 
-            color, 
+        OptionX::Some(Stroke {
+            color,
             options: StrokeOptions::DEFAULT
                 .with_line_width(size as f32)
                 .with_start_cap(LineCap::Round)
@@ -31,8 +31,8 @@ impl DslFrom<(Color, i32)> for OptionX<Stroke>{
 
 impl DslFrom<(Color, f32)> for OptionX<Stroke>{
     fn dfrom((color, size): (Color, f32)) -> Self {
-        OptionX::Some(Stroke { 
-            color, 
+        OptionX::Some(Stroke {
+            color,
             options: StrokeOptions::DEFAULT
                 .with_line_width(size)
                 .with_start_cap(LineCap::Round)
@@ -51,7 +51,7 @@ widget_extension! {
         pub stroke: OptionX<Stroke>,
         pub stroke_size: f32,
         /// Unlike the default behavior of `Lyon`,
-        /// 
+        ///
         /// The default is `Round`.
         pub caps: Option<OneOrTwo<[LineCap; 2]>>,
     }
@@ -59,14 +59,14 @@ widget_extension! {
 
 impl Widget for ShapeBuilder {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        let color_material = commands.add(ColorMaterial::default());
+        let color_material = commands.add_asset(ColorMaterial::default());
         let mut frame = build_frame!(commands, self);
         frame.insert((
             BuildTransformBundle::default(),
             self.shape.build_path(self.anchor, self.size.unwrap_or(Vec2::ONE)),
             self.shape,
-            ShapeDimension { 
-                size: self.size.unwrap_or(Vec2::ONE), 
+            ShapeDimension {
+                size: self.size.unwrap_or(Vec2::ONE),
                 anchor: self.anchor,
             },
             Mesh2dHandle::default(),
