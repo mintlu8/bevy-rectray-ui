@@ -409,8 +409,6 @@ macro_rules! size {
 ///
 /// # Examples
 /// ```
-/// # use bevy_aoui::size2;
-/// # let PI = 3.0;
 /// // We perform auto float conversion.
 /// size2!(40, 50.5);
 /// // Supply a unit like this

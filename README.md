@@ -41,7 +41,6 @@ and returns an [`Entity`](bevy::ecs::entity::Entity).
 Create a hierarchy:
 
 ```
-# /*
 vstack!(commands {
     font_size: em(2),
     child: text! {
@@ -54,7 +53,6 @@ vstack!(commands {
         },
     },
 });
-# */
 ```
 
 ### Why a DSL?

@@ -4,7 +4,6 @@
 //!
 //! We use a CSS-like syntax in the `transition!` macro:
 //! ```
-//! # /*
 //! text! (commands {
 //!     text: "I'm Spinning!",
 //!     extra: SetAlpha,
@@ -15,7 +14,6 @@
 //!         Color 2 Linear loop [cyan, blue];
 //!     )
 //! });
-//! # */
 //! ```
 //! The syntax is
 //! ```js

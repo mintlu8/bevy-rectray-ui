@@ -3,7 +3,6 @@
 //! # Getting Started
 //!
 //! ```
-//! # /*
 //! let (sender, recv1, recv2, recv3, ...) = commands.signal();
 //!
 //! checkbox! (commands {
@@ -17,7 +16,6 @@
 //!         "unchecked".to_owned()
 //!     }),
 //! });
-//! # */
 //! ```
 //!
 //! # How this works?
@@ -31,23 +29,43 @@
 //! into senders or receivers. Alternatives include `named_signal` and `shared_storage`
 //!
 //! ```
-//! # /*
 //! let (sender, receiver) = signal();
 //! let sender = Handlers::<EvTextChange>::new(sender);
 //! let receiver = receiver::recv0(|s: String, text: &mut Text| { format_widget! (text, "Text Contains: {}", s) });
-//! # */
 //! ```
 //!
 //!
-//! ## Marked Signals
+//! ## Sending Signals
 //!
 //! Event handlers can be used to send signals. See [`Handlers`](crate::events::Handlers).
+//! You can also obtain a sender yourself and send them with custom component.
 //!
-//! Marking the receiver with a signal type like `SigOffset`.
-//! This allows the value of a signal to directly modify a component's value,
-//! thus achieving reactivity.
-//! If [`Interpolate`](crate::anim::Interpolate) is present,
-//! signals will use `Interpolate` instead.
+//! ## Receiving Signals
+//!
+//! Call `.recv(||...)` is the easist way to use a signal. This uses the same semantics
+//! as [`Mutation`](crate::events::Mutation), which allows you to modify components
+//! when a signal is received, achiving a form of reactivity. `Invoke<Widget>` can also
+//! be used to trigger behavior of widgets.
+//!
+//! ### Example
+//!
+//! ```
+//! // This shinks and fades out a widget.
+//! some_float_signal.recv(|value: f32, dimension: &mut Dimension, opacity: &mut Opacity| {
+//!     dimension.edit_raw(|v| *v.y = value);
+//!     opacity.opacity = value;
+//! })
+//! ```
+//!
+//! Other functions exist like `recv_select` that
+//! provides easy ways to deal with type erase signals.
+//!
+//! ## Signal IDs
+//!
+//! Note the receiver is a completely type erased component, meaning we need some way to
+//! disamubiguate them. We use a const generic parameter to do this,
+//! using [`with_slot`](SignalReceiver::with_slot).
+//! We run signal ids `0..=5` out of the box but you can add more if needed.
 //!
 //! ## Implementation Details
 //!
@@ -63,18 +81,19 @@
 //!
 //! ## Example: Spinning Arrowhead
 //! ```
-//! # /*
 //! let (send, recv) = signal();
 //! check_button! {
 //!     checked: true,
 //!     change: send,
 //!     child: text! {
 //!         text: "v",
-//!         extra: recv.mark::<SigRotation>().map(|x: bool| if x {PI} else {0.0}),
+//!         extra: recv.recv_select(index,
+//!             Interpolate::<Rotation>::signal_to(PI),
+//!             Interpolate::<Rotation>::signal_to(0.0),
+//!         ),
 //!         extra: transition! (Rotation 0.5 CubicInOut default PI)
 //!     },
 //! }
-//! # */
 //! ```
 
 mod dto;

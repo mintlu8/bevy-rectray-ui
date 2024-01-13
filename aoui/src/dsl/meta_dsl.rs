@@ -270,7 +270,6 @@ macro_rules! quote_syntax {
 ///
 /// To create a custom widget macro:
 /// ```
-/// # /*
 /// #[macro_export]
 /// macro_rules! macro_name {
 ///     {$commands: tt {$($tt:tt)*}} => {
@@ -279,7 +278,6 @@ macro_rules! quote_syntax {
 ///         })
 ///     };
 /// }
-/// # */
 /// ```
 #[macro_export]
 macro_rules! meta_dsl {

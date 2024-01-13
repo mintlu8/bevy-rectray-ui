@@ -7,7 +7,7 @@ use crate::{Size2, FontSize, SizeUnit};
 /// If `Copied` and paired with a component that has a dimension like [`Sprite`](bevy::sprite::Sprite),
 /// this will be copied every frame,
 /// useful when paired with a dynamic sized item like text or atlas.
-/// 
+///
 /// If `Owned` we will try to edit the dimension of the paired sprite
 #[derive(Debug, Clone, Copy, Reflect, PartialEq, Default)]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
@@ -31,7 +31,7 @@ pub struct Dimension {
     /// Modifies font size `em`.
     pub font_size: FontSize,
     /// If set, always preserves the aspect ratio of the input sprite.
-    /// 
+    ///
     /// This will resize the dimension and affect children laid out against
     /// this sprite.
     pub preserve_aspect: bool,
@@ -41,16 +41,16 @@ pub struct Dimension {
 #[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct DimensionData {
     /// Evaluated size in pixels.
-    ///     
-    /// This value is computed every frame. 
+    ///
+    /// This value is computed every frame.
     pub size: Vec2,
     /// Aspect ratio of the sprite.
-    /// 
+    ///
     /// If paired with a sprite this will be copied.
     pub aspect: f32,
     /// Font size `em` on this sprite.
-    /// 
-    /// This value is computed every frame. 
+    ///
+    /// This value is computed every frame.
     pub em: f32,
 }
 
@@ -136,7 +136,7 @@ impl Dimension {
     }
 
     /// Run a closure with the underlying raw value.
-    /// 
+    ///
     /// Has no effect if dimension is not owned.
     pub fn with_raw(&self, f: impl FnOnce(Vec2)) {
         match self.dimension {
@@ -146,7 +146,7 @@ impl Dimension {
         }
     }
     /// Edit a contextless underlying value.
-    /// 
+    ///
     /// Has no effect if dimension is not owned.
     pub fn edit_raw(&mut self, f: impl FnOnce(&mut Vec2)) {
         match &mut self.dimension {
@@ -289,7 +289,7 @@ impl DimensionMutItem<'_> {
     }
 
     /// Edit a contextless underlying value.
-    /// 
+    ///
     /// Has no effect if dimension is not owned.
     pub fn edit_raw(&mut self, f: impl FnOnce(&mut Vec2)) {
         match &mut self.source.dimension {
@@ -300,9 +300,9 @@ impl DimensionMutItem<'_> {
     }
 
     /// Gain mutable access to the underlying owned vector.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// When dimension is copied.
     #[doc(hidden)]
     pub fn raw_mut(&mut self) -> &mut Vec2 {
@@ -312,7 +312,7 @@ impl DimensionMutItem<'_> {
             DimensionType::Owned(v) => v.raw_mut(),
         }
     }
-    
+
     /// Run a function if dimension is owned.
     pub fn run_if_owned(&self, f: impl FnOnce(Vec2)) {
         match self.source.dimension {
@@ -322,7 +322,7 @@ impl DimensionMutItem<'_> {
     }
 
     /// Update size based on a foreign source.
-    /// 
+    ///
     /// If `copied`, copy size. If `preserve_aspect`, copy aspect ratio.
     pub fn update_size(&mut self, value: impl FnOnce() -> Vec2) {
         match self.source.dimension {

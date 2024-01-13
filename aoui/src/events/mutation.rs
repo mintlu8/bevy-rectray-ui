@@ -133,7 +133,6 @@ impl<T: AsObject> Mutation<T> {
     ///
     /// # Example
     /// ```
-    /// # use bevy_aoui::{Transform2D, Dimension, events::Mutation};
     /// let _: Mutation<()> = Mutation::new(|dim: &mut Dimension, transform: &mut Transform2D| {
     ///     dim.edit_raw(|v| v.x += 1.0);
     ///     transform.rotation += 1.0;

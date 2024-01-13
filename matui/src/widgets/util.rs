@@ -8,22 +8,17 @@ use crate::shapes::RoundedShadowMaterial;
 /// Create a palette struct, every field must be a color.
 ///
 /// ```
-/// # /*
 /// palette!(FramePalette {
 ///     foreground: red,
 ///     background: green,
 /// })
-/// # */
 /// ```
 /// Translates to:
-/// ```
-/// # /*
-/// FramePalette {
+/// ``/// FramePalette {
 ///     foreground: color!(red),
 ///     background: color!(green),
 ///     ..Default::default()
 /// }
-/// # */
 /// ```
 #[macro_export]
 macro_rules! palette {
