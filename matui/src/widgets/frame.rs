@@ -93,9 +93,9 @@ impl Widget for MFrameBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         self.z += 0.01;
         if self.layout.is_none() {
-            self.layout = Some(Box::new(BoundsLayout::PADDING));
+            self.layout = Some(BoundsLayout::PADDING.into());
         }
-        self.event = Some(EventFlags::BlockAll);
+        self.event = EventFlags::BlockAll;
         let mesh = commands.add_asset(mesh_rectangle());
         let material = commands.add_asset(
             RoundedRectangleMaterial::new(self.palette.background, self.radius)
@@ -137,8 +137,8 @@ widget_extension!(
 impl Widget for MWindowBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         self.z += 0.01;
-        let layout = mem::replace(&mut self.layout, Some(Box::new(StackLayout::VSTACK)));
-        self.event = Some(EventFlags::BlockAll);
+        let layout = mem::replace(&mut self.layout, Some(StackLayout::VSTACK.into()));
+        self.event = EventFlags::BlockAll;
         let window_margin = self.window_margin.unwrap_or(Vec2::new(1.0, 0.5));
         let margin = mem::replace(&mut self.margin.0, Size2::em(0.0, window_margin.y));
         let padding = mem::replace(&mut self.padding.0, Size2::em(window_margin.x, window_margin.y));
@@ -227,7 +227,7 @@ impl Widget for MWindowBuilder {
                 entity: container,
                 margin: margin,
                 padding: padding,
-                layout: layout.unwrap_or(Box::new(StackLayout::VSTACK)),
+                layout: layout.unwrap_or(StackLayout::VSTACK.into()),
             }
         });
 

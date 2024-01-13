@@ -103,7 +103,7 @@ widget_extension!(
 
 impl Widget for MInputBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        bevy_aoui::inject_events!(self.event, EventFlags::Hover|EventFlags::LeftDrag);
+        self.event |= EventFlags::Hover|EventFlags::LeftDrag;
 
         self.dimension = size2!({self.width} em, 2.8 em).dinto();
         let style = self.palette;

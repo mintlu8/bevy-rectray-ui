@@ -15,17 +15,6 @@ use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea};
 
 use super::{Widget, AouiCommands, IntoAsset};
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! inject_events {
-    ($this: expr, $flags: expr) => {
-        match &mut $this {
-            Some(event) => *event |= $flags,
-            None => $this = Some($flags),
-        }
-    };
-}
-
 widget_extension!(
     pub struct InputBoxBuilder {
         pub text: String,
@@ -45,7 +34,7 @@ widget_extension!(
 
 impl Widget for InputBoxBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        inject_events!(self.event, EventFlags::Hover|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside);
+        self.event |= EventFlags::Hover|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside;
         let font = commands.load_or_default(self.font);
 
         let mut entity = build_frame!(commands, self);
@@ -112,7 +101,7 @@ widget_extension!(
 
 impl Widget for ButtonBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        inject_events!(self.event, EventFlags::Hover|EventFlags::LeftClick);
+        self.event |= EventFlags::Hover|EventFlags::LeftClick;
         let mut entity = build_frame!(commands, self);
         entity.insert((
             PropagateFocus,
@@ -151,7 +140,7 @@ widget_extension!(
 
 impl Widget for CheckButtonBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        inject_events!(self.event, EventFlags::Hover|EventFlags::LeftClick);
+        self.event |= EventFlags::Hover|EventFlags::LeftClick;
         let mut  entity = build_frame!(commands, self);
         entity.insert((
             PropagateFocus,
@@ -191,7 +180,7 @@ widget_extension!(
 
 impl Widget for RadioButtonBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        inject_events!(self.event, EventFlags::Hover|EventFlags::LeftClick);
+        self.event |= EventFlags::Hover|EventFlags::LeftClick;
         let mut entity = build_frame!(commands, self);
 
         entity.insert((

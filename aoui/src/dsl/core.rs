@@ -5,7 +5,7 @@ use bevy::text::{Text, TextSection, TextStyle, BreakLineOn, Text2dBounds, TextLa
 use bevy::render::{color::Color, texture::{Image, BevyDefault}};
 use bevy::render::render_resource::{Extent3d, TextureDimension};
 
-use crate::{DimensionType, Transform2D, Anchor, Dimension};
+use crate::{DimensionType, Transform2D, Dimension};
 use crate::{widget_extension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
 
 use super::{Widget, DslInto, AouiCommands, Aspect, IntoAsset};
@@ -66,7 +66,7 @@ impl Widget for FrameBuilder {
                 transform: Transform2D {
                     center: self.center,
                     anchor: self.anchor,
-                    parent_anchor: self.parent_anchor.unwrap_or(Anchor::INHERIT),
+                    parent_anchor: self.parent_anchor.0,
                     offset: self.offset,
                     rotation: self.rotation,
                     scale: self.scale.0,
@@ -83,12 +83,12 @@ impl Widget for FrameBuilder {
                 ..Default::default()
             }
         );
-        if let Some(event) = self.event {
-            base.insert(event);
+        if !self.event.is_empty() {
+            base.insert(self.event);
         }
         if let Some(hitbox) = self.hitbox {
             base.insert(hitbox);
-        } else if self.event.is_some() {
+        } else if !self.event.is_empty() {
             base.insert(Hitbox::FULL);
         }
         if let Some(layer) = self.layer {

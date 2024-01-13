@@ -22,7 +22,7 @@ impl Layout for FixedGridLayout {
             (Binary::Lo, Trinary::Pos) => 0.0,
             (Binary::Hi, Trinary::Neg) => 0.0,
             (Binary::Hi, Trinary::Mid) => 0.5,
-            (Binary::Hi, Trinary::Pos) => 1.0, 
+            (Binary::Hi, Trinary::Pos) => 1.0,
         };
         let columns = match self.row_dir.into() {
             Axis::Horizontal => self.cells.x,
@@ -39,6 +39,10 @@ impl Layout for FixedGridLayout {
             (B, L) => grid(margin, entities, columns, cell_size, negy, negx, align),
             _ => panic!("Direction and stack must be othogonal.")
         }.normalized()
+    }
+
+    fn dyn_clone(&self) -> Box<dyn Layout> {
+        Box::new(*self)
     }
 }
 
@@ -60,7 +64,7 @@ impl Layout for SizedGridLayout {
             (Binary::Lo, Trinary::Pos) => 0.0,
             (Binary::Hi, Trinary::Neg) => 0.0,
             (Binary::Hi, Trinary::Mid) => 0.5,
-            (Binary::Hi, Trinary::Pos) => 1.0, 
+            (Binary::Hi, Trinary::Pos) => 1.0,
         };
         let columns = match self.row_dir.into() {
             Axis::Horizontal => cell_count.x,
@@ -78,6 +82,10 @@ impl Layout for SizedGridLayout {
             _ => panic!("Direction and stack must be orthogonal.")
         }.normalized()
     }
+
+    fn dyn_clone(&self) -> Box<dyn Layout> {
+        Box::new(*self)
+    }
 }
 
 impl Layout for TableLayout {
@@ -90,7 +98,7 @@ impl Layout for TableLayout {
             Axis::Vertical => parent.dimension.y,
         };
 
-        let columns = self.columns.iter().map(|(unit, raw)| 
+        let columns = self.columns.iter().map(|(unit, raw)|
             unit.as_pixels(*raw, main_axis, parent.em, parent.rem)
         ).collect();
 
@@ -105,6 +113,10 @@ impl Layout for TableLayout {
             (B, L) => fixed_table(dim, margin, entities, columns, negy, negx, stretch),
             _ => panic!("Direction and stack must be orthogonal.")
         }.normalized()
+    }
+
+    fn dyn_clone(&self) -> Box<dyn Layout> {
+        Box::new(self.clone())
     }
 }
 
@@ -126,6 +138,10 @@ impl Layout for DynamicTableLayout {
             (B, L) => flex_table(dim, margin, entities, columns, negy, negx, stretch),
             _ => panic!("Direction and stack must be orthogonal.")
         }
+    }
+
+    fn dyn_clone(&self) -> Box<dyn Layout> {
+        Box::new(self.clone())
     }
 }
 
@@ -159,7 +175,7 @@ pub(crate) fn grid(
         if item.control != LayoutControl::LinebreakMarker {
             result.push((item.entity, row_cursor + half_dir + half_size * item.anchor.as_vec()));
             row_cursor += delta_cell;
-        } 
+        }
         if result.len() - row_start >= columns || item.control.is_linebreak() {
             row_ranges.push(row_start..result.len());
             max_columns = max_columns.max(result.len() - row_start);
@@ -218,7 +234,7 @@ pub(crate) fn table(
         if item.control != LayoutControl::LinebreakMarker {
             result.push((item.entity, offset + dim / 2.0 + dim * item.anchor.as_vec()));
             col += 1;
-        } 
+        }
         if col >= columns.len() || item.control.is_linebreak() {
             let len = result.len();
             let height = column_dir(line_height);
@@ -316,7 +332,7 @@ pub fn flex_table(
 
     let row_len = row_dir(dimension);
     let row_one = row_dir(Vec2::ONE).abs();
-    
+
     let col_margin = if stretch {
         (xy(row_len).abs() - cols.iter().sum::<f32>()).max(0.0) / (cols.len() - 1) as f32 * row_one
     } else {
@@ -324,7 +340,7 @@ pub fn flex_table(
     };
     let total = if stretch {
         row_len.abs()
-    } else { 
+    } else {
         cols.iter().sum::<f32>() * row_one + row_dir(margin).abs() * (cols.len() - 1) as f32
     };
     let columns = if row_len.cmplt(Vec2::ZERO).any() {

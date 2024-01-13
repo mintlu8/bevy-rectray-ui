@@ -2,7 +2,7 @@
 
 use bevy::math::Vec2;
 use bevy::text::Text;
-use crate::layout::Layout;
+use crate::layout::{Layout, LayoutObject};
 use crate::widgets::TextFragment;
 use crate::widgets::inputbox::InputBox;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit, Size};
@@ -50,9 +50,9 @@ impl DslFrom<f32> for Aspect {
     }
 }
 
-impl<T> DslFrom<T> for Option<Box<dyn Layout>> where T: Layout {
+impl<T> DslFrom<T> for Option<LayoutObject> where T: Layout {
     fn dfrom(value: T) -> Self {
-        Some(Box::new(value))
+        Some(LayoutObject::new(value))
     }
 }
 
@@ -347,6 +347,22 @@ impl DslInto<Scale> for f32 {
         Scale(Vec2::splat(self))
     }
 }
+
+/// A `Anchor` with default value `INHERIT`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ParentAnchor(pub Anchor);
+impl Default for ParentAnchor{
+    fn default() -> Self {
+        Self(Anchor::INHERIT)
+    }
+}
+
+impl<A> DslConvert<ParentAnchor, 1> for A where A: DslInto<Anchor>{
+    fn parse(self) -> ParentAnchor {
+        ParentAnchor(self.dinto())
+    }
+}
+
 
 /// Construct a [`Size`](crate::Size) through CSS like syntax.
 #[macro_export]

@@ -10,14 +10,14 @@ macro_rules! linebreak {
     };
     (($commands: expr $(, $tt:expr)*), $size: expr $(,)?) => {
         {
-            use $crate::dsl::DslInto;            
+            use $crate::dsl::DslInto;
             let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
             $commands.spawn_bundle($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
     (($commands: expr $(, $tt:expr)*) {$size: expr}) => {
         {
-            use $crate::dsl::DslInto;            
+            use $crate::dsl::DslInto;
             let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
             $commands.spawn_bundle($crate::bundles::LinebreakBundle::new(size)).id()
         }
@@ -52,7 +52,7 @@ widget_extension! {
 
 impl Widget for PaddingBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        self.layout = Some(Box::new(BoundsLayout::PADDING));
+        self.layout = Some(BoundsLayout::PADDING.into());
         let entity = build_frame!(commands, self).id();
         (entity, entity)
     }

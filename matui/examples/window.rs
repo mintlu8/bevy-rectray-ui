@@ -166,6 +166,7 @@ pub fn init(mut commands: AouiCommands) {
             palette: palette_idle,
         },
         child: mmenu! {
+            shadow: 5,
             palette: palette!(FramePalette {
                 background: blue,
                 stroke: green,

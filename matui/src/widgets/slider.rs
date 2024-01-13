@@ -77,11 +77,7 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
 
         let horiz_len = self.length.unwrap_or(5.0);
         self.dimension = Size2::em(2.0 + horiz_len, 2.0).dinto();
-        if let Some(event) = &mut self.event {
-            *event |= EventFlags::Hover | EventFlags::LeftDrag;
-        } else {
-            self.event = Some(EventFlags::Hover | EventFlags::LeftDrag);
-        }
+        self.event |= EventFlags::Hover | EventFlags::LeftDrag;
 
         let (fac_send, fac_recv) = commands.signal();
         let (rebase_send, rebase_recv) = commands.signal();

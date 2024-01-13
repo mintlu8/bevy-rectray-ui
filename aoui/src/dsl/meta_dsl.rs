@@ -385,7 +385,7 @@ macro_rules! widget_extension {
             pub anchor: $crate::Anchor,
             /// Matched parent anchor of the sprite, default is `anchor`.
             /// Usually should not be set in idiomatic use.
-            pub parent_anchor: Option<$crate::Anchor>,
+            pub parent_anchor: $crate::dsl::ParentAnchor,
             /// Center of the sprite, default is `center`.
             pub center: $crate::Anchor,
             /// Propagated opacity.
@@ -416,7 +416,7 @@ macro_rules! widget_extension {
             ///
             /// Due to this being a confusing footgun,
             /// setting event here automatically sets hitbox to `Hitbox::rect(1)` if not set manually.
-            pub event: Option<$crate::events::EventFlags>,
+            pub event: $crate::events::EventFlags,
             /// The click detection area of the sprite.
             pub hitbox: Option<$crate::Hitbox>,
             /// The render layer of the sprite.
@@ -424,7 +424,7 @@ macro_rules! widget_extension {
             /// Layout of the widget's children.
             ///
             /// If this is `Some`, the default `dimension` is `Dynamic` instead of `Copied`.
-            pub layout: Option<Box<dyn $crate::layout::Layout>>,
+            pub layout: Option<$crate::layout::LayoutObject>,
             /// Margin of the widget's layout, has no effect if widget has no layout.
             pub margin: $crate::dsl::OneOrTwo<$crate::Size2>,
             /// Margin of the widget's layout, has no effect if widget has no layout.

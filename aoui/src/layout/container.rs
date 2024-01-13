@@ -2,12 +2,12 @@ use std::ops::Range;
 
 use bevy::prelude::*;
 
-use crate::{Size2, layout::Layout};
+use crate::Size2;
 
-use super::LayoutOutput;
+use super::{LayoutOutput, LayoutObject};
 
 /// Range of content displayed in the layout, default is `All`.
-/// 
+///
 /// This means different things with different layout, could be
 /// entities, rows or pages.
 #[derive(Debug, Clone, Copy, Default)]
@@ -60,10 +60,10 @@ impl LayoutRange {
 }
 
 /// A configurable container that lays out a sequence of Entities.
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Clone)]
 pub struct Container {
     /// Layout of the container.
-    pub layout: Box<dyn Layout>,
+    pub layout: LayoutObject,
     /// Margin between cells, always corresponds to the X and Y axis
     /// regardless of layout directions.
     pub margin: Size2,

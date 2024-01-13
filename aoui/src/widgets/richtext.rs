@@ -606,7 +606,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                                         ..Default::default()
                                     },
                                     Container {
-                                        layout: Box::new(StackLayout::HSTACK),
+                                        layout: StackLayout::HSTACK.into(),
                                         margin: Size2::ZERO,
                                         padding: Size2::ZERO,
                                         range: Default::default(),

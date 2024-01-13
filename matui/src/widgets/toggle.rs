@@ -142,7 +142,7 @@ impl Widget for MToggleBuilder {
             Dimension::owned(Size2::em(2.0 + horiz_len, 2.0)),
             PropagateFocus,
             CheckButton::from(self.checked),
-            self.event.unwrap_or(EventFlags::LeftClick) | EventFlags::LeftClick | EventFlags::Hover,
+            self.event | EventFlags::LeftClick | EventFlags::Hover,
             SetCursor {
                 flags: EventFlags::Hover|EventFlags::LeftPressed,
                 icon: self.cursor.unwrap_or(CursorIcon::Hand),

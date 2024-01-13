@@ -96,7 +96,8 @@ widget_extension!(
 );
 
 impl Widget for MButtonBuilder {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+        self.event |=  EventFlags::LeftClick | EventFlags::Hover;
         let mut frame = build_frame!(commands, self);
 
         let style = self.palette;
@@ -107,13 +108,12 @@ impl Widget for MButtonBuilder {
         frame.insert((
             PropagateFocus,
             Button,
-            self.event.unwrap_or(EventFlags::LeftClick) | EventFlags::LeftClick | EventFlags::Hover,
             SetCursor {
                 flags: EventFlags::Hover|EventFlags::LeftPressed,
                 icon: self.cursor.unwrap_or(CursorIcon::Hand),
             },
             Container {
-                layout: Box::new(StackLayout::HSTACK),
+                layout: StackLayout::HSTACK.into(),
                 margin: size2!(0.5 em, 1 em),
                 padding: size2!(1 em, 0.75 em),
                 range: LayoutRange::All,

@@ -7,9 +7,11 @@ mod util;
 mod core;
 
 use std::iter::Copied;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
-use bevy::hierarchy::DespawnRecursiveExt;
+use bevy::ecs::component::Component;
+use bevy::hierarchy::{DespawnRecursiveExt, Children, DespawnRecursive};
 use bevy::prelude::{Commands, Entity, BuildChildren, Bundle};
 use bevy::ecs::system::{SystemParam, Res, EntityCommands, Command};
 use bevy::asset::{AssetServer, Asset, Handle, AssetPath};
@@ -28,7 +30,7 @@ mod clipping;
 //mod rich_text;
 
 
-pub use util::{OneOrTwo, Scale, Aspect, WidgetWrite};
+pub use util::{OneOrTwo, Scale, Aspect, WidgetWrite, ParentAnchor};
 pub use converters::{OptionEx, DslFromOptionEx, IntoAsset};
 #[doc(hidden)]
 pub use itertools::izip;
@@ -62,6 +64,7 @@ pub struct AouiCommands<'w, 's> {
     signals: Res<'w, SignalPool>,
 }
 
+#[derive(Clone)]
 /// A dynamic function that builds an entity.
 pub struct WidgetBuilder<T>(Arc<dyn Fn(&mut AouiCommands, T) -> Entity + Send + Sync + 'static>);
 
@@ -181,6 +184,24 @@ impl<'w, 's> AouiCommands<'w, 's> {
     pub fn despawn_descendants(&mut self, entity: Entity) {
         self.commands.entity(entity).despawn_descendants();
     }
+
+    /// Despawn children with a specific component and their descendants.
+    pub fn despawn_children_with<T: Component>(&mut self, entity: Entity) {
+        pub struct DespawnDescendantsWith<T: Component>(Entity, PhantomData<T>);
+        impl<T: Component> Command for DespawnDescendantsWith<T> {
+            fn apply(self, world: &mut bevy::prelude::World) {
+                let Some(children) = world.get::<Children>(self.0) else {return};
+                let children = children.to_vec();
+                for child in children {
+                    if world.get::<T>(child).is_some() {
+                        DespawnRecursive {entity: child}.apply(world);
+                    }
+                }
+            }
+        }
+
+        self.commands.add(DespawnDescendantsWith::<T>(entity, PhantomData))
+    }
 }
 
 impl AsRef<AssetServer> for AouiCommands<'_, '_> {
@@ -201,6 +222,11 @@ impl<'w, 's> AsMut<Commands<'w, 's>> for AouiCommands<'w, 's> {
 pub trait Widget: Sized {
     /// This function should panic if assets is needed but is `None`.
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity);
+
+    /// Construct a widget builder from a clonable widget.
+    fn into_bulider(self) -> WidgetBuilder<()> where Self: Clone + Send + Sync + 'static {
+        WidgetBuilder::new(move |commands: &mut AouiCommands| self.clone().spawn(commands).0)
+    }
 }
 
 /// Construct marker components by name.

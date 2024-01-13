@@ -41,10 +41,7 @@ widget_extension!(
 
 impl<B: IntoScrollingBuilder> Widget for ScrollingFrameBuilder<B> {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        match &mut self.event {
-            Some(flag) => *flag |= EventFlags::MouseWheel,
-            None => self.event = Some(EventFlags::MouseWheel),
-        }
+        self.event |= EventFlags::MouseWheel;
         let entity = build_frame!(commands, self).id();
         commands.entity(entity).insert(self.scroll.expect("Expect `scroll`").with_constraints());
         if self.clipping.is_none(){

@@ -3,9 +3,8 @@
 use bevy::ecs::component::Component;
 use bevy::{window::CursorIcon, hierarchy::BuildChildren};
 use bevy::ecs::{entity::Entity, query::Changed, system::Query};
-use bevy_aoui::{Anchor, size2, frame};
+use bevy_aoui::{Anchor, size2, frame, Size2, markers};
 use bevy_aoui::dsl::prelude::em;
-use bevy_aoui::layout::BoundsLayout;
 use bevy_aoui::signals::Object;
 use bevy_aoui::{widget_extension, events::EventFlags, layout::StackLayout};
 use bevy_aoui::widgets::button::{RadioButton, Payload, radio_button_group};
@@ -20,13 +19,13 @@ pub struct DropdownItems(Vec<MenuItem>);
 
 #[derive(Debug, Component)]
 pub struct DropdownBuilder {
-    width: Option<f32>,
+    width: f32,
     radio: RadioButton,
     divider: WidgetBuilder<()>,
     text: WidgetBuilder<String>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub enum MenuItem {
     #[default]
     Divider,
@@ -35,6 +34,13 @@ pub enum MenuItem {
         value: String,
         left: Option<WidgetBuilder<()>>,
         right: Option<WidgetBuilder<()>>,
+    },
+    Nest {
+        key: Object,
+        value: String,
+        left: Option<WidgetBuilder<()>>,
+        right: Option<WidgetBuilder<()>>,
+        nest: Box<MenuItem>,
     },
 }
 
@@ -107,43 +113,60 @@ pub fn rebuild_dropdown_children(
     query: Query<(Entity, &DropdownItems, &DropdownBuilder), Changed<DropdownItems>>
 ) {
     for (entity, items, builder) in query.iter() {
-        dbg!("Ahhh");
-        commands.despawn_descendants(entity);
-        let Some(width) = builder.width else {continue};
+        markers!(MenuItemMarker);
+        commands.despawn_children_with::<MenuItemMarker>(entity);
+        let width = builder.width;
         for item in &items.0 {
             match item {
                 MenuItem::Divider => {
                     let div = builder.divider.build(&mut commands, ());
+                    commands.entity(div).insert(MenuItemMarker);
                     commands.entity(entity).add_child(div);
                 },
                 MenuItem::Text { key, value, left, right } => {
-                    let entity = frame!(commands {
+                    let item = bevy_aoui::radio_button!(commands {
                         dimension: size2!(width em, 2.2 em),
-                    });
-                    let text = bevy_aoui::radio_button!(commands {
                         context: builder.radio.clone(),
                         value: key.clone(),
-                        layout: BoundsLayout::PADDING,
-                        child: builder.text.build(&mut commands, value.clone())
+                        child: builder.text.build(&mut commands, value.clone()),
+                        extra: MenuItemMarker,
                     });
-                    commands.entity(entity).add_child(text);
                     if let Some(left) = left {
                         let icon = left.build(&mut commands, ());
-                        commands.entity(entity).add_child(icon);
+                        commands.entity(item).add_child(icon);
                     }
                     if let Some(right) = right {
                         let right = right.build(&mut commands, ());
-                        commands.entity(entity).add_child(right);
+                        commands.entity(item).add_child(right);
                     }
+                    commands.entity(entity).add_child(item);
                 },
+                MenuItem::Nest { key, value, left, right, nest:_ } => {
+                    let item = bevy_aoui::radio_button!(commands {
+                        dimension: size2!(width em, 2.2 em),
+                        context: builder.radio.clone(),
+                        value: key.clone(),
+                        child: builder.text.build(&mut commands, value.clone()),
+                        extra: MenuItemMarker,
+                    });
+                    if let Some(left) = left {
+                        let icon = left.build(&mut commands, ());
+                        commands.entity(item).add_child(icon);
+                    }
+                    if let Some(right) = right {
+                        let right = right.build(&mut commands, ());
+                        commands.entity(item).add_child(right);
+                    }
+                    commands.entity(entity).add_child(item);
+                }
             }
         }
     }
 }
 
 widget_extension!(
+    #[derive(Clone)]
     pub struct MMenuBuilder {
-        /// Sets the CursorIcon when hovering this menu, default is `Hand`
         pub cursor: Option<CursorIcon>,
         /// The context for the dropdown radio_button value.
         pub context: Option<RadioButton>,
@@ -160,7 +183,7 @@ widget_extension!(
         /// Palette
         pub palette: FramePalette,
         /// Palette for hovering.
-        pub hover_palette: FramePalette,
+        pub hover_palette: Option<FramePalette>,
         /// Shadow.
         pub shadow: OptionEx<ShadowInfo>,
         pub stroke: f32,
@@ -182,6 +205,8 @@ widget_extension!(
 impl Widget for MMenuBuilder {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
         let radio = radio_button_group(self.selected);
+        let palette = self.palette;
+        let hover_palette = self.hover_palette.unwrap_or(self.palette);
         let frame = mframe!(commands {
             anchor: self.anchor,
             parent_anchor: self.parent_anchor,
@@ -194,15 +219,18 @@ impl Widget for MMenuBuilder {
             padding: em(0.25),
             radius: self.radius,
             shadow: self.shadow,
+            child: frame! {
+                dimension: Size2::FULL,
+            },
             extra: DropdownItems(self.items),
             extra: DropdownBuilder {
-                width: self.width,
+                width: self.width.unwrap_or(10.0),
                 radio,
                 divider: WidgetBuilder::new(move |commands: &mut AouiCommands| {
                     bevy_aoui::padding!(commands {
                         padding: size2!(0, 0.3 em),
                         child: mdivider!{
-                            color: self.palette.stroke,
+                            color: palette.stroke,
                             width: self.divider_width,
                             inset: self.divider_inset,
                         }
@@ -213,7 +241,7 @@ impl Widget for MMenuBuilder {
                         bevy_aoui::text!(commands {
                             anchor: Anchor::CENTER_LEFT,
                             text: text,
-                            color: self.hover_palette.stroke,
+                            color: hover_palette.stroke,
                         })
                     })
                 ),

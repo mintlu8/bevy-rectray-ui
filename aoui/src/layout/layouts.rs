@@ -20,9 +20,48 @@ const _: Option<Box<dyn Layout>> = None;
 pub trait Layout: Downcast + Debug + Send + Sync + 'static {
     /// Place sprites in the layout.
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput;
+    /// Clone the layout.
+    fn dyn_clone(&self) -> Box<dyn Layout>;
 }
 
 impl_downcast!(Layout);
+
+#[derive(Debug)]
+pub struct LayoutObject(Box<dyn Layout>);
+
+impl LayoutObject {
+    pub fn new(layout: impl Layout) -> Self {
+        Self(Box::new(layout))
+    }
+
+    pub fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput {
+        self.0.place(parent, entities, range)
+    }
+
+    pub fn downcast<T: Layout>(&self) -> Option<&T>{
+        self.0.downcast_ref()
+    }
+
+    pub fn into_downcast<T: Layout>(self) -> Result<T, Self>{
+        match self.0.downcast() {
+            Ok(x) => Ok(*x),
+            Err(x) => Err(Self(x)),
+        }
+    }
+}
+
+impl Clone for LayoutObject {
+    fn clone(&self) -> Self {
+        Self(self.0.dyn_clone())
+    }
+}
+
+impl<T> From<T> for LayoutObject where T: Layout {
+    fn from(value: T) -> Self {
+        Self(Box::new(value))
+    }
+}
+
 
 /// Output of a layout, containing anchors of entities, and the computed dimension of the layout.
 #[derive(Debug)]
@@ -127,11 +166,22 @@ impl Layout for BoundsLayout {
         );
         LayoutOutput { entity_anchors, dimension, max_count: entities.len() }
     }
+
+    fn dyn_clone(&self) -> Box<dyn Layout> {
+        Box::new(*self)
+    }
 }
 
 /// A size agnostic mono-directional container.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Default)]
 pub struct StackLayout<D: Direction = X>(PhantomData<D>);
+
+impl<D: Direction> Copy for StackLayout<D> {}
+impl<D: Direction> Clone for StackLayout<D> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 
 impl StackLayout {
     /// A left to right layout.
@@ -148,8 +198,15 @@ impl<D: Direction> StackLayout<D> {
 
 
 /// A fix-sized mono-directional container.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Default)]
 pub struct SpanLayout<D: StretchDir = X>(PhantomData<D>);
+
+impl<D: StretchDir> Copy for SpanLayout<D> {}
+impl<D: StretchDir> Clone for SpanLayout<D> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 
 impl SpanLayout {
     /// A left to right layout with fixed dimension.
@@ -171,8 +228,15 @@ impl<D: StretchDir> SpanLayout<D> {
 
 
 /// A multiline version of the `span` layout, similar to the layout of a paragraph.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Default)]
 pub struct ParagraphLayout<D1: StretchDir=X, D2: Direction=Rev<Y>>(PhantomData<(D1, D2)>) where (D1, D2): DirectionPair;
+
+impl<D1: StretchDir, D2: Direction> Copy for ParagraphLayout<D1, D2> where (D1, D2): DirectionPair {}
+impl<D1: StretchDir, D2: Direction> Clone for ParagraphLayout<D1, D2> where (D1, D2): DirectionPair {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 
 impl ParagraphLayout {
     /// A left to right, top to bottom paragraph, similar to the default layout of a webpage.
