@@ -3,7 +3,8 @@
 [![Crates.io](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
 [![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
 
-Bevy Aoui is a component based 2D and UI solution for the bevy engine.
+Bevy Aoui is a native component based 2D and UI solution for the bevy engine.
+
 
 ## Getting Started
 
@@ -13,7 +14,7 @@ First add the Aoui Plugin:
 app.add_plugins(AouiPlugin)
 ```
 
-Import the DSL prelude in the function scope
+Import the [DSL prelude](dsl::prelude), preferrably in the function scope.
 
 ```rust
 fn spawn(mut commands: AouiCommands) {
@@ -35,27 +36,39 @@ sprite!(commands {
 
 This spawns a "Ferris.png" to the center left of the screen,
 moved to the right by 40 px, with dimension 200 px * 200 px,
-and returns an `Entity`.
+and returns an [`Entity`](bevy::ecs::entity::Entity).
 
-Create a stack of words:
+Create a hierarchy:
 
-```rust
+```
+# /*
 vstack!(commands {
     font_size: em(2),
     child: text! {
         text: "Hello"
     },
     child: text! {
-        text: "rust"
-    },
-    child: text! {
-        text: "and"
-    },
-    child: text! {
-        text: "bevy"
+        text: "rust",
+        child: text! {
+            text: "and bevy!"
+        },
     },
 });
+# */
 ```
+
+### Why a DSL?
+
+`bevy_aoui`'s DSL is a very simple `macro_rules` macro that reorganizes arguments in a way to make
+`commands` usable anywhere during the macro invocation, without the need to bend over backwards
+to create children/bundles before parents. As a result we have a simple rust-like syntax.
+that is intuitive and enjoyable to write.
+
+Other approach like `egui`'s cx closure would add a lot of boilerplate
+as every field can potentially load contents via `commands`,
+creating borrow checking issues.
+
+If you don't like the DSL you can use our [bundles] or [widget builders](crate::dsl::builders),
 
 ## How this works?
 
@@ -68,13 +81,13 @@ You might want to
 
 ```text
 Place a sprite to the center right of the parent sprite,
-move left by 10 px, 
+move left by 10 px,
 with 20% of parent's width as width
 2x font size as height
 and rotate by 45 degrees.
 ```
 
-In `aoui` this is incredibly simple:
+In `bevy_aoui` this is incredibly simple:
 
 ```rust
 sprite!(commands {
@@ -86,23 +99,24 @@ sprite!(commands {
 })
 ```
 
-Use `Transform2D` and `Dimension` to manipulate `aoui` widgets directly.
+Use [`Transform2D`] and [`Dimension`] to manipulate `aoui` widgets directly.
 
-## What `bevy_aoui` provides
+# What `bevy_aoui` provides:
 
 * Fine grained low level anchor-offset layout system.
 * First class support for rotation and scaling.
-* Simple and intuitive layouts.
+* Simple and intuitive containers.
 * Decentralized ECS components with no central state.
 * Complete support of bevy's 2D primitives.
 * Input handling system for mouse and cursor.
 * Building blocks for most common widgets.
-* Event handling through closures.
+* Event handling through one-shot systems.
 * Reactivity and animation through signals.
 * `macro_rules` based DSL that annihilates boilerplate.
+* Easy integration with third-party 2D crates.
 * Easy migration to future bevy versions.
 
-## What `bevy_aoui` is not
+# What `bevy_aoui` is not
 
 * Not a renderer.
 
@@ -122,27 +136,25 @@ Use `Transform2D` and `Dimension` to manipulate `aoui` widgets directly.
 
 * No styling
 
-   Styling is outside the scope of this crate.
+    Styling is outside the scope of this crate.
 
-## Layouts
+# Container
 
-Vanilla `bevy_aoui` gives you an experience akin to a traditional 2D game framework,
-this is great for keeping things simple at first, like placing something
-at the corner of a window.
-But for more complicated UI you might find using `Layout` with `Container` more attractive.
+Anchor-Offset offers fine-grained control over the layout, but you can surrender
+that control to [containers](layout) for ergonomics.
 
-With `Container`, you get access to CSS like properties `padding` and `margin`,
-reverse dimension propagation in `BoundsLayout`,
-and common layouts like `hbox`, `paragraph` and `grid`.
+The `Container` is a very simple layout system that
+only depends on insertion order of its children. You can find your
+[`hstack`](layout::StackLayout), [`grid`](layout::FixedGridLayout) or [`paragraph`](layout::ParagraphLayout) here.
 
-You can also implement `Layout` yourself to create a custom layout.
+You can implement [`Layout`](layout::Layout) yourself to create a custom layout.
 
-## Widget Abstractions
+# Widget Abstractions
 
-Widget builders are used to empower our DSL.
-Widget builders implements `Widget` and `Default` and can be used in general like so:
+[Widget builders](crate::dsl::builders) are used to empower our DSL.
+Widget builders implements [`Widget`](dsl::Widget) and [`Default`] and can be used in general like so:
 
-```rust
+```
 FrameBuilder {
     offset: [121, 423].dinto(),
     anchor: Center.dinto(),
@@ -151,9 +163,9 @@ FrameBuilder {
 }.build(commands)
 ```
 
-This returns an `Entity`.
+This returns an [`Entity`](bevy::ecs::entity::Entity).
 
-`dinto` is implemented in `DslFrom` or `DslInto`.
+`dinto` is implemented in [`DslFrom`](dsl::DslFrom) or [`DslInto`](dsl::DslInto).
 which gives us nice conversion like `[i32; 2] -> Vec2`, which can save us a lot of typing!
 
 When using the dsl macro, this becomes
@@ -166,21 +178,22 @@ frame! (commands {
 });
 ```
 
-much nicer, right?
+much cleaner, right?
 
-`commands` is the context, if `AssetServer` is needed
-we can put `commands` there, which should be the
-case most of the time.
-
-## DSL Syntax
+# DSL Syntax
 
 The DSL have a few special fields that makes it much more powerful than
 a simple struct constructor.
 
-### child and children
+## commands
 
-`child:` is a special field that can be repeated, it accepts an `Entity`
-and inserts it as a child.
+At the root level, the DSL takes a [`AouiCommands`](dsl::AouiCommands),
+which is a combination of `Commands`, `AssetServer` and [`SignalPool`](signals::SignalPool).
+
+## child
+
+`child:` is a special field that can be repeated, it accepts an `Entity`,
+an iterator of `Entity` or `&Entity` and inserts it/them as a child/children.
 
 ```rust
 frame! (commands {
@@ -191,28 +204,27 @@ frame! (commands {
     child: text! {
         text: "Hello, World!!"
     },
+    child: "Hello".chars().map(|c|
+        text! (commands {
+            text: c,
+        })
+    )
 });
 ```
 
 This syntax, notice the use of braces `{}`,
-
 ```rust
 field: macro! { .. },
 ```
 
 Will be automatically rewritten as
-
 ```rust
 field: macro!(commands { .. }),
 ```
 
 Which serves as context propagation.
 
-`children:` adds an iterator as children to the entity.
-Iterators of `Entity` and `&Entity` are both accepted.
-Child and children guarantees insertion order.
-
-### extra
+## extra
 
 Extra adds a component or a bundle to a widget,
 which is the idiomatic pattern to compose behaviors.
@@ -227,11 +239,10 @@ sprite! (commands {
 });
 ```
 
-### entity
+## entity
 
-`entity` lets us fetch the `Entity`
+`entity` lets us fetch the [`Entity`](bevy::ecs::entity::Entity)
 directly from a nested macro invocation.
-
 ```rust
 let sprite_entity: Entity;
 sprite! (commands {
@@ -241,9 +252,44 @@ sprite! (commands {
 });
 ```
 
-## Next Step
+## `quote!` syntax
 
-See documentation on individual modules for more information.
+We have support for a syntax inspired by the `quote!` crate,
+that can be used to repeat a child by an iterator.
+
+```rust
+vstack! (commands {
+    child: #rectangle! {
+        dimension: #dimensions,
+        color: #colors,
+    }
+});
+```
+
+This zips `colors` and `dimensions` and
+iterate through them to create multiple rectangles.
+
+### Note
+
+The dsl normally functions on the field level, which is
+performant and editor friendly, but using `quote!` syntax
+requires running a `tt` muncher, which may cause editors to give up
+or break your recursion limit. You can use
+```
+#![recursion_limit="256"]
+```
+to increase your recursion limit.
+
+# Next Steps
+
+Checkout our modules for more documentations and examples.
+
+* [events]
+* [signals]
+* [widgets]
+* [animation](anim)
+
+
 
 ## License
 
