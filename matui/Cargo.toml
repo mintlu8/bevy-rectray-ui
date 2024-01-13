@@ -5,6 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+doctest = false
+
 [dependencies]
 bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite", "bevy_text", "trace"] }
 bevy_aoui = {version = "0.3.0", path = "../aoui"}

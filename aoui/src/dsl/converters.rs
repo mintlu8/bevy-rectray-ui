@@ -5,7 +5,7 @@ use super::{AouiCommands, convert::DslConvert};
 
 /// Extended `Option` for the DSL.
 ///
-/// Since dependants of this crate cannot implemnt `DslFrom` on `Option<T>` with foreigh types,
+/// Since dependents of this crate cannot implement `DslFrom` on `Option<T>` with foreign types,
 /// [`DslFromOptionEx`](super::DslFromOptionEx) can be used to make conversion to OptionX.
 ///
 /// Using a crate local option type also works here.

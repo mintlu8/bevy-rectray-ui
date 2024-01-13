@@ -5,7 +5,6 @@
 
 Bevy Aoui is a native component based 2D and UI solution for the bevy engine.
 
-
 ## Getting Started
 
 First add the Aoui Plugin:
@@ -14,7 +13,9 @@ First add the Aoui Plugin:
 app.add_plugins(AouiPlugin)
 ```
 
-Import the [DSL prelude](dsl::prelude), preferrably in the function scope.
+Import the
+[DSL prelude](https://docs.rs/bevy_aoui/latest/bevy_aoui/dsl/prelude/),
+preferably inside the function scope.
 
 ```rust
 fn spawn(mut commands: AouiCommands) {
@@ -35,12 +36,12 @@ sprite!(commands {
 ```
 
 This spawns a "Ferris.png" to the center left of the screen,
-moved to the right by 40 px, with dimension 200 px * 200 px,
-and returns an [`Entity`](bevy::ecs::entity::Entity).
+moved to the right by `40 px`, with dimension `200 px * 200 px`,
+and returns an `Entity`.
 
 Create a hierarchy:
 
-```
+```rust
 vstack!(commands {
     font_size: em(2),
     child: text! {
@@ -62,11 +63,11 @@ vstack!(commands {
 to create children/bundles before parents. As a result we have a simple rust-like syntax.
 that is intuitive and enjoyable to write.
 
-Other approach like `egui`'s cx closure would add a lot of boilerplate
-as every field can potentially load contents via `commands`,
-creating borrow checking issues.
-
-If you don't like the DSL you can use our [bundles] or [widget builders](crate::dsl::builders),
+If you don't like the DSL you can use our
+[`bundles`](https://docs.rs/bevy_aoui/latest/bevy_aoui/bundles)
+or
+[`widgets`](https://docs.rs/bevy_aoui/latest/bevy_aoui/dsl/builders)
+directly,
 
 ## How this works?
 
@@ -97,9 +98,9 @@ sprite!(commands {
 })
 ```
 
-Use [`Transform2D`] and [`Dimension`] to manipulate `aoui` widgets directly.
+Use `Transform2D` and `Dimension` to manipulate `aoui` widgets directly.
 
-# What `bevy_aoui` provides:
+## What `bevy_aoui` provides
 
 * Fine grained low level anchor-offset layout system.
 * First class support for rotation and scaling.
@@ -114,7 +115,7 @@ Use [`Transform2D`] and [`Dimension`] to manipulate `aoui` widgets directly.
 * Easy integration with third-party 2D crates.
 * Easy migration to future bevy versions.
 
-# What `bevy_aoui` is not
+## What `bevy_aoui` is not
 
 * Not a renderer.
 
@@ -132,27 +133,38 @@ Use [`Transform2D`] and [`Dimension`] to manipulate `aoui` widgets directly.
     `bevy_aoui` uses rust closures for a lot of things, including events and reactivity,
     those are unfortunately not serializable.
 
+* Limited reflection support.
+
+    Limiting the scope of this project to the supported feature set of `Reflection` is not ideal of this project. Use reflect to some extent to
+    debug is supported, but don't expect every reflect based feature to work with `bevy_aoui`.
+
 * No styling
 
     Styling is outside the scope of this crate.
 
-# Container
+## Container
 
 Anchor-Offset offers fine-grained control over the layout, but you can surrender
-that control to [containers](layout) for ergonomics.
+that control to
+[containers](https://docs.rs/bevy_aoui/latest/bevy_aoui/layout) for ergonomics.
 
 The `Container` is a very simple layout system that
 only depends on insertion order of its children. You can find your
-[`hstack`](layout::StackLayout), [`grid`](layout::FixedGridLayout) or [`paragraph`](layout::ParagraphLayout) here.
+[`hstack`](https://docs.rs/bevy_aoui/latest/bevy_aoui/layout/struct.StackLayout.html),
+[`grid`](https://docs.rs/bevy_aoui/latest/bevy_aoui/layout/struct.FixedGridLayout.html)
+or
+[`paragraph`](https://docs.rs/bevy_aoui/latest/bevy_aoui/layout/struct.ParagraphLayout) here.
 
-You can implement [`Layout`](layout::Layout) yourself to create a custom layout.
+You can implement [`Layout`](https://docs.rs/bevy_aoui/latest/bevy_aoui/layout/trait.Layout) yourself to create a custom layout.
 
-# Widget Abstractions
+## Widget Abstractions
 
-[Widget builders](crate::dsl::builders) are used to empower our DSL.
-Widget builders implements [`Widget`](dsl::Widget) and [`Default`] and can be used in general like so:
+Widget builders are used to empower our DSL.
+Widget builders implements [`Widget`](https://docs.rs/bevy_aoui/latest/bevy_aoui/dsl/trait.Widget)
+and `Default`.
+They can be used in general like so:
 
-```
+```rust
 FrameBuilder {
     offset: [121, 423].dinto(),
     anchor: Center.dinto(),
@@ -161,9 +173,9 @@ FrameBuilder {
 }.build(commands)
 ```
 
-This returns an [`Entity`](bevy::ecs::entity::Entity).
+This returns an `Entity`.
 
-`dinto` is implemented in [`DslFrom`](dsl::DslFrom) or [`DslInto`](dsl::DslInto).
+`dinto` is implemented in `DslFrom` or `DslInto`.
 which gives us nice conversion like `[i32; 2] -> Vec2`, which can save us a lot of typing!
 
 When using the dsl macro, this becomes
@@ -178,17 +190,19 @@ frame! (commands {
 
 much cleaner, right?
 
-# DSL Syntax
+## DSL Syntax
 
 The DSL have a few special fields that makes it much more powerful than
 a simple struct constructor.
 
-## commands
+### commands
 
-At the root level, the DSL takes a [`AouiCommands`](dsl::AouiCommands),
-which is a combination of `Commands`, `AssetServer` and [`SignalPool`](signals::SignalPool).
+At the root level, the DSL takes a
+[`AouiCommands`](https://docs.rs/bevy_aoui/latest/bevy_aoui/dsl/struct.AouiCommands),
+which is a combination of `Commands`, `AssetServer` and
+[`SignalPool`](https://docs.rs/bevy_aoui/latest/bevy_aoui/signals/struct.SignalPool),
 
-## child
+### child
 
 `child:` is a special field that can be repeated, it accepts an `Entity`,
 an iterator of `Entity` or `&Entity` and inserts it/them as a child/children.
@@ -211,18 +225,20 @@ frame! (commands {
 ```
 
 This syntax, notice the use of braces `{}`,
+
 ```rust
 field: macro! { .. },
 ```
 
 Will be automatically rewritten as
+
 ```rust
 field: macro!(commands { .. }),
 ```
 
 Which serves as context propagation.
 
-## extra
+### extra
 
 Extra adds a component or a bundle to a widget,
 which is the idiomatic pattern to compose behaviors.
@@ -237,10 +253,11 @@ sprite! (commands {
 });
 ```
 
-## entity
+### entity
 
-`entity` lets us fetch the [`Entity`](bevy::ecs::entity::Entity)
+`entity` lets us fetch the `Entity`
 directly from a nested macro invocation.
+
 ```rust
 let sprite_entity: Entity;
 sprite! (commands {
@@ -250,7 +267,7 @@ sprite! (commands {
 });
 ```
 
-## `quote!` syntax
+### `quote!` syntax
 
 We have support for a syntax inspired by the `quote!` crate,
 that can be used to repeat a child by an iterator.
@@ -267,27 +284,27 @@ vstack! (commands {
 This zips `colors` and `dimensions` and
 iterate through them to create multiple rectangles.
 
-### Note
+#### Note
 
 The dsl normally functions on the field level, which is
 performant and editor friendly, but using `quote!` syntax
 requires running a `tt` muncher, which may cause editors to give up
 or break your recursion limit. You can use
-```
+
+```rust
 #![recursion_limit="256"]
 ```
+
 to increase your recursion limit.
 
-# Next Steps
+## Next Steps
 
 Checkout our modules for more documentations and examples.
 
-* [events]
-* [signals]
-* [widgets]
-* [animation](anim)
-
-
+* [events](https://docs.rs/bevy_aoui/latest/bevy_aoui/events)
+* [signals](https://docs.rs/bevy_aoui/latest/bevy_aoui/signals)
+* [widgets](https://docs.rs/bevy_aoui/latest/bevy_aoui/widgets)
+* [animation](https://docs.rs/bevy_aoui/latest/bevy_aoui/anim)
 
 ## License
 
