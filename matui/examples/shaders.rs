@@ -1,6 +1,6 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, material_sprite, dsl::AouiCommands};
-use bevy_matui::{MatuiPlugin, shapes::{RoundedRectangleMaterial, RoundedShadowMaterial}};
+use bevy_aoui::{AouiPlugin, material_sprite, util::AouiCommands};
+use bevy_matui::{MatuiPlugin, shaders::{RoundedRectangleMaterial, RoundedShadowMaterial}};
 
 pub fn main() {
     App::new()
@@ -42,11 +42,12 @@ pub fn init(mut commands: AouiCommands) {
             z: -1,
         }
     });
-    
+
     material_sprite!(commands {
         offset: size2!(25%, 25%),
         dimension: size2!(20%, 20%),
-        material: RoundedRectangleMaterial::from_image(commands.load("bricks.png"), color!(white), 20.0),
+        material: RoundedRectangleMaterial::from_image(commands.load("bricks.png"), color!(white), 20.0)
+            .with_stroke((color!(brown), 5.0)),
         child: material_sprite! {
             dimension: size2!(1 + 40 px, 1 + 40 px),
             material: RoundedShadowMaterial::new(color!(black), 20.0, 20.0),
@@ -81,6 +82,16 @@ pub fn init(mut commands: AouiCommands) {
         child: material_sprite! {
             dimension: size2!(1 + 10 px, 1 + 10 px),
             material: RoundedShadowMaterial::capsule(color!(black), 5.0),
+            z: -1,
+        }
+    });
+    material_sprite!(commands {
+        offset: size2!(-25%, 25%),
+        dimension: size2!(20%, 20%),
+        material: RoundedRectangleMaterial::rect(color!(green)).with_stroke((color!(red), 5.0)),
+        child: material_sprite! {
+            dimension: size2!(1 + 10 px, 1 + 10 px),
+            material: RoundedShadowMaterial::new(color!(black), 0.0, 5.0),
             z: -1,
         }
     });

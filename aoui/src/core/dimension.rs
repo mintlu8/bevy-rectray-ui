@@ -1,6 +1,6 @@
 use bevy::{reflect::Reflect, ecs::{component::Component, query::WorldQuery}, math::Vec2};
 
-use crate::{Size2, FontSize, SizeUnit};
+use crate::{Size2, FontSize};
 
 /// Size of the sprite.
 ///
@@ -258,20 +258,20 @@ impl DimensionMutItem<'_> {
                 if size.is_nan() {
                     return Vec2::ZERO;
                 }
-                if v.units().0 == SizeUnit::Percent {
+                if v.units().0.is_relative() {
                     size.x = 0.0;
                 }
-                if v.units().0 == SizeUnit::Percent {
+                if v.units().0.is_relative() {
                     size.x = 0.0;
                 }
                 size
             }
             DimensionType::Owned(v) => {
                 let mut size = v.as_pixels(parent, em, rem);
-                if v.units().0 == SizeUnit::Percent {
+                if v.units().0.is_relative() {
                     size.x = 0.0;
                 }
-                if v.units().0 == SizeUnit::Percent {
+                if v.units().0.is_relative() {
                     size.x = 0.0;
                 }
                 size

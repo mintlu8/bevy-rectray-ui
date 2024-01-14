@@ -3,7 +3,7 @@
 //! Note this just compiles to bevy_text, nothing fancy here.
 
 use bevy::{prelude::*, utils::HashMap};
-use bevy_aoui::{AouiPlugin, widgets::richtext::{RichTextBuilder, FontStyle}, dsl::AouiCommands};
+use bevy_aoui::{AouiPlugin, widgets::richtext::{RichTextBuilder, FontStyle}, util::AouiCommands};
 
 pub fn main() {
     App::new()

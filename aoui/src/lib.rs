@@ -3,6 +3,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::single_match)]
 pub(crate) mod core;
+pub mod util;
 pub mod layout;
 pub mod dsl;
 pub mod widgets;
@@ -16,8 +17,6 @@ pub use core::*;
 pub use bevy;
 
 pub mod schedule;
-mod extension;
-pub use extension::WorldExtension;
 
 pub use schedule::CorePlugin;
 

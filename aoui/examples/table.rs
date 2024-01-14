@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AouiPlugin, dsl::{DslInto, AouiCommands}, Anchor, material_sprite, layout::TableLayout};
+use bevy_aoui::{AouiPlugin, util::{DslInto, AouiCommands}, Anchor, material_sprite, layout::TableLayout};
 
 pub fn main() {
     App::new()

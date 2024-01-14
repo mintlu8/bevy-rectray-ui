@@ -1,7 +1,7 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::WorldExtension;
+use bevy_aoui::util::WorldExtension;
 use bevy_aoui::AouiPlugin;
-use bevy_aoui::dsl::AouiCommands;
+use bevy_aoui::util::AouiCommands;
 use bevy_aoui::events::MovementUnits;
 use bevy_aoui::signals::Object;
 use bevy_aoui::signals::SignalBuilder;

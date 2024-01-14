@@ -1,6 +1,7 @@
 use bevy::asset::{Asset, Handle};
-use crate::{widgets::button::Payload, signals::AsObject};
-use super::{AouiCommands, convert::DslConvert};
+use crate::{widgets::button::Payload, signals::AsObject, util::AouiCommands};
+
+use super::DslConvert;
 
 
 /// Extended `Option` for the DSL.
@@ -54,13 +55,13 @@ pub trait DslFromOptionEx<T> {
     fn dfrom_option(value: T) -> Self;
 }
 
-impl<T, U> DslConvert<OptionEx<U>, 5> for T where U: DslFromOptionEx<T> {
+impl<T, U> DslConvert<OptionEx<U>, 'O'> for T where U: DslFromOptionEx<T> {
     fn parse(self) -> OptionEx<U> {
         OptionEx::Some(U::dfrom_option(self))
     }
 }
 
-impl<T> DslConvert<Option<Payload>, 2> for T where T: AsObject{
+impl<T> DslConvert<Option<Payload>, 'P'> for T where T: AsObject{
     fn parse(self) -> Option<Payload> {
         Some(Payload::new(self))
     }
@@ -76,31 +77,31 @@ pub enum IntoAsset<T: Asset>{
     String(String),
 }
 
-impl<T> DslConvert<IntoAsset<T>, 1> for T where T: Asset {
+impl<T> DslConvert<IntoAsset<T>, 'A'> for T where T: Asset {
     fn parse(self) -> IntoAsset<T> {
         IntoAsset::Raw(self)
     }
 }
 
-impl<T> DslConvert<IntoAsset<T>, 1> for Handle<T> where T: Asset {
+impl<T> DslConvert<IntoAsset<T>, 'A'> for Handle<T> where T: Asset {
     fn parse(self) -> IntoAsset<T> {
         IntoAsset::Handle(self)
     }
 }
 
-impl<T> DslConvert<IntoAsset<T>, 1> for &Handle<T> where T: Asset {
+impl<T> DslConvert<IntoAsset<T>, 'A'> for &Handle<T> where T: Asset {
     fn parse(self) -> IntoAsset<T> {
         IntoAsset::Handle(self.clone())
     }
 }
 
-impl<T> DslConvert<IntoAsset<T>, 2> for String where T: Asset {
+impl<T> DslConvert<IntoAsset<T>, 'a'> for String where T: Asset {
     fn parse(self) -> IntoAsset<T> {
         IntoAsset::String(self)
     }
 }
 
-impl<T> DslConvert<IntoAsset<T>, 2> for &str where T: Asset {
+impl<T> DslConvert<IntoAsset<T>, 'a'> for &str where T: Asset {
     fn parse(self) -> IntoAsset<T> {
         IntoAsset::String(self.to_owned())
     }

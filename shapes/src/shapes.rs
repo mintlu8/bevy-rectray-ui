@@ -1,5 +1,5 @@
 use bevy::{math::Vec2, sprite::{Mesh2dHandle, ColorMaterial}, prelude::Color, ecs::entity::Entity};
-use bevy_aoui::{widget_extension, dsl::{prelude::OneOrTwo, DslFrom, Widget, AouiCommands}, bundles::BuildTransformBundle, build_frame};
+use bevy_aoui::{frame_extension, util::{DslFrom, Widget, AouiCommands}, bundles::BuildTransformBundle, build_frame, dsl::OneOrTwo};
 use bevy_prototype_lyon::prelude::*;
 
 use crate::systems::{ShapeDimension, Shapes};
@@ -43,7 +43,7 @@ impl DslFrom<(Color, f32)> for OptionX<Stroke>{
 
 
 
-widget_extension! {
+frame_extension! {
     pub struct ShapeBuilder {
         pub size: Option<Vec2>,
         pub shape: Shapes,

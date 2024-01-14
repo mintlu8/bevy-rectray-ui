@@ -22,7 +22,7 @@
 //!
 //! Signal is a mpmc cell that can hold one value per frame.
 //!
-//! [`AouiCommands`](crate::dsl::AouiCommands) contains a [`SignalPool`], that is used
+//! [`AouiCommands`](crate::util::AouiCommands) contains a [`SignalPool`], that is used
 //! to track, name and cleanup signals.
 //!
 //! The `signal()` function can create a list of signal builders that can be turned
@@ -110,7 +110,7 @@ pub use mpmc::*;
 pub use receiver::*;
 pub(crate) use signal::Signal;
 
-use crate::{schedule::{AouiEventSet, AouiCleanupSet}, dsl::CloneSplit};
+use crate::{schedule::{AouiEventSet, AouiCleanupSet}, util::CloneSplit};
 
 pub use signal_pool::SignalPool;
 

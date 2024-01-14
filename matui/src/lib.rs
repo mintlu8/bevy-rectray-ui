@@ -29,15 +29,18 @@ use aoui::anim::Interpolation;
 use bevy::{app::{Plugin, PostUpdate, Update}, asset::load_internal_asset, render::render_resource::Shader, ecs::schedule::IntoSystemConfigs, sprite::Material2dPlugin};
 use bevy_aoui::schedule::AouiStoreOutputSet;
 
-use crate::{shapes::*, widgets::{cursor_color_change, toggle_color_change, toggle_dial_change, button::cursor_stroke_change, menu::rebuild_dropdown_children}};
+use crate::{shaders::*, widgets::{cursor_color_change, toggle_color_change, toggle_dial_change, button::cursor_stroke_change, menu::rebuild_dropdown_children, input::text_placeholder}};
 
 /// `[u8;4]` this reduces the size of `Color` by `1/5`.
 pub type Color8 = [u8; 4];
 
-pub mod shapes;
+pub mod shaders;
 pub mod builders;
 pub mod widgets;
 pub mod style;
+
+#[doc(hidden)]
+pub use bevy;
 
 #[doc(hidden)]
 pub use bevy_aoui as aoui;
@@ -65,6 +68,7 @@ impl Plugin for MatuiPlugin {
             toggle_color_change,
             toggle_dial_change,
             rebuild_dropdown_children,
+            text_placeholder,
         ).in_set(AouiStoreOutputSet));
     }
 }

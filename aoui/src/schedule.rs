@@ -35,7 +35,7 @@ pub struct AouiEventSet;
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct AouiCleanupSet;
 
-/// SystemSet for handling button clicks in `PreUpdate`, 
+/// SystemSet for handling button clicks in `PreUpdate`,
 /// has elevated precedence for signal piping.
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct AouiButtonEventSet;
@@ -78,8 +78,8 @@ impl bevy::prelude::Plugin for CorePlugin {
             )
             .add_systems(PostUpdate, (
                 set_occluded,
-                copy_anchor, 
-                copy_anchor_sprite, 
+                copy_anchor,
+                copy_anchor_sprite,
                 copy_anchor_atlas,
                 copy_dimension_sprite,
                 copy_dimension_text,
@@ -94,6 +94,7 @@ impl bevy::prelude::Plugin for CorePlugin {
                 sync_dimension_sprite,
                 sync_dimension_text_bounds,
                 sync_em_text,
+                sync_opacity_vis,
                 sync_opacity_sprite,
                 sync_opacity_atlas,
                 sync_opacity_text,
@@ -103,6 +104,6 @@ impl bevy::prelude::Plugin for CorePlugin {
                 build_global_transform
             ).in_set(AouiFinalizeSet))
         ;
-            
+
     }
 }

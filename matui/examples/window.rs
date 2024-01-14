@@ -1,12 +1,13 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, WorldExtension, dsl::AouiCommands};
-use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, widgets::{util::WidgetPalette, toggle::DialPalette, frame::FramePalette}, palette, mwindow, mslider, minput, mmenu, menu_items};
+use bevy_aoui::{AouiPlugin, util::WorldExtension, util::AouiCommands};
+use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, palette, mwindow, mslider, minput, mmenu, menu_items};
 use bevy_aoui::layout::BoundsLayout;
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 present_mode: bevy::window::PresentMode::AutoNoVsync,
+                //resolution: WindowResolution::new(1600.0, 800.0).with_scale_factor_override(1.0),
                 ..Default::default()
             }),
             ..Default::default()
@@ -33,22 +34,22 @@ pub fn init(mut commands: AouiCommands) {
         })
     });
 
-    let palette_idle = WidgetPalette {
-        background: color!(red500),
-        foreground: color!(white),
-        stroke: color!(none),
+    let palette_idle = palette! {
+        background: red500,
+        foreground: white,
+        stroke: none,
     };
 
-    let palette_hover = WidgetPalette {
-        background: color!(red600),
-        foreground: color!(white),
-        stroke: color!(none),
+    let palette_hover = palette! {
+        background: red600,
+        foreground: white,
+        stroke: none,
     };
 
-    let palette_pressed = WidgetPalette {
-        background: color!(red800),
-        foreground: color!(white),
-        stroke: color!(none),
+    let palette_pressed = palette! {
+        background: red800,
+        foreground: white,
+        stroke: none,
     };
 
     let (collapse_send, collapse_recv, collapse_spin) = commands.signal();
@@ -134,47 +135,49 @@ pub fn init(mut commands: AouiCommands) {
                 length: 2,
                 dial_size: 1.6,
                 dial_shadow: 2.0,
-                palette: palette!(DialPalette {
+                palette: palette!(
                     background: red300,
-                    dial: red500,
-                }),
-                checked_palette: palette!(DialPalette {
+                    foreground: red500,
+                ),
+                checked_palette: palette!(
                     background: red700,
-                    dial: red500,
-                }),
+                    foreground: red500,
+                ),
             }
         },
 
         child: mslider! {
             range: (0..5),
             dial_shadow: 2.0,
-            palette: palette!(DialPalette {
+            palette: palette!(
                 background: grey,
-                dial: red500,
-            }),
-            hover_palette: palette!(DialPalette {
+                foreground: red500,
+            ),
+            hover_palette: palette!(
                 background: grey,
-                dial: red600,
-            }),
+                foreground: red600,
+            ),
         },
 
         child: minput! {
             text: "Hello, World!",
-            //placeholder: "Say Hello:",
+            placeholder: "Say Hello:",
             width: 20,
             radius: 5,
             palette: palette_idle,
         },
         child: mmenu! {
             shadow: 5,
-            palette: palette!(FramePalette {
-                background: blue,
+            radius: 10.0,
+            padding: [0, 10],
+            palette: palette!(
+                background: white,
                 stroke: green,
-            }),
-            hover_palette: palette!(FramePalette {
-                background: blue,
+            ),
+            hover_palette: palette!(
+                background: white,
                 stroke: green,
-            }),
+            ),
             items: menu_items!(
                 "Hello", "Hi", |, "Good Bye"
             ),
@@ -194,22 +197,21 @@ pub fn init(mut commands: AouiCommands) {
 
     mtoggle!(commands{
         offset: [0, 100],
-        palette: palette!(DialPalette {
+        palette: palette!(
             background: red300,
-            background_stroke: red700,
-            dial: red500,
-            icon: white,
-        }),
-        checked_palette: palette!(DialPalette {
+            stroke: red700,
+            foreground: red500,
+            on_foreground: white,
+        ),
+        checked_palette: palette!(
             background: red700,
-            background_stroke: red700,
-            dial: white,
-            icon: red700,
-        }),
+            stroke: red700,
+            foreground: white,
+            on_foreground: red700,
+        ),
         icon: "cross.png",
         shadow: 5,
         background_stroke: 2,
-        //background_stroke: (color!(darkred), 3),
     });
 
     mtoggle!(commands{
@@ -217,14 +219,14 @@ pub fn init(mut commands: AouiCommands) {
         background_size: 1.0,
         length: 2,
         dial_size: 1.6,
-        palette: palette!(DialPalette {
+        palette: palette!(
             background: white,
-            dial: red500,
-        }),
-        checked_palette: palette!(DialPalette {
+            foreground: red500,
+        ),
+        checked_palette: palette!(
             background: red700,
-            dial: red500,
-        }),
+            foreground: red500,
+        ),
         dial_shadow: (4, color!(grey)),
     });
 }

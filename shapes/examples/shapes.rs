@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_aoui::{AouiPlugin, linebreak, dsl::AouiCommands};
+use bevy_aoui::{AouiPlugin, linebreak, util::AouiCommands};
 use bevy_aoui_shapes::{shape, Shapes, AouiShapesPlugin};
 use bevy_prototype_lyon::prelude::*;
 

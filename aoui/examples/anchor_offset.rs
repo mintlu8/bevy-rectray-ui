@@ -8,7 +8,7 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, DimensionMut, dsl::AouiCommands};
+use bevy_aoui::{*, DimensionMut, util::AouiCommands};
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox, Ui}, EguiPlugin};
 

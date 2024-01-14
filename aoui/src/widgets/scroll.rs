@@ -10,7 +10,7 @@ use crate::events::{EvPositionFactor, MouseWheelAction};
 use crate::layout::Container;
 use crate::events::{EvMouseWheel, Handlers};
 use crate::signals::Invoke;
-use crate::dsl::DslInto;
+use crate::util::convert::DslInto;
 
 use crate::events::MovementUnits;
 pub use super::constraints::ScrollConstraint;

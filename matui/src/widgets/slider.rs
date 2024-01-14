@@ -7,14 +7,15 @@ use bevy::{render::texture::Image, window::CursorIcon, ecs::entity::Entity};
 use bevy_aoui::signals::SignalSender;
 use bevy_aoui::widgets::drag::Dragging;
 use bevy_aoui::RotatedRect;
-use bevy_aoui::dsl::{Widget, AouiCommands, OptionEx, IntoAsset};
-use bevy_aoui::{widget_extension, build_frame, material_sprite, layout::Axis, events::EvPositionFactor, Anchor};
+use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
+use bevy_aoui::{frame_extension, build_frame, material_sprite, layout::Axis, events::EvPositionFactor, Anchor};
 use bevy_aoui::events::{Handlers, CursorState};
 
-use crate::shapes::RoundedRectangleMaterial;
+use crate::shaders::RoundedRectangleMaterial;
+use crate::style::Palette;
 use crate::widgets::button::CursorStateColors;
 
-use super::{util::ShadowInfo, toggle::DialPalette};
+use super::util::ShadowInfo;
 
 #[derive(Debug, Clone, Component)]
 pub struct SliderRebase(SignalSender<Vec2>);
@@ -30,7 +31,7 @@ impl SliderData for f32 {
 
 }
 
-widget_extension!(
+frame_extension!(
     pub struct MSliderBuilder[T: SliderData] {
         pub direction: Axis,
         /// Sets the CursorIcon when hovering this button, default is `Hand`
@@ -44,10 +45,10 @@ widget_extension!(
         /// The length the dial travels in em, default is 1.25 em.
         pub length: Option<f32>,
 
-        pub palette: DialPalette,
-        pub hover_palette: Option<DialPalette>,
-        pub drag_palette: Option<DialPalette>,
-        pub disabled_palette: Option<DialPalette>,
+        pub palette: Palette,
+        pub hover_palette: Option<Palette>,
+        pub drag_palette: Option<Palette>,
+        pub disabled_palette: Option<Palette>,
 
         pub thickness: Option<f32>,
         pub background_size: Option<f32>,
@@ -106,18 +107,18 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
         let background = material_sprite!(commands {
             dimension: Size2::em(horiz_len + thickness, thickness),
             z: 0.01,
-            material: RoundedRectangleMaterial::capsule(palette.background)
-                .with_stroke((palette.background_stroke, self.background_stroke)),
+            material: RoundedRectangleMaterial::capsule(palette.background())
+                .with_stroke((palette.stroke(), self.background_stroke)),
             child: material_sprite!{
                 anchor: Anchor::CENTER_LEFT,
                 dimension: size2!(0%, thickness em),
                 z: 0.01,
-                material: RoundedRectangleMaterial::capsule(palette.dial)
-                    .with_stroke((palette.background_stroke, self.background_stroke)),
+                material: RoundedRectangleMaterial::capsule(palette.foreground())
+                    .with_stroke((palette.stroke(), self.background_stroke)),
                 extra: fac_recv.recv(|fac: f32, dim: &mut Dimension| {
                     dim.edit_raw(|v| v.x = fac);
                 }),
-                extra: transition!(Color 0.2 CubicInOut default {palette.dial}),
+                extra: transition!(Color 0.2 CubicInOut default {palette.foreground()}),
             }
         });
         if let OptionEx::Some(shadow) = self.background_shadow {
@@ -142,17 +143,17 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
                     entity: dial,
                     dimension: Size2::em(dial_size, dial_size),
                     z: 0.01,
-                    material: RoundedRectangleMaterial::capsule(palette.dial)
-                        .with_stroke((palette.dial_stroke, self.dial_stroke)),
+                    material: RoundedRectangleMaterial::capsule(palette.foreground())
+                        .with_stroke((palette.foreground_stroke(), self.dial_stroke)),
                     event: EventFlags::LeftDrag | EventFlags::Hover,
                     hitbox: Hitbox::ellipse(1),
                     extra: CursorStateColors {
-                        idle: palette.dial,
-                        hover: hover_palette.dial,
-                        pressed: drag_palette.dial,
-                        disabled: disabled_palette.dial,
+                        idle: palette.foreground(),
+                        hover: hover_palette.foreground(),
+                        pressed: drag_palette.foreground(),
+                        disabled: disabled_palette.foreground(),
                     },
-                    extra: transition!(Color 0.2 CubicInOut default {palette.dial}),
+                    extra: transition!(Color 0.2 CubicInOut default {palette.foreground()}),
                     extra: Handlers::<EvMouseDrag>::new(drag_send_dial),
                     extra: SetCursor {
                         flags: EventFlags::LeftDrag | EventFlags::Hover | EventFlags::LeftDown,

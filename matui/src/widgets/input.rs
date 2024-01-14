@@ -1,5 +1,6 @@
 use bevy::ecs::entity::Entity;
 use bevy::hierarchy::BuildChildren;
+use bevy::math::Vec2;
 use bevy::render::color::Color;
 use bevy::text::Font;
 use bevy::sprite::Mesh2dHandle;
@@ -7,16 +8,47 @@ use bevy::transform::components::GlobalTransform;
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
 use bevy_aoui::widgets::TextFragment;
-use bevy_aoui::{Opacity, material_sprite, size2, BuildMeshTransform, color, inputbox, Anchor, text, Size2, rectangle};
+use bevy_aoui::{Opacity, material_sprite, size2, BuildMeshTransform, color, inputbox, Anchor, text, Size2, rectangle, transition};
 use bevy_aoui::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxCursorArea, InputBoxCursorBar, InputBoxText};
-use bevy_aoui::{size, widget_extension, build_frame};
-use bevy_aoui::anim::{Interpolate, Easing};
+use bevy_aoui::{size, frame_extension, build_frame};
+use bevy_aoui::anim::{Interpolate, Easing, Offset, Scale};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvTextChange, EvTextSubmit};
-use bevy_aoui::widgets::util::DisplayIf;
-use bevy_aoui::dsl::{Widget, mesh_rectangle, AouiCommands, DslInto, IntoAsset};
-use crate::shapes::{RoundedRectangleMaterial, StrokeColor};
+use bevy_aoui::util::{Widget, mesh_rectangle, AouiCommands, DslInto, convert::IntoAsset};
+use crate::shaders::{RoundedRectangleMaterial, StrokeColor};
+use crate::style::Palette;
 
-use super::util::{StrokeColors, WidgetPalette};
+use super::util::StrokeColors;
+
+#[derive(Debug, Clone, Copy, Component)]
+pub struct PlaceHolderText {
+    pub idle_color: Color,
+    pub active_color: Color,
+}
+
+pub fn text_placeholder(
+    mut query: Query<(
+        &PlaceHolderText,
+        Option<&InputBoxState>,
+        &mut Interpolate<Color>,
+        &mut Interpolate<Offset>,
+        &mut Interpolate<Scale>,
+)>) {
+    for (placeholder, state, mut color, mut offset, mut scale) in query.iter_mut() {
+        match state {
+            Some(_) => {
+                color.interpolate_to(placeholder.active_color);
+                offset.interpolate_to(Vec2::new(0.8, 0.7));
+                scale.interpolate_to(Vec2::new(0.8, 0.8));
+            },
+            None => {
+                color.interpolate_to(placeholder.idle_color);
+                offset.interpolate_to(Vec2::new(0.8, 0.0));
+                scale.interpolate_to(Vec2::new(1.0, 1.0));
+            }
+        }
+    }
+}
+
 
 /// A simple state machine that changes depending on status.
 #[derive(Debug, Component, Clone, Copy)]
@@ -80,7 +112,7 @@ pub struct InputStateColors {
     pub disabled: Color,
 }
 
-widget_extension!(
+frame_extension!(
     pub struct MInputBuilder {
         pub placeholder: String,
         pub text: String,
@@ -93,9 +125,9 @@ widget_extension!(
         pub overflow: InputOverflow,
         /// Sets the CursorIcon when hovering this button, default is `Text`
         pub cursor_icon: Option<CursorIcon>,
-        pub palette: WidgetPalette,
-        pub focus_palette: Option<WidgetPalette>,
-        pub disabled_palette: Option<WidgetPalette>,
+        pub palette: Palette,
+        pub focus_palette: Option<Palette>,
+        pub disabled_palette: Option<Palette>,
 
         pub bottom_bar: Option<f32>,
     }
@@ -111,7 +143,7 @@ impl Widget for MInputBuilder {
         let disabled_style = self.disabled_palette.unwrap_or(style);
 
         let rect = commands.add_asset(
-            RoundedRectangleMaterial::new(style.background,
+            RoundedRectangleMaterial::new(style.background(),
                 if self.bottom_bar.is_some() {
                     [0.0, 0.0, self.radius, self.radius]
                 } else {
@@ -122,7 +154,7 @@ impl Widget for MInputBuilder {
         let mesh = commands.add_asset(mesh_rectangle());
         let frame = build_frame!(commands, self).id();
         let input_box = inputbox!(commands {
-            color: style.foreground,
+            color: style.foreground(),
             text: &self.text,
             overflow: self.overflow,
             dimension: Size2::FULL,
@@ -134,47 +166,59 @@ impl Widget for MInputBuilder {
             extra: GlobalTransform::IDENTITY,
             extra: BuildMeshTransform,
             extra: InputStateColors {
-                idle: style.background,
-                focused: focus_style.background,
-                disabled: disabled_style.background,
+                idle: style.background(),
+                focused: focus_style.background(),
+                disabled: disabled_style.background(),
             },
             extra: Interpolate::<Color>::new(
                 Easing::Linear,
-                style.background,
+                style.background(),
                 0.15
             ),
             cursor_bar: material_sprite! {
                 z: 0.005,
                 dimension: size2!(0.15 em, 1.2 em),
-                material: RoundedRectangleMaterial::capsule(style.foreground),
+                material: RoundedRectangleMaterial::capsule(style.foreground()),
                 extra: InputBoxCursorBar,
-                extra: DisplayIf::<InputBoxState>(InputBoxState::Focus),
             },
             cursor_area: material_sprite! {
                 z: -0.005,
                 dimension: size2!(0, 1.2 em),
                 material: RoundedRectangleMaterial::new(color!(green300), 2.0),
                 extra: InputBoxCursorArea,
-                extra: DisplayIf::<InputBoxState>(InputBoxState::Focus),
             },
             text_area: rectangle! {
                 z: 0.01,
-                offset: size2!(0.8 em, 0.0),
-                color: style.foreground,
+                offset: size2!(0.8 em, {if self.placeholder.is_empty() {
+                    0.0
+                } else {
+                    -0.4
+                }} em),
+                color: style.foreground(),
                 anchor: Anchor::CENTER_LEFT,
                 extra: InputBoxText,
                 extra: TextFragment::new(self.text)
                     .with_font(commands.load_or_default(self.font.clone()))
-                    .with_color(style.foreground)
+                    .with_color(style.foreground())
             }
         });
         let has_placeholder = !self.placeholder.is_empty();
         if has_placeholder {
             let placeholder = text!(commands {
                 anchor: Anchor::CENTER_LEFT,
-                offset: size2!(0.8 em, 0),
+                offset: size2!(0.8 em, 0 em),
+                center: Anchor::CENTER_LEFT,
                 font: self.font.clone(),
                 text: self.placeholder,
+                extra: PlaceHolderText {
+                    idle_color: style.foreground(),
+                    active_color: focus_style.foreground()
+                },
+                extra: transition!(
+                    Color 0.15 Linear default {self.palette.foreground()};
+                    Offset 0.15 Linear default {Vec2::ZERO};
+                    Scale 0.15 Linear default {Vec2::ONE};
+                )
             });
             commands.entity(input_box).add_child(placeholder);
         }

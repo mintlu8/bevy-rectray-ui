@@ -7,15 +7,16 @@ use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
 use bevy_aoui::Opacity;
 use bevy_aoui::layout::LayoutRange;
-use bevy_aoui::{widget_extension, build_frame, Hitbox, size2, text, layout::{Container, StackLayout}, sprite, BuildMeshTransform};
+use bevy_aoui::{frame_extension, build_frame, Hitbox, size2, text, layout::{Container, StackLayout}, sprite, BuildMeshTransform};
 use bevy_aoui::anim::{Interpolate, Easing};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvButtonClick};
 use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
 use bevy_aoui::widgets::button::{Button, Payload};
-use bevy_aoui::dsl::{Widget, mesh_rectangle, AouiCommands, OptionEx, IntoAsset};
-use crate::shapes::{RoundedRectangleMaterial, StrokeColor};
+use bevy_aoui::util::{Widget, mesh_rectangle, AouiCommands, convert::{OptionEx, IntoAsset}};
+use crate::shaders::{RoundedRectangleMaterial, StrokeColor};
+use crate::style::Palette;
 
-use super::util::{ShadowInfo, StrokeColors, WidgetPalette};
+use super::util::{ShadowInfo, StrokeColors};
 
 /// A simple state machine that changes depending on status.
 #[derive(Debug, Component, Clone, Copy)]
@@ -71,15 +72,15 @@ pub fn cursor_stroke_change(mut query: Query<(&StrokeColors<CursorStateColors>, 
 #[derive(Debug, Component, Clone, Copy, Default)]
 pub struct ColorOnClick;
 
-widget_extension!(
+frame_extension!(
     pub struct MButtonBuilder {
         pub cursor: Option<CursorIcon>,
         pub sprite: Option<IntoAsset<Image>>,
         /// This will set `color_pressed` if its not set
-        pub palette: WidgetPalette,
-        pub palette_hover: Option<WidgetPalette>,
-        pub palette_pressed: Option<WidgetPalette>,
-        pub palette_disabled: Option<WidgetPalette>,
+        pub palette: Palette,
+        pub palette_hover: Option<Palette>,
+        pub palette_pressed: Option<Palette>,
+        pub palette_disabled: Option<Palette>,
         pub text: Option<String>,
         pub font: IntoAsset<Font>,
         pub texture: IntoAsset<Image>,
@@ -97,7 +98,7 @@ widget_extension!(
 
 impl Widget for MButtonBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        self.event |=  EventFlags::LeftClick | EventFlags::Hover;
+        self.event |= EventFlags::LeftClick | EventFlags::Hover;
         let mut frame = build_frame!(commands, self);
 
         let style = self.palette;
@@ -120,25 +121,25 @@ impl Widget for MButtonBuilder {
                 maximum: usize::MAX
             },
             CursorStateColors {
-                idle: style.background,
-                hover: hover.background,
-                pressed: pressed.background,
-                disabled: disabled.background,
+                idle: style.background(),
+                hover: hover.background(),
+                pressed: pressed.background(),
+                disabled: disabled.background(),
             },
             StrokeColors(CursorStateColors{
-                idle: style.stroke,
-                hover: hover.stroke,
-                pressed: pressed.stroke,
-                disabled: disabled.stroke,
+                idle: style.stroke(),
+                hover: hover.stroke(),
+                pressed: pressed.stroke(),
+                disabled: disabled.stroke(),
             }),
             Interpolate::<Color>::new(
                 Easing::Linear,
-                style.background,
+                style.background(),
                 0.15
             ),
             Interpolate::<StrokeColor>::new(
                 Easing::Linear,
-                style.stroke,
+                style.stroke(),
                 0.15
             ),
         ));
@@ -158,14 +159,14 @@ impl Widget for MButtonBuilder {
                 z: 0.01,
                 dimension: size2!(1.2 em, 1.2 em),
                 extra: CursorStateColors {
-                    idle: style.foreground,
-                    hover: hover.foreground,
-                    pressed: pressed.foreground,
-                    disabled: disabled.foreground,
+                    idle: style.foreground(),
+                    hover: hover.foreground(),
+                    pressed: pressed.foreground(),
+                    disabled: disabled.foreground(),
                 },
                 extra: Interpolate::<Color>::new(
                     Easing::Linear,
-                    style.foreground,
+                    style.foreground(),
                     0.15
                 ),
             });
@@ -182,14 +183,14 @@ impl Widget for MButtonBuilder {
                 z: 0.01,
                 font: commands.load_or_default(self.font),
                 extra: CursorStateColors {
-                    idle: style.foreground,
-                    hover: hover.foreground,
-                    pressed: pressed.foreground,
-                    disabled: disabled.foreground,
+                    idle: style.foreground(),
+                    hover: hover.foreground(),
+                    pressed: pressed.foreground(),
+                    disabled: disabled.foreground(),
                 },
                 extra: Interpolate::<Color>::new(
                     Easing::Linear,
-                    style.foreground,
+                    style.foreground(),
                     0.15
                 ),
             });
@@ -202,10 +203,10 @@ impl Widget for MButtonBuilder {
         match (self.capsule, self.radius) {
             (true, ..) => {
                 let mat = commands.add_asset(if let Some(im) = commands.try_load(self.texture) {
-                    RoundedRectangleMaterial::capsule_image(im, style.background)
+                    RoundedRectangleMaterial::capsule_image(im, style.background())
                 } else {
-                    RoundedRectangleMaterial::capsule(style.background)
-                }.with_stroke((self.stroke, self.palette.stroke)));
+                    RoundedRectangleMaterial::capsule(style.background())
+                }.with_stroke((self.stroke, self.palette.stroke())));
                 let rect = commands.add_asset(mesh_rectangle());
                 commands.entity(frame).insert((
                     mat,
@@ -221,10 +222,10 @@ impl Widget for MButtonBuilder {
             },
             (_, radius, ..) => {
                 let mat = commands.add_asset(if let Some(im) = commands.try_load(self.texture) {
-                    RoundedRectangleMaterial::from_image(im, style.background, radius)
+                    RoundedRectangleMaterial::from_image(im, style.background(), radius)
                 } else {
-                    RoundedRectangleMaterial::new(style.background, radius)
-                }.with_stroke((self.stroke, self.palette.stroke)));
+                    RoundedRectangleMaterial::new(style.background(), radius)
+                }.with_stroke((self.stroke, style.stroke())));
                 let rect = commands.add_asset(mesh_rectangle());
                 commands.entity(frame).insert((
                     mat,

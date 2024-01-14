@@ -6,12 +6,13 @@ use bevy::render::{color::Color, texture::{Image, BevyDefault}};
 use bevy::render::render_resource::{Extent3d, TextureDimension};
 
 use crate::{DimensionType, Transform2D, Dimension};
-use crate::{widget_extension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
+use crate::{frame_extension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
 
-use super::{Widget, DslInto, AouiCommands, Aspect, IntoAsset};
+use crate::util::{Widget, AouiCommands, convert::IntoAsset};
+use super::Aspect;
 
-widget_extension!(pub struct FrameBuilder {});
-widget_extension!(
+frame_extension!(pub struct FrameBuilder {});
+frame_extension!(
     pub struct SpriteBuilder {
         /// Handle of the image asset.
         pub sprite: IntoAsset<Image>,
@@ -26,7 +27,7 @@ widget_extension!(
     }
 );
 
-widget_extension!(
+frame_extension!(
     pub struct RectangleBuilder {
         /// Size of the image.
         pub size: Option<Vec2>,
@@ -36,7 +37,7 @@ widget_extension!(
 );
 
 
-widget_extension!(
+frame_extension!(
     pub struct TextBuilder {
         /// The text string.
         pub text: String,
@@ -78,7 +79,6 @@ impl Widget for FrameBuilder {
                     preserve_aspect: !matches!(self.aspect, Aspect::None)
                 },
                 opacity: self.opacity,
-                vis: self.visible.dinto(),
                 clipping: Clipping::new(self.clipping.unwrap_or(false)),
                 ..Default::default()
             }

@@ -2,7 +2,7 @@ use std::{marker::PhantomData, fmt::Debug};
 
 use bevy::ecs::{system::{EntityCommands, Query, Commands}, component::Component, entity::Entity};
 
-use crate::{events::mutation::IntoMutationCommand, dsl::DslFrom};
+use crate::{events::mutation::IntoMutationCommand, util::convert::DslFrom};
 
 use super::{Object, SignalBuilder, dto::AsObject, signal::Signal};
 

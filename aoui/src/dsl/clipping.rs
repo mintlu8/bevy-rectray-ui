@@ -1,9 +1,9 @@
 use bevy::{render::texture::Image, hierarchy::BuildChildren, ecs::entity::Entity, asset::Handle};
-use crate::{widget_extension, build_frame, Clipping, frame, Size2, events::{EventFlags, FetchCoveragePx, Handlers, FetchCoveragePercent}};
+use crate::{frame_extension, build_frame, Clipping, frame, Size2, events::{EventFlags, FetchCoveragePx, Handlers, FetchCoveragePercent}};
 use crate::widgets::{scroll::IntoScrollingBuilder, clipping::ScopedCameraBundle};
-use super::{Widget, AouiCommands};
+use crate::util::{Widget, AouiCommands};
 
-widget_extension!(
+frame_extension!(
     /// A camera with its viewport bound to a sprite's `RotatedRect`.
     pub struct CameraFrameBuilder {
         /// Render target of the camera.
@@ -16,7 +16,7 @@ impl Widget for CameraFrameBuilder {
         let Some(buffer) = self.render_target else  {panic!("Requires \"buffer\"")};
         let entity = build_frame!(commands, self).id();
 
-        let bundle = ScopedCameraBundle::from_image(
+        let bundle = ScopedCameraBundle::new(
             buffer,
             self.layer.expect("Please specify a render layer.")
         );
@@ -26,7 +26,7 @@ impl Widget for CameraFrameBuilder {
     }
 }
 
-widget_extension!(
+frame_extension!(
     pub struct ScrollingFrameBuilder[B: IntoScrollingBuilder] {
         /// If set, configure scrolling for this widget.
         pub scroll: Option<B>,

@@ -1,35 +1,14 @@
 use bevy::{render::{color::Color, texture::Image}, window::CursorIcon, ecs::{component::Component, system::Query, entity::Entity}, hierarchy::BuildChildren, math::Vec2};
-use bevy_aoui::{widget_extension, build_frame, Hitbox, Dimension, Size2, material_sprite, sprite, size2, dsl::{AouiCommands, OptionEx, IntoAsset}};
+use bevy_aoui::{frame_extension, build_frame, Hitbox, Dimension, Size2, material_sprite, sprite, size2};
+use bevy_aoui::util::{AouiCommands, Widget, convert::{OptionEx, IntoAsset}};
 use bevy_aoui::anim::{Interpolate, Easing, Offset, EaseFunction};
 use bevy_aoui::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange};
 use bevy_aoui::widgets::button::{CheckButton, Payload, CheckButtonState};
 use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
-use bevy_aoui::dsl::Widget;
 
-use crate::shapes::{RoundedRectangleMaterial, StrokeColor};
+use crate::{shaders::{RoundedRectangleMaterial, StrokeColor}, style::Palette};
 
 use super::util::{ShadowInfo, StrokeColors};
-
-#[derive(Debug, Component, Clone, Copy)]
-pub struct DialPalette {
-    pub background: Color,
-    pub dial: Color,
-    pub background_stroke: Color,
-    pub dial_stroke: Color,
-    pub icon: Color,
-}
-
-impl Default for DialPalette {
-    fn default() -> Self {
-        Self {
-            background: Color::NONE,
-            dial: Color::NONE,
-            background_stroke: Color::NONE,
-            dial_stroke: Color::NONE,
-            icon: Color::NONE
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, Component)]
 pub struct ToggleColors {
@@ -79,7 +58,7 @@ pub fn toggle_dial_change(mut query: Query<(&CheckButtonState, &ToggleDial, &mut
     })
 }
 
-widget_extension!(
+frame_extension!(
     pub struct MToggleBuilder {
         /// Sets the CursorIcon when hovering this button, default is `Hand`
         pub cursor: Option<CursorIcon>,
@@ -97,8 +76,8 @@ widget_extension!(
         /// The length the dial travels in em, default is 1.25 em.
         pub length: Option<f32>,
 
-        pub palette: DialPalette,
-        pub checked_palette: Option<DialPalette>,
+        pub palette: Palette,
+        pub checked_palette: Option<Palette>,
 
         /// Size of the background in em, default is `Full` (evaluates to 2.0 em).
         pub background_size: Option<f32>,
@@ -131,7 +110,7 @@ impl Widget for MToggleBuilder {
 
         let unchecked_palette = self.palette;
         let checked_palette = self.checked_palette.unwrap_or(unchecked_palette);
-        let DialPalette { background, dial, background_stroke, dial_stroke, icon: icon_color } = if self.checked {
+        let active_palette = if self.checked {
             checked_palette
         } else {
             unchecked_palette
@@ -167,24 +146,24 @@ impl Widget for MToggleBuilder {
         let background = material_sprite!(commands {
             dimension: size,
             z: 0.01,
-            material: RoundedRectangleMaterial::capsule(background)
-                .with_stroke((background_stroke, self.background_stroke)),
+            material: RoundedRectangleMaterial::capsule(active_palette.background())
+                .with_stroke((active_palette.stroke(), self.background_stroke)),
             extra: ToggleColors {
-                inactive: unchecked_palette.background,
-                active: checked_palette.background,
+                inactive: unchecked_palette.background(),
+                active: checked_palette.background(),
             },
             extra: StrokeColors(ToggleColors {
-                inactive: unchecked_palette.background_stroke,
-                active: checked_palette.background_stroke,
+                inactive: unchecked_palette.stroke(),
+                active: checked_palette.stroke(),
             }),
             extra: Interpolate::<Color>::new(
                 Easing::Linear,
-                background,
+                active_palette.background(),
                 0.25
             ),
             extra: Interpolate::<StrokeColor>::new(
                 Easing::Linear,
-                background_stroke,
+                active_palette.stroke(),
                 0.25
             ),
         });
@@ -199,15 +178,15 @@ impl Widget for MToggleBuilder {
             offset: Size2::em(0.0, 0.0),
             dimension: Size2::em(dial_size, dial_size),
             z: 0.02,
-            material: RoundedRectangleMaterial::capsule(dial)
-                .with_stroke((dial_stroke, self.dial_stroke)),
+            material: RoundedRectangleMaterial::capsule(active_palette.foreground())
+                .with_stroke((active_palette.foreground_stroke(), self.dial_stroke)),
             extra: ToggleColors {
-                inactive: unchecked_palette.dial,
-                active: checked_palette.dial,
+                inactive: unchecked_palette.foreground(),
+                active: checked_palette.foreground(),
             },
             extra: StrokeColors(ToggleColors {
-                inactive: unchecked_palette.dial_stroke,
-                active: checked_palette.dial_stroke,
+                inactive: unchecked_palette.foreground_stroke(),
+                active: checked_palette.foreground_stroke(),
             }),
             extra: ToggleDial {
                 inactive_offset: Vec2::new(-horiz_len / 2.0, 0.0),
@@ -217,12 +196,12 @@ impl Widget for MToggleBuilder {
             },
             extra: Interpolate::<Color>::new(
                 Easing::Ease(EaseFunction::CubicInOut),
-                dial,
+                active_palette.foreground(),
                 0.25
             ),
             extra: Interpolate::<StrokeColor>::new(
                 Easing::Ease(EaseFunction::CubicInOut),
-                dial_stroke,
+                active_palette.foreground_stroke(),
                 0.25
             ),
             extra: Interpolate::<Offset>::new(
@@ -254,12 +233,12 @@ impl Widget for MToggleBuilder {
                 dimension: size2!(66.6%, 66.6%),
                 extra: Interpolate::<Color>::new(
                     Easing::Ease(EaseFunction::CubicInOut),
-                    icon_color,
+                    active_palette.on_foreground(),
                     0.25
                 ),
                 extra: ToggleColors {
-                    inactive: unchecked_palette.icon,
-                    active: checked_palette.icon,
+                    inactive: unchecked_palette.on_foreground(),
+                    active: checked_palette.on_foreground(),
                 }
             });
             commands.entity(dial).add_child(icon);
@@ -269,11 +248,11 @@ impl Widget for MToggleBuilder {
                 dimension: size2!(66.6%, 66.6%),
                 extra: Interpolate::<Color>::new(
                     Easing::Ease(EaseFunction::CubicInOut),
-                    if self.checked { Color::NONE } else { unchecked_palette.icon },
+                    if self.checked { Color::NONE } else { unchecked_palette.on_foreground() },
                     0.25
                 ),
                 extra: ToggleColors {
-                    inactive: unchecked_palette.icon,
+                    inactive: unchecked_palette.on_foreground(),
                     active: Color::NONE,
                 }
             });
@@ -285,12 +264,12 @@ impl Widget for MToggleBuilder {
                 dimension: size2!(66.6%, 66.6%),
                 extra: Interpolate::<Color>::new(
                     Easing::Ease(EaseFunction::CubicInOut),
-                    if !self.checked { Color::NONE } else { checked_palette.icon },
+                    if !self.checked { Color::NONE } else { checked_palette.on_foreground() },
                     0.25
                 ),
                 extra: ToggleColors {
                     inactive: Color::NONE,
-                    active: checked_palette.icon,
+                    active: checked_palette.on_foreground(),
                 }
             });
             commands.entity(dial).add_child(icon);

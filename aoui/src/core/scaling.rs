@@ -1,7 +1,7 @@
 use bevy::{prelude::{Vec2, Resource}, reflect::Reflect};
 
 /// The root font size of the window.
-/// 
+///
 /// By default this is `16 px`.
 #[derive(Debug, Resource)]
 pub struct AouiREM(f32);
@@ -61,6 +61,13 @@ pub enum SizeUnit{
 
 
 impl SizeUnit {
+
+    /// Returns true if size is a percentage of parent's.
+    #[inline]
+    pub fn is_relative(&self) -> bool {
+        matches!(self, SizeUnit::Percent | SizeUnit::MarginPx | SizeUnit::MarginEm | SizeUnit::MarginRem)
+    }
+
     /// Compute size in pixels given parent info.
     #[inline]
     pub fn as_pixels(self, value: f32, parent: f32, em: f32, rem: f32) -> f32 {
@@ -201,7 +208,7 @@ impl Size2 {
     }
 
     /// Obtains this struct's underlying value.
-    /// 
+    ///
     /// The unit and meaning of this value depends on the use case.
     pub fn raw(&self) -> Vec2 {
         self.raw
@@ -214,7 +221,7 @@ impl Size2 {
     }
 
     /// Updates this struct's underlying value.
-    /// 
+    ///
     /// The unit and meaning of this value depends on the use case.
     pub fn edit_raw(&mut self, f: impl FnOnce(&mut Vec2)) {
         f(&mut self.raw)
@@ -223,8 +230,8 @@ impl Size2 {
 
 impl From<Vec2> for Size2 {
     fn from(value: Vec2) -> Self {
-        Self { 
-            x: SizeUnit::Pixels, 
+        Self {
+            x: SizeUnit::Pixels,
             y: SizeUnit::Pixels,
             raw: value
         }
@@ -255,8 +262,8 @@ const _:() = {
 
     impl<'de> Deserialize<'de> for Size2 {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
-            let ((ux, x), (uy, y)) = <_>::deserialize(deserializer)?; 
-            Ok(Self { 
+            let ((ux, x), (uy, y)) = <_>::deserialize(deserializer)?;
+            Ok(Self {
                 x: ux,
                 y: uy,
                 raw: Vec2::new(x, y)

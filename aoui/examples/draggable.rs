@@ -1,7 +1,7 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::{AouiPlugin, WorldExtension, dsl::AouiCommands};
+use bevy_aoui::{AouiPlugin, util::{WorldExtension, AouiCommands}};
 
 pub fn main() {
     App::new()

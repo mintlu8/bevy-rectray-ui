@@ -1,7 +1,7 @@
 use bevy::math::Vec2;
 use bevy::ecs::{component::Component, query::Without, bundle::Bundle, entity::Entity};
 use bevy::ecs::system::{Query, Res, Commands};
-use crate::dsl::DslInto;
+use crate::util::convert::DslInto;
 use crate::{Transform2D, anim::Attr};
 use crate::events::{Handlers, EvMouseDrag, EvPositionFactor};
 use crate::signals::{Invoke, ReceiveInvoke};

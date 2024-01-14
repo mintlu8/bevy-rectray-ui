@@ -2,7 +2,7 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, bundles::*, dsl::AouiCommands};
+use bevy_aoui::{*, bundles::*, util::AouiCommands};
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_egui::{EguiContexts, egui::{self, Slider}, EguiPlugin};
 pub fn main() {

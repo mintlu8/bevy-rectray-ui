@@ -166,6 +166,21 @@ pub fn sync_opacity_text(mut query: Query<(&Opacity, &mut Text), Without<IgnoreA
     })
 }
 
+#[allow(clippy::collapsible_else_if)]
+/// Copy opacity as sprite alpha.
+pub fn sync_opacity_vis(mut query: Query<(&Opacity, &mut Visibility), Without<IgnoreAlpha>>) {
+    query.iter_mut().for_each(|(opacity, mut vis)| {
+        if opacity.computed_opacity <= 0.0 {
+            if vis.as_ref() != Visibility::Hidden {
+                *vis = Visibility::Hidden
+            }
+        } else {
+            if vis.as_ref() != Visibility::Inherited {
+                *vis = Visibility::Inherited
+            }
+        }
+    })
+}
 /// Copy opacity as sprite alpha.
 pub fn sync_opacity_sprite(mut query: Query<(&Opacity, &mut Sprite), Without<IgnoreAlpha>>) {
     query.iter_mut().for_each(|(opacity, mut sprite)| {

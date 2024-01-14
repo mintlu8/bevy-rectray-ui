@@ -1,7 +1,7 @@
 /// A simple example of rendering description using the paragraph layout.
 
 use bevy::prelude::*;
-use bevy_aoui::{AouiPlugin, dsl::AouiCommands};
+use bevy_aoui::{AouiPlugin, util::AouiCommands};
 
 pub fn main() {
     App::new()

@@ -9,7 +9,7 @@ use crate::{Hitbox, HitboxShape, Anchor, SizeUnit, Size};
 use crate::{Size2, FontSize, layout::Alignment, layout::LayoutDir};
 
 use super::DslFrom;
-use super::convert::{DslInto, DslConvert};
+use crate::util::convert::{DslInto, DslConvert};
 
 impl Hitbox {
     pub fn rect(value: impl DslInto<OneOrTwo<Vec2>>) -> Self {
@@ -284,7 +284,7 @@ impl DslFrom<Size> for FontSize {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct OneOrTwo<T>(pub T);
 
-impl<A, T> DslConvert<OneOrTwo<T>, 1> for A where A: DslInto<T>{
+impl<A, T> DslConvert<OneOrTwo<T>, '2'> for A where A: DslInto<T>{
     fn parse(self) -> OneOrTwo<T> {
         OneOrTwo(self.dinto())
     }
@@ -330,7 +330,7 @@ impl Default for Scale{
     }
 }
 
-impl<A> DslConvert<Scale, 1> for A where A: DslInto<Vec2>{
+impl<A> DslConvert<Scale, 's'> for A where A: DslInto<Vec2>{
     fn parse(self) -> Scale {
         Scale(self.dinto())
     }
@@ -357,7 +357,7 @@ impl Default for ParentAnchor{
     }
 }
 
-impl<A> DslConvert<ParentAnchor, 1> for A where A: DslInto<Anchor>{
+impl<A> DslConvert<ParentAnchor, 'A'> for A where A: DslInto<Anchor>{
     fn parse(self) -> ParentAnchor {
         ParentAnchor(self.dinto())
     }

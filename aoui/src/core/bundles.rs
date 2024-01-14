@@ -1,11 +1,11 @@
 //! Bundles mapping the features of `bevy_2d`.
 //!
-//! The implementations here mimics the behavior of bevy 
+//! The implementations here mimics the behavior of bevy
 //! and not necessarily the same of their corresponding widget builder.
 #![allow(missing_docs)]
 use bevy::{
-    prelude::*, 
-    sprite::{Sprite, Mesh2dHandle, Material2d}, 
+    prelude::*,
+    sprite::{Sprite, Mesh2dHandle, Material2d},
     text::{Text2dBounds, TextLayoutInfo}
 };
 
@@ -20,6 +20,7 @@ pub struct AouiBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub dimension_data: DimensionData,
+    pub control: LayoutControl,
     pub rect: RotatedRect,
     pub clipping: Clipping,
     pub opacity: Opacity,
@@ -45,14 +46,14 @@ pub struct BuildTransformBundle {
 
 impl BuildTransformBundle {
     pub fn new(anchor: Anchor) -> Self{
-        Self { 
+        Self {
             builder: BuildTransform(anchor),
-            ..Default::default() 
+            ..Default::default()
         }
     }
 }
 
-/// A bundle that breaks a multiline [`Container`](crate::layout::Container) 
+/// A bundle that breaks a multiline [`Container`](crate::layout::Container)
 /// in place without taking up space.
 #[derive(Debug, Bundle)]
 pub struct LinebreakBundle {
@@ -64,11 +65,11 @@ pub struct LinebreakBundle {
 impl LinebreakBundle {
     pub fn new(size: impl Into<Size2>) -> Self{
         Self {
-            bundle: AouiBundle { 
+            bundle: AouiBundle {
                 dimension: Dimension {
                     dimension: crate::DimensionType::Owned(size.into()),
                     ..Default::default()
-                }, 
+                },
                 ..Default::default()
             },
             control: LayoutControl::LinebreakMarker,
@@ -77,11 +78,11 @@ impl LinebreakBundle {
 
     pub fn ems(size: Vec2) -> Self{
         Self {
-            bundle: AouiBundle { 
+            bundle: AouiBundle {
                 dimension: Dimension {
                     dimension: crate::DimensionType::Owned(Size2::em(size.x, size.y)),
                     ..Default::default()
-                }, 
+                },
                 ..Default::default()
             },
             control: LayoutControl::LinebreakMarker,
@@ -101,6 +102,7 @@ pub struct AouiSpriteBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub dimension_data: DimensionData,
+    pub control: LayoutControl,
     pub rect: RotatedRect,
     pub build: BuildTransform,
     pub sprite: Sprite,
@@ -117,6 +119,7 @@ pub struct AouiSpriteSheetBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub dimension_data: DimensionData,
+    pub control: LayoutControl,
     pub rect: RotatedRect,
     pub build: BuildTransform,
     pub sprite: TextureAtlasSprite,
@@ -134,6 +137,7 @@ pub struct AouiTextBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub dimension_data: DimensionData,
+    pub control: LayoutControl,
     pub rect: RotatedRect,
     pub build: BuildTransform,
     pub hitbox: Hitbox,
@@ -154,6 +158,7 @@ pub struct AouiMaterialMesh2dBundle<M: Material2d>{
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub dimension_data: DimensionData,
+    pub control: LayoutControl,
     pub rect: RotatedRect,
     pub build: BuildTransform,
     pub mesh: Mesh2dHandle,

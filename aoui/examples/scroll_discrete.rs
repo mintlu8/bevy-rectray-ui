@@ -1,7 +1,7 @@
 //! This showcases discrete scrolling.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, widgets::scroll::ScrollDiscrete, dsl::AouiCommands};
+use bevy_aoui::{AouiPlugin, widgets::scroll::ScrollDiscrete, util::AouiCommands};
 
 pub fn main() {
     App::new()

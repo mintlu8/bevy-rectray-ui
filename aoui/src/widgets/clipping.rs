@@ -1,5 +1,5 @@
-use crate::{dsl::CloneSplit, Anchor, BuildTransform, DimensionData};
-use bevy::asset::{AssetServer, Handle};
+use crate::{Anchor, BuildTransform, DimensionData};
+use bevy::asset::Handle;
 use bevy::core_pipeline::core_2d::Camera2dBundle;
 use bevy::core_pipeline::{
     clear_color::ClearColorConfig,
@@ -10,16 +10,13 @@ use bevy::ecs::{bundle::Bundle, component::Component, query::With, system::Query
 use bevy::render::camera::{
     Camera, CameraRenderGraph, OrthographicProjection, RenderTarget, ScalingMode,
 };
-use bevy::render::render_resource::{
-    Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
-};
 use bevy::render::view::{RenderLayers, VisibleEntities};
 use bevy::{
     render::{color::Color, primitives::Frustum, texture::Image},
     transform::components::GlobalTransform,
 };
 
-use crate::dsl::DslInto;
+use crate::util::convert::DslInto;
 
 /// Marker component that indicates the camera is used for clipping its contents.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Component)]
@@ -43,47 +40,9 @@ pub struct ScopedCameraBundle {
     pub global: GlobalTransform,
 }
 
-/// Create an image suitable as a render target.
-pub fn render_target<T: CloneSplit<Handle<Image>>>(
-    assets: impl AsRef<AssetServer>,
-    [width, height]: [u32; 2],
-) -> T {
-    let handle = assets.as_ref().add(Image {
-        texture_descriptor: TextureDescriptor {
-            label: None,
-            size: Extent3d {
-                width,
-                height,
-                ..Default::default()
-            },
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Bgra8UnormSrgb,
-            mip_level_count: 1,
-            sample_count: 1,
-            usage: TextureUsages::TEXTURE_BINDING
-                | TextureUsages::COPY_DST
-                | TextureUsages::RENDER_ATTACHMENT,
-            view_formats: &[],
-        },
-        data: vec![0; width as usize * height as usize * 4],
-        ..Default::default()
-    });
-    CloneSplit::clone_split(handle)
-}
-
 impl ScopedCameraBundle {
-    /// Create a camera and its render target.
-    pub fn new(
-        assets: impl AsRef<AssetServer>,
-        dimension: [u32; 2],
-        layer: impl DslInto<RenderLayers>,
-    ) -> (Self, Handle<Image>) {
-        let (cam, texture) = render_target(assets, dimension);
-        (Self::from_image(cam, layer), texture)
-    }
-
     /// Create a camera from a render target.
-    pub fn from_image(target: Handle<Image>, layer: impl DslInto<RenderLayers>) -> Self {
+    pub fn new(target: Handle<Image>, layer: impl DslInto<RenderLayers>) -> Self {
         let bun = Camera2dBundle::default();
         Self {
             clip: CameraClip,

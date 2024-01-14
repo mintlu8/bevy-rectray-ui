@@ -6,16 +6,16 @@ use bevy::text::Font;
 use bevy::window::CursorIcon;
 use crate::widgets::TextFragment;
 use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel};
-use crate::widgets::util::{SetCursor, PropagateFocus, DisplayIf};
+use crate::widgets::util::{SetCursor, PropagateFocus};
 use crate::{build_frame, Anchor, rectangle, Size, size};
 use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit};
-use crate::widget_extension;
-use crate::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxText};
+use crate::frame_extension;
+use crate::widgets::inputbox::{InputOverflow, InputBoxText};
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea};
 
-use super::{Widget, AouiCommands, IntoAsset};
+use crate::util::{Widget, AouiCommands, convert::IntoAsset};
 
-widget_extension!(
+frame_extension!(
     pub struct InputBoxBuilder {
         pub text: String,
         pub font: IntoAsset<Font>,
@@ -70,10 +70,10 @@ impl Widget for InputBoxBuilder {
             })
         );
         let bar = commands.entity(self.cursor_bar.expect("cursor_bar is required."))
-            .insert((InputBoxCursorBar, DisplayIf(InputBoxState::Focus)))
+            .insert(InputBoxCursorBar)
             .id();
         let area = commands.entity(self.cursor_area.expect("cursor_area is required."))
-            .insert((InputBoxCursorArea, DisplayIf(InputBoxState::Focus)))
+            .insert(InputBoxCursorArea)
             .id();
         commands.entity(text_area).add_child(bar);
         commands.entity(text_area).add_child(area);
@@ -88,7 +88,7 @@ macro_rules! inputbox {
         {$crate::meta_dsl!($commands [$crate::dsl::builders::InputBoxBuilder] {$($tt)*})};
 }
 
-widget_extension!(
+frame_extension!(
     pub struct ButtonBuilder {
         /// Sets the CursorIcon when hovering this button, default is `Hand`
         pub cursor: Option<CursorIcon>,
@@ -121,7 +121,7 @@ impl Widget for ButtonBuilder {
     }
 }
 
-widget_extension!(
+frame_extension!(
     pub struct CheckButtonBuilder {
         /// Sets the CursorIcon when hovering this button, default is `Hand`
         pub cursor: Option<CursorIcon>,
@@ -163,7 +163,7 @@ impl Widget for CheckButtonBuilder {
     }
 }
 
-widget_extension!(
+frame_extension!(
     pub struct RadioButtonBuilder {
         /// Sets the CursorIcon when hovering this button, default is `Hand`
         pub cursor: Option<CursorIcon>,

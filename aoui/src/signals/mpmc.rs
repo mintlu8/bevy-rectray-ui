@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, fmt::Debug};
 
-use crate::dsl::CloneSplit;
+use crate::util::CloneSplit;
 
 use super::{dto::{Object, AsObject}, signal::Signal};
 

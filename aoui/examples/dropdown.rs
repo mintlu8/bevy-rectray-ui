@@ -1,8 +1,8 @@
 #![recursion_limit = "256"]
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::WorldExtension;
+use bevy_aoui::util::WorldExtension;
 use bevy_aoui::AouiPlugin;
-use bevy_aoui::dsl::AouiCommands;
+use bevy_aoui::util::AouiCommands;
 
 pub fn main() {
     App::new()

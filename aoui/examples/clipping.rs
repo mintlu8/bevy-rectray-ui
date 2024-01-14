@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder, dsl::AouiCommands};
+use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder, util::AouiCommands};
 
 pub fn main() {
     App::new()

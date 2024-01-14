@@ -3,8 +3,8 @@
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use bevy_aoui::AouiPlugin;
-use bevy_aoui::WorldExtension;
-use bevy_aoui::dsl::AouiCommands;
+use bevy_aoui::util::WorldExtension;
+use bevy_aoui::util::AouiCommands;
 use bevy_aoui::signals::Invoke;
 use bevy_aoui::signals::ReceiveInvoke;
 

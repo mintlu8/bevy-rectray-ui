@@ -1,7 +1,7 @@
 //! Demo for the span based layouts.
 
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AouiPlugin, material_sprite, dsl::AouiCommands};
+use bevy_aoui::{AouiPlugin, material_sprite, util::AouiCommands};
 
 pub fn main() {
     App::new()

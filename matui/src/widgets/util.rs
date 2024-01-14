@@ -1,34 +1,9 @@
 use std::ops::{Deref, DerefMut};
 
 use bevy::{render::color::Color, ecs::{component::Component, entity::Entity}};
-use bevy_aoui::{dsl::{AouiCommands, DslFromOptionEx}, material_sprite, size2, layout::LayoutControl};
+use bevy_aoui::{util::{AouiCommands, convert::DslFromOptionEx}, material_sprite, size2, layout::LayoutControl};
 
-use crate::shapes::RoundedShadowMaterial;
-
-/// Create a palette struct, every field must be a color.
-///
-/// ```
-/// palette!(FramePalette {
-///     foreground: red,
-///     background: green,
-/// })
-/// ```
-/// Translates to:
-/// ``/// FramePalette {
-///     foreground: color!(red),
-///     background: color!(green),
-///     ..Default::default()
-/// }
-/// ```
-#[macro_export]
-macro_rules! palette {
-    ($ty: ident {$($field: ident: $color: tt),* $(,)?}) => {
-        $ty {
-            $($field: $crate::aoui::color!($color),)*
-            ..Default::default()
-        }
-    };
-}
+use crate::shaders::RoundedShadowMaterial;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ShadowInfo {
@@ -150,11 +125,4 @@ impl<T> DerefMut for StrokeColors<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
-}
-
-#[derive(Debug, Component, Clone, Copy, Default)]
-pub struct WidgetPalette {
-    pub background: Color,
-    pub foreground: Color,
-    pub stroke: Color,
 }

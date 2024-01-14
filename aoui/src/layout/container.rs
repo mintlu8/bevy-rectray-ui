@@ -1,8 +1,8 @@
-use std::ops::Range;
+use std::ops::{Range, RangeFull, RangeInclusive};
 
 use bevy::prelude::*;
 
-use crate::Size2;
+use crate::{Size2, util::DslFrom};
 
 use super::{LayoutOutput, LayoutObject};
 
@@ -55,6 +55,28 @@ impl LayoutRange {
             LayoutRange::Bounded { min, len } => min..(min+len).min(len),
             LayoutRange::Capped { min, len } => min..(min+len).min(len),
             LayoutRange::Stepped { step, len } => step*len..(step*len+step).min(len),
+        }
+    }
+}
+
+impl DslFrom<RangeFull> for LayoutRange {
+    fn dfrom(_: RangeFull) -> Self {
+        LayoutRange::All
+    }
+}
+
+impl DslFrom<Range<usize>> for LayoutRange {
+    fn dfrom(value: Range<usize>) -> Self {
+        LayoutRange::Bounded { min: value.start, len: value.len() }
+    }
+}
+
+
+impl DslFrom<RangeInclusive<usize>> for LayoutRange {
+    fn dfrom(value: RangeInclusive<usize>) -> Self {
+        LayoutRange::Bounded {
+            min: *value.start(),
+            len: value.end() - value.start() + 1
         }
     }
 }
@@ -183,7 +205,7 @@ pub struct LayoutInfo {
 /// Cause special behaviors when inserted into a [`Container`].
 pub enum LayoutControl {
     #[default]
-    /// Does not cause special behaviors, optional.
+    /// Does not cause special behaviors.
     None,
     /// Breaks the line in a container after rendering this item.
     Linebreak,

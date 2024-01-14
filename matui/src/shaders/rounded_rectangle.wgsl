@@ -6,23 +6,23 @@ var<uniform> color: vec4<f32>;
 @group(1) @binding(1)
 var<uniform> size: vec2<f32>;
 
-@group(1) @binding(2) 
+@group(1) @binding(2)
 var<uniform> stroke_color: vec4<f32>;
 
-@group(1) @binding(3) 
+@group(1) @binding(3)
 var<uniform> stroke: f32;
 
-@group(1) @binding(4) 
+@group(1) @binding(4)
 var<uniform> capsule: f32;
 
 // (--, +-, +-, ++)
 @group(1) @binding(5)
 var<uniform> corners: vec4<f32>;
 
-@group(1) @binding(6) 
+@group(1) @binding(6)
 var texture: texture_2d<f32>;
 
-@group(1) @binding(7) 
+@group(1) @binding(7)
 var samplr: sampler;
 
 fn sdf(in: vec2<f32>) -> f32 {
@@ -31,7 +31,7 @@ fn sdf(in: vec2<f32>) -> f32 {
     } else {
         return max(in.x, in.y);
     }
-} 
+}
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
@@ -59,7 +59,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let capsule_radius = min(size.x, size.y) / 2.0;
     radius = min(radius, capsule_radius) * (1.0 - capsule) + capsule_radius * capsule;
-    
+
     let origin = size / 2.0 - radius;
 
     var position = abs((in.uv - 0.5) * size) - origin;
@@ -72,5 +72,5 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let extrude_fac = 1.0 - (select(0.0, 1.0, length > radius) * stroke_color.w);
     let factor = 1.0 - smoothstep(radius - 1.0, radius, length);
     let fill = vec4(color.xyz, color.a * factor);
-    return fill * (1.0 - stroke_fac) * extrude_fac + vec4(stroke_color.xyz, stroke_fac);
+    return fill * (1.0 - stroke_fac) * extrude_fac + vec4(stroke_color.xyz, stroke_fac) * stroke_fac;
 }

@@ -3,7 +3,7 @@ use bevy::{prelude::*, window::{Window, PrimaryWindow}};
 use super::{*, cursor::CameraQuery, wheel::MouseWheelAction};
 
 
-/// Remove [`CursorFocus`], [`CursorAction`], [`CursorClickOutside`] and [`Submit`];
+/// Remove [`CursorFocus`], [`CursorAction`], [`CursorClickOutside`] and [`MouseWheelAction`];
 pub fn remove_focus(mut commands: Commands,
     query1: Query<Entity, With<CursorFocus>>,
     query2: Query<Entity, With<CursorAction>>,
@@ -119,9 +119,6 @@ pub fn mouse_button_input(
         } else if !buttons.pressed(state.drag_button) {
             state.dragging = false;
             state.drag_target = None;
-            iter(EventFlags::ClickOutside)
-            .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-            .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         }
     } else if buttons.pressed(MouseButton::Left) {
         if buttons.just_pressed(MouseButton::Left) {
@@ -223,9 +220,6 @@ pub fn mouse_button_input(
                     }
                 )
                 .exec(|| state.caught = true);
-            iter(EventFlags::ClickOutside)
-                .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-                .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         } else if buttons.just_released(MouseButton::Right) {
             let down = state.down_pos;
             iter(EventFlags::RightClick)
@@ -233,9 +227,6 @@ pub fn mouse_button_input(
                 .max_by(|(.., a), (.., b)| a.compare(b))
                 .map(|(entity, ..)| commands.entity(entity).insert(CursorAction(EventFlags::RightClick)).end())
                 .exec(|| state.caught = true);
-            iter(EventFlags::ClickOutside)
-                .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-                .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         } else if buttons.just_released(MouseButton::Middle) {
             let down = state.down_pos;
             iter(EventFlags::MidClick)
@@ -243,9 +234,6 @@ pub fn mouse_button_input(
                 .max_by(|(.., a), (.., b)| a.compare(b))
                 .map(|(entity, ..)| commands.entity(entity).insert(CursorAction(EventFlags::MidClick)).end())
                 .exec(|| state.caught = true);
-            iter(EventFlags::ClickOutside)
-                .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-                .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         }
         if state.focused.is_none() {
             iter(EventFlags::Hover)
@@ -258,4 +246,29 @@ pub fn mouse_button_input(
                 .exec(|| state.caught = true);
         }
     }
+}
+
+pub fn mouse_button_click_outside(
+    mut commands: Commands,
+    state: Res<CursorState>,
+    buttons: Res<Input<MouseButton>>,
+    parents: Query<&Parent>,
+    query: Query<(Entity, &EventFlags)>,
+) {
+    if !buttons.any_just_released([MouseButton::Left, MouseButton::Middle, MouseButton::Right]) {
+        return;
+    }
+    let mut focused = Vec::new();
+
+    if let Some(mut active) = state.focused {
+        focused.push(active);
+        while let Ok(parent) = parents.get(active) {
+            focused.push(parent.get());
+            active = parent.get();
+        }
+    }
+    query.iter()
+        .filter(|(_, flags)| flags.contains(EventFlags::ClickOutside))
+        .filter(|(entity, _)| !focused.contains(entity))
+        .for_each(|(entity, _)| commands.entity(entity).insert(CursorClickOutside).end())
 }

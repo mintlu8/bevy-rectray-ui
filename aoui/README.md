@@ -205,8 +205,9 @@ which is a combination of `Commands`, `AssetServer` and
 
 ### child
 
-`child:` is a special field that can be repeated, it accepts an `Entity`,
-an iterator of `Entity` or `&Entity` and inserts it/them as a child/children.
+`child:` is a special field that can be repeated, it accepts an `Entity`, `Option<Entity>`
+or an iterator of `Entity`/`&Entity`,
+and inserts it/them as a child/children.
 
 ```rust
 frame! (commands {

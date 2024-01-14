@@ -4,14 +4,13 @@ use bevy::asset::{Asset, Handle, Assets};
 use bevy::math::{Vec2, Vec4};
 use bevy::render::{color::Color, texture::Image};
 use bevy::render::render_resource::{AsBindGroup, ShaderRef, Shader};
-use bevy_aoui::{anim::{Interpolate, Interpolation}, dsl::DslInto, DimensionData, Opacity};
+use bevy_aoui::{anim::{Interpolate, Interpolation}, util::DslInto, DimensionData, Opacity};
 
 use crate::builders::Stroke;
 
 pub const ROUNDED_RECTANGLE_SHADER: Handle<Shader> =       Handle::weak_from_u128(270839355282343875567970925758141260070);
 pub const ROUNDED_SHADOW_SHADER: Handle<Shader> =          Handle::weak_from_u128(270839355282343875567970925758141260071);
 
-/// If you 
 #[derive(AsBindGroup, Asset, TypePath, Debug, Clone, Default)]
 #[non_exhaustive]
 pub struct RoundedShadowMaterial {
@@ -30,9 +29,9 @@ pub struct RoundedShadowMaterial {
 }
 impl RoundedShadowMaterial {
     pub fn new(color: Color, corner: f32, size: f32) -> Self {
-        Self { 
-            color, 
-            shadow_size: size, 
+        Self {
+            color,
+            shadow_size: size,
             size: Vec2::ZERO,
             capsule: 0.0,
             corners: Vec4::splat(corner),
@@ -40,9 +39,9 @@ impl RoundedShadowMaterial {
     }
 
     pub fn capsule(color: Color, size: f32) -> Self {
-        Self { 
-            color, 
-            shadow_size: size, 
+        Self {
+            color,
+            shadow_size: size,
             size: Vec2::ZERO,
             capsule: 1.0,
             corners: Vec4::ZERO,
@@ -106,44 +105,44 @@ impl IntoCorners for Vec4 {
 impl RoundedRectangleMaterial {
 
     pub fn new(color: Color, corner: impl IntoCorners) -> Self {
-        Self { 
+        Self {
             color, image: None, corners: corner.into_corners(), size: Vec2::ZERO,
             capsule: 0.0,
-            stroke_color: Color::NONE, stroke_size: 0.0 
+            stroke_color: Color::NONE, stroke_size: 0.0
         }
     }
 
 
     pub fn capsule(color: Color) -> Self {
-        Self { 
+        Self {
             color, image: None, corners: Vec4::ZERO, size: Vec2::ZERO,
             capsule: 1.0,
-            stroke_color: Color::NONE, stroke_size: 0.0 
+            stroke_color: Color::NONE, stroke_size: 0.0
         }
     }
 
     pub fn rect(color: Color) -> Self {
-        Self { 
+        Self {
             color, image: None, corners: Vec4::ZERO, size: Vec2::ZERO,
             capsule: 0.0,
-            stroke_color: Color::NONE, stroke_size: 0.0 
+            stroke_color: Color::NONE, stroke_size: 0.0
         }
     }
-    
+
 
     pub fn from_image(image: Handle<Image>, color: Color, corner: impl IntoCorners) -> Self {
-        Self { 
+        Self {
             color, image: Some(image), corners: corner.into_corners(), size: Vec2::ZERO,
             capsule: 0.0,
-            stroke_color: Color::NONE, stroke_size: 0.0 
+            stroke_color: Color::NONE, stroke_size: 0.0
         }
     }
 
     pub fn capsule_image(image: Handle<Image>, color: Color) -> Self {
-        Self { 
+        Self {
             color, image: Some(image), corners: Vec4::ZERO, size: Vec2::ZERO,
             capsule: 1.0,
-            stroke_color: Color::NONE, stroke_size: 0.0 
+            stroke_color: Color::NONE, stroke_size: 0.0
         }
     }
 
@@ -177,23 +176,25 @@ pub fn sync_rounded_rect(
 }
 
 pub fn sync_rounded_shadow(
-    query: Query<(&Handle<RoundedShadowMaterial>, &DimensionData, &Opacity)>, 
+    query: Query<(&Handle<RoundedShadowMaterial>, &DimensionData, &Opacity)>,
     mut assets: ResMut<Assets<RoundedShadowMaterial>>
 ){
     for (handle, dimension, opacity) in query.iter() {
         if let Some(asset) = assets.get(handle) {
-            if asset.size != dimension.size || asset.color.a() != opacity.get() {
+            // Quadratic so we fade out shadow faster.
+            let opacity_squared = opacity.get().powi(2);
+            if asset.size != dimension.size || asset.color.a() != opacity_squared {
                 let Some(asset) = assets.get_mut(handle) else {return};
                 asset.size = dimension.size;
-                asset.color.set_a(opacity.get());
+                asset.color.set_a(opacity_squared);
             }
         }
     }
 }
 
 pub fn interpolate_round_rect_color(
-    query: Query<(&Interpolate<Color>, &Handle<RoundedRectangleMaterial>)>, 
-    mut assets: ResMut<Assets<RoundedRectangleMaterial>> 
+    query: Query<(&Interpolate<Color>, &Handle<RoundedRectangleMaterial>)>,
+    mut assets: ResMut<Assets<RoundedRectangleMaterial>>
 ){
     for (interpolate, material) in query.iter() {
         if let Some(asset) = assets.get(material) {
@@ -222,8 +223,8 @@ impl Interpolation for StrokeColor {
 }
 
 pub fn interpolate_stroke_color(
-    query: Query<(&Interpolate<StrokeColor>, &Handle<RoundedRectangleMaterial>)>, 
-    mut assets: ResMut<Assets<RoundedRectangleMaterial>> 
+    query: Query<(&Interpolate<StrokeColor>, &Handle<RoundedRectangleMaterial>)>,
+    mut assets: ResMut<Assets<RoundedRectangleMaterial>>
 ){
     for (interpolate, material) in query.iter() {
         if let Some(asset) = assets.get(material) {

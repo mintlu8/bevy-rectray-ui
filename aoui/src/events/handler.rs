@@ -5,7 +5,7 @@ use bevy::ecs::query::{Without, With};
 use bevy::ecs::system::{Query, Commands, EntityCommands};
 use smallvec::SmallVec;
 
-use crate::dsl::{DslFrom, DslInto};
+use crate::util::convert::{DslFrom, DslInto};
 use crate::events::*;
 use crate::signals::{SignalSender, SignalBuilder, Object, AsObject};
 use crate::widgets::drag::DragState;

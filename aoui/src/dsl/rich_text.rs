@@ -1,11 +1,11 @@
 use bevy::{utils::HashMap, asset::Handle, text::Font};
 
-use crate::widget_extension;
+use crate::frame_extension;
 
 use super::HandleOrAsset;
 
 
-widget_extension!(
+frame_extension!(
     pub struct DslRichTextBuilder {
         /// The text string.
         pub text: String,

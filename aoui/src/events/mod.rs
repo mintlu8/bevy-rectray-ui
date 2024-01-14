@@ -141,6 +141,7 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .init_resource::<DoubleClickThreshold>()
             .init_resource::<CursorDefault>()
             .add_systems(PreUpdate, mouse_button_input.in_set(AouiEventSet))
+            .add_systems(PreUpdate, mouse_button_click_outside.in_set(AouiEventSet).after(mouse_button_input))
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
             .add_systems(Last, remove_focus.in_set(AouiCleanupSet))
             .add_systems(Update, (

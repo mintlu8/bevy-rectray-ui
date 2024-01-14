@@ -1,8 +1,9 @@
-use crate::dsl::{prelude::SignalSender, CloneSplit};
+use crate::dsl::prelude::SignalSender;
 use crate::events::{CursorAction, EventFlags};
 use crate::events::{EvButtonClick, EvToggleChange, Handlers};
 use crate::signals::{AsObject, Signal};
 use crate::signals::{Object, SignalBuilder};
+use crate::util::CloneSplit;
 use bevy::ecs::system::{Commands, Query};
 use bevy::ecs::{component::Component, query::With};
 use bevy::{

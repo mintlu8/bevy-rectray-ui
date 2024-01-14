@@ -1,12 +1,20 @@
 
 use bevy::{prelude::*, reflect::Reflect, math::Affine2};
 
-/// Stores opacity of the widget, not used by default but
-/// can be used by implementors.
+use crate::util::DslFrom;
+
+/// Stores opacity of the widget.
+///
+/// Note: this is not magic, third party materials need to intergrate with
+/// this to function properly.
 #[derive(Debug, Clone, Copy, PartialEq, Component, Reflect)]
 pub struct Opacity {
     /// User specified opacity of the widget.
     pub opacity: f32,
+    /// Non-user controlled opacity for styling.
+    ///
+    /// Multiplied with the normal opacity.
+    pub style_opacity: f32,
     /// Computed opacity of the widget.
     pub computed_opacity: f32,
     /// Occluded
@@ -21,6 +29,7 @@ impl Opacity {
     /// Fully opaque.
     pub const OPAQUE: Self = Self {
         opacity: 1.0,
+        style_opacity: 1.0,
         computed_opacity: 1.0,
         disabled: false,
         occluded: false,
@@ -29,6 +38,7 @@ impl Opacity {
     /// Fully transparent.
     pub const TRANSPARENT: Self = Self {
         opacity: 0.0,
+        style_opacity: 1.0,
         computed_opacity: 0.0,
         disabled: false,
         occluded: false,
@@ -38,6 +48,7 @@ impl Opacity {
     pub const fn new(v: f32) -> Self {
         Self {
             opacity: v,
+            style_opacity: 1.0,
             computed_opacity: v,
             disabled: false,
             occluded: false,
@@ -69,8 +80,27 @@ impl Default for Opacity {
     }
 }
 
+impl DslFrom<i32> for Opacity {
+    fn dfrom(value: i32) -> Self {
+        Opacity::new(value as f32)
+    }
+}
+
+impl DslFrom<f32> for Opacity {
+    fn dfrom(value: f32) -> Self {
+        Opacity::new(value)
+    }
+}
+
+impl DslFrom<bool> for Opacity {
+    fn dfrom(value: bool) -> Self {
+        Opacity::new(if value {1.0} else {0.0})
+    }
+}
+
 /// Ignores writing opacity to the associated alpha value of sprite, text, etc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Reflect)]
+#[component(storage="SparseSet")]
 pub struct IgnoreAlpha;
 
 /// Data related to clipping.

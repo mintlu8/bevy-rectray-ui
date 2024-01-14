@@ -11,6 +11,7 @@ doctest = false
 [dependencies]
 bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite", "bevy_text", "trace"] }
 bevy_aoui = {version = "0.3.0", path = "../aoui"}
+colorthis = { version = "^0.1.1", features = ["compact"] }
 
 [dev-dependencies]
 bevy = { version = "^0.12", features = ["multi-threaded", "png", "bevy_winit"]}

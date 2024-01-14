@@ -8,7 +8,7 @@ use bevy::math::{Vec2, IVec2};
 use bevy::hierarchy::{Children, Parent};
 use bevy::ecs::{component::Component, system::{Commands, Res, Query}};
 use crate::DimensionData;
-use crate::dsl::CloneSplit;
+use crate::util::CloneSplit;
 use crate::{AouiREM, Transform2D, Anchor, anim::Attr, layout::Container};
 use crate::anim::Offset;
 use crate::events::{Handlers, EvMouseWheel, MovementUnits, EvPositionFactor};

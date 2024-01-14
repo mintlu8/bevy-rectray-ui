@@ -1,9 +1,6 @@
 use std::{sync::{RwLock, Arc}, marker::PhantomData};
-
 use bevy::{utils::HashMap, ecs::system::{Resource, ResMut, Local}};
-
-use crate::dsl::CloneSplit;
-
+use crate::util::CloneSplit;
 use super::{signal::Signal, SignalBuilder, AsObject};
 
 /// A pool of signals.
