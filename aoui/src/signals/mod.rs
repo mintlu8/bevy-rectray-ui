@@ -96,7 +96,6 @@
 //! }
 //! ```
 
-mod dto;
 mod mpmc;
 mod globals;
 mod signal;
@@ -105,12 +104,11 @@ mod receiver;
 
 use bevy::{app::{Plugin, Update, PreUpdate, Last}, ecs::schedule::IntoSystemConfigs};
 pub use globals::*;
-pub use dto::{Object, AsObject};
 pub use mpmc::*;
 pub use receiver::*;
 pub(crate) use signal::Signal;
 
-use crate::{schedule::{AouiEventSet, AouiCleanupSet}, util::CloneSplit};
+use crate::{schedule::{AouiEventSet, AouiCleanupSet}, util::{CloneSplit, AsObject}};
 
 pub use signal_pool::SignalPool;
 

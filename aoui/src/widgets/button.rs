@@ -1,8 +1,8 @@
 use crate::dsl::prelude::SignalSender;
 use crate::events::{CursorAction, EventFlags};
 use crate::events::{EvButtonClick, EvToggleChange, Handlers};
-use crate::signals::{AsObject, Signal};
-use crate::signals::{Object, SignalBuilder};
+use crate::signals::{SignalBuilder, Signal};
+use crate::util::{Object, AsObject};
 use crate::util::CloneSplit;
 use bevy::ecs::system::{Commands, Query};
 use bevy::ecs::{component::Component, query::With};
@@ -80,6 +80,12 @@ impl From<bool> for CheckButton {
 /// Discriminant is the [`Payload`] component.
 #[derive(Debug, Clone, Component)]
 pub struct RadioButton(Arc<Mutex<Object>>, SignalSender<Object>);
+
+impl Default for RadioButton {
+    fn default() -> Self {
+        Self::new_empty()
+    }
+}
 
 impl RadioButton {
     /// Create an empty `RadioButton` context, usually unchecked by default.

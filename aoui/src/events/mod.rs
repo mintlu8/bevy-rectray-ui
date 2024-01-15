@@ -56,7 +56,7 @@
 
 use bevy::{prelude::*, ecs::query::WorldQuery};
 use crate::{Hitbox, Clipping, RotatedRect, Opacity};
-use crate::widgets::util::CursorDefault;
+use crate::widgets::util::{CursorDefault, remove_all};
 use crate::schedule::{AouiEventSet, AouiCleanupSet};
 
 mod systems;
@@ -143,7 +143,6 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .add_systems(PreUpdate, mouse_button_input.in_set(AouiEventSet))
             .add_systems(PreUpdate, mouse_button_click_outside.in_set(AouiEventSet).after(mouse_button_input))
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
-            .add_systems(Last, remove_focus.in_set(AouiCleanupSet))
             .add_systems(Update, (
                 handle_event::<EvLeftClick>,
                 handle_event::<EvLeftDown>,
@@ -177,12 +176,21 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
                 fetch::transfer_padding_evaluated,
             ))
             .add_systems(Update, (
-                lose_focus_detection,
-                obtain_focus_detection,
+                focus_obtain,
+                focus_lose,
+                focus_change,
                 track_cursor,
                 custom_cursor_controller,
                 coverage::calculate_coverage,
             ))
+            .add_systems(Last, (
+                remove_all::<CursorAction>,
+                remove_all::<CursorFocus>,
+                remove_all::<CursorClickOutside>,
+                remove_all::<MouseWheelAction>,
+                remove_all::<DescendantHasFocus>,
+            ).in_set(AouiCleanupSet))
+
         ;
     }
 }

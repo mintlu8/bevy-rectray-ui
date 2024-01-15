@@ -8,7 +8,7 @@ use bevy_aoui::signals::SignalSender;
 use bevy_aoui::widgets::drag::Dragging;
 use bevy_aoui::RotatedRect;
 use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
-use bevy_aoui::{frame_extension, build_frame, material_sprite, layout::Axis, events::EvPositionFactor, Anchor};
+use bevy_aoui::{frame_extension, build_frame, layout::Axis, events::EvPositionFactor, Anchor};
 use bevy_aoui::events::{Handlers, CursorState};
 
 use crate::shaders::RoundedRectangleMaterial;
@@ -104,17 +104,19 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
 
 
         let thickness = self.thickness.unwrap_or(0.4);
-        let background = material_sprite!(commands {
+        let background = frame!(commands {
             dimension: Size2::em(horiz_len + thickness, thickness),
             z: 0.01,
-            material: RoundedRectangleMaterial::capsule(palette.background())
-                .with_stroke((palette.stroke(), self.background_stroke)),
-            child: material_sprite!{
+            extra: RoundedRectangleMaterial::capsule(palette.background())
+                .with_stroke((palette.stroke(), self.background_stroke))
+                .into_bundle(commands),
+            child: frame!{
                 anchor: Anchor::CENTER_LEFT,
                 dimension: size2!(0%, thickness em),
                 z: 0.01,
-                material: RoundedRectangleMaterial::capsule(palette.foreground())
-                    .with_stroke((palette.stroke(), self.background_stroke)),
+                extra: RoundedRectangleMaterial::capsule(palette.foreground())
+                    .with_stroke((palette.stroke(), self.background_stroke))
+                    .into_bundle(commands),
                 extra: fac_recv.recv(|fac: f32, dim: &mut Dimension| {
                     dim.edit_raw(|v| v.x = fac);
                 }),
@@ -139,12 +141,13 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
                 extra: rebase_recv.recv(|pos: Vec2, state: &mut Dragging|{
                     state.drag_start.x = pos.x
                 }),
-                child: material_sprite! {
+                child: frame! {
                     entity: dial,
                     dimension: Size2::em(dial_size, dial_size),
                     z: 0.01,
-                    material: RoundedRectangleMaterial::capsule(palette.foreground())
-                        .with_stroke((palette.foreground_stroke(), self.dial_stroke)),
+                    extra: RoundedRectangleMaterial::capsule(palette.foreground())
+                        .with_stroke((palette.foreground_stroke(), self.dial_stroke))
+                        .into_bundle(commands),
                     event: EventFlags::LeftDrag | EventFlags::Hover,
                     hitbox: Hitbox::ellipse(1),
                     extra: CursorStateColors {

@@ -1,8 +1,8 @@
 use std::{marker::PhantomData, fmt::Debug};
 
-use crate::util::CloneSplit;
+use crate::util::{CloneSplit, Object, AsObject};
 
-use super::{dto::{Object, AsObject}, signal::Signal};
+use super::signal::Signal;
 
 /// A function that maps the value of a signal.
 #[derive(Default)]
@@ -33,7 +33,7 @@ impl SignalMapper {
 macro_rules! signal_mapper {
     ($in_ty: ty, $f: expr) => {
         $crate::signals::SignalMapper::Function(
-            Box::new(move |obj: &mut $crate::signals::Object| {
+            Box::new(move |obj: &mut $crate::util::Object| {
                 let Some(a) = obj.get::<$in_ty>() else {return};
                 *obj = Object::new(($f)(a));
             })

@@ -1,19 +1,19 @@
 use bevy::ecs::entity::Entity;
 use bevy::render::color::Color;
 use bevy::render::texture::Image;
-use bevy::{hierarchy::BuildChildren, text::Font, transform::components::GlobalTransform};
-use bevy::sprite::Mesh2dHandle;
+use bevy::{hierarchy::BuildChildren, text::Font};
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
 use bevy_aoui::Opacity;
 use bevy_aoui::layout::LayoutRange;
-use bevy_aoui::{frame_extension, build_frame, Hitbox, size2, text, layout::{Container, StackLayout}, sprite, BuildMeshTransform};
+use bevy_aoui::{frame_extension, build_frame, size2, text, layout::{Container, StackLayout}, sprite};
 use bevy_aoui::anim::{Interpolate, Easing};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvButtonClick};
 use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
 use bevy_aoui::widgets::button::{Button, Payload};
-use bevy_aoui::util::{Widget, mesh_rectangle, AouiCommands, convert::{OptionEx, IntoAsset}};
-use crate::shaders::{RoundedRectangleMaterial, StrokeColor};
+use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
+use crate::build_shape;
+use crate::shaders::{RoundedRectangleMaterial, StrokeColoring};
 use crate::style::Palette;
 
 use super::util::{ShadowInfo, StrokeColors};
@@ -54,7 +54,7 @@ pub fn cursor_color_change(mut query: Query<(&CursorStateColors, &Opacity, Optio
 }
 
 
-pub fn cursor_stroke_change(mut query: Query<(&StrokeColors<CursorStateColors>, &Opacity, Option<&CursorFocus>, &mut Interpolate<StrokeColor>)>) {
+pub fn cursor_stroke_change(mut query: Query<(&StrokeColors<CursorStateColors>, &Opacity, Option<&CursorFocus>, &mut Interpolate<StrokeColoring>)>) {
     query.iter_mut().for_each(|(colors, opacity, focus, mut color)| {
         if opacity.is_disabled() {
             color.interpolate_to(colors.disabled);
@@ -88,11 +88,11 @@ frame_extension!(
         pub icon_hover: IntoAsset<Image>,
         pub icon_pressed: IntoAsset<Image>,
         pub stroke: f32,
-        pub signal: Handlers<EvButtonClick>,
-        pub payload: Option<Payload>,
         pub capsule: bool,
         pub radius: f32,
         pub shadow: OptionEx<ShadowInfo>,
+        pub signal: Handlers<EvButtonClick>,
+        pub payload: Option<Payload>,
     }
 );
 
@@ -137,15 +137,12 @@ impl Widget for MButtonBuilder {
                 style.background(),
                 0.15
             ),
-            Interpolate::<StrokeColor>::new(
+            Interpolate::<StrokeColoring>::new(
                 Easing::Linear,
                 style.stroke(),
                 0.15
             ),
         ));
-        if self.hitbox.is_none() {
-            frame.insert(Hitbox::FULL);
-        }
         if !self.signal.is_empty() {
             frame.insert(self.signal);
         }
@@ -199,47 +196,8 @@ impl Widget for MButtonBuilder {
             });
             commands.entity(frame).push_children(&[child, right_pad]);
         }
-
-        match (self.capsule, self.radius) {
-            (true, ..) => {
-                let mat = commands.add_asset(if let Some(im) = commands.try_load(self.texture) {
-                    RoundedRectangleMaterial::capsule_image(im, style.background())
-                } else {
-                    RoundedRectangleMaterial::capsule(style.background())
-                }.with_stroke((self.stroke, self.palette.stroke())));
-                let rect = commands.add_asset(mesh_rectangle());
-                commands.entity(frame).insert((
-                    mat,
-                    Mesh2dHandle(rect),
-                    GlobalTransform::IDENTITY,
-                    BuildMeshTransform,
-                ));
-                if let OptionEx::Some(shadow) = self.shadow {
-                    let shadow = shadow.build_capsule(commands);
-                    commands.entity(frame).add_child(shadow);
-                }
-                (frame, frame)
-            },
-            (_, radius, ..) => {
-                let mat = commands.add_asset(if let Some(im) = commands.try_load(self.texture) {
-                    RoundedRectangleMaterial::from_image(im, style.background(), radius)
-                } else {
-                    RoundedRectangleMaterial::new(style.background(), radius)
-                }.with_stroke((self.stroke, style.stroke())));
-                let rect = commands.add_asset(mesh_rectangle());
-                commands.entity(frame).insert((
-                    mat,
-                    Mesh2dHandle(rect),
-                    GlobalTransform::IDENTITY,
-                    BuildMeshTransform,
-                ));
-                if let OptionEx::Some(shadow) = self.shadow {
-                    let shadow = shadow.build_rect(commands, radius);
-                    commands.entity(frame).add_child(shadow);
-                }
-                (frame, frame)
-            }
-        }
+        build_shape!(commands, self, frame);
+        (frame, frame)
     }
 }
 

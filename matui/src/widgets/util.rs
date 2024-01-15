@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use bevy::{render::color::Color, ecs::{component::Component, entity::Entity}};
-use bevy_aoui::{util::{AouiCommands, convert::DslFromOptionEx}, material_sprite, size2, layout::LayoutControl};
+use bevy_aoui::{util::{AouiCommands, convert::DslFromOptionEx}, material_sprite, size2, layout::LayoutControl, Coloring};
 
 use crate::shaders::RoundedShadowMaterial;
 
@@ -29,6 +29,7 @@ impl ShadowInfo {
             z: -0.005,
             material: RoundedShadowMaterial::capsule(self.color, self.size - self.size * self.darken),
             extra: LayoutControl::IgnoreLayout,
+            extra: Coloring::new(self.color),
         })
     }
 
@@ -38,6 +39,7 @@ impl ShadowInfo {
             z: -0.005,
             material: RoundedShadowMaterial::new(self.color, corner, self.size - self.size * self.darken),
             extra: LayoutControl::IgnoreLayout,
+            extra: Coloring::new(self.color),
         })
     }
 }

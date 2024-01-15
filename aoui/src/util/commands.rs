@@ -1,8 +1,15 @@
 use std::marker::PhantomData;
 
-use bevy::{ecs::{system::{SystemParam, Commands, Res, EntityCommands, Command}, entity::Entity, bundle::Bundle, component::Component}, asset::{AssetServer, Asset, Handle, AssetPath}, render::{texture::Image, render_resource::{TextureDescriptor, Extent3d, TextureDimension, TextureFormat, TextureUsages}}, hierarchy::{Children, DespawnRecursive, BuildChildren, DespawnRecursiveExt}};
-use crate::signals::{SignalPool, SignalBuilder, AsObject};
-use crate::util::{CloneSplit, Widget};
+use bevy::ecs::{entity::Entity, bundle::Bundle, component::Component};
+use bevy::ecs::system::{SystemParam, Commands, Res, EntityCommands, Command};
+use bevy::hierarchy::{Children, DespawnRecursive, BuildChildren, DespawnRecursiveExt};
+use bevy::render::texture::{Image, BevyDefault};
+use bevy::render::render_resource::{TextureDescriptor, Extent3d, TextureDimension, TextureUsages};
+use bevy::asset::{AssetServer, Asset, Handle, AssetPath};
+use crate::signals::{SignalPool, SignalBuilder};
+use crate::util::{CloneSplit, Widget, AsObject};
+
+use super::WidgetBuilder;
 
 
 /// [`SystemParam`] combination of [`Commands`], [`AssetServer`] and [`SignalPool`].
@@ -61,7 +68,7 @@ impl<'w, 's> AouiCommands<'w, 's> {
                     ..Default::default()
                 },
                 dimension: TextureDimension::D2,
-                format: TextureFormat::Bgra8UnormSrgb,
+                format: BevyDefault::bevy_default(),
                 mip_level_count: 1,
                 sample_count: 1,
                 usage: TextureUsages::TEXTURE_BINDING
@@ -82,6 +89,14 @@ impl<'w, 's> AouiCommands<'w, 's> {
         self.entity(id)
             .insert(extras);
         id
+    }
+
+    pub fn spawn_dynamic(&mut self, widget: &WidgetBuilder<()>) -> Entity{
+        widget.build(self, ())
+    }
+
+    pub fn spawn_fn<T>(&mut self, widget: &WidgetBuilder<T>, arg: T) -> Entity{
+        widget.build(self, arg)
     }
 
     /// Created a tracked unnamed signal.

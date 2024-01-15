@@ -1,8 +1,9 @@
-use bevy::{render::color::Color, text::Text, math::Vec2};
+use bevy::{render::color::Color, math::Vec2};
 use bevy::ecs::{component::Component, system::Query};
-use bevy::sprite::{TextureAtlasSprite, Sprite};
-use bevy::ecs::query::{WorldQuery, ReadOnlyWorldQuery, Without};
-use crate::{Transform2D, Dimension, Opacity, widgets::TextFragment};
+use bevy::sprite::TextureAtlasSprite;
+use bevy::ecs::query::{WorldQuery, ReadOnlyWorldQuery};
+use crate::Coloring;
+use crate::{Transform2D, Dimension, Opacity};
 use super::{Interpolation, Interpolate, Offset, Rotation, Scale, Index};
 
 
@@ -115,26 +116,10 @@ impl InterpolateAssociation for (Opacity, Opacity) {
     }
 }
 
-impl InterpolateAssociation for (Opacity, Color) {
-    type Component = Opacity;
+impl InterpolateAssociation for (Coloring, Color) {
+    type Component = Coloring;
     type Interpolation = Color;
     type Condition = ();
-
-    fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
-        component.opacity = value.a()
-    }
-
-    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
-        let o = component.opacity;
-        Color::rgba_linear(o, o, o, o)
-    }
-}
-
-
-impl InterpolateAssociation for (Sprite, Color) {
-    type Component = Sprite;
-    type Interpolation = Color;
-    type Condition = Without<TextFragment>;
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.color = value
@@ -145,49 +130,7 @@ impl InterpolateAssociation for (Sprite, Color) {
     }
 }
 
-impl InterpolateAssociation for (TextureAtlasSprite, Color) {
-    type Component = TextureAtlasSprite;
-    type Interpolation = Color;
-    type Condition = Without<TextFragment>;
 
-    fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
-        component.color = value
-    }
-
-    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
-        component.color
-    }
-}
-
-impl InterpolateAssociation for (Text, Color) {
-    type Component = Text;
-    type Interpolation = Color;
-    type Condition = Without<TextFragment>;
-
-    fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
-        for section in &mut component.sections {
-            section.style.color = value;
-        }
-    }
-
-    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
-        component.sections.first().map(|x| x.style.color).unwrap_or(Color::NONE)
-    }
-}
-
-impl InterpolateAssociation for (TextFragment, Color) {
-    type Component = TextFragment;
-    type Interpolation = Color;
-    type Condition = ();
-
-    fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
-        component.color = value;
-    }
-
-    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
-        component.color
-    }
-}
 
 /// Query for either setting a field or setting its associated interpolation.
 #[derive(Debug, WorldQuery)]

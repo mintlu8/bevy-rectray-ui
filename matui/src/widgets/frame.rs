@@ -1,24 +1,21 @@
 use std::mem;
-
 use bevy::ecs::component::Component;
 use bevy::math::Vec2;
 use bevy::ecs::entity::Entity;
 use bevy::render::color::Color;
 use bevy::render::texture::Image;
 use bevy::hierarchy::BuildChildren;
-use bevy::sprite::Mesh2dHandle;
-use bevy::transform::components::GlobalTransform;
 use bevy::window::CursorIcon;
 use bevy_aoui::anim::{Interpolate, Padding};
 use bevy_aoui::layout::{Axis, BoundsLayout};
 use bevy_aoui::layout::LayoutControl::IgnoreLayout;
 use bevy_aoui::signals::{SignalBuilder, RawReceiver};
 use bevy_aoui::widgets::misc::LayoutOpacityLimiter;
-use bevy_aoui::{material_sprite, Hitbox, Size2, Opacity, transition, Dimension, Anchor, BuildMeshTransform};
+use bevy_aoui::{Hitbox, Size2, Opacity, transition, Dimension, Anchor};
 use bevy_aoui::widgets::drag::{Dragging, DragConstraint};
 use bevy_aoui::{frame, frame_extension, build_frame, size2, layout::StackLayout};
 use bevy_aoui::events::{EventFlags, Handlers, EvMouseDrag, Fetch, Evaluated};
-use bevy_aoui::util::{Widget, AouiCommands, mesh_rectangle, convert::{OptionEx, IntoAsset}};
+use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
 use crate::mframe_extension;
 use crate::shaders::RoundedRectangleMaterial;
 use crate::style::Palette;
@@ -38,21 +35,21 @@ impl Widget for Divider {
             RoundedRectangleMaterial::rect(self.color)
         } else {
             RoundedRectangleMaterial::capsule(self.color)
-        };
+        }.into_bundle(commands);
         let width = self.width.unwrap_or(0.1);
         match self.axis {
             Axis::Horizontal => {
-                let entity = material_sprite!(commands {
+                let entity = frame!(commands {
                     dimension: size2!({100.0 - self.inset * 2.0}%, width em),
-                    material: mat,
+                    extra: mat,
                     z: self.z,
                 });
                 (entity, entity)
             },
             Axis::Vertical => {
-                let entity = material_sprite!(commands {
+                let entity = frame!(commands {
                     dimension: size2!(width em, {100.0 - self.inset * 2.0}%),
-                    material: mat,
+                    extra: mat,
                     z: self.z,
                 });
                 (entity, entity)
@@ -79,6 +76,27 @@ pub struct WindowDimensionQuery {
 
 use super::util::ShadowInfo;
 
+frame_extension!(pub struct MRectangle {
+    pub palette: Palette,
+    pub stroke: f32,
+    pub shadow: Option<ShadowInfo>
+});
+
+impl Widget for MRectangle {
+    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+        let material = RoundedRectangleMaterial::rect(self.palette.background())
+            .with_stroke((self.palette.stroke(), self.stroke)).into_bundle(commands);
+
+        let entity = build_frame!(commands, self).insert(material).id();
+
+        if let Some(shadow) = self.shadow {
+            let shadow = shadow.build_capsule(commands);
+            commands.entity(entity).add_child(shadow);
+        }
+        (entity, entity)
+    }
+}
+
 
 frame_extension!(pub struct MCapsule {
     pub palette: Palette,
@@ -88,18 +106,10 @@ frame_extension!(pub struct MCapsule {
 
 impl Widget for MCapsule {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        let mesh = commands.add_asset(mesh_rectangle());
-        let material = commands.add_asset(
-            RoundedRectangleMaterial::capsule(self.palette.background())
-                .with_stroke((self.palette.stroke(), self.stroke)));
+        let material = RoundedRectangleMaterial::capsule(self.palette.background())
+            .with_stroke((self.palette.stroke(), self.stroke)).into_bundle(commands);
 
-        let entity = build_frame!(commands, self)
-            .insert((
-                material,
-                Mesh2dHandle(mesh),
-                GlobalTransform::IDENTITY,
-                BuildMeshTransform,
-            )).id();
+        let entity = build_frame!(commands, self).insert(material).id();
 
         if let Some(shadow) = self.shadow {
             let shadow = shadow.build_capsule(commands);
@@ -118,17 +128,10 @@ impl Widget for MFrameBuilder {
             self.layout = Some(BoundsLayout::PADDING.into());
         }
         self.event = EventFlags::BlockAll;
-        let mesh = commands.add_asset(mesh_rectangle());
-        let material = commands.add_asset(
-            RoundedRectangleMaterial::new(self.palette.background(), self.radius)
-                .with_stroke((self.palette.stroke(), self.stroke)));
+        let material = RoundedRectangleMaterial::new(self.palette.background(), self.radius)
+            .with_stroke((self.palette.stroke(), self.stroke)).into_bundle(commands);
         let mut frame = build_frame!(commands, self);
-        let id = frame.insert((
-            Mesh2dHandle(mesh),
-            material,
-            GlobalTransform::IDENTITY,
-            BuildMeshTransform,
-        )).id();
+        let id = frame.insert(material).id();
         if let OptionEx::Some(shadow) = self.shadow {
             let shadow = shadow.build_rect(commands, self.radius);
             commands.entity(id).add_child(shadow);
@@ -167,16 +170,16 @@ impl Widget for MWindowBuilder {
             RoundedRectangleMaterial::from_image(im, style.background(), self.radius)
         } else {
             RoundedRectangleMaterial::new(style.background(), self.radius)
-        }.with_stroke((self.stroke, self.palette.stroke()));
+        }.with_stroke((self.stroke, self.palette.stroke())).into_bundle(commands);
         commands.entity(frame).insert((
             Dragging::BOTH,
             DragConstraint,
         ));
-        let background = material_sprite!(commands {
+        let background = frame!(commands {
             z: -0.05,
             anchor: Anchor::TOP_CENTER,
             dimension: Size2::FULL,
-            material: mat,
+            extra: mat,
             extra: IgnoreLayout,
         });
         commands.entity(frame).add_child(background);
@@ -261,6 +264,15 @@ impl Widget for MWindowBuilder {
         commands.entity(frame).add_child(rest);
         (frame, container)
     }
+}
+
+#[macro_export]
+macro_rules! mrectangle {
+    ($ctx: tt {$($tt: tt)*}) => {
+        $crate::aoui::meta_dsl!($ctx [$crate::widgets::MRectangle] {
+            $($tt)*
+        })
+    };
 }
 
 #[macro_export]

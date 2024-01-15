@@ -25,7 +25,7 @@
 #![allow(clippy::too_many_arguments)]
 
 
-use aoui::anim::Interpolation;
+use aoui::anim::InterpolateAssociation;
 use bevy::{app::{Plugin, PostUpdate, Update}, asset::load_internal_asset, render::render_resource::Shader, ecs::schedule::IntoSystemConfigs, sprite::Material2dPlugin};
 use bevy_aoui::schedule::AouiStoreOutputSet;
 
@@ -59,8 +59,7 @@ impl Plugin for MatuiPlugin {
         ).in_set(AouiStoreOutputSet));
         app.add_systems(Update, (
             interpolate_stroke_color,
-            interpolate_round_rect_color,
-            StrokeColor::update_interpolate,
+            StrokeColoring::system,
         ));
         app.add_systems(Update, (
             cursor_color_change,

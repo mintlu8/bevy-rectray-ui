@@ -1,12 +1,14 @@
-use bevy::{render::{color::Color, texture::Image}, window::CursorIcon, ecs::{component::Component, system::Query, entity::Entity}, hierarchy::BuildChildren, math::Vec2};
-use bevy_aoui::{frame_extension, build_frame, Hitbox, Dimension, Size2, material_sprite, sprite, size2};
+use bevy::{window::CursorIcon, hierarchy::BuildChildren, math::Vec2};
+use bevy::render::{color::Color, texture::Image};
+use bevy::ecs::{component::Component, system::Query, entity::Entity};
+use bevy_aoui::{frame_extension, build_frame, Hitbox, Dimension, Size2, sprite, size2};
 use bevy_aoui::util::{AouiCommands, Widget, convert::{OptionEx, IntoAsset}};
 use bevy_aoui::anim::{Interpolate, Easing, Offset, EaseFunction};
 use bevy_aoui::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange};
 use bevy_aoui::widgets::button::{CheckButton, Payload, CheckButtonState};
 use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
 
-use crate::{shaders::{RoundedRectangleMaterial, StrokeColor}, style::Palette};
+use crate::{shaders::{RoundedRectangleMaterial, StrokeColoring}, style::Palette};
 
 use super::util::{ShadowInfo, StrokeColors};
 
@@ -25,7 +27,7 @@ pub fn toggle_color_change(mut query: Query<(&CheckButtonState, &ToggleColors, &
     })
 }
 
-pub fn toggle_stroke_change(mut query: Query<(&CheckButtonState, &StrokeColors<ToggleColors>, &mut Interpolate<StrokeColor>)>) {
+pub fn toggle_stroke_change(mut query: Query<(&CheckButtonState, &StrokeColors<ToggleColors>, &mut Interpolate<StrokeColoring>)>) {
     query.iter_mut().for_each(|(check, colors, mut color)| {
         match check {
             CheckButtonState::Checked => color.interpolate_to(colors.active),
@@ -143,11 +145,12 @@ impl Widget for MToggleBuilder {
 
         let size = self.background_size.map(|x| Size2::em(x + horiz_len, x))
             .unwrap_or(Size2::FULL);
-        let background = material_sprite!(commands {
+        let background = bevy_aoui::frame!(commands {
             dimension: size,
             z: 0.01,
-            material: RoundedRectangleMaterial::capsule(active_palette.background())
-                .with_stroke((active_palette.stroke(), self.background_stroke)),
+            extra: RoundedRectangleMaterial::capsule(active_palette.background())
+                .with_stroke((active_palette.stroke(), self.background_stroke))
+                .into_bundle(commands),
             extra: ToggleColors {
                 inactive: unchecked_palette.background(),
                 active: checked_palette.background(),
@@ -161,7 +164,7 @@ impl Widget for MToggleBuilder {
                 active_palette.background(),
                 0.25
             ),
-            extra: Interpolate::<StrokeColor>::new(
+            extra: Interpolate::<StrokeColoring>::new(
                 Easing::Linear,
                 active_palette.stroke(),
                 0.25
@@ -174,12 +177,13 @@ impl Widget for MToggleBuilder {
         commands.entity(frame).add_child(background);
         let dial_size = self.dial_size.unwrap_or(1.4);
         let checked_size = self.checked_size.unwrap_or(dial_size);
-        let dial = material_sprite!(commands {
+        let dial = bevy_aoui::frame!(commands {
             offset: Size2::em(0.0, 0.0),
             dimension: Size2::em(dial_size, dial_size),
             z: 0.02,
-            material: RoundedRectangleMaterial::capsule(active_palette.foreground())
-                .with_stroke((active_palette.foreground_stroke(), self.dial_stroke)),
+            extra: RoundedRectangleMaterial::capsule(active_palette.foreground())
+                .with_stroke((active_palette.foreground_stroke(), self.dial_stroke))
+                .into_bundle(commands),
             extra: ToggleColors {
                 inactive: unchecked_palette.foreground(),
                 active: checked_palette.foreground(),
@@ -199,7 +203,7 @@ impl Widget for MToggleBuilder {
                 active_palette.foreground(),
                 0.25
             ),
-            extra: Interpolate::<StrokeColor>::new(
+            extra: Interpolate::<StrokeColoring>::new(
                 Easing::Ease(EaseFunction::CubicInOut),
                 active_palette.foreground_stroke(),
                 0.25

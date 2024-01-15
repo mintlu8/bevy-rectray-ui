@@ -1,5 +1,5 @@
 use bevy::asset::{Asset, Handle};
-use crate::{widgets::button::Payload, signals::AsObject, util::AouiCommands};
+use crate::{widgets::button::Payload, util::AsObject, util::AouiCommands};
 
 use super::DslConvert;
 

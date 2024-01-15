@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor as BevyAnchor;
 use bevy::window::PrimaryWindow;
 use crate::dimension::DimensionMut;
-use crate::{RotatedRect, BuildTransform, Transform2D, Opacity, IgnoreAlpha, BuildMeshTransform, Anchor, DimensionData, Dimension};
+use crate::{RotatedRect, BuildTransform, Transform2D, Opacity, IgnoreAlpha, BuildMeshTransform, Anchor, DimensionData, Dimension, Coloring};
 
 
 /// Copy our `anchor` component's value to the `Anchor` component
@@ -99,26 +99,22 @@ pub fn copy_dimension_atlas(
 
 /// Synchonize size from `Dimension` to `Sprite`
 pub fn sync_dimension_sprite(
-    scaling_factor: ScalingFactor,
     mut query: Query<(&mut Sprite, &Dimension, &DimensionData)>
 ) {
-    let scaling_factor = scaling_factor.get();
     query.iter_mut().for_each(|(mut sp, dimension, data)| {
         if !dimension.is_copied() && sp.custom_size != Some(data.size) {
-            sp.custom_size = Some(data.size * scaling_factor)
+            sp.custom_size = Some(data.size)
         }
     })
 }
 
 /// Synchonize size from `Dimension` to `TextureAtlasSprite`
 pub fn sync_dimension_atlas(
-    scaling_factor: ScalingFactor,
     mut query: Query<(&mut TextureAtlasSprite, &Dimension, &DimensionData)>
 ) {
-    let scaling_factor = scaling_factor.get();
     query.iter_mut().for_each(|(mut sp, dimension, data)| {
         if !dimension.is_copied() && sp.custom_size != Some(data.size) {
-            sp.custom_size = Some(data.size * scaling_factor)
+            sp.custom_size = Some(data.size)
         }
     })
 }
@@ -157,15 +153,6 @@ pub fn sync_em_text(mut query: Query<(&mut Text, &DimensionData), Without<OptOut
     })
 }
 
-/// Copy opacity as text alpha.
-pub fn sync_opacity_text(mut query: Query<(&Opacity, &mut Text), Without<IgnoreAlpha>>) {
-    query.iter_mut().for_each(|(opacity, mut text)| {
-        if text.sections.iter().any(|x| x.style.color.a() != opacity.get()) {
-            text.sections.iter_mut().for_each(|x| {x.style.color.set_a(opacity.get());} )
-        }
-    })
-}
-
 #[allow(clippy::collapsible_else_if)]
 /// Copy opacity as sprite alpha.
 pub fn sync_opacity_vis(mut query: Query<(&Opacity, &mut Visibility), Without<IgnoreAlpha>>) {
@@ -181,17 +168,34 @@ pub fn sync_opacity_vis(mut query: Query<(&Opacity, &mut Visibility), Without<Ig
         }
     })
 }
+
+/// Copy opacity as text alpha.
+pub fn sync_opacity_text(mut query: Query<(&Coloring, &Opacity, &mut Text), Without<IgnoreAlpha>>) {
+    query.iter_mut().for_each(|(color, opacity, mut text)| {
+        let color = color.color.with_a(color.color.a() * opacity.get());
+        if text.sections.iter().any(|x| x.style.color != color) {
+            text.sections.iter_mut().for_each(|x| {x.style.color = color} )
+        }
+    })
+}
+
 /// Copy opacity as sprite alpha.
-pub fn sync_opacity_sprite(mut query: Query<(&Opacity, &mut Sprite), Without<IgnoreAlpha>>) {
-    query.iter_mut().for_each(|(opacity, mut sprite)| {
-        sprite.color.set_a(opacity.get());
+pub fn sync_opacity_sprite(mut query: Query<(&Coloring, &Opacity, &mut Sprite), Without<IgnoreAlpha>>) {
+    query.iter_mut().for_each(|(color, opacity, mut sprite)| {
+        let color = color.color.with_a(color.color.a() * opacity.get());
+        if sprite.color != color {
+            sprite.color = color;
+        }
     })
 }
 
 /// Copy opacity as atlas alpha.
-pub fn sync_opacity_atlas(mut query: Query<(&Opacity, &mut TextureAtlasSprite), Without<IgnoreAlpha>>) {
-    query.iter_mut().for_each(|(opacity, mut sprite)| {
-        sprite.color.set_a(opacity.computed_opacity);
+pub fn sync_opacity_atlas(mut query: Query<(&Coloring, &Opacity, &mut TextureAtlasSprite), Without<IgnoreAlpha>>) {
+    query.iter_mut().for_each(|(color, opacity, mut sprite)| {
+        let color = color.color.with_a(color.color.a() * opacity.get());
+        if sprite.color != color {
+            sprite.color = color;
+        }
     })
 }
 

@@ -3,7 +3,7 @@ use bevy_aoui::util::WorldExtension;
 use bevy_aoui::AouiPlugin;
 use bevy_aoui::util::AouiCommands;
 use bevy_aoui::events::MovementUnits;
-use bevy_aoui::signals::Object;
+use bevy_aoui::util::Object;
 use bevy_aoui::signals::SignalBuilder;
 use bevy_aoui::widgets::button::RadioButton;
 
@@ -12,6 +12,7 @@ pub fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 present_mode: bevy::window::PresentMode::AutoNoVsync,
+                //resolution: WindowResolution::new(1600.0, 800.0).with_scale_factor_override(1.0),
                 ..Default::default()
             }),
             ..Default::default()
@@ -124,7 +125,7 @@ pub fn accordion_page(
                     layer: 1,
                     extra: DragY.with_position(pos_scroll.flip(false, true)),
                     extra: cov_percent_recv.recv(|fac: Vec2, dim: &mut Dimension| {
-                        dim.edit_raw(|v| v.y = if fac.y > 1.0 {1.0 / fac.y} else {fac.y})
+                        dim.edit_raw(|v| v.y = if fac.y > 1.0 {1.0 / fac.y} else {fac.y});
                     }),
                 }
             },

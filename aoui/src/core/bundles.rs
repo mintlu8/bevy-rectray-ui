@@ -9,7 +9,7 @@ use bevy::{
     text::{Text2dBounds, TextLayoutInfo}
 };
 
-use crate::{Transform2D, RotatedRect, BuildTransform, Hitbox, layout::LayoutControl, Size2, Opacity, Anchor, Clipping, DimensionData, Dimension};
+use crate::{Transform2D, RotatedRect, BuildTransform, Hitbox, layout::LayoutControl, Size2, Opacity, Anchor, Clipping, DimensionData, Dimension, Coloring};
 
 
 /// The minimal bundle required for Aoui to function.
@@ -108,6 +108,7 @@ pub struct AouiSpriteBundle {
     pub sprite: Sprite,
     pub texture: Handle<Image>,
     pub clipping: Clipping,
+    pub color: Coloring,
     pub opacity: Opacity,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,
@@ -125,6 +126,7 @@ pub struct AouiSpriteSheetBundle {
     pub sprite: TextureAtlasSprite,
     pub texture: Handle<TextureAtlas>,
     pub clipping: Clipping,
+    pub color: Coloring,
     pub opacity: Opacity,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,
@@ -146,6 +148,7 @@ pub struct AouiTextBundle {
     pub text_bounds: Text2dBounds,
     pub text_layout: TextLayoutInfo,
     pub clipping: Clipping,
+    pub color: Coloring,
     pub opacity: Opacity,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,
@@ -164,6 +167,7 @@ pub struct AouiMaterialMesh2dBundle<M: Material2d>{
     pub mesh: Mesh2dHandle,
     pub material: Handle<M>,
     pub clipping: Clipping,
+    pub color: Coloring,
     pub opacity: Opacity,
     pub vis: VisibilityBundle,
     pub global: GlobalTransform,

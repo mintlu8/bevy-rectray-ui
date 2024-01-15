@@ -21,7 +21,7 @@ use bevy::text::Font;
 use bevy::window::ReceivedCharacter;
 use super::TextFragment;
 use super::text::measure_string;
-use super::util::DisplayIf;
+use super::util::{DisplayIf, BlockPropagation};
 
 #[derive(Debug, Default, Clone, Copy, Reflect)]
 enum LeftRight {
@@ -410,7 +410,7 @@ pub(crate) fn text_on_mouse_double_click(mut query: Query<(&mut InputBox, &Curso
 pub(crate) fn text_propagate_focus(
     mut commands: Commands,
     query: Query<(Entity, &InputBox)>,
-    entities: Query<&Children>,
+    entities: Query<Option<&Children>, Without<BlockPropagation>>,
 ) {
     let mut queue = Vec::new();
     for (entity, input_box) in query.iter() {
@@ -428,7 +428,7 @@ pub(crate) fn text_propagate_focus(
     while !queue.is_empty() {
         for (entity, focus) in mem::take(&mut queue) {
             commands.entity(entity).insert(focus);
-            if let Ok(children) = entities.get(entity) {
+            if let Ok(Some(children)) = entities.get(entity) {
                 for entity in children {
                     queue.push((*entity, focus))
                 }

@@ -357,6 +357,12 @@ impl Default for ParentAnchor{
     }
 }
 
+impl From<Anchor> for ParentAnchor {
+    fn from(value: Anchor) -> Self {
+        ParentAnchor(value)
+    }
+}
+
 impl<A> DslConvert<ParentAnchor, 'A'> for A where A: DslInto<Anchor>{
     fn parse(self) -> ParentAnchor {
         ParentAnchor(self.dinto())

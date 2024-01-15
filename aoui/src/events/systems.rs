@@ -1,28 +1,6 @@
 use bevy::{prelude::*, window::{Window, PrimaryWindow}};
 
-use super::{*, cursor::CameraQuery, wheel::MouseWheelAction};
-
-
-/// Remove [`CursorFocus`], [`CursorAction`], [`CursorClickOutside`] and [`MouseWheelAction`];
-pub fn remove_focus(mut commands: Commands,
-    query1: Query<Entity, With<CursorFocus>>,
-    query2: Query<Entity, With<CursorAction>>,
-    query3: Query<Entity, With<CursorClickOutside>>,
-    query4: Query<Entity, With<MouseWheelAction>>,
-) {
-    for entity in query1.iter() {
-        commands.entity(entity).remove::<CursorFocus>();
-    }
-    for entity in query2.iter() {
-        commands.entity(entity).remove::<CursorAction>();
-    }
-    for entity in query3.iter() {
-        commands.entity(entity).remove::<CursorClickOutside>();
-    }
-    for entity in query4.iter() {
-        commands.entity(entity).remove::<MouseWheelAction>();
-    }
-}
+use super::{*, cursor::CameraQuery};
 
 trait OptionDo<T> {
     fn exec(self, f: impl FnOnce());
@@ -255,9 +233,6 @@ pub fn mouse_button_click_outside(
     parents: Query<&Parent>,
     query: Query<(Entity, &EventFlags)>,
 ) {
-    if !buttons.any_just_released([MouseButton::Left, MouseButton::Middle, MouseButton::Right]) {
-        return;
-    }
     let mut focused = Vec::new();
 
     if let Some(mut active) = state.focused {
@@ -266,6 +241,12 @@ pub fn mouse_button_click_outside(
             focused.push(parent.get());
             active = parent.get();
         }
+    }
+    for entity in &focused {
+        commands.entity(*entity).insert(DescendantHasFocus);
+    }
+    if !buttons.any_just_released([MouseButton::Left, MouseButton::Middle, MouseButton::Right]) {
+        return;
     }
     query.iter()
         .filter(|(_, flags)| flags.contains(EventFlags::ClickOutside))

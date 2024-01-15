@@ -2,21 +2,23 @@ use bevy::ecs::entity::Entity;
 use bevy::hierarchy::BuildChildren;
 use bevy::math::Vec2;
 use bevy::render::color::Color;
+use bevy::render::texture::Image;
 use bevy::text::Font;
-use bevy::sprite::Mesh2dHandle;
-use bevy::transform::components::GlobalTransform;
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
+use bevy_aoui::dsl::OptionEx;
 use bevy_aoui::widgets::TextFragment;
-use bevy_aoui::{Opacity, material_sprite, size2, BuildMeshTransform, color, inputbox, Anchor, text, Size2, rectangle, transition};
+use bevy_aoui::{Opacity, material_sprite, size2, color, inputbox, Anchor, text, Size2, rectangle, transition, frame};
 use bevy_aoui::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxCursorArea, InputBoxCursorBar, InputBoxText};
 use bevy_aoui::{size, frame_extension, build_frame};
 use bevy_aoui::anim::{Interpolate, Easing, Offset, Scale};
 use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvTextChange, EvTextSubmit};
-use bevy_aoui::util::{Widget, mesh_rectangle, AouiCommands, DslInto, convert::IntoAsset};
-use crate::shaders::{RoundedRectangleMaterial, StrokeColor};
+use bevy_aoui::util::{Widget, AouiCommands, DslInto, convert::IntoAsset};
+use crate::{StrokeColoring, build_shape};
+use crate::shaders::RoundedRectangleMaterial;
 use crate::style::Palette;
 
+use super::ShadowInfo;
 use super::util::StrokeColors;
 
 #[derive(Debug, Clone, Copy, Component)]
@@ -86,7 +88,7 @@ pub fn cursor_color_change(mut query: Query<(&CursorStateColors, &Opacity, Optio
 }
 
 
-pub fn cursor_stroke_change(mut query: Query<(&StrokeColors<CursorStateColors>, &Opacity, Option<&CursorFocus>, &mut Interpolate<StrokeColor>)>) {
+pub fn cursor_stroke_change(mut query: Query<(&StrokeColors<CursorStateColors>, &Opacity, Option<&CursorFocus>, &mut Interpolate<StrokeColoring>)>) {
     query.iter_mut().for_each(|(colors, opacity, focus, mut color)| {
         if opacity.is_disabled() {
             color.interpolate_to(colors.disabled);
@@ -119,7 +121,11 @@ frame_extension!(
         /// Width of text, in em.
         pub width: f32,
         pub font: IntoAsset<Font>,
+        pub texture: IntoAsset<Image>,
+        pub stroke: f32,
+        pub capsule: bool,
         pub radius: f32,
+        pub shadow: OptionEx<ShadowInfo>,
         pub on_change: Handlers<EvTextChange>,
         pub on_submit: Handlers<EvTextSubmit>,
         pub overflow: InputOverflow,
@@ -142,17 +148,7 @@ impl Widget for MInputBuilder {
         let focus_style = self.focus_palette.unwrap_or(style);
         let disabled_style = self.disabled_palette.unwrap_or(style);
 
-        let rect = commands.add_asset(
-            RoundedRectangleMaterial::new(style.background(),
-                if self.bottom_bar.is_some() {
-                    [0.0, 0.0, self.radius, self.radius]
-                } else {
-                    [self.radius; 4]
-                }
-            )
-        );
-        let mesh = commands.add_asset(mesh_rectangle());
-        let frame = build_frame!(commands, self).id();
+        let entity = build_frame!(commands, self).id();
         let input_box = inputbox!(commands {
             color: style.foreground(),
             text: &self.text,
@@ -161,10 +157,6 @@ impl Widget for MInputBuilder {
             font: self.font.clone(),
             width: size!(1 - 1.6 em),
             z: 0.01,
-            extra: Mesh2dHandle(mesh),
-            extra: rect,
-            extra: GlobalTransform::IDENTITY,
-            extra: BuildMeshTransform,
             extra: InputStateColors {
                 idle: style.background(),
                 focused: focus_style.background(),
@@ -175,16 +167,18 @@ impl Widget for MInputBuilder {
                 style.background(),
                 0.15
             ),
-            cursor_bar: material_sprite! {
+            cursor_bar: frame! {
                 z: 0.005,
                 dimension: size2!(0.15 em, 1.2 em),
-                material: RoundedRectangleMaterial::capsule(style.foreground()),
+                extra: RoundedRectangleMaterial::capsule(style.foreground())
+                    .into_bundle(commands),
                 extra: InputBoxCursorBar,
             },
-            cursor_area: material_sprite! {
+            cursor_area: frame! {
                 z: -0.005,
                 dimension: size2!(0, 1.2 em),
-                material: RoundedRectangleMaterial::new(color!(green300), 2.0),
+                extra: RoundedRectangleMaterial::new(color!(green300), 2.0)
+                    .into_bundle(commands),
                 extra: InputBoxCursorArea,
             },
             text_area: rectangle! {
@@ -199,9 +193,10 @@ impl Widget for MInputBuilder {
                 extra: InputBoxText,
                 extra: TextFragment::new(self.text)
                     .with_font(commands.load_or_default(self.font.clone()))
-                    .with_color(style.foreground())
             }
         });
+
+        build_shape!(commands, self, input_box);
         let has_placeholder = !self.placeholder.is_empty();
         if has_placeholder {
             let placeholder = text!(commands {
@@ -231,8 +226,8 @@ impl Widget for MInputBuilder {
             commands.entity(input_box).add_child(bottom_bar);
         }
 
-        commands.entity(frame).add_child(input_box);
-        (frame, input_box)
+        commands.entity(entity).add_child(input_box);
+        (entity, input_box)
     }
 }
 

@@ -1,4 +1,4 @@
-use bevy::{reflect::TypePath, ecs::entity::Entity};
+use bevy::ecs::entity::Entity;
 
 use crate::{util::WidgetBuilder, dsl::prelude::AouiCommands};
 
@@ -11,14 +11,14 @@ impl<T, U> DslConvert<U, ' '> for T where T: DslInto<U> {
     }
 }
 
-impl<F, T: TypePath> DslConvert<WidgetBuilder<T>, 'W'> for F
+impl<F, T> DslConvert<WidgetBuilder<T>, 'W'> for F
         where F: (Fn(&mut AouiCommands, T) -> Entity) + Send + Sync + 'static {
     fn parse(self) -> WidgetBuilder<T> {
         WidgetBuilder::new(self)
     }
 }
 
-impl<F, T: TypePath> DslConvert<Option<WidgetBuilder<T>>, 'W'> for F
+impl<F, T> DslConvert<Option<WidgetBuilder<T>>, 'W'> for F
         where F: (Fn(&mut AouiCommands, T) -> Entity) + Send + Sync + 'static {
     fn parse(self) -> Option<WidgetBuilder<T>> {
         Some(WidgetBuilder::new(self))

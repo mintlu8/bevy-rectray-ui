@@ -66,6 +66,7 @@ pub mod richtext;
 pub mod scroll;
 pub mod clipping;
 pub mod button;
+pub mod spinbox;
 pub mod util;
 mod text;
 use bevy::ecs::system::IntoSystem;
@@ -136,6 +137,8 @@ impl Plugin for WidgetsPlugin {
                 atlas::build_deferred_atlas,
                 text::sync_text_text_fragment,
                 text::sync_sprite_text_fragment,
+                spinbox::spin_text_change,
+                spinbox::sync_spin_text_with_text,
             ))
             .add_systems(Update, (
                 misc::layout_opacity_limit.pipe(misc::set_layout_opactiy_limit),

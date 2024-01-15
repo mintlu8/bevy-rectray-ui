@@ -5,13 +5,15 @@ pub mod util;
 pub mod slider;
 pub mod input;
 pub mod menu;
+pub mod spinner;
 mod macros;
 pub use button::MButtonBuilder;
 pub use toggle::MToggleBuilder;
 pub use frame::*;
 pub use slider::MSliderBuilder;
 pub use input::MInputBuilder;
-pub use menu::{MMenuBuilder, MenuItem};
+pub use spinner::MSpinnerBuilder;
+pub use menu::{MMenuBuilder, MenuItem, MenuItemText, MenuItemNested};
 pub use util::*;
 
 pub(crate) use button::cursor_color_change;

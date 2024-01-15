@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use bevy::{ecs::entity::Entity, reflect::TypePath, asset::Asset};
+use bevy::ecs::entity::Entity;
 use crate::util::AouiCommands;
 
 
@@ -16,11 +16,11 @@ pub trait Widget: Sized {
     }
 }
 
-#[derive(Clone, TypePath, Asset)]
+#[derive(Clone)]
 /// A dynamic function that builds an entity.
-pub struct WidgetBuilder<T: TypePath>(Arc<dyn Fn(&mut AouiCommands, T) -> Entity + Send + Sync + 'static>);
+pub struct WidgetBuilder<T>(Arc<dyn Fn(&mut AouiCommands, T) -> Entity + Send + Sync + 'static>);
 
-impl<T: TypePath> std::fmt::Debug for WidgetBuilder<T> {
+impl<T> std::fmt::Debug for WidgetBuilder<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WidgetBuilder").finish()
     }
@@ -43,7 +43,7 @@ impl<F, T> IntoWidgetBuilder<T, 1> for F where F: Fn(&mut AouiCommands, T) -> En
     }
 }
 
-impl<T: TypePath> WidgetBuilder<T> {
+impl<T> WidgetBuilder<T> {
     pub fn new<const M: u8>(f: impl IntoWidgetBuilder<T, M>) -> Self {
         Self(Arc::new(f.into_builder()))
     }

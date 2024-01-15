@@ -1,10 +1,10 @@
 
-use bevy::{reflect::TypePath, sprite::Material2d, ecs::system::{Query, ResMut}};
+use bevy::{reflect::TypePath, sprite::{Material2d, Mesh2dHandle}, ecs::{system::{Query, ResMut}, component::Component, bundle::Bundle}, transform::components::GlobalTransform};
 use bevy::asset::{Asset, Handle, Assets};
 use bevy::math::{Vec2, Vec4};
 use bevy::render::{color::Color, texture::Image};
 use bevy::render::render_resource::{AsBindGroup, ShaderRef, Shader};
-use bevy_aoui::{anim::{Interpolate, Interpolation}, util::DslInto, DimensionData, Opacity};
+use bevy_aoui::{anim::{Interpolate, Interpolation, InterpolateAssociation}, util::{DslInto, AouiCommands, mesh_rectangle}, DimensionData, Opacity, Coloring, BuildMeshTransform};
 
 use crate::builders::Stroke;
 
@@ -104,6 +104,17 @@ impl IntoCorners for Vec4 {
 
 impl RoundedRectangleMaterial {
 
+    pub fn into_bundle(self, commands: &mut AouiCommands) -> impl Bundle{
+        (
+            Coloring::new(self.color),
+            StrokeColoring::new(self.stroke_color),
+            Mesh2dHandle(commands.add_asset(mesh_rectangle())),
+            commands.add_asset(self),
+            GlobalTransform::IDENTITY,
+            BuildMeshTransform,
+        )
+    }
+
     pub fn new(color: Color, corner: impl IntoCorners) -> Self {
         Self {
             color, image: None, corners: corner.into_corners(), size: Vec2::ZERO,
@@ -161,55 +172,51 @@ impl Material2d for RoundedRectangleMaterial {
 }
 
 pub fn sync_rounded_rect(
-    query: Query<(&Handle<RoundedRectangleMaterial>, &DimensionData, &Opacity)>,
+    query: Query<(&Handle<RoundedRectangleMaterial>, &DimensionData, &Coloring, &StrokeColoring, &Opacity)>,
     mut assets: ResMut<Assets<RoundedRectangleMaterial>>
 ){
-    for (handle, dimension, opacity) in query.iter() {
+    for (handle, dimension, fill, stroke, opacity) in query.iter() {
         if let Some(asset) = assets.get(handle) {
-            if asset.size != dimension.size || asset.color.a() != opacity.get() {
+            let fill = fill.color.with_a(fill.color.a() * opacity.get());
+            let stroke = stroke.color.with_a(stroke.color.a() * opacity.get());
+            if asset.size != dimension.size || asset.color != fill || asset.stroke_color != stroke {
                 let Some(asset) = assets.get_mut(handle) else {return};
                 asset.size = dimension.size;
-                asset.color.set_a(opacity.get());
+                asset.color = fill;
+                asset.stroke_color = stroke;
             }
         }
     }
 }
 
 pub fn sync_rounded_shadow(
-    query: Query<(&Handle<RoundedShadowMaterial>, &DimensionData, &Opacity)>,
+    query: Query<(&Handle<RoundedShadowMaterial>, &DimensionData, &Coloring, &Opacity)>,
     mut assets: ResMut<Assets<RoundedShadowMaterial>>
 ){
-    for (handle, dimension, opacity) in query.iter() {
+    for (handle, dimension, color, opacity) in query.iter() {
         if let Some(asset) = assets.get(handle) {
-            // Quadratic so we fade out shadow faster.
-            let opacity_squared = opacity.get().powi(2);
-            if asset.size != dimension.size || asset.color.a() != opacity_squared {
+            let color = color.color.with_a(color.color.a() * opacity.get().powi(2));
+            if asset.size != dimension.size || asset.color != color {
                 let Some(asset) = assets.get_mut(handle) else {return};
                 asset.size = dimension.size;
-                asset.color.set_a(opacity_squared);
+                asset.color = color;
             }
         }
     }
 }
 
-pub fn interpolate_round_rect_color(
-    query: Query<(&Interpolate<Color>, &Handle<RoundedRectangleMaterial>)>,
-    mut assets: ResMut<Assets<RoundedRectangleMaterial>>
-){
-    for (interpolate, material) in query.iter() {
-        if let Some(asset) = assets.get(material) {
-            if asset.color != interpolate.get() {
-                let Some(asset) = assets.get_mut(material) else {return};
-                asset.color = interpolate.get()
-            }
-        }
+#[derive(Debug, Clone, Copy, Component)]
+pub struct StrokeColoring {
+    pub color: Color,
+}
+
+impl StrokeColoring {
+    pub fn new(color: Color) -> Self {
+        Self {color}
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum StrokeColor {}
-
-impl Interpolation for StrokeColor {
+impl Interpolation for StrokeColoring {
     type FrontEnd = Color;
     type Data = Vec4;
 
@@ -222,8 +229,22 @@ impl Interpolation for StrokeColor {
     }
 }
 
+impl InterpolateAssociation for StrokeColoring {
+    type Component = StrokeColoring;
+    type Interpolation = StrokeColoring;
+    type Condition = ();
+
+    fn set(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
+        component.color = value
+    }
+
+    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
+        component.color
+    }
+}
+
 pub fn interpolate_stroke_color(
-    query: Query<(&Interpolate<StrokeColor>, &Handle<RoundedRectangleMaterial>)>,
+    query: Query<(&Interpolate<StrokeColoring>, &Handle<RoundedRectangleMaterial>)>,
     mut assets: ResMut<Assets<RoundedRectangleMaterial>>
 ){
     for (interpolate, material) in query.iter() {

@@ -3,6 +3,20 @@ use bevy::{prelude::*, reflect::Reflect, math::Affine2};
 
 use crate::util::DslFrom;
 
+/// Tracked color of `aoui` does not propagate.
+/// 
+/// Displayed colors multiplied to opacity.
+#[derive(Debug, Clone, Copy, PartialEq, Component, Reflect, Default)]
+pub struct Coloring {
+    pub color: Color,
+}
+
+impl Coloring {
+    pub fn new(color: Color) -> Coloring {
+        Coloring { color }
+    }
+}
+
 /// Stores opacity of the widget.
 ///
 /// Note: this is not magic, third party materials need to intergrate with

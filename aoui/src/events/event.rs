@@ -44,6 +44,11 @@ impl CursorAction {
 #[component(storage="SparseSet")]
 pub struct CursorClickOutside;
 
+/// Set if some descendant has focus.
+#[derive(Debug, Component)]
+#[component(storage="SparseSet")]
+pub struct DescendantHasFocus;
+
 pub(super) mod sealed {
     use bevy::{ecs::component::Component, reflect::Reflect};
 
@@ -167,6 +172,10 @@ pub enum EvLoseFocus{}
 
 /// An event sent if widget has obtained focus (drag, hover, pressed).
 #[derive(Debug)]
+pub enum EvFocusChange{}
+
+/// An event sent if widget has obtained focus (drag, hover, pressed).
+#[derive(Debug)]
 pub enum EvObtainFocus{}
 
 /// An event that sends the `Payload` value of a widget in the button family.
@@ -176,6 +185,11 @@ pub enum EvButtonClick{}
 /// An event that sends the `bool` value of a Toggle/CheckButton.
 #[derive(Debug)]
 pub enum EvToggleChange{}
+
+/// An event that sends the key of a spin text
+/// on change.
+#[derive(Debug)]
+pub enum EvSpinChange{}
 
 /// An event that sends the content of a text input
 /// on change.

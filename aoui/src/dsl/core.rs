@@ -5,7 +5,7 @@ use bevy::text::{Text, TextSection, TextStyle, BreakLineOn, Text2dBounds, TextLa
 use bevy::render::{color::Color, texture::{Image, BevyDefault}};
 use bevy::render::render_resource::{Extent3d, TextureDimension};
 
-use crate::{DimensionType, Transform2D, Dimension};
+use crate::{DimensionType, Transform2D, Dimension, Coloring};
 use crate::{frame_extension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
 
 use crate::util::{Widget, AouiCommands, convert::IntoAsset};
@@ -112,16 +112,18 @@ impl Widget for SpriteBuilder {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
         let sprite = commands.load_or_default(self.sprite);
         let mut frame = build_frame!(commands, self);
+        let color = self.color.unwrap_or(bevy::prelude::Color::WHITE);
         frame.insert((
             Sprite {
                 custom_size: self.size,
-                color: self.color.unwrap_or(bevy::prelude::Color::WHITE),
+                color,
                 rect: self.rect,
                 flip_x: self.flip[0],
                 flip_y: self.flip[1],
                 ..Default::default()
             },
             sprite,
+            Coloring::new(color),
             BuildTransformBundle::default(),
         ));
         (frame.id(), frame.id())
@@ -137,13 +139,15 @@ impl Widget for RectangleBuilder {
             ..Default::default()
         }, TextureDimension::D2, vec![255, 255, 255, 255], BevyDefault::bevy_default());
         let texture = commands.add_asset(texture);
+        let color = self.color.unwrap_or(bevy::prelude::Color::WHITE);
         let frame = build_frame!(commands, self)
             .insert((
             Sprite {
                 custom_size: self.size,
-                color: self.color.unwrap_or(bevy::prelude::Color::WHITE),
+                color,
                 ..Default::default()
             },
+            Coloring::new(color),
             texture,
             BuildTransformBundle::default(),
         )).id();
@@ -155,13 +159,13 @@ impl Widget for TextBuilder {
     fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
         let font = commands.load_or_default(self.font);
         let mut frame = build_frame!(commands, self);
+        let color = self.color.unwrap_or(bevy::prelude::Color::WHITE);
         frame.insert((
             Text {
                 sections: vec![TextSection::new(
                     self.text,
                     TextStyle {
-                        font,
-                        color: self.color.unwrap_or(Color::WHITE),
+                        font, color,
                         ..Default::default()
                     }
                 )],
@@ -180,6 +184,7 @@ impl Widget for TextBuilder {
             },
             TextLayoutInfo::default(),
             Into::<bevy::sprite::Anchor>::into(self.anchor),
+            Coloring::new(color),
             BuildTransformBundle::default(),
         ));
         (frame.id(), frame.id())

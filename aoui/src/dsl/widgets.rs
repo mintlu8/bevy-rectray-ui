@@ -64,7 +64,6 @@ impl Widget for InputBoxBuilder {
                 extra: TextFragment {
                     text: self.text,
                     font,
-                    color: self.color.expect("color is required."),
                     size: 0.0
                 }
             })

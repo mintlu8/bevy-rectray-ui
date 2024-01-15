@@ -58,7 +58,8 @@
 //! * If target is the source of current animation, reverse.
 //! * Otherwise interpolate to the target.
 
-use bevy::{ecs::{schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, query::WorldQuery}, app::{Update, Plugin}, render::color::Color, sprite::{Sprite, TextureAtlasSprite}, text::Text};
+use bevy::{app::{Update, Plugin}, render::color::Color, sprite::TextureAtlasSprite};
+use bevy::ecs::{schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, query::WorldQuery};
 
 use ::interpolation::Ease;
 /// Enum for easing functions.
@@ -68,7 +69,7 @@ pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Ind
 mod assoc;
 pub use assoc::{Attr, InterpolateAssociation};
 
-use crate::{Opacity, Transform2D, Dimension, widgets::TextFragment};
+use crate::{Opacity, Transform2D, Dimension, Coloring};
 
 /// A easing function.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -149,15 +150,8 @@ impl Plugin for AnimationPlugin {
                 <(Transform2D, Offset)>::system,
                 <(Transform2D, Scale)>::system,
                 <(Dimension, Dimension)>::system,
-                <(Sprite, Color)>::system,
-                <(TextureAtlasSprite, Color)>::system,
-                <(Text, Color)>::system,
-                <(TextFragment, Color)>::system,
-                <(Sprite, Color)>::system,
-                <(Opacity, Color)>::system,
-                <(Opacity, Opacity)>::system.after(
-                    <(Opacity, Color)>::system
-                ),
+                <(Coloring, Color)>::system,
+                <(Opacity, Opacity)>::system,
                 <(TextureAtlasSprite, Index)>::system,
             ).in_set(InterpolationSet))
             .add_systems(Update, (

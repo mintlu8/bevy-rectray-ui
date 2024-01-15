@@ -1,13 +1,12 @@
 use std::fmt::Debug;
-
-use bevy::ecs::{component::Component, removal_detection::RemovedComponents};
-use bevy::ecs::query::{Without, With};
+use bevy::ecs::component::Component;
 use bevy::ecs::system::{Query, Commands, EntityCommands};
 use smallvec::SmallVec;
 
+use crate::util::{Object, AsObject};
 use crate::util::convert::{DslFrom, DslInto};
 use crate::events::*;
-use crate::signals::{SignalSender, SignalBuilder, Object, AsObject};
+use crate::signals::{SignalSender, SignalBuilder};
 use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;
@@ -18,6 +17,7 @@ use super::{EvLoseFocus, EvObtainFocus, EvButtonClick, EvTextSubmit, EvTextChang
 
 /// A collection of event handlers.
 #[derive(Debug, Component)]
+#[component(storage="SparseSet")]
 pub struct Handlers<T: EventHandling> {
     pub context: T::Context,
     pub handlers: SmallVec<[Handler<T>;1]>,
@@ -199,6 +199,14 @@ impl<T: EventHandling> Handlers<T> {
             Handler::Signal(sig) => sig.try_cleanup(drop_flag),
         })
     }
+
+    pub fn optional(self) -> Option<Self> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(self)
+        }
+    }
 }
 
 /// Trait for a handleable event.
@@ -310,17 +318,29 @@ impl_entity_query_for_mouse_state! (
     LeftDrag MidDrag RightDrag
 );
 
+impl EventHandling for EvFocusChange {
+    type Data = bool;
+    type Context = bool;
+    fn new_context() -> Self::Context {
+        false
+    }
+}
+
 impl EventHandling for EvLoseFocus {
     type Data = ();
-    type Context = ();
-    fn new_context() -> Self::Context {}
+    type Context = bool;
+    fn new_context() -> Self::Context {
+        false
+    }
 }
 
 
 impl EventHandling for EvObtainFocus {
     type Data = ();
     type Context = bool;
-    fn new_context() -> Self::Context { false }
+    fn new_context() -> Self::Context { 
+        false 
+    }
 }
 
 impl EventHandling for EvButtonClick {
@@ -331,6 +351,12 @@ impl EventHandling for EvButtonClick {
 
 impl EventHandling for EvToggleChange {
     type Data = bool;
+    type Context = ();
+    fn new_context() -> Self::Context {}
+}
+
+impl EventHandling for EvSpinChange {
+    type Data = Object;
     type Context = ();
     fn new_context() -> Self::Context {}
 }
@@ -353,29 +379,45 @@ impl EventHandling for EvPositionFactor {
     fn new_context() -> Self::Context {}
 }
 
-pub(crate) fn obtain_focus_detection(
+pub(crate) fn focus_change(
     mut commands: Commands,
-    mut focused: Query<(Entity, &mut Handlers<EvObtainFocus>), With<CursorFocus>>,
-    mut unfocused: Query<&mut Handlers<EvObtainFocus>, Without<CursorFocus>>,
+    mut focused: Query<(Entity, &mut Handlers<EvFocusChange>, Has<DescendantHasFocus>)>,
 ) {
-    for (entity, mut handlers) in focused.iter_mut() {
-        if handlers.context { continue; }
-        handlers.context = true;
-        let mut commands = commands.entity(entity);
-        handlers.handle(&mut commands, ());
-    }
-    for mut handlers in unfocused.iter_mut() {
-        handlers.context = false;
+    for (entity, mut handlers, has) in focused.iter_mut() {
+        if has != handlers.context {
+            handlers.context = has;
+            handlers.handle(&mut commands.entity(entity), has)
+        }
     }
 }
 
-pub(crate) fn lose_focus_detection(
+
+pub(crate) fn focus_obtain(
     mut commands: Commands,
-    mut removed: RemovedComponents<CursorFocus>,
-    actions: Query<(Entity, &Handlers<EvLoseFocus>), Without<CursorFocus>>,
+    mut focused: Query<(Entity, &mut Handlers<EvObtainFocus>, Has<DescendantHasFocus>)>,
 ) {
-    for (entity, handlers) in actions.iter_many(removed.read()) {
-        let mut commands = commands.entity(entity);
-        handlers.handle(&mut commands, ());
+    for (entity, mut handlers, has) in focused.iter_mut() {
+        if has != handlers.context {
+            handlers.context = has;
+            if has {
+                handlers.handle(&mut commands.entity(entity), ())
+            }
+        }
     }
 }
+
+
+pub(crate) fn focus_lose(
+    mut commands: Commands,
+    mut focused: Query<(Entity, &mut Handlers<EvObtainFocus>, Has<DescendantHasFocus>)>,
+) {
+    for (entity, mut handlers, has) in focused.iter_mut() {
+        if has != handlers.context {
+            handlers.context = has;
+            if !has {
+                handlers.handle(&mut commands.entity(entity), ())
+            }
+        }
+    }
+}
+

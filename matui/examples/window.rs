@@ -1,6 +1,6 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::{AouiPlugin, util::WorldExtension, util::AouiCommands};
-use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, palette, mwindow, mslider, minput, mmenu, menu_items};
+use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, palette, mwindow, mslider, minput, mmenu, menu_items, mspinner};
 use bevy_aoui::layout::BoundsLayout;
 pub fn main() {
     App::new()
@@ -68,6 +68,7 @@ pub fn init(mut commands: AouiCommands) {
             dimension: size2!(100%, 2 em),
             margin: size2!(1 em, 0),
             child: text! {
+                //font: "Roboto-Regular.ttf",
                 text: "Hello, World!",
                 color: color!(black),
             },
@@ -77,8 +78,9 @@ pub fn init(mut commands: AouiCommands) {
                 dimension: size2!(1 em, 1 em),
                 checked: true,
                 on_change: collapse_send,
-                child: text! {
-                    text: "v",
+                child: sprite! {
+                    dimension: size2!(1 em, 1 em),
+                    sprite: "tri.png",
                     color: color!(black),
                     extra: transition!(Rotation 0.2 Linear default 0.0),
                     extra: collapse_spin.recv_select(true,
@@ -168,7 +170,7 @@ pub fn init(mut commands: AouiCommands) {
         },
         child: mmenu! {
             shadow: 5,
-            radius: 10.0,
+            radius: 5,
             padding: [0, 10],
             palette: palette!(
                 background: white,
@@ -178,9 +180,39 @@ pub fn init(mut commands: AouiCommands) {
                 background: white,
                 stroke: green,
             ),
-            items: menu_items!(
-                "Hello", "Hi", |, "Good Bye"
-            ),
+            items: menu_items! {
+                "Rust", "Go", |, 
+                "Python" { "Python2", "Python3" }, 
+                "JVM" { "Java", "Kotlin" },
+                "CLR" { "C#", "F#" },
+            },
+        },
+
+        child: hstack! {
+            margin: size2!(1 em, 0),
+            child: text! {
+                color: color!(black),
+                text: "Crates:",
+            },
+            child: mspinner!{
+                capsule: true,
+                palette: palette_idle,
+                palette_focus: palette_pressed,
+                decrement_icon: "left.png",
+                increment_icon: "right.png",
+                content: ["serde", "tokio", "bevy", "actix"]
+            },
+            child: mspinner!{
+                capsule: true,
+                axis: bevy_aoui::layout::Axis::Vertical,
+                radius: 5,
+                width: 1,
+                palette: palette_idle,
+                palette_focus: palette_pressed,
+                decrement_icon: "left.png",
+                increment_icon: "right.png",
+                content: 0..=9,
+            },
         },
     });
 
@@ -191,7 +223,7 @@ pub fn init(mut commands: AouiCommands) {
         palette: palette_idle,
         palette_hover: palette_hover,
         palette_pressed: palette_pressed,
-        icon: "cross.png",
+        icon: "plus.png",
         text: "Hello",
     });
 
@@ -209,7 +241,7 @@ pub fn init(mut commands: AouiCommands) {
             foreground: white,
             on_foreground: red700,
         ),
-        icon: "cross.png",
+        icon: "plus.png",
         shadow: 5,
         background_stroke: 2,
     });

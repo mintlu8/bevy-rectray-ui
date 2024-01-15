@@ -3,8 +3,8 @@ use std::{marker::PhantomData, fmt::Debug};
 use bevy::ecs::{system::{EntityCommands, Query, Commands}, component::Component, entity::Entity};
 
 use crate::{events::mutation::IntoMutationCommand, util::convert::DslFrom};
-
-use super::{Object, SignalBuilder, dto::AsObject, signal::Signal};
+use crate::util::{Object, AsObject};
+use super::{SignalBuilder, Signal};
 
 /// A raw signal receiver that can be polled, not a component.
 pub struct RawReceiver<T: AsObject> {
@@ -162,6 +162,7 @@ pub fn signal_receive<const S: u8>(
 
 /// Invoke a widget's behavior with an event.
 #[derive(Component)]
+#[component(storage="SparseSet")]
 pub struct Invoke<T: ReceiveInvoke>{
     signal: Signal,
     p: PhantomData<T>

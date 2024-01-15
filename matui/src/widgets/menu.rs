@@ -7,16 +7,17 @@ use bevy::render::texture::Image;
 use bevy::{window::CursorIcon, hierarchy::BuildChildren};
 use bevy::ecs::{entity::Entity, query::Changed, system::Query};
 use bevy_aoui::anim::Interpolate;
-use bevy_aoui::events::EventFlags;
-use bevy_aoui::widgets::util::DisplayIf;
-use bevy_aoui::{Anchor, size2, Size2, markers, frame, transition, Opacity, rectangle, color};
-use bevy_aoui::signals::{Object, SignalBuilder};
+use bevy_aoui::events::{EventFlags, Handlers, EvFocusChange};
+use bevy_aoui::widgets::util::{DisplayIf, BlockPropagation};
+use bevy_aoui::{Anchor, size2, Size2, markers, frame, transition, Opacity};
+use bevy_aoui::util::Object;
+use bevy_aoui::signals::SignalBuilder;
 use bevy_aoui::layout::StackLayout;
 use bevy_aoui::widgets::button::{RadioButton, Payload, radio_button_group};
 use bevy_aoui::util::{Widget, AouiCommands, WidgetBuilder};
 
 use crate::style::Palette;
-use crate::{mdivider, mframe_extension, build_mframe, mcapsule, palette};
+use crate::{mdivider, mframe_extension, build_mframe, mcapsule, palette, mrectangle};
 
 
 #[derive(Debug, Default, Component)]
@@ -28,10 +29,52 @@ pub struct MenuBuilder {
     radio: RadioButton,
     divider: WidgetBuilder<()>,
     text: WidgetBuilder<String>,
-    icon: Option<WidgetBuilder<Handle<Image>>>,
-    right_icon: Option<WidgetBuilder<Handle<Image>>>,
+    icon: WidgetBuilder<Handle<Image>>,
+    nested: Option<WidgetBuilder<Vec<MenuItem>>>,
     hover_background: Color,
     hover_capsule: bool,
+}
+
+#[doc(hidden)]
+#[derive(Debug, Default)]
+pub struct MenuItemText {
+    pub key: Object,
+    pub value: String,
+    pub icon: Option<Handle<Image>>,
+    pub right: Option<Handle<Image>>,
+}
+
+impl Into<MenuItem> for MenuItemText {
+    fn into(self) -> MenuItem {
+        MenuItem::Text { 
+            key: self.key.or(self.value.clone()), 
+            value: self.value, 
+            icon: self.icon, 
+            right: self.right 
+        }
+    }
+}
+
+#[doc(hidden)]
+#[derive(Debug, Default)]
+pub struct MenuItemNested {
+    pub key: Object,
+    pub value: String,
+    pub icon: Option<Handle<Image>>,
+    pub right: Option<Handle<Image>>,
+    pub nested: Vec<MenuItem>
+}
+
+impl Into<MenuItem> for MenuItemNested {
+    fn into(self) -> MenuItem {
+        MenuItem::Nest { 
+            key: self.key.or(self.value.clone()), 
+            value: self.value, 
+            icon: self.icon, 
+            right: self.right,
+            nest: self.nested
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -42,32 +85,32 @@ pub enum MenuItem {
         key: Object,
         value: String,
         icon: Option<Handle<Image>>,
-        right: Option<WidgetBuilder<()>>,
+        right: Option<Handle<Image>>,
     },
     Nest {
         key: Object,
         value: String,
-        left: Option<WidgetBuilder<()>>,
-        right: Option<WidgetBuilder<()>>,
-        nest: WidgetBuilder<()>,
+        icon: Option<Handle<Image>>,
+        right: Option<Handle<Image>>,
+        nest: Vec<MenuItem>,
     },
 }
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! menu_item {
-    (|) => {
+    ($commands: tt |) => {
         $crate::widgets::MenuItem::Divider
     };
-    ($name: expr) => {
+    ($commands: tt $name: literal) => {
         $crate::widgets::MenuItem::Text{
-            key: $crate::aoui::signals::Object::new($name.to_string()),
+            key: $crate::aoui::util::Object::new($name.to_string()),
             value: $name.to_string(),
             icon: None,
             right: None,
         }
     };
-    (($key: expr, $value: expr)) => {
+    ($commands: tt ($key: expr, $value: expr)) => {
         $crate::widgets::MenuItem::Text{
             key: $bevy_aoui::dsl::parse($key),
             value: $value.to_string(),
@@ -75,42 +118,52 @@ macro_rules! menu_item {
             right: None,
         }
     };
-    (($key: expr, $icon: expr, $value: expr)) => {
-        $crate::widgets::MenuItem::Text{
-            key: $bevy_aoui::dsl::parse($key),
-            value: $value.to_string(),
-            icon: $icon,
-            right: None,
-        }
+    ($commands: tt {$($field: ident: $value: expr),* $(,)?}) => {
+        $crate::widgets::MenuItemText{
+            $($field: $crate::aoui::dsl::parse($value),)*
+            ..Default::default()
+        }.into()
     };
-    (($key: expr, _, $value: expr, $right: expr)) => {
-        $crate::widgets::MenuItem::Text{
+    ($commands: tt $name: literal {$($nest:tt)*}) => {
+        $crate::widgets::MenuItemNested{
+            key: $crate::aoui::util::Object::new($name.to_string()),
+            value: $name.to_string(),
+            icon: None,
+            right: None,
+            nested: $crate::menu_items! ($commands {
+                $($nest)*
+            }),
+        }.into()
+    };
+    ($commands: tt ($key: expr, $value: expr) {$($nest:tt)*}) => {
+        $crate::widgets::MenuItemNested{
             key: $bevy_aoui::dsl::parse($key),
             value: $value.to_string(),
             icon: None,
-            right: $bevy_aoui::dsl::parse($right),
-        }
+            right: None,
+            nested: $crate::menu_items! ($commands {
+                $($nest)*
+            }),
+        }.into()
     };
-    (($key: expr, $icon: expr, $value: expr, $right: expr)) => {
-        $crate::widgets::MenuItem::Text{
-            key: $bevy_aoui::dsl::parse($key),
-            value: $value.to_string(),
-            left: $bevy_aoui::dsl::parse(|commands| $crate::aoui::sprite!(commands {
-                sprite: $icon,
-                dimension: $crate::aoui::size2!(1.2 em, 1.2 em),
-            })),
-            right: $bevy_aoui::dsl::parse($right),
-        }
+    ($commands: tt {$($field: ident: $value: expr),* $(,)?} {$($nest:tt)*}) => {
+        $crate::widgets::MenuItemNested{
+            $($field: $crate::aoui::dsl::parse($value),)*
+            nested: $crate::menu_items! ($commands {
+                $($nest)*
+            }),
+            ..Default::default()
+        }.into()
     };
-    ($tt: tt) => {
+    ($commands: tt $tt: tt) => {
         $tt
     }
 }
 
 #[macro_export]
 macro_rules! menu_items {
-    ($($expr: tt),* $(,)?) => {
-        vec![$($crate::menu_item!($expr)),*]
+    ($commands: tt {$($expr: tt $({$($nest:tt)*})?),* $(,)?}) => {
+        vec![$($crate::menu_item!($commands $expr $({$($nest)*})?)),*]
     };
 }
 
@@ -135,9 +188,58 @@ pub fn rebuild_dropdown_children(
                         context: builder.radio.clone(),
                         value: key.clone(),
                         child: builder.text.build(&mut commands, value.clone()),
-                        child: builder.icon.as_ref().and_then(|x| Some(x.build(&mut commands, icon.clone()?))),
+                        child: icon.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
+                        child: right.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
                         extra: MenuItemMarker,
                     });
+                    if builder.hover_background.a() > 0.0 && builder.hover_capsule{
+                        let background = mcapsule!(commands {
+                            dimension: Size2::FULL,
+                            palette: palette!(
+                                background: grey300,
+                            ),
+                            extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
+                            extra: transition!(Opacity 0.15 Linear default 0.0),
+                            z: 0.005,
+                        });
+                        commands.entity(item).add_child(background);
+                    } else if builder.hover_background.a() > 0.0 {
+                        let background = mrectangle!(commands {
+                            dimension: Size2::FULL,
+                            palette: palette!(
+                                background: grey300,
+                            ),
+                            extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
+                            extra: transition!(Opacity 0.15 Linear default 0.0),
+                            z: 0.005,
+                        });
+                        commands.entity(item).add_child(background);
+                    }
+                    commands.entity(entity).add_child(item);
+                },
+                MenuItem::Nest { key, value, icon, right, nest } => {
+                    let (sender, receiver) = commands.signal();
+                    let item = bevy_aoui::radio_button!(commands {
+                        dimension: size2!(width em, 2.2 em),
+                        context: builder.radio.clone(),
+                        value: key.clone(),
+                        child: builder.text.build(&mut commands, value.clone()),
+                        child: icon.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
+                        child: right.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
+                        extra: MenuItemMarker,
+                        extra: Handlers::<EvFocusChange>::new(sender),
+                    });
+                    let child = commands.spawn_fn(builder.nested.as_ref()
+                        .expect("Expect menu builder."), 
+                        nest.clone());
+                    commands.entity(child).insert(
+                        receiver.recv_select(true,
+                            Interpolate::<Opacity>::signal_to(1.0), 
+                            Interpolate::<Opacity>::signal_to(0.0),
+                        )
+                    );
+                    commands.entity(item).add_child(child);
+
                     if builder.hover_background.a() > 0.0 && builder.hover_capsule{
                         let background = mcapsule!(commands {
                             dimension: Size2::FULL,
@@ -151,36 +253,16 @@ pub fn rebuild_dropdown_children(
                         });
                         commands.entity(item).add_child(background);
                     } else if builder.hover_background.a() > 0.0 {
-                        let background = rectangle!(commands {
+                        let background = mrectangle!(commands {
                             dimension: Size2::FULL,
-                            color: color!(grey300),
-                            extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
+                            palette: palette!(
+                                background: grey300,
+                                stroke: grey300,
+                            ),                            extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
                             extra: transition!(Opacity 0.15 Linear default 0.0),
                             z: 0.005,
                         });
                         commands.entity(item).add_child(background);
-                    }
-                    if let Some(right) = right {
-                        let right = right.build(&mut commands, ());
-                        commands.entity(item).add_child(right);
-                    }
-                    commands.entity(entity).add_child(item);
-                },
-                MenuItem::Nest { key, value, left, right, nest:_ } => {
-                    let item = bevy_aoui::radio_button!(commands {
-                        dimension: size2!(width em, 2.2 em),
-                        context: builder.radio.clone(),
-                        value: key.clone(),
-                        child: builder.text.build(&mut commands, value.clone()),
-                        extra: MenuItemMarker,
-                    });
-                    if let Some(left) = left {
-                        let icon = left.build(&mut commands, ());
-                        commands.entity(item).add_child(icon);
-                    }
-                    if let Some(right) = right {
-                        let right = right.build(&mut commands, ());
-                        commands.entity(item).add_child(right);
                     }
                     commands.entity(entity).add_child(item);
                 }
@@ -194,7 +276,7 @@ mframe_extension!(
     pub struct MMenuBuilder {
         pub cursor: Option<CursorIcon>,
         /// The context for the dropdown radio_button value.
-        pub context: Option<RadioButton>,
+        pub context: RadioButton,
         /// If true, behave like a `CheckButton` and set context to `None` if already checked.
         pub cancellable: bool,
         /// Discriminant for this button's value, must be comparable.
@@ -213,7 +295,12 @@ mframe_extension!(
         pub default_value: Object,
 
         /// Widget builder for text dropdown.
+        pub icon_builder: Option<WidgetBuilder<Handle<Image>>>,
+
+        /// Widget builder for text dropdown.
         pub text_builder: Option<WidgetBuilder<String>>,
+        pub nested_builder: Option<WidgetBuilder<Vec<MenuItem>>>,
+
 
         pub divider_width: Option<f32>,
         pub divider_inset: f32,
@@ -227,6 +314,27 @@ mframe_extension!(
 
 impl Widget for MMenuBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+        let nested_builder = match self.nested_builder {
+            Some(builder) => Some(builder),
+            None => {
+                if self.items.iter().any(|x| matches!(x, MenuItem::Nest { .. })) {
+                    let mut cloned = self.clone();
+                    cloned.opacity = Opacity::new(0.0);
+                    cloned.anchor = Anchor::TOP_LEFT;
+                    cloned.parent_anchor = Anchor::TOP_RIGHT.into();
+                    Some(WidgetBuilder::new(
+                        move |commands: &mut AouiCommands, items: Vec<MenuItem>| {
+                            let mut cloned = cloned.clone();
+                            cloned.items = items;
+                            cloned.spawn(commands).0
+                        }
+                    ))
+                } else {
+                    None
+                }
+            },
+        };
+
         let radio = radio_button_group(self.selected);
         let palette = self.palette;
         let hover_palette = self.hover_palette.unwrap_or(self.palette);
@@ -236,6 +344,7 @@ impl Widget for MMenuBuilder {
         let divider_width = self.divider_width.unwrap_or(0.1);
         let frame = build_mframe!(commands, self)
             .insert((
+                BlockPropagation,
                 transition!(Opacity 0.15 Linear default self.opacity.opacity),
                 DropdownItems(self.items),
                 MenuBuilder {
@@ -265,8 +374,19 @@ impl Widget for MMenuBuilder {
                             })
                         })
                     ),
-                    icon: None,
-                    right_icon: None,
+                    icon: self.icon_builder.unwrap_or_else(||
+                        WidgetBuilder::new(move |commands: &mut AouiCommands, img: Handle<Image>| {
+                            bevy_aoui::sprite!(commands {
+                                anchor: Anchor::CENTER_RIGHT,
+                                sprite: img,
+                                offset: size2!(-2.2 em, 0),
+                                dimension: size2!(2.2 em, 2.2 em),
+                                color: hover_palette.stroke(),
+                                z: 0.01,
+                            })
+                        })
+                    ),
+                    nested: nested_builder,
                 },
             )).id();
         if let Some(signal) = self.open_signal {

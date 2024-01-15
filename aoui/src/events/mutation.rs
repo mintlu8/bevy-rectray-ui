@@ -5,7 +5,7 @@ use bevy::ecs::world::World;
 use bevy::ecs::{component::Component, entity::Entity};
 use bevy::ecs::system::{EntityCommands, Command, RunSystemOnce, Query, IntoSystem, In};
 
-use crate::signals::{AsObject, Object};
+use crate::util::{AsObject, Object};
 
 pub trait IntoMutationCommand<T: Clone, M1, M2>: Clone + Send + Sync + 'static {
     fn into_command(self, entity: Entity, data: T) -> impl Command;

@@ -159,4 +159,12 @@ impl Object {
             _ => false
         }
     }
+
+    pub fn or<T: AsObject>(self, item: T) -> Object {
+        if self.is_none() {
+            Object::new(item)
+        } else {
+            self
+        }
+    }
 }

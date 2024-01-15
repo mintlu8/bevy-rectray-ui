@@ -1,11 +1,8 @@
 use std::sync::{Arc, atomic::{AtomicBool, Ordering, AtomicU8}, Mutex};
 
-use super::{Object, AsObject};
+use crate::util::{Object, AsObject};
 
 /// A Signal for sending and receiving data between entities.
-///
-/// This simulates the "double buffered" behavior of bevy's events.
-/// If read, Signal lives for 1 frame, if not, lives for 2,
 #[derive(Debug, Clone)]
 #[doc(hidden)]
 pub struct Signal{
