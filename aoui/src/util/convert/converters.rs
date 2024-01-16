@@ -1,7 +1,7 @@
-use bevy::asset::{Asset, Handle};
-use crate::{widgets::button::Payload, util::AsObject, util::AouiCommands};
+use bevy::{asset::{Asset, Handle}, ecs::entity::Entity};
+use crate::{widgets::button::Payload, util::{AsObject, WidgetBuilder}, util::AouiCommands};
 
-use super::DslConvert;
+use super::{DslConvert, DslFrom};
 
 
 /// Extended `Option` for the DSL.
@@ -106,6 +106,53 @@ impl<T> DslConvert<IntoAsset<T>, 'a'> for &str where T: Asset {
         IntoAsset::String(self.to_owned())
     }
 }
+
+
+/// An [`Entity`] or a [`WidgetBuilder`].
+#[derive(Debug, Clone, Default)]
+pub enum IntoEntity{
+    #[default]
+    None,
+    Entity(Entity),
+    Builder(WidgetBuilder<()>),
+}
+
+impl IntoEntity {
+    pub fn build_expect(&self, commands: &mut AouiCommands, panic: &str) -> Entity {
+        match self {
+            IntoEntity::None => panic!("{}", panic),
+            IntoEntity::Entity(e) => *e,
+            IntoEntity::Builder(b) => commands.spawn_dynamic(&b),
+        }
+    }
+
+    pub fn build_or(&self, commands: &mut AouiCommands, or: impl FnOnce() -> Entity) -> Entity {
+        match self {
+            IntoEntity::None => or(),
+            IntoEntity::Entity(e) => *e,
+            IntoEntity::Builder(b) => commands.spawn_dynamic(&b),
+        }
+    }
+}
+
+impl DslFrom<Entity> for IntoEntity {
+    fn dfrom(value: Entity) -> Self {
+        IntoEntity::Entity(value)
+    }
+}
+
+impl DslFrom<WidgetBuilder<()>> for IntoEntity {
+    fn dfrom(value: WidgetBuilder<()>) -> Self {
+        IntoEntity::Builder(value)
+    }
+}
+
+impl<F> DslConvert<IntoEntity, 'ë'> for F where F: Fn(&mut AouiCommands) -> Entity + Send + Sync + 'static {
+    fn parse(self) -> IntoEntity {
+        IntoEntity::Builder(WidgetBuilder::new(self))
+    }
+}
+
 
 impl AouiCommands<'_, '_>{
     /// Load a dsl `IntoAsset`, if `None`, returns the default value.

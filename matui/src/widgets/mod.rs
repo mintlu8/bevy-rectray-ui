@@ -6,6 +6,7 @@ pub mod slider;
 pub mod input;
 pub mod menu;
 pub mod spinner;
+pub mod dropdown;
 mod macros;
 pub use button::MButtonBuilder;
 pub use toggle::MToggleBuilder;
@@ -14,6 +15,7 @@ pub use slider::MSliderBuilder;
 pub use input::MInputBuilder;
 pub use spinner::MSpinnerBuilder;
 pub use menu::{MMenuBuilder, MenuItem, MenuItemText, MenuItemNested};
+pub use dropdown::MDropdownBuilder;
 pub use util::*;
 
 pub(crate) use button::cursor_color_change;

@@ -4,6 +4,7 @@ mod cloning;
 mod extension;
 mod mesh;
 mod object;
+mod compose;
 
 pub mod convert;
 

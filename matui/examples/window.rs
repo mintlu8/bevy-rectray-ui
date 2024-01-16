@@ -1,6 +1,6 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::{AouiPlugin, util::WorldExtension, util::AouiCommands};
-use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, palette, mwindow, mslider, minput, mmenu, menu_items, mspinner};
+use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, palette, mwindow, mslider, minput, mmenu, menu_items, mspinner, mdropdown};
 use bevy_aoui::layout::BoundsLayout;
 pub fn main() {
     App::new()
@@ -14,13 +14,14 @@ pub fn main() {
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
+        .add_systems(PostStartup, |w: &mut World| {dbg!(w.archetypes().iter().filter(|x| x.entities().len() > 0).count());})
+
         .add_plugins(AouiPlugin)
         .add_plugins(MatuiPlugin)
         .insert_resource(ClearColor(Color::WHITE))
         .register_cursor_default(CursorIcon::Arrow)
         .run();
 }
-
 pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
@@ -167,6 +168,9 @@ pub fn init(mut commands: AouiCommands) {
             width: 20,
             radius: 5,
             palette: palette_idle,
+        },
+        child: mdropdown! {
+
         },
         child: mmenu! {
             shadow: 5,

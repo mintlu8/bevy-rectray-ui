@@ -79,7 +79,7 @@ impl From<bool> for CheckButton {
 ///
 /// Discriminant is the [`Payload`] component.
 #[derive(Debug, Clone, Component)]
-pub struct RadioButton(Arc<Mutex<Object>>, SignalSender<Object>);
+pub struct RadioButton(pub(crate) Arc<Mutex<Object>>, pub(crate) SignalSender<Object>);
 
 impl Default for RadioButton {
     fn default() -> Self {

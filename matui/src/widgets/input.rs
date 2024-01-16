@@ -201,8 +201,8 @@ impl Widget for MInputBuilder {
         if has_placeholder {
             let placeholder = text!(commands {
                 anchor: Anchor::CENTER_LEFT,
-                offset: size2!(0.8 em, 0 em),
                 center: Anchor::CENTER_LEFT,
+                offset: size2!(0.8 em, 0 em),
                 font: self.font.clone(),
                 text: self.placeholder,
                 extra: PlaceHolderText {

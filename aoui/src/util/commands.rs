@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::sync::{Arc, Mutex};
 
 use bevy::ecs::{entity::Entity, bundle::Bundle, component::Component};
 use bevy::ecs::system::{SystemParam, Commands, Res, EntityCommands, Command};
@@ -8,8 +9,9 @@ use bevy::render::render_resource::{TextureDescriptor, Extent3d, TextureDimensio
 use bevy::asset::{AssetServer, Asset, Handle, AssetPath};
 use crate::signals::{SignalPool, SignalBuilder};
 use crate::util::{CloneSplit, Widget, AsObject};
+use crate::widgets::button::RadioButton;
 
-use super::WidgetBuilder;
+use super::{WidgetBuilder, Object};
 
 
 /// [`SystemParam`] combination of [`Commands`], [`AssetServer`] and [`SignalPool`].
@@ -103,6 +105,12 @@ impl<'w, 's> AouiCommands<'w, 's> {
     pub fn signal<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self) -> S {
         self.signals.signal()
     }
+
+    /// Created a tracked radio button group.
+    pub fn radio_button_group<T: AsObject, S: CloneSplit<RadioButton>>(&self, default: T) -> S {
+        let (signal, ) = self.signal();
+        CloneSplit::clone_split(RadioButton(Arc::new(Mutex::new(Object::new(default))), signal.send()))
+    } 
 
     /// Created a tracked named signal.
     pub fn named_signal<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self, name: &str) -> S {
