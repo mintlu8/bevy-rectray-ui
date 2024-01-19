@@ -93,3 +93,58 @@ impl<'t, T> IntoChildren<'t, 2> for T where T: IntoIterator<Item = &'t Entity> +
 pub fn into_children<'t, E: IntoChildren<'t, M>, const M:u8>(entity: E) -> E::Out {
     entity.into_entities()
 }
+
+/// Documents intrinsic fields of bevy_aoui's dsl.
+#[doc(hidden)]
+pub mod intrinsics {
+
+    /// Pseudo-type of a mutable reference to an [`Entity`](bevy::ecs::entity::Entity).
+    /// ```
+    /// let mut item: Entity;
+    /// ```
+    pub struct MutEntity;
+    pub struct IntrinsicEntity {
+        /// Fetches an entity from a nested macro invocation.
+        /// ```
+        /// let mut item: Entity;
+        /// sprite!(commands {
+        ///     child: sprite! {
+        ///         entity: item
+        ///     }
+        /// })
+        /// ```
+        pub entity: MutEntity
+    }
+
+    pub struct ImplBundle;
+    pub struct IntrinsicExtra {
+        /// Adds a [`Bundle`](bevy::ecs::bundle::Bundle) to an [`Entity`](bevy::ecs::entity::Entity).
+        pub extra: ImplBundle
+    }
+
+    pub struct EntityOrIterator;
+    pub struct IntrinsicChild {
+        /// Adds a [`Entity`](bevy::ecs::bundle::Bundle), `Option<Entity>`, 
+        /// `IntoIterator<Item = Entity>` or `IntoIterator<Item = &Entity>`
+        /// as children.
+        pub child: EntityOrIterator
+    }
+
+    pub struct RoleSignal;
+
+    pub struct IntrinsicSignal {
+        /// A [`RoleSignal`](crate::sync::RoleSignal), either sender or receiver. 
+        /// 
+        /// Created by the 
+        /// [`sender`](crate::dsl::prelude::sender) and
+        /// [`receiver`](crate::dsl::prelude::receiver) functions.
+        pub signal: RoleSignal
+    }
+
+    pub struct AsyncSystem;
+
+    pub struct IntrinsicSystem {
+        /// An asynchronous system function [`AsyncSystem`](crate::sync::AsyncSystem).
+        pub system: AsyncSystem
+    }
+}

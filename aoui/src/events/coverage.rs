@@ -1,9 +1,6 @@
 use bevy::{ecs::system::{Query, Res}, hierarchy::Children, math::Vec2};
 
-use crate::{DimensionData, Transform2D, Anchor, AouiREM};
-
-use super::{EventHandling, Handlers};
-
+use crate::{DimensionData, Transform2D, Anchor, AouiREM, sync::{StateId, SignalId, SignalState}};
 
 /// An signal sender that calculates how many pixels of the sprite's bounding
 /// rectangle is covered by children's **offset** or **dimension**.
@@ -12,7 +9,14 @@ use super::{EventHandling, Handlers};
 /// anchor, min bound, and max bound,
 /// ignores rotation and scaling.
 #[derive(Debug, Clone)]
-pub enum FetchCoveragePx {}
+pub enum CoveragePx {}
+
+impl StateId for CoveragePx {
+    type Data = Vec2;
+}
+impl SignalId for CoveragePx {
+    type Data = Vec2;
+}
 
 
 /// An signal sender that calculates how many percentage of the sprite's bounding
@@ -22,38 +26,28 @@ pub enum FetchCoveragePx {}
 /// anchor, min bound, and max bound,
 /// ignores rotation and scaling.
 #[derive(Debug, Clone)]
-pub enum FetchCoveragePercent {}
+pub enum CoveragePercent {}
 
-
-impl EventHandling for FetchCoveragePx {
+impl StateId for CoveragePercent {
     type Data = Vec2;
-    type Context = ();
-    fn new_context() -> Self::Context {}
 }
-
-impl EventHandling for FetchCoveragePercent {
+impl SignalId for CoveragePercent {
     type Data = Vec2;
-    type Context = ();
-    fn new_context() -> Self::Context {}
 }
 
 pub fn calculate_coverage(
     rem: Res<AouiREM>,
     query: Query<(&Transform2D, &DimensionData, Option<&Children>,
-        Option<&Handlers<FetchCoveragePercent>>,
-        Option<&Handlers<FetchCoveragePx>>)>
+        SignalState<CoveragePx>,
+        SignalState<CoveragePercent>)>
 ) {
 
     let rem = rem.get();
     for (_, dimension, children, percent, px) in query.iter() {
-        if percent.is_none() && px.is_none() { continue; }
+        if !percent.exists() && !px.exists() { continue; }
         let Some(children) = children else {
-            if let Some(handler) = percent {
-                handler.send_signal(Vec2::ZERO);
-            }
-            if let Some(handler) = percent {
-                handler.send_signal(Vec2::ZERO);
-            }
+            percent.send(Vec2::ZERO);
+            px.send(Vec2::ZERO);
             continue;
         };
         let em = dimension.em;
@@ -74,11 +68,7 @@ pub fn calculate_coverage(
         if pixels.is_nan() {
             pixels = Vec2::ZERO;
         }
-        if let Some(handler) = px {
-            handler.send_signal(pixels);
-        }
-        if let Some(handler) = percent {
-            handler.send_signal(pixels / size);
-        }
+        px.send(pixels);
+        percent.send(pixels / size);
     }
 }

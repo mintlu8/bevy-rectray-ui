@@ -62,27 +62,24 @@ use crate::schedule::{AouiEventSet, AouiCleanupSet};
 mod systems;
 mod state;
 mod event;
-mod handler;
+//mod handler;
 mod wheel;
 mod cursor;
 pub(crate) mod mutation;
 mod oneshot;
 mod coverage;
-mod fetch;
+//mod fetch;
 
 pub use event::*;
 pub use state::*;
 use systems::*;
-pub use handler::*;
+// pub use handler::*;
 pub use wheel::{MovementUnits, ScrollScaling, MouseWheelAction};
 pub use cursor::{CustomCursor, TrackCursor};
 pub use mutation::Mutation;
 pub use oneshot::OneShot;
-pub use fetch::{Fetch, Evaluated};
 pub use cursor::CameraQuery;
-
-use self::cursor::{custom_cursor_controller, track_cursor};
-pub use coverage::{FetchCoveragePercent, FetchCoveragePx};
+pub use coverage::{CoveragePx, CoveragePercent};
 
 /// Marker component for Aoui's camera, optional.
 ///
@@ -143,46 +140,6 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .add_systems(PreUpdate, mouse_button_input.in_set(AouiEventSet))
             .add_systems(PreUpdate, mouse_button_click_outside.in_set(AouiEventSet).after(mouse_button_input))
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
-            .add_systems(Update, (
-                handle_event::<EvLeftClick>,
-                handle_event::<EvLeftDown>,
-                handle_event::<EvDragEnd>,
-                handle_event::<EvRightClick>,
-                handle_event::<EvRightDown>,
-                handle_event::<EvMidClick>,
-                handle_event::<EvMidDown>,
-                handle_event::<EvDoubleClick>,
-                handle_event::<EvDragEnd>,
-                handle_event::<EvClickOutside>,
-                handle_event::<EvHover>,
-                handle_event::<EvLeftPressed>,
-                handle_event::<EvLeftDrag>,
-                handle_event::<EvMidPressed>,
-                handle_event::<EvMidDrag>,
-                handle_event::<EvRightPressed>,
-                handle_event::<EvRightDrag>,
-            ))
-            .add_systems(Update, (
-                fetch::transfer_offset,
-                fetch::transfer_offset_evaluated,
-                fetch::transfer_dimension,
-                fetch::transfer_dimension_evaluated,
-                fetch::transfer_rotation,
-                fetch::transfer_scale,
-                fetch::transfer_opacity,
-                fetch::transfer_margin,
-                fetch::transfer_padding,
-                fetch::transfer_margin_evaluated,
-                fetch::transfer_padding_evaluated,
-            ))
-            .add_systems(Update, (
-                focus_obtain,
-                focus_lose,
-                focus_change,
-                track_cursor,
-                custom_cursor_controller,
-                coverage::calculate_coverage,
-            ))
             .add_systems(Last, (
                 remove_all::<CursorAction>,
                 remove_all::<CursorFocus>,

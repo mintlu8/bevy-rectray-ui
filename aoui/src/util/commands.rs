@@ -1,5 +1,5 @@
+use std::borrow::Borrow;
 use std::marker::PhantomData;
-use std::sync::{Arc, Mutex};
 
 use bevy::ecs::{entity::Entity, bundle::Bundle, component::Component};
 use bevy::ecs::system::{SystemParam, Commands, Res, EntityCommands, Command};
@@ -7,12 +7,11 @@ use bevy::hierarchy::{Children, DespawnRecursive, BuildChildren, DespawnRecursiv
 use bevy::render::texture::{Image, BevyDefault};
 use bevy::render::render_resource::{TextureDescriptor, Extent3d, TextureDimension, TextureUsages};
 use bevy::asset::{AssetServer, Asset, Handle, AssetPath};
-use crate::signals::{SignalPool, SignalBuilder};
+use crate::sync::{TypedSignal, SignalPool};
 use crate::util::{CloneSplit, Widget, AsObject};
 use crate::widgets::button::RadioButton;
 
-use super::{WidgetBuilder, Object};
-
+use super::WidgetBuilder;
 
 /// [`SystemParam`] combination of [`Commands`], [`AssetServer`] and [`SignalPool`].
 #[derive(SystemParam)]
@@ -22,6 +21,10 @@ pub struct AouiCommands<'w, 's> {
     signals: Res<'w, SignalPool>,
 }
 
+/// Created a unnamed signal.
+pub fn signal<T: AsObject, S: CloneSplit<TypedSignal<T>>>() -> S {
+    CloneSplit::clone_split(TypedSignal::default())
+}
 
 impl<'w, 's> AouiCommands<'w, 's> {
     /// Obtain the underlying [`Commands`].
@@ -101,25 +104,22 @@ impl<'w, 's> AouiCommands<'w, 's> {
         widget.build(self, arg)
     }
 
-    /// Created a tracked unnamed signal.
-    pub fn signal<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self) -> S {
-        self.signals.signal()
-    }
 
     /// Created a tracked radio button group.
     pub fn radio_button_group<T: AsObject, S: CloneSplit<RadioButton>>(&self, default: T) -> S {
-        let (signal, ) = self.signal();
-        CloneSplit::clone_split(RadioButton(Arc::new(Mutex::new(Object::new(default))), signal.send()))
-    } 
-
-    /// Created a tracked named signal.
-    pub fn named_signal<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self, name: &str) -> S {
-        self.signals.named(name)
+        CloneSplit::clone_split(RadioButton::new(default))
     }
 
-    /// Created a named untracked signal.
-    pub fn shared_storage<T: AsObject, S: CloneSplit<SignalBuilder<T>>>(&self, name: &str) -> S {
-        self.signals.shared_storage(name)
+    /// Created a named signal.
+    pub fn signal<T: AsObject, S: CloneSplit<TypedSignal<T>>>(&self, name: impl Into<String> + Borrow<str>) -> S {
+        let mut w = self.signals.0.write();
+        if let Some(signal) = w.get(name.borrow()) {
+            CloneSplit::clone_split(TypedSignal::from_inner(signal.clone()))
+        } else {
+            let signal = TypedSignal::default();
+            w.insert(name.into(), signal.clone().into_inner());
+            CloneSplit::clone_split(signal)
+        }
     }
 
     /// Recursively despawn an entity, calls `despawn_recursive`.

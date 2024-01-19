@@ -137,7 +137,6 @@ impl Plugin for WidgetsPlugin {
                 atlas::build_deferred_atlas,
                 text::sync_text_text_fragment,
                 text::sync_sprite_text_fragment,
-                spinbox::spin_text_change,
                 spinbox::sync_spin_text_with_text,
             ))
             .add_systems(Update, (

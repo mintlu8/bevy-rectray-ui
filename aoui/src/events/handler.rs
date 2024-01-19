@@ -6,7 +6,6 @@ use smallvec::SmallVec;
 use crate::util::{Object, AsObject};
 use crate::util::convert::{DslFrom, DslInto};
 use crate::events::*;
-use crate::signals::{SignalSender, SignalBuilder};
 use crate::widgets::drag::DragState;
 
 use self::sealed::EventQuery;

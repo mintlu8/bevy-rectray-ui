@@ -1,5 +1,6 @@
 
 
+use bevy::ecs::world::Mut;
 use bevy::math::Vec2;
 use bevy::text::Text;
 use crate::layout::{Layout, LayoutObject};
@@ -489,25 +490,45 @@ macro_rules! size2 {
 
 /// Format trait for a widget.
 pub trait WidgetWrite {
-    fn write(&mut self, s: String);
+    fn write(self, s: String);
 }
 
-impl WidgetWrite for Text {
-    fn write(&mut self, s: String) {
+impl WidgetWrite for &mut Text {
+    fn write(self, s: String) {
         if let Some(section) = self.sections.first_mut() {
             section.value = s;
         }
     }
 }
 
-impl WidgetWrite for InputBox {
-    fn write(&mut self, s: String) {
+impl WidgetWrite for &mut InputBox {
+    fn write(self, s: String) {
         self.set(s)
     }
 }
 
-impl WidgetWrite for TextFragment {
-    fn write(&mut self, s: String) {
+impl WidgetWrite for &mut TextFragment {
+    fn write(self, s: String) {
+        self.text = s
+    }
+}
+
+impl WidgetWrite for Mut<'_, Text> {
+    fn write(mut self, s: String) {
+        if let Some(section) = self.sections.first_mut() {
+            section.value = s;
+        }
+    }
+}
+
+impl WidgetWrite for Mut<'_, InputBox> {
+    fn write(mut self, s: String) {
+        self.set(s)
+    }
+}
+
+impl WidgetWrite for Mut<'_, TextFragment> {
+    fn write(mut self, s: String) {
         self.text = s
     }
 }
@@ -519,5 +540,21 @@ impl WidgetWrite for TextFragment {
 macro_rules! format_widget {
     ($widget: expr, $s: literal $(,$rest: expr),* $(,)?) => {
         $crate::dsl::WidgetWrite::write($widget, format!($s, $($rest),*))
+    };
+}
+
+/// Quickly construct multiple signal_ids at once.
+#[macro_export]
+macro_rules! signal_ids {
+    ($($(#[$($attr:tt)*])*$name: ident: $ty: ty),* $(,)?) => {
+        $(
+            $(#[$($attr)*])*
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            pub enum $name {}
+
+            impl $crate::sync::SignalId for $name{
+                type Data = $ty;
+            }
+        )*
     };
 }

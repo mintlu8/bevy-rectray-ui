@@ -2,10 +2,10 @@ use std::mem;
 use crate::anim::VisibilityToggle;
 use crate::dimension::DimensionMut;
 use crate::events::{
-    ActiveDetection, CursorAction, CursorClickOutside, CursorFocus, CursorState, EvTextChange,
-    EvTextSubmit, EventFlags, Handlers,
+    ActiveDetection, CursorAction, CursorClickOutside, CursorFocus, CursorState,
+    EventFlags,
 };
-use crate::signals::{Invoke, ReceiveInvoke};
+use crate::sync::{SignalId, SignalSender};
 use crate::{RotatedRect, Transform2D, DimensionData, Size, size, AouiREM};
 use ab_glyph::{Font as FontTrait, ScaleFont};
 use bevy::asset::{Assets, Handle};
@@ -22,6 +22,20 @@ use bevy::window::ReceivedCharacter;
 use super::TextFragment;
 use super::text::measure_string;
 use super::util::{DisplayIf, BlockPropagation};
+
+#[derive(Debug)]
+pub enum TextChange {}
+
+impl SignalId for TextChange {
+    type Data = String;
+}
+
+#[derive(Debug)]
+pub enum TextSubmit {}
+
+impl SignalId for TextSubmit {
+    type Data = String;
+}
 
 #[derive(Debug, Default, Clone, Copy, Reflect)]
 enum LeftRight {
@@ -80,11 +94,6 @@ pub struct InputBox {
     active: LeftRight,
     max_len: Size,
     em: f32,
-}
-
-
-impl ReceiveInvoke for InputBox {
-    type Type = ();
 }
 
 /// Marker component for a sprite containing renderred glyphs.
@@ -554,15 +563,15 @@ pub(crate) fn text_on_click_outside(mut query: Query<&mut InputBox, With<CursorC
     }
 }
 pub(crate) fn inputbox_keyboard(
-    mut commands: Commands,
     rem: Res<AouiREM>,
     fonts: Res<Assets<Font>>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
-    mut query: Query<(Entity, &DimensionData, &mut InputBox, &Handle<Font>,
+    mut query: Query<(&DimensionData, &mut InputBox, &Handle<Font>,
         &Children,
-        Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>,
-        Option<&Invoke<InputBox>>, ActiveDetection)>,
+        SignalSender<TextChange>,
+        SignalSender<TextSubmit>,
+        ActiveDetection)>,
     text: Query<&Children, With<InputBoxText>>,
     mut bar: Query<VisibilityToggle,
         (With<InputBoxCursorBar>, Without<InputBoxCursorArea>, Without<InputBox>)>,
@@ -586,10 +595,9 @@ pub(crate) fn inputbox_keyboard(
         }
     };
 
-    for (entity, dimension, mut inputbox, font_handle, children, change, submit, invoke, active) in
-        query.iter_mut().filter(|(_, _, input, ..)| input.has_focus())
+    for (dimension, mut inputbox, font_handle, children, change, submit, active) in
+        query.iter_mut().filter(|(_, input, ..)| input.has_focus())
     {
-        let mut commands = commands.entity(entity);
         let em = dimension.em;
         let dimension = inputbox.max_len.as_pixels(dimension.size.x, dimension.em, rem.get());
         if !active.is_active() {
@@ -653,9 +661,7 @@ pub(crate) fn inputbox_keyboard(
                 match char.char {
                     '\t' => (),
                     '\r' | '\n' => {
-                        if let Some(submit) = submit {
-                            submit.handle(&mut commands, inputbox.get().to_owned())
-                        }
+                        submit.send(inputbox.get().to_owned())
                     }
                     '\x08' | '\x7f' => inputbox.backspace(),
                     _ => {
@@ -681,20 +687,11 @@ pub(crate) fn inputbox_keyboard(
                 changed = true;
             }
         }
-        if let Some(invoke) = invoke {
-            if invoke.poll().is_some() {
-                if let Some(submit) = submit {
-                    submit.handle(&mut commands, inputbox.get().to_owned())
-                }
-            }
-        }
         if changed {
             if is_area{
                 temp_set_invisible(children);
             }
-            if let Some(change) = change {
-                change.handle(&mut commands, inputbox.get().to_owned())
-            }
+            change.send(inputbox.get().to_owned())
         }
     }
 }

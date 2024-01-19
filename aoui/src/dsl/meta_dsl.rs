@@ -4,33 +4,98 @@
 #[doc(hidden)]
 #[macro_export]
 macro_rules! inline_context {
-    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($fields: tt)*]) => {
-        $crate::meta_dsl!($ctx [$($path)*] {$($fields)*} {} {} {} {$($entity)?})
-    };
-    ($ctx: tt [$($path: tt)*] [] [$($out: tt)*] entity: $entity: ident $(,$($rest: tt)*)?) => {
-        $crate::inline_context!($ctx [$($path)*] [$entity] [$($out)*] $($($rest)*)?)
+    (@ $ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($field: ident: $value: expr),*]) => {
+        $crate::meta_dsl2!($ctx [$($path)*] {$($field: $value),*} {} {} {} {} {} {$($entity)?})
     };
 
-    ($ctx: tt [$($path: tt)*] [$e: ident] [$($out: tt)*] entity: $entity: ident $(,$($rest: tt)*)?) => {
+    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($field: ident: $value: expr),*]) => {
+        $crate::meta_dsl2!($ctx [$($path)*] {$($field: $value),*} {} {} {} {} {} {$($entity)?})
+    };
+
+    (@ $ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($field: ident: $value: expr),*] $field2: ident $($rest: tt)*) => {
+        {
+            $crate::format_intrinsics!($field2, $field2);
+            $crate::inline_context!($ctx [$($path)*] [$($entity)?] [$($field: $value),*] $field2 $($rest)*)
+        }
+    };
+
+    ($ctx: tt [$($path: tt)*] [] [$($field: ident: $value: expr),*] entity: $entity: ident $(,$($rest: tt)*)?) => {
+        $crate::inline_context!(@ $ctx [$($path)*] [$entity] [$($field: $value),*] $($($rest)*)?)
+    };
+
+    ($ctx: tt [$($path: tt)*] [$e: ident] [$($field: ident: $value: expr),*] entity: $entity: ident $(,$($rest: tt)*)?) => {
         compile_error!("Duplicate field: entity.")
     };
-    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($out: tt)*] child: #$macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
-        $crate::inline_context!($ctx [$($path)*] [$($entity)?] [
-            $($out)*
-            child: $crate::quote_syntax!($ctx $macro { $($expr)* }),
+    
+    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($field: ident: $value: expr),*] child: #$macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
+        $crate::inline_context!(@ $ctx [$($path)*] [$($entity)?] [
+            $($field: $value,)*
+            child: $crate::quote_syntax!($ctx $macro { $($expr)* })
         ] $($($rest)*)?)
     };
-    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($out: tt)*] $field: ident: $macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
-        $crate::inline_context!($ctx [$($path)*] [$($entity)?] [
-            $($out)*
-            $field: $macro! ($ctx {
+    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($field: ident: $value: expr),*] $field2: ident: $macro: ident ! {$($expr: tt)*} $(,$($rest: tt)*)?) => {
+        $crate::inline_context!(@ $ctx [$($path)*] [$($entity)?] [
+            $($field: $value,)*
+            $field2: $macro! ($ctx {
                 $($expr)*
-            }),
+            })
         ] $($($rest)*)?)
     };
-    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($out: tt)*] $field: ident: $head: expr $(,$($rest: tt)*)?) => {
-        $crate::inline_context!($ctx [$($path)*] [$($entity)?] [$($out)* $field: $head,] $($($rest)*)?)
+
+    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($field: ident: $value: expr),*] system: |$($arg:ident: $ty: ty),* $(,)?| $expr: expr $(,$($rest: tt)*)?) => {
+        $crate::inline_context!(@ $ctx [$($path)*] [$($entity)?] [
+            $($field: $value,)*
+            system: $crate::async_system!(|$($arg: $ty),*| $expr)
+        ] $($($rest)*)?)
     };
+
+    ($ctx: tt [$($path: tt)*] [$($entity:ident)?] [$($field: ident: $value: expr),*] $field2: ident: $head: expr $(,$($rest: tt)*)?) => {
+        $crate::inline_context!(@ $ctx [$($path)*] [$($entity)?] [
+            $($field: $value,)*
+            $field2: $head
+        ] $($($rest)*)?)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! format_intrinsics {
+    ($name: ident, entity) => {
+        { 
+            let _ = $crate::dsl::intrinsics::IntrinsicEntity { 
+                $name: $crate::dsl::intrinsics::MutEntity
+            };
+        }
+    };
+    ($name: ident, extra) => {
+        { 
+            let _ = $crate::dsl::intrinsics::IntrinsicExtra { 
+                $name: $crate::dsl::intrinsics::ImplBundle
+            };
+        }
+    };
+    ($name: ident, child) => {
+        { 
+            let _ = $crate::dsl::intrinsics::IntrinsicChild { 
+                $name: $crate::dsl::intrinsics::EntityOrIterator
+            };
+        }
+    };
+    ($name: ident, signal) => {
+        { 
+            let _ = $crate::dsl::intrinsics::IntrinsicSignal { 
+                $name: $crate::dsl::intrinsics::RoleSignal
+            };
+        }
+    };
+    ($name: ident, system) => {
+        { 
+            let _ = $crate::dsl::intrinsics::IntrinsicSystem { 
+                $name: $crate::dsl::intrinsics::AsyncSystem
+            };
+        }
+    };
+    ($span: ident, $unmatched: ident) => {};
 }
 
 /// Original syntax is `child: #macro! {color: #colors}`
@@ -281,58 +346,115 @@ macro_rules! quote_syntax {
 /// ```
 #[macro_export]
 macro_rules! meta_dsl {
-
     ($commands: tt [$($path: tt)*] {$($fields: tt)*} ) => {
         $crate::inline_context!($commands [$($path)*] [] [] $($fields)*)
     };
+}
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! meta_dsl2 {
     ($commands: tt [$($path: tt)*]
-        {extra: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
+        {extra: $expr: expr $(,$f: ident: $e: expr)*}
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
         {$($children: expr),*}
+        {$($signal: expr),*}
+        {$($system: expr),*}
         {$($out:ident)?}
     ) => {
-        $crate::meta_dsl!($commands
+        $crate::meta_dsl2!($commands
             [$($path)*]
             {$($f: $e),*}
             {$($f2: $e2),*}
             {$($extras,)* $expr}
             {$($children),*}
+            {$($signal),*}
+            {$($system),*}
             {$($out)?}
         )
     };
 
     ($commands: tt [$($path: tt)*]
-        {child: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
+        {child: $expr: expr $(,$f: ident: $e: expr)*}
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
         {$($children: expr),*}
+        {$($signal: expr),*}
+        {$($system: expr),*}
         {$($out:ident)?}
     ) => {
-        $crate::meta_dsl!($commands
+        $crate::meta_dsl2!($commands
             [$($path)*]
             {$($f: $e),*}
             {$($f2: $e2),*}
             {$($extras),*}
             {$($children,)* $expr}
+            {$($signal),*}
+            {$($system),*}
             {$($out)?}
         )
     };
 
     ($commands: tt [$($path: tt)*]
-        {$field: ident: $expr: expr $(,$f: ident: $e: expr)* $(,)?}
+        {signal: $expr: expr $(,$f: ident: $e: expr)*}
         {$($f2: ident: $e2: expr),*}
         {$($extras: expr),*}
         {$($children: expr),*}
+        {$($signal: expr),*}
+        {$($system: expr),*}
         {$($out:ident)?}
     ) => {
-        $crate::meta_dsl!($commands
+        $crate::meta_dsl2!($commands
+            [$($path)*]
+            {$($f: $e),*}
+            {$($f2: $e2),*}
+            {$($extras),*}
+            {$($children),*}
+            {$($signal,)* $expr}
+            {$($system),*}
+            {$($out)?}
+        )
+    };
+
+    ($commands: tt [$($path: tt)*]
+        {system: $expr: expr $(,$f: ident: $e: expr)*}
+        {$($f2: ident: $e2: expr),*}
+        {$($extras: expr),*}
+        {$($children: expr),*}
+        {$($signal: expr),*}
+        {$($system: expr),*}
+        {$($out:ident)?}
+    ) => {
+        $crate::meta_dsl2!($commands
+            [$($path)*]
+            {$($f: $e),*}
+            {$($f2: $e2),*}
+            {$($extras),*}
+            {$($children),*}
+            {$($signal),*}
+            {$($system,)* $expr}
+            {$($out)?}
+        )
+    };
+
+    ($commands: tt [$($path: tt)*]
+        {$field: ident: $expr: expr $(,$f: ident: $e: expr)*}
+        {$($f2: ident: $e2: expr),*}
+        {$($extras: expr),*}
+        {$($children: expr),*}
+        {$($signal: expr),*}
+        {$($system: expr),*}
+        {$($out:ident)?}
+    ) => {
+        $crate::meta_dsl2!($commands
             [$($path)*]
             {$($f: $e),*}
             {$($f2: $e2,)* $field: $expr}
             {$($extras),*}
             {$($children),*}
+            {$($signal),*}
+            {$($system),*}
             {$($out)?}
         )
     };
@@ -341,6 +463,8 @@ macro_rules! meta_dsl {
         {$($field: ident: $expr: expr),*}
         {$($extras: expr),*}
         {$($children: expr),*}
+        {$($first_sig: expr $(,$signal: expr)*)?}
+        {$($first_sys: expr $(,$system: expr)*)?}
         {$($out:ident)?}
     ) => {
         {
@@ -358,6 +482,20 @@ macro_rules! meta_dsl {
                 extras,
                 children,
             );
+            $(
+                let signal = $first_sig $(.and($signal))*;
+                $crate::util::ComposeExtension::compose(
+                    &mut $commands.entity(out),
+                    signal.into_signals()
+                );
+            )?
+            $(
+                let system = $crate::sync::AsyncSystems::from_systems([$first_sys, $($system),*]);
+                $crate::util::ComposeExtension::compose(
+                    &mut $commands.entity(out),
+                    system
+                );
+            )?
             $($out = out;)?
             out
         }

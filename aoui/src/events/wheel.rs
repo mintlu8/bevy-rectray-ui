@@ -1,7 +1,7 @@
 use bevy::{input::mouse::{MouseWheel, MouseScrollUnit}, math::{Vec2, IVec2}, window::{Window, PrimaryWindow}, render::camera::Camera, transform::components::GlobalTransform, ecs::{component::Component, system::{Resource, Local, Res}}};
 use bevy::ecs::{system::{Query, Commands}, event::EventReader, query::{With, Without}, entity::Entity};
 
-use crate::widgets::clipping::CameraClip;
+use crate::{widgets::clipping::CameraClip, sync::{SignalId, StateId}};
 
 use super::{EventFlags, AouiCamera, CursorDetection, ActiveDetection};
 
@@ -49,6 +49,15 @@ impl MovementUnits {
         pixels: Vec2::ZERO
     };
 }
+
+impl SignalId for MouseWheelAction {
+    type Data = MovementUnits;
+}
+
+impl StateId for MouseWheelAction {
+    type Data = MovementUnits;
+}
+
 
 pub(crate) fn mousewheel_event(
     mut commands: Commands,

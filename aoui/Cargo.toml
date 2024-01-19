@@ -33,6 +33,8 @@ xi-unicode = "^0.3"
 thiserror = "^1"
 once_cell = "^1.19"
 atomic = "^0.6"
+futures = "^0.3.30"
+parking_lot = "^0.12"
 
 
 [features]

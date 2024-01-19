@@ -5,11 +5,10 @@ use bevy::ecs::system::{Res, SystemParam};
 use bevy::math::{Vec2, IVec2};
 use bevy::ecs::{component::Component, query::Without};
 use bevy::ecs::system::{Query, Commands};
-use crate::{Transform2D, anim::Attr, anim::Offset, AouiREM, DimensionData, signals::ReceiveInvoke};
-use crate::events::{EvPositionFactor, MouseWheelAction};
+use crate::sync::{SignalSender, SignalReceiver};
+use crate::{Transform2D, anim::Attr, anim::Offset, AouiREM, DimensionData};
+use crate::events::MouseWheelAction;
 use crate::layout::Container;
-use crate::events::{EvMouseWheel, Handlers};
-use crate::signals::Invoke;
 use crate::util::convert::DslInto;
 
 use crate::events::MovementUnits;
@@ -108,29 +107,24 @@ impl Default for Scrolling {
     }
 }
 
-impl ReceiveInvoke for Scrolling {
-    type Type = MovementUnits;
-}
-
 pub(crate) fn scrolling_senders(
-    mut commands: Commands,
-    sender: Query<(Entity, &MouseWheelAction, &Handlers<EvMouseWheel>), Without<MouseWheelAction>>,
+    sender: Query<(&MouseWheelAction, SignalSender<MouseWheelAction>), Without<Scrolling>>,
 ) {
-    for (entity, action, signal) in sender.iter() {
-        signal.handle(&mut commands.entity(entity), action.get());
+    for (action, signal) in sender.iter() {
+        signal.send(action.get());
     }
 }
 
 pub(crate) fn scrolling_system<'t, T: Movement>(
     mut fetched: T::Ctx<'_, '_>,
     mut scroll: Query<(T::Query<'t>, &MouseWheelAction)>,
-    mut receiver: Query<(T::Query<'t>, &Invoke<Scrolling>), Without<MouseWheelAction>>,
+    mut receiver: Query<(T::Query<'t>, SignalReceiver<MouseWheelAction>), Without<MouseWheelAction>>,
 ) {
     let iter = scroll.iter_mut()
         .map(|(query, action)|
             (query, action.get()))
-        .chain(receiver.iter_mut().filter_map(|(query, receiver)|
-            Some((query, receiver.poll()?)))); {
+        .chain(receiver.iter_mut().filter_map(|(query, mut receiver)|
+            Some((query, receiver.poll_once()?)))); {
     }
     for (mut query, input) in iter {
         T::run(&mut query, &mut fetched, input);
@@ -248,18 +242,6 @@ pub trait IntoScrollingBuilder: Bundle + Default {
 
     fn with_shared_position(self, position: impl DslInto<SharedPosition>) -> impl IntoScrollingBuilder {
         (self.with_constraints(), position.dinto())
-    }
-
-    fn with_handler(self, handler: impl DslInto<Handlers<EvPositionFactor>>) -> impl IntoScrollingBuilder {
-        (self.with_constraints(), handler.dinto())
-    }
-
-    fn with_invoke(self, handler: impl DslInto<Handlers<EvMouseWheel>>) -> impl IntoScrollingBuilder {
-        (self.with_constraints(), handler.dinto())
-    }
-
-    fn with_recv(self, handler: impl DslInto<Invoke<Scrolling>>) -> impl IntoScrollingBuilder {
-        (self.with_constraints(), handler.dinto())
     }
 }
 

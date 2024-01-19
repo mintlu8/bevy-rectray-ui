@@ -4,13 +4,15 @@ use bevy::render::color::Color;
 
 use bevy::text::Font;
 use bevy::window::CursorIcon;
+use crate::sync::{TypedSignal, Signals};
+use crate::util::{Object, ComposeExtension};
 use crate::widgets::TextFragment;
-use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel};
+use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel, ButtonClick, ToggleChange};
 use crate::widgets::util::{SetCursor, PropagateFocus};
 use crate::{build_frame, Anchor, rectangle, Size, size};
-use crate::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange, EvTextChange, EvTextSubmit};
+use crate::events::EventFlags;
 use crate::frame_extension;
-use crate::widgets::inputbox::{InputOverflow, InputBoxText};
+use crate::widgets::inputbox::{InputOverflow, InputBoxText, TextSubmit, TextChange};
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea};
 
 use crate::util::{Widget, AouiCommands, convert::IntoAsset};
@@ -24,8 +26,8 @@ frame_extension!(
         pub text_area: Option<Entity>,
         pub cursor_bar: Option<Entity>,
         pub cursor_area: Option<Entity>,
-        pub on_change: Handlers<EvTextChange>,
-        pub on_submit: Handlers<EvTextSubmit>,
+        pub on_change: Option<TypedSignal<String>>,
+        pub on_submit: Option<TypedSignal<String>>,
         pub overflow: InputOverflow,
         /// Sets the CursorIcon when hovering this button, default is `Text`
         pub cursor_icon: Option<CursorIcon>,
@@ -49,12 +51,10 @@ impl Widget for InputBoxBuilder {
                 icon: self.cursor_icon.unwrap_or(CursorIcon::Text),
             },
         ));
-        if !self.on_submit.is_empty()  {
-            entity.insert(self.on_submit);
-        }
-        if !self.on_change.is_empty()  {
-            entity.insert(self.on_change);
-        }
+        entity.compose2(
+            self.on_change.map(Signals::from_sender::<TextChange>),
+            self.on_submit.map(Signals::from_sender::<TextSubmit>)
+        );
         let entity = entity.id();
         let text_area = self.text_area.unwrap_or(
             rectangle!(commands {
@@ -92,7 +92,7 @@ frame_extension!(
         /// Sets the CursorIcon when hovering this button, default is `Hand`
         pub cursor: Option<CursorIcon>,
         /// Sends a signal whenever the button is clicked.
-        pub on_click: Handlers<EvButtonClick>,
+        pub on_click: Option<TypedSignal<Object>>,
         /// If set, `submit` sends its contents.
         pub payload: Option<Payload>,
     }
@@ -110,13 +110,14 @@ impl Widget for ButtonBuilder {
                 icon: self.cursor.unwrap_or(CursorIcon::Hand),
             },
         ));
-        if !self.on_click.is_empty()  {
-            entity.insert(self.on_click);
-        }
         if let Some(payload) = self.payload  {
             entity.insert(payload);
         }
-        (entity.id(), entity.id())
+        if let Some(click) = self.on_click {
+            entity.compose(Signals::from_sender::<ButtonClick>(click));
+        }
+        let entity = entity.id();
+        (entity, entity)
     }
 }
 
@@ -129,9 +130,9 @@ frame_extension!(
         /// Sends a signal whenever the button is clicked and its value is `true`.
         ///
         /// Like button, this sends either `()` or `Payload`.
-        pub on_checked: Handlers<EvButtonClick>,
+        pub on_checked: Option<TypedSignal<Object>>,
         /// Sends a `bool` signal whenever the button is clicked.
-        pub on_change: Handlers<EvToggleChange>,
+        pub on_change: Option<TypedSignal<bool>>,
         /// Sets whether the default value is checked or not.
         pub checked: bool,
     }
@@ -149,16 +150,15 @@ impl Widget for CheckButtonBuilder {
                 icon: self.cursor.unwrap_or(CursorIcon::Hand),
             },
         ));
-        if !self.on_checked.is_empty() {
-            entity.insert(self.on_checked);
-        }
-        if !self.on_change.is_empty() {
-            entity.insert(self.on_change);
-        }
         if let Some(payload) = self.payload  {
             entity.insert(payload);
         }
-        (entity.id(), entity.id())
+        entity.compose2(
+            self.on_change.map(Signals::from_sender::<ToggleChange>),
+            self.on_checked.map(Signals::from_sender::<ButtonClick>),
+        );
+        let entity = entity.id();
+        (entity, entity)
     }
 }
 
@@ -173,7 +173,7 @@ frame_extension!(
         /// Discriminant for this button's value, must be comparable.
         pub value: Option<Payload>,
         /// Sends a signal whenever the button is clicked.
-        pub on_click: Handlers<EvButtonClick>,
+        pub on_click: Option<TypedSignal<Object>>,
     }
 );
 
@@ -194,10 +194,11 @@ impl Widget for RadioButtonBuilder {
         if self.cancellable {
             entity.insert(RadioButtonCancel);
         }
-        if !self.on_click.is_empty()  {
-            entity.insert(self.on_click);
+        if let Some(click) = self.on_click {
+            entity.compose(Signals::from_sender::<ButtonClick>(click));
         }
-        (entity.id(), entity.id())
+        let entity = entity.id();
+        (entity, entity)
     }
 }
 

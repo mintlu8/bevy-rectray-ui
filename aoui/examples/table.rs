@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
 use bevy_aoui::{AouiPlugin, util::{DslInto, AouiCommands}, Anchor, material_sprite, layout::TableLayout};
 

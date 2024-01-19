@@ -8,12 +8,24 @@ use bevy::math::{Vec2, IVec2};
 use bevy::hierarchy::{Children, Parent};
 use bevy::ecs::{component::Component, system::{Commands, Res, Query}};
 use crate::DimensionData;
+use crate::events::{MouseWheelAction, MovementUnits};
+use crate::sync::{SignalId, StateId, SignalState};
 use crate::util::CloneSplit;
 use crate::{AouiREM, Transform2D, Anchor, anim::Attr, layout::Container};
 use crate::anim::Offset;
-use crate::events::{Handlers, EvMouseWheel, MovementUnits, EvPositionFactor};
 
 use super::{scroll::{Scrolling, ScrollDiscrete}, drag::Dragging};
+
+#[derive(Debug)]
+pub enum PositionFactor {}
+
+impl SignalId for PositionFactor {
+    type Data = f32;
+}
+
+impl StateId for PositionFactor {
+    type Data = f32;
+}
 
 fn filter_nan(v: Vec2) -> Vec2 {
     Vec2::new(
@@ -97,19 +109,17 @@ pub struct ScrollConstraint;
 
 
 pub fn scroll_constraint(
-    mut commands: Commands,
     rem: Option<Res<AouiREM>>,
-    query: Query<(Entity, &Scrolling, &DimensionData, Option<&SharedPosition>, &Children,
-        Option<&Handlers<EvMouseWheel>>,
-        Option<&Handlers<EvPositionFactor>>,
+    query: Query<(&Scrolling, &DimensionData, Option<&SharedPosition>, &Children,
+        SignalState<MouseWheelAction>,
+        SignalState<PositionFactor>,
         Has<PositionChanged>,
     ), With<ScrollConstraint>>,
     mut child_query: Query<(&DimensionData, Attr<Transform2D, Offset>, Option<&Children>)>,
 ) {
     let rem = rem.map(|x|x.get()).unwrap_or(16.0);
-    for (entity, scroll, dimension, shared, children, scroll_handler, fac_handler, changed) in query.iter() {
+    for (scroll, dimension, shared, children, scroll_handler, fac_handler, changed) in query.iter() {
         let size = dimension.size;
-        let mut commands = commands.entity(entity);
         if children.len() != 1 {
             warn!("Component 'Scrolling' requires exactly one child as a buffer.");
             continue;
@@ -155,17 +165,13 @@ pub fn scroll_constraint(
                     match (scroll.x_scroll(), scroll.y_scroll()) {
                         (true, false) => {
                             let value = fac.x.clamp(0.0, 1.0);
-                            if let Some(signal) = fac_handler {
-                                signal.handle(&mut commands, value)
-                            }
+                            fac_handler.send(value)
                         },
                         (false, true) => {
                             let value = fac.y.clamp(0.0, 1.0);
-                            if let Some(signal) = fac_handler {
-                                signal.handle(&mut commands, value)
-                            }
+                            fac_handler.send(value)
                         },
-                        (true, true) if fac_handler.is_some() => {
+                        (true, true) if fac_handler.exists() => {
                             warn!("Warning: Cannot Send `SigPositionFactor` with 2d scrolling.")
                         }
                         _ => (),
@@ -174,15 +180,13 @@ pub fn scroll_constraint(
                 None => (),
                 Some(SharedPosition{ position, flip }) if changed => {
                     // If scrolled to the end pipe the scroll event to the parent.
-                    if let Some(piping) = scroll_handler {
-                        let delta = offset - transform.get();
-                        if delta != Vec2::ZERO {
-                            let action = MovementUnits {
-                                lines: IVec2::ZERO,
-                                pixels: delta,
-                            };
-                            piping.handle(&mut commands, action);
-                        }
+                    let delta = offset - transform.get();
+                    if delta != Vec2::ZERO {
+                        let action = MovementUnits {
+                            lines: IVec2::ZERO,
+                            pixels: delta,
+                        };
+                        scroll_handler.send(action);
                     }
                     let fac = filter_nan((offset - min) / (max - min));
                     position.store(flip_vec(fac, flip), Ordering::Relaxed);
@@ -190,17 +194,13 @@ pub fn scroll_constraint(
                     match (scroll.x_scroll(), scroll.y_scroll()) {
                         (true, false) => {
                             let value = fac.x.clamp(0.0, 1.0);
-                            if let Some(signal) = fac_handler {
-                                signal.handle(&mut commands, value)
-                            }
+                            fac_handler.send(value);
                         },
                         (false, true) => {
                             let value = fac.y.clamp(0.0, 1.0);
-                            if let Some(signal) = fac_handler {
-                                signal.handle(&mut commands, value)
-                            }
+                            fac_handler.send(value);
                         },
-                        (true, true) if fac_handler.is_some() => {
+                        (true, true) if fac_handler.exists() => {
                             warn!("Warning: Cannot Send `SigPositionFactor` with 2d scrolling.")
                         }
                         _ => (),
@@ -217,13 +217,12 @@ pub fn scroll_constraint(
 }
 
 pub fn drag_constraint(
-    mut commands: Commands,
     window: Query<&Window, With<PrimaryWindow>>,
     rem: Option<Res<AouiREM>>,
-    mut query: Query<(Entity, &Dragging, Attr<Transform2D, Offset>, &DimensionData,
+    mut query: Query<(&Dragging, Attr<Transform2D, Offset>, &DimensionData,
         Option<&SharedPosition>,
         Option<&Parent>,
-        Option<&Handlers<EvPositionFactor>>,
+        SignalState<PositionFactor>,
         Has<PositionChanged>,
     ), With<DragConstraint>>,
     parent_query: Query<&DimensionData>,
@@ -231,8 +230,7 @@ pub fn drag_constraint(
     let window_size = window.get_single().map(|x| Vec2::new(x.width(), x.height())).ok();
     let rem = rem.map(|x| x.get()).unwrap_or(16.0);
 
-    for (entity, drag, mut transform, dim, shared, parent, fac_handler, changed) in query.iter_mut() {
-        let mut commands = commands.entity(entity);
+    for (drag, mut transform, dim, shared, parent, fac_handler, changed) in query.iter_mut() {
         let Some(dimension) = parent
             .and_then(|p| parent_query.get(p.get()).ok())
             .map(|x| x.size)
@@ -262,17 +260,13 @@ pub fn drag_constraint(
                 match (drag.x, drag.y) {
                     (true, false) => {
                         let value = fac.x.clamp(0.0, 1.0);
-                        if let Some(signal) = fac_handler {
-                            signal.handle(&mut commands, value)
-                        }
+                        fac_handler.send(value);
                     },
                     (false, true) => {
                         let value = fac.y.clamp(0.0, 1.0);
-                        if let Some(signal) = fac_handler {
-                            signal.handle(&mut commands, value)
-                        }
+                        fac_handler.send(value);
                     },
-                    (true, true) if fac_handler.is_some() => {
+                    (true, true) if fac_handler.exists() => {
                         warn!("Warning: Cannot Send `SigPositionFactor` with 2d dragging.")
                     }
                     _ => (),
@@ -284,18 +278,14 @@ pub fn drag_constraint(
                 match (drag.x, drag.y) {
                     (true, false) => {
                         let value = fac.x.clamp(0.0, 1.0);
-                        if let Some(signal) = fac_handler {
-                            signal.handle(&mut commands, value)
-                        }
+                        fac_handler.send(value);
                     },
                     (false, true) => {
                         let value = fac.y.clamp(0.0, 1.0);
-                        if let Some(signal) = fac_handler {
-                            signal.handle(&mut commands, value)
-                        }
+                        fac_handler.send(value);
                     },
-                    (true, true) if fac_handler.is_some() => {
-                        warn!("Warning: Cannot Send `SigPositionFactor` with 2d dragging.")
+                    (true, true) if fac_handler.exists() => {
+                        warn!("Warning: Cannot Send `PositionFactor` with 2d dragging.")
                     }
                     _ => (),
                 }
@@ -317,12 +307,10 @@ pub fn drag_constraint(
 
 
 pub fn discrete_scroll_sync(
-    mut commands: Commands,
-    mut query: Query<(Entity, &ScrollDiscrete, &mut Container,
-        Option<&SharedPosition>, Option<&Handlers<EvPositionFactor>>, Has<PositionChanged>)>,
+    mut query: Query<(&ScrollDiscrete, &mut Container,
+        Option<&SharedPosition>, SignalState<PositionFactor>, Has<PositionChanged>)>,
 ) {
-    for (entity, scroll, mut container, shared, fac_handler, changed) in query.iter_mut() {
-        let mut commands = commands.entity(entity);
+    for (scroll, mut container, shared, fac_handler, changed) in query.iter_mut() {
         let fac = container.get_fac();
         match shared {
             Some(SharedPosition{ position, flip }) if changed => {
@@ -331,9 +319,7 @@ pub fn discrete_scroll_sync(
                     fac2 += Vec2::ONE;
                 }
                 position.store(flip_vec(fac2, flip), Ordering::Relaxed);
-                if let Some(signal) = fac_handler {
-                    signal.handle(&mut commands, fac)
-                }
+                fac_handler.send(fac);
             },
             Some(SharedPosition{ position, flip }) => {
                 let fac = flip_vec(position.load(Ordering::Relaxed), flip);

@@ -3,21 +3,28 @@ use std::fmt::Debug;
 use bevy::{ecs::{component::Component, system::Query, world::Mut, query::{Without, Changed}}, text::Text};
 use itertools::Itertools;
 
-use crate::{util::{Object, convert::DslConvert, AsObject}, signals::{ReceiveInvoke, Invoke}, dsl::prelude::{Handlers, EvTextChange}, events::EvSpinChange};
+use crate::{util::{Object, convert::DslConvert, AsObject}, sync::{SignalId, SignalReceiver, SignalSender}};
 
-use super::TextFragment;
+use super::{TextFragment, inputbox::TextChange};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum Increment {}
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+
+impl SignalId for Increment {
+    type Data = ();
+}
+#[derive(Debug)]
 pub enum Decrement {}
 
-impl ReceiveInvoke for Increment {
-    type Type = ();
+impl SignalId for Decrement {
+    type Data = ();
 }
 
-impl ReceiveInvoke for Decrement {
-    type Type = ();
+#[derive(Debug)]
+pub enum SpinChange {}
+
+impl SignalId for SpinChange {
+    type Data = Object;
 }
 
 /// A text based spinner implementation.
@@ -152,31 +159,26 @@ impl<T: SpinDisplay, F> DslConvert<SpinnerText, '±'> for F where F: IntoIterato
 }
 
 pub fn spin_text_change(
-    mut query: Query<(&mut SpinnerText, Option<&Invoke<Increment>>, Option<&Invoke<Decrement>>, 
-        Option<&Handlers<EvTextChange>>, Option<&Handlers<EvSpinChange>>,
+    mut query: Query<(&mut SpinnerText, SignalReceiver<Increment>, SignalReceiver<Decrement>, 
+        SignalSender<TextChange>, SignalSender<SpinChange>,
     )>
 ) {
-    for (mut spin, increment, decrement, ev_text, ev_spin) in query.iter_mut() {
+    for (mut spin, mut increment, mut decrement, ev_text, ev_spin) in query.iter_mut() {
         let mut changed = false;
-        if increment.map(|x| x.poll_any()).unwrap_or(false) {
+        if increment.poll_any() {
             SpinnerText::increment(&mut spin);
             changed = true;
         }
 
-        if decrement.map(|x| x.poll_any()).unwrap_or(false) {
+        if decrement.poll_any() {
             SpinnerText::decrement(&mut spin);
             changed = true;
         }
 
         if changed {
-            if let Some(ev) = ev_text {
-                ev.send_signal(spin.get())
-            }
-            if let Some(ev) = ev_spin {
-                ev.send_signal(spin.get_object())
-            }
+            ev_text.send(spin.get());
+            ev_spin.send(spin.get_object());
         }
-
     }
 }
 

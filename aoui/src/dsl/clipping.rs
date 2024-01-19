@@ -1,7 +1,10 @@
+use bevy::math::Vec2;
 use bevy::{render::texture::Image, hierarchy::BuildChildren, ecs::entity::Entity, asset::Handle};
-use crate::{frame_extension, build_frame, Clipping, frame, Size2, events::{EventFlags, FetchCoveragePx, Handlers, FetchCoveragePercent}};
+use crate::events::{CoveragePx, CoveragePercent};
+use crate::sync::{Signals, TypedSignal};
+use crate::{frame_extension, build_frame, Clipping, frame, Size2, events::EventFlags};
 use crate::widgets::{scroll::IntoScrollingBuilder, clipping::ScopedCameraBundle};
-use crate::util::{Widget, AouiCommands};
+use crate::util::{Widget, AouiCommands, ComposeExtension};
 
 frame_extension!(
     /// A camera with its viewport bound to a sprite's `RotatedRect`.
@@ -32,10 +35,10 @@ frame_extension!(
         pub scroll: Option<B>,
         /// Send a signal regarding how much of the sprite is covered by child sprites's
         /// anchor, min bound and max bound.
-        pub coverage_px: Handlers<FetchCoveragePx>,
+        pub coverage_px: Option<TypedSignal<Vec2>>,
         /// Send a signal regarding how much of the sprite is covered by child sprites's
         /// anchor, min bound and max bound.
-        pub coverage_percent: Handlers<FetchCoveragePercent>,
+        pub coverage_percent: Option<TypedSignal<Vec2>>,
     }
 );
 
@@ -50,12 +53,10 @@ impl<B: IntoScrollingBuilder> Widget for ScrollingFrameBuilder<B> {
         let container = frame!(commands {
             dimension: Size2::FULL,
         });
-        if !self.coverage_px.is_empty() {
-            commands.entity(container).insert(self.coverage_px);
-        }
-        if !self.coverage_percent.is_empty() {
-            commands.entity(container).insert(self.coverage_percent);
-        }
+        commands.entity(entity).compose2(
+            self.coverage_px.map(Signals::from_sender::<CoveragePx>),
+            self.coverage_percent.map(Signals::from_sender::<CoveragePercent>)
+        );
         commands.entity(entity).add_child(container);
         (entity, container)
     }

@@ -171,6 +171,10 @@ pub fn init(mut commands: AouiCommands) {
         },
         child: mdropdown! {
 
+            placeholder: "Say Hello:",
+            width: 20,
+            radius: 5,
+            palette: palette_idle,
         },
         child: mmenu! {
             shadow: 5,
