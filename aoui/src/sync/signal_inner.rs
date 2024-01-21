@@ -22,7 +22,7 @@ pub struct SignalInner<T> {
 
 #[derive(Debug, Default)]
 pub struct Signal<T> {
-    inner: Arc<SignalInner<T>>
+    pub(super) inner: Arc<SignalInner<T>>
 }
 
 impl<T> Clone for Signal<T> {

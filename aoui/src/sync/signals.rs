@@ -3,9 +3,9 @@ use bevy::{utils::HashMap, ecs::{component::Component, entity::Entity, query::Wo
 use futures::Future;
 use once_cell::sync::Lazy;
 use crate::util::{Object, AsObject, ComponentCompose};
-use super::{AsyncExecutor, AsyncSystemParam, Signal, SignalData, SignalInner, StateId, States, YieldNow};
+use super::{AsyncExecutor, AsyncSystemParam, Signal, SignalData, SignalInner, YieldNow};
 
-pub trait SignalId: Any{
+pub trait SignalId: Any + Send + Sync + 'static{
     type Data: AsObject;
 }
 
@@ -41,9 +41,9 @@ impl<T: AsObject> TypedSignal<T> {
 
 }
 
-pub static DUMMY_SIGNALS: Lazy<Signals> = Lazy::new(||Signals::new());
+pub(super) static DUMMY_SIGNALS: Lazy<Signals> = Lazy::new(||Signals::new());
 
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Default)]
 pub struct Signals {
     pub senders: HashMap<TypeId, Signal<Object>>,
     pub receivers: HashMap<TypeId, Signal<Object>>,
@@ -94,12 +94,27 @@ impl Signals {
         }
     }
 
+    pub fn broadcast<T: SignalId>(&self, item: T::Data) {
+        match self.senders.get(&TypeId::of::<T>()){
+            Some(x) => x.broadcast(Object::new(item)),
+            None => (),
+        }
+    }
+
     pub fn poll_once<T: SignalId>(&mut self) -> Option<T::Data>{
         match self.receivers.get_mut(&TypeId::of::<T>()){
             Some(sig) => sig.try_read().and_then(|x| x.get()),
             None => None,
         }
     }
+
+    pub fn poll_senders_once<T: SignalId>(&mut self) -> Option<T::Data>{
+        match self.senders.get_mut(&TypeId::of::<T>()){
+            Some(sig) => sig.try_read().and_then(|x| x.get()),
+            None => None,
+        }
+    }
+    
     pub fn sender<T: SignalId>(&self) -> Option<Arc<SignalInner<Object>>> {
         self.senders.get(&TypeId::of::<T>()).map(|x| x.borrow_inner())
     }
@@ -111,6 +126,13 @@ impl Signals {
     }
     pub fn add_receiver<T: SignalId>(&mut self, signal: TypedSignal<T::Data>) {
         self.receivers.insert(TypeId::of::<T>(), Signal::from_typed(signal));
+    }
+
+    pub fn has_sender<T: SignalId>(&self) -> bool {
+        self.senders.contains_key(&TypeId::of::<T>())
+    }
+    pub fn has_receiver<T: SignalId>(&self) ->  bool {
+        self.receivers.contains_key(&TypeId::of::<T>())
     }
 }
 
@@ -154,7 +176,6 @@ impl <T: SignalId> AsyncSystemParam for SigSend<T>  {
             _: Entity,
             _: &Arc<AsyncExecutor>,
             signals: &Signals,
-            _: &States,
         ) -> Self {
         SigSend(
             signals.sender::<T>()
@@ -204,7 +225,6 @@ impl <T: SignalId> AsyncSystemParam for SigRecv<T>  {
             _: Entity,
             _: &Arc<AsyncExecutor>,
             signals: &Signals,
-            _: &States,
         ) -> Self {
         SigRecv(
             signals.receiver::<T>()
@@ -221,31 +241,21 @@ pub struct SignalSender<T: SignalId>{
 }
 
 impl<T: SignalId> SignalSenderItem<'_, T> {
+    pub fn exists(&self) -> bool{
+        self.signals
+            .map(|x| x.sender::<T>().is_some())
+            .unwrap_or(false)
+    }
+
     pub fn send(&self, item: T::Data) {
         if let Some(signals) = self.signals {
             signals.send::<T>(item);
         }
     }
-}
-
-#[derive(Debug, WorldQuery)]
-pub struct SignalState<T: SignalId + StateId>{
-    signals: Option<&'static Signals>,
-    states: Option<&'static States>,
-    p: PhantomData<T>,
-}
-
-impl<T: SignalId + StateId<Data = <T as SignalId>::Data>> SignalStateItem<'_, T> {
-    pub fn exists(&self) -> bool {
-        self.signals.is_some() || self.states.is_some()
-    }
-
-    pub fn send(&self, item: <T as SignalId>::Data) {
+    
+    pub fn broadcast(&self, item: T::Data) {
         if let Some(signals) = self.signals {
-            signals.send::<T>(item.clone());
-        }
-        if let Some(states) = self.states {
-            states.set::<T>(item);
+            signals.broadcast::<T>(item);
         }
     }
 }
@@ -259,11 +269,14 @@ pub struct SignalReceiver<T: SignalId>{
 
 impl<T: SignalId> SignalReceiverItem<'_, T> {
     pub fn poll_once(&mut self) -> Option<T::Data> {
-        self.signals.as_mut().and_then(|sig| sig.poll_once::<T>())
+        self.signals.as_mut()
+            .and_then(|sig| sig.poll_once::<T>())
     }
 
     pub fn poll_any(&mut self) -> bool {
-        self.signals.as_mut().and_then(|sig| sig.poll_once::<T>()).is_some()
+        self.signals.as_mut()
+            .and_then(|sig| sig.poll_once::<T>())
+            .is_some()
     }
 }
 

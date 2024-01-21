@@ -1,19 +1,111 @@
-use std::{sync::Arc, future::Future, pin::Pin, mem, task::Context, fmt::Debug, ops::Deref, any::{Any, TypeId}};
-use bevy::{log::trace, ecs::component::Component, ecs::{entity::Entity, system::{Query, IntoSystem, Res}, schedule::IntoSystemConfigs}, app::{Plugin, PreUpdate, Update, PostUpdate, First}, utils::HashMap};
+//! Async systems and signals for `bevy_aoui`.
+//! 
+//! # What do you mean? I hate async!
+//! 
+//! Async system is entirely optional, everything used in async systems
+//! also has sync versions. See implementations in `bevy_matui` as that
+//! crate does not use async systems in any way.
+//! 
+//! # Then why does async systems exist?
+//! 
+//! Async systems provide a way to define logic inside UI code, without
+//! explicitly adding systems and using marker components. When you call
+//! an async function on an [`AsyncSystemParam`], the query gets sent to
+//! the executor to be executed, while the async system waits for it to
+//! complete, usually within the same frame. This also works nicely with
+//! signals as a way to wait for other widgets to send information.
+//! 
+//! # Example
+//! 
+//! This example shows a button changing a text widget.
+//! 
+//! ```
+//! text! (commands {
+//!     offset: [300, -100],
+//!     color: color!(gold),
+//!     text: "Click a button!",
+//!     signal: receiver::<FormatText>(sig),
+//!     system: |x: SigRecv<FormatText>, text: Ac<Text>| {
+//!         let msg = x.recv().await;
+//!         text.write(move |text| format_widget!(text, "You clicked button {}!", msg)).await?;
+//!     }
+//! });
+//! ```
+//! 
+//! Let's break it down:
+//! 
+//! ```
+//! signal: receiver::<FormatText>(sig),
+//! ```
+//! 
+//! This receives a signal `sig` of id `FormatText`.
+//! id is unique per entity and `id::Data` informs the type of the signal,
+//! in this case `FormatText::Data` is `String`.
+//! 
+//! ```
+//! system: |x: SigRecv<FormatText>, text: Ac<Text>| {
+//! ```
+//! 
+//! We define an [`AsyncSystem`] like a regular system, note this function is async
+//! and should be `|..| async move {}`, but the macro saves us from writing that.
+//! 
+//! [`SigRecv`] receives the signal, `Ac` is an alias for [`AsyncComponent`], which
+//! allows us to get or set data on a component within the same entity. You can use
+//! `WorldQuery` as well with [`AsyncEntityQuery`]
+//! and `SystemParam` with [`AsyncWorldQuery`],
+//! but those are unfortunately slower
+//! due to bevy current not being optimized for this type of usage.
+//! 
+//! ```
+//! let msg = x.recv().await;
+//! text.write(move |text| format_widget!(text, "You clicked button {}!", msg)).await?;
+//! ```
+//! 
+//! You can treat this like a loop:
+//! 
+//! 1. At the start of the frame, run this if not already running.
+//! 2. Wait for receiving signal.
+//! 3. Write received message to the text.
+//! 4. Wait for the write query to complete.
+//! 5. End and repeat step 1 on the next frame.
+//! 
+//! # FAQ
+//! 
+//! ## Is there a spawn function? Can I use runtime dependent async crates?
+//! 
+//! No, we only use have a bare bones async runtime with no waking support.
+//! 
+//! ## Can I use a third party async crate?
+//! 
+//! Depends, a future is polled fixed a number of times per frame, which may
+//! or may not be ideal.
+//! 
+//! ## Any tips regarding async usage?
+//! 
+//! You should use [`futures::join`] whenever you want to wait for multiple
+//! independent queries, otherwise your systems might take longer to complete.
+//! 
+//! 
+
+use std::{sync::Arc, future::Future, pin::Pin, mem, task::Context, fmt::Debug, ops::Deref};
+use bevy::tasks::{ComputeTaskPool, ParallelSliceMut};
+use bevy::{ecs::component::Component, log::trace, reflect::Reflect, utils::HashMap};
+use bevy::ecs::{entity::Entity, system::{Query, Res}, schedule::IntoSystemConfigs};
+use bevy::app::{Plugin, PreUpdate, Update, PostUpdate, First};
 use bevy::ecs::world::World;
-use bevy::ecs::system::{Resource, In};
+use bevy::ecs::system::Resource;
 mod signals;
 mod async_param;
 mod async_system;
-mod state;
 mod signal_inner;
+mod special_query;
 use parking_lot::RwLock;
 pub use signals::*;
 pub use async_system::*;
 pub use async_param::*;
-pub use state::*;
 pub use parking_lot::Mutex;
 pub use signal_inner::*;
+pub use special_query::*;
 
 use crate::util::{ComponentCompose, Object};
 
@@ -23,7 +115,7 @@ pub struct SignalPool(pub(crate) RwLock<HashMap<String, Arc<SignalData<Object>>>
 #[derive(Debug, thiserror::Error)]
 pub enum AsyncFailure {
     #[error("async channel destroyed")]
-    ChannelDestroyed,
+    ChannelClosed,
     #[error("entity not found")]
     EntityQueryNotFound,
     #[error("component not found")]
@@ -50,6 +142,27 @@ impl KeepAlive {
 pub struct SystemFuture{
     future: Pin<Box<dyn Future<Output = Result<(), AsyncFailure>> + Send + Sync + 'static>>,
     alive: KeepAlive,
+}
+
+
+pub struct AsyncReadonlyQuery {
+    command: Option<Box<dyn FnOnce(&World) + Send + Sync + 'static>>
+}
+
+impl AsyncReadonlyQuery {
+    pub fn new<Out: Send + Sync + 'static>(
+        query: impl (FnOnce(&World) -> Out) + Send + Sync + 'static,
+        channel: futures::channel::oneshot::Sender<Out>
+    ) -> Self {
+        Self {
+            command: Some(Box::new(move |w| {
+                let result = query(w);
+                if channel.send(result).is_err() {
+                    trace!("Error: one-shot channel closed.")
+                }
+            }))
+        }
+    }
 }
 
 pub struct AsyncQuery {
@@ -98,8 +211,8 @@ impl AsyncQuery {
 #[derive(Default)]
 pub struct AsyncExecutor {
     stream: Mutex<Vec<SystemFuture>>,
+    readonly: Mutex<Vec<AsyncReadonlyQuery>>,
     queries: Mutex<Vec<AsyncQuery>>,
-    states: Mutex<HashMap<TypeId, Box<dyn Any + Send + Sync>>>
 }
 
 #[derive(Default, Resource)]
@@ -114,24 +227,25 @@ impl Deref for ResAsyncExecutor {
 }
 
 pub fn run_async_query(
-    executor: Res<ResAsyncExecutor>,
-) -> Vec<AsyncQuery> {
+    w: &mut World,
+) {
+    let executor = w.resource::<ResAsyncExecutor>().0.clone();
+    let mut lock = executor.readonly.lock();
+    let mut inner: Vec<_> = mem::take(lock.as_mut());
+    drop(lock);
+
+    if !inner.is_empty() {
+        let pool = ComputeTaskPool::get();
+        inner.par_splat_map_mut(pool, None, |chunks| for item in chunks {
+            if let Some(f) = item.command.take() { f(w) }
+        });
+    }
+    
+    
     let mut lock = executor.queries.lock();
-    mem::take(&mut lock)
+    let inner: Vec<_> = mem::take(lock.as_mut());
+    *lock = inner.into_iter().filter_map(|query| (query.command)(w)).collect();
 }
-
-pub fn apply_commands(input: In<Vec<AsyncQuery>>, w: &mut World) -> Vec<AsyncQuery> {
-    input.0.into_iter().filter_map(|query| (query.command)(w)).collect()
-}
-
-pub fn collect_async_query(
-    input: In<Vec<AsyncQuery>>,
-    executor: Res<ResAsyncExecutor>,
-)  {
-    let mut lock = executor.queries.lock();
-    *lock = input.0;
-}
-
 
 
 
@@ -158,7 +272,6 @@ pub struct AsyncSystem {
         Entity,
         &Arc<AsyncExecutor>,
         &Signals,
-        &States,
     ) -> Pin<Box<dyn Future<Output = Result<(), AsyncFailure>> + Send + Sync + 'static>> + Send + Sync> ,
     marker: KeepAlive,
 }
@@ -166,8 +279,8 @@ pub struct AsyncSystem {
 impl AsyncSystem {
     pub fn new<F, M>(f: F) -> Self where F: AsyncSystemFunction<M>  {
         AsyncSystem {
-            function: Box::new(move |entity, executor, signals, states| {
-                Box::pin(f.into_future(entity, executor, signals, states))
+            function: Box::new(move |entity, executor, signals| {
+                Box::pin(f.into_future(entity, executor, signals))
             }),
             marker: KeepAlive::new()
         }
@@ -180,8 +293,9 @@ impl Debug for AsyncSystem {
     }
 }
 
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Reflect)]
 pub struct AsyncSystems {
+    #[reflect(ignore)]
     systems: Vec<AsyncSystem>,
 }
 
@@ -195,8 +309,8 @@ impl AsyncSystems {
     pub fn new<F, M>(f: F) -> Self where F: AsyncSystemFunction<M>  {
         AsyncSystems {
             systems: vec![AsyncSystem {
-                function: Box::new(move |entity, executor, signals, states| {
-                    Box::pin(f.into_future(entity, executor, signals, states))
+                function: Box::new(move |entity, executor, signals| {
+                    Box::pin(f.into_future(entity, executor, signals))
                 }),
                 marker: KeepAlive::new()
             }]
@@ -212,8 +326,8 @@ impl AsyncSystems {
     pub fn and<F, M>(mut self, f: F) -> Self where F: AsyncSystemFunction<M>  {
         self.systems.push(
             AsyncSystem {
-                function: Box::new(move |entity, executor, signals, states| {
-                    Box::pin(f.into_future(entity, executor, signals, states))
+                function: Box::new(move |entity, executor, signals| {
+                    Box::pin(f.into_future(entity, executor, signals))
                 }),
                 marker: KeepAlive::new()
             }
@@ -224,16 +338,16 @@ impl AsyncSystems {
 
 pub fn run_async_systems(
     executor: Res<ResAsyncExecutor>,
-    query: Query<(Entity, Option<&Signals>, Option<&States>, &AsyncSystems)>
+    query: Query<(Entity, Option<&Signals>, &AsyncSystems)>
 ) {
     let mut stream = executor.stream.lock();
-    for (entity, signals, states, systems) in query.iter() {
-        let signals = signals.unwrap_or(&DUMMY_SIGNALS);
-        let states = states.unwrap_or(&DUMMY_STATE);
+    let dummy = DUMMY_SIGNALS.deref();
+    for (entity, signals, systems) in query.iter() {
+        let signals = signals.unwrap_or(dummy);
         for system in systems.systems.iter(){
             if !system.marker.other_alive() {
                 let fut = SystemFuture{
-                    future: (system.function)(entity, &executor.0, &signals, &states),
+                    future: (system.function)(entity, &executor.0, &signals),
                     alive: system.marker.clone()
                 };
                 stream.push(fut)
@@ -251,28 +365,16 @@ impl Plugin for AsyncExecutorPlugin {
             .init_resource::<SignalPool>();
         app.add_systems(First, run_async_systems);
         app.add_systems(PreUpdate, (
-            run_async_query.pipe(
-                apply_commands
-            ).pipe(
-                collect_async_query
-            ),
-            run_async_executor.after(apply_commands)
+            run_async_query,
+            run_async_executor.after(run_async_query)
         ));
         app.add_systems(Update, (
-            run_async_query.pipe(
-                apply_commands
-            ).pipe(
-                collect_async_query
-            ),
-            run_async_executor.after(apply_commands)
+            run_async_query,
+            run_async_executor.after(run_async_query)
         ));
         app.add_systems(PostUpdate, (
-            run_async_query.pipe(
-                apply_commands
-            ).pipe(
-                collect_async_query
-            ),
-            run_async_executor.after(apply_commands)
+            run_async_query,
+            run_async_executor.after(run_async_query)
         ));
     }
 }

@@ -1,13 +1,13 @@
+use bevy::ecs::bundle::Bundle;
 use bevy::math::Vec2;
 use bevy::ecs::{component::Component, query::Without, entity::Entity};
-use bevy::ecs::system::{Query, Res, Commands};
-use crate::sync::{SignalState, SignalId, StateId, SignalReceiver};
+use bevy::ecs::system::{Query, Res};
+use crate::sync::{SignalId, SignalReceiver, SignalSender};
 use crate::{Transform2D, anim::Attr};
 use serde::{Serialize, Deserialize};
 
 use crate::{events::{CursorAction, CursorState, EventFlags, CursorFocus}, anim::Offset};
 
-use super::constraints::PositionChanged;
 pub use super::constraints::DragConstraint;
 
 
@@ -37,10 +37,6 @@ pub struct Dragging {
     pub drag_start: Vec2,
 }
 
-impl StateId for Dragging {
-    type Data = DragState;
-}
-
 impl SignalId for Dragging {
     type Data = DragState;
 }
@@ -67,6 +63,18 @@ impl Dragging {
     fn set(&mut self, value: Vec2) {
         self.drag_start = value
     }
+
+    pub fn with_snap_back(self) -> impl Bundle {
+        (self, DragSnapBack::DEFAULT)
+    }
+
+    pub fn with_constraints(self) -> impl Bundle {
+        (self, DragConstraint)
+    }
+
+    pub fn with_snap_constraints(self) -> impl Bundle {
+        (self, DragSnapBack::DEFAULT, DragConstraint)
+    }
 }
 
 impl Default for Dragging {
@@ -91,7 +99,7 @@ impl DragSnapBack {
 
 
 pub(crate) fn drag_start(
-    send: Query<(&CursorAction, SignalState<Dragging>), Without<Dragging>>,
+    send: Query<(&CursorAction, SignalSender<Dragging>), Without<Dragging>>,
     mut receive: Query<(SignalReceiver<Dragging>, &mut Dragging, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut Dragging, Attr<Transform2D, Offset>, Option<&mut DragSnapBack>)>,
 ) {
@@ -141,14 +149,12 @@ pub enum DragState {
 }
 
 pub(crate) fn dragging(
-    mut commands: Commands,
     state: Res<CursorState>,
-    send: Query<(&CursorFocus, SignalState<Dragging>), Without<Dragging>>,
+    send: Query<(&CursorFocus, SignalSender<Dragging>), Without<Dragging>>,
     mut query: Query<(Entity, &CursorFocus, &Dragging, Attr<Transform2D, Offset>)>,
     mut receive: Query<(Entity, &Dragging, Attr<Transform2D, Offset>, SignalReceiver<Dragging>), Without<CursorFocus>>,
-) {
+) -> Vec<Entity>{
     let delta = state.cursor_position() - state.down_position();
-
     for (focus, send) in send.iter() {
         if !focus.intersects(EventFlags::LeftDrag | EventFlags::MidDrag | EventFlags:: RightDrag)  {
             continue;
@@ -165,7 +171,10 @@ pub(crate) fn dragging(
             (recv.poll_once() == Some(DragState::Dragging)).then_some((entity, drag, transform))
         ));
 
+    let mut out = Vec::new();
+
     for (entity, drag, mut transform) in iter {
+        out.push(entity);
         if !(drag.x || drag.y) { continue; }
         let pos = drag.last_drag_start() + {
             Vec2::new(
@@ -174,14 +183,14 @@ pub(crate) fn dragging(
             )
         };
         transform.force_set(pos);
-        commands.entity(entity).insert(PositionChanged);
     }
+    out
 }
 
 
 
 pub(crate) fn drag_end(
-    send: Query<(&CursorAction, SignalState<Dragging>), Without<Dragging>>,
+    send: Query<(&CursorAction, SignalSender<Dragging>), Without<Dragging>>,
     mut receive: Query<(&mut DragSnapBack, Attr<Transform2D, Offset>, SignalReceiver<Dragging>), Without<CursorAction>>,
     mut query: Query<(&CursorAction, &mut DragSnapBack, Attr<Transform2D, Offset>)>
 ) {

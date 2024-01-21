@@ -17,6 +17,8 @@ macro_rules! frame_extension {
         $(#[$($parent_attr)*])*
         $vis0 struct $name $(<$($generics)*>)? {
             /// Anchor of the sprite.
+            pub name: String,
+            /// Anchor of the sprite.
             pub anchor: $crate::Anchor,
             /// Matched parent anchor of the sprite, default is `anchor`.
             /// Usually should not be set in idiomatic use.
@@ -45,6 +47,8 @@ macro_rules! frame_extension {
             pub aspect: $crate::dsl::Aspect,
             /// Propagated font size.
             pub font_size: $crate::FontSize,
+            /// Primary color of the associated sprite
+            pub color: Option<$crate::bevy::render::color::Color>,
             /// Sets up which event this receives.
             ///
             /// Due to this being a confusing footgun,
@@ -75,6 +79,7 @@ macro_rules! build_frame {
     ($commands: expr, $this: expr) => {
         {
             let entity = $crate::util::Widget::spawn($crate::dsl::builders::FrameBuilder {
+                name: $this.name,
                 anchor: $this.anchor,
                 parent_anchor: $this.parent_anchor,
                 center: $this.center,
@@ -85,6 +90,7 @@ macro_rules! build_frame {
                 z: $this.z,
                 dimension: $this.dimension,
                 font_size: $this.font_size,
+                color: $this.color,
                 event: $this.event,
                 hitbox: $this.hitbox,
                 layer: $this.layer,

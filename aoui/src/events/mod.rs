@@ -57,35 +57,30 @@
 use bevy::{prelude::*, ecs::query::WorldQuery};
 use crate::{Hitbox, Clipping, RotatedRect, Opacity};
 use crate::widgets::util::{CursorDefault, remove_all};
-use crate::schedule::{AouiEventSet, AouiCleanupSet};
+use crate::schedule::{AouiCleanupSet, AouiEventSet, AouiWidgetEventSet};
 
 mod systems;
 mod state;
 mod event;
-//mod handler;
 mod wheel;
 mod cursor;
-pub(crate) mod mutation;
-mod oneshot;
 mod coverage;
-//mod fetch;
+mod focus;
 
 pub use event::*;
 pub use state::*;
 use systems::*;
-// pub use handler::*;
 pub use wheel::{MovementUnits, ScrollScaling, MouseWheelAction};
 pub use cursor::{CustomCursor, TrackCursor};
-pub use mutation::Mutation;
-pub use oneshot::OneShot;
 pub use cursor::CameraQuery;
 pub use coverage::{CoveragePx, CoveragePercent};
+pub use focus::*;
 
 /// Marker component for Aoui's camera, optional.
 ///
 /// Used for cursor detection and has no effect on rendering.
 /// If not present, we will try the `.get_single()` method instead.
-#[derive(Debug, Clone, Copy, Component, Default)]
+#[derive(Debug, Clone, Copy, Component, Default, Reflect)]
 pub struct AouiCamera;
 
 
@@ -140,6 +135,7 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .add_systems(PreUpdate, mouse_button_input.in_set(AouiEventSet))
             .add_systems(PreUpdate, mouse_button_click_outside.in_set(AouiEventSet).after(mouse_button_input))
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
+            .add_systems(PreUpdate, focus::run_focus_signals.in_set(AouiWidgetEventSet))
             .add_systems(Last, (
                 remove_all::<CursorAction>,
                 remove_all::<CursorFocus>,
@@ -147,7 +143,6 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
                 remove_all::<MouseWheelAction>,
                 remove_all::<DescendantHasFocus>,
             ).in_set(AouiCleanupSet))
-
         ;
     }
 }

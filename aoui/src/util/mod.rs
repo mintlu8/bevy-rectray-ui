@@ -5,6 +5,7 @@ mod extension;
 mod mesh;
 mod object;
 mod compose;
+mod children;
 
 pub mod convert;
 
@@ -16,3 +17,4 @@ pub use extension::WorldExtension;
 pub use convert::{DslFrom, DslInto};
 pub use object::{Object, AsObject};
 pub use compose::{ComponentCompose, ComposeInsert, ComposeExtension};
+pub use children::ChildIter;

@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, util::AouiCommands};
+use bevy_aoui::{util::AouiCommands, widgets::PositionFac, AouiPlugin};
 
 pub fn main() {
     App::new()
@@ -26,18 +26,23 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
-            format_widget!(text, "FPS: {:.2}", fps);
-        })
+        system: |fps: Fps, text: Ac<Text>| {
+            let fps = fps.get().await;
+            text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
+        }
     });
 
-    let (send1, recv1) = commands.signal();
+    let (send1, recv1) = signal();
 
     text! (commands {
         offset: [-400, 200],
         color: color!(gold),
         text: "Scroll this! =>",
-        extra: recv1.recv(|x: f32, text: &mut Text| format_widget!(text, "This has value {:.2}! =>", x))
+        signal: receiver::<PositionFac>(recv1),
+        system: |x: SigRecv<PositionFac>, text: Ac<Text>| {
+            let s = x.recv().await;
+            text.write(format!("This has value {:.2}! =>", s)).await?;
+        },
     });
 
     sprite! (commands {
@@ -46,7 +51,8 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
-        extra: Scrolling::X.with_handler(send1),
+        extra: Scrolling::X.with_constraints(),
+        signal: sender::<PositionFac>(send1),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {
@@ -150,13 +156,17 @@ pub fn init(mut commands: AouiCommands) {
         }
     });
 
-    let (send2, recv2) = commands.signal();
+    let (send2, recv2) = signal();
 
     text! (commands {
         offset: [-400, -200],
         color: color!(gold),
         text: "Scroll this! =>",
-        extra: recv2.recv(|x: f32, text: &mut Text| format_widget!(text, "This has value {:.2}! =>", x))
+        signal: receiver::<PositionFac>(recv2),
+        system: |x: SigRecv<PositionFac>, text: Ac<Text>| {
+            let s = x.recv().await;
+            text.write(format!("This has value {:.2}! =>", s)).await?;
+        },
     });
 
     sprite! (commands {
@@ -165,7 +175,8 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
-        extra: Scrolling::Y.with_handler(send2),
+        extra: Scrolling::Y.with_constraints(),
+        signal: sender::<PositionFac>(send2),
         child: frame! {
             dimension: size2!(100%, 100%),
             child: sprite! {

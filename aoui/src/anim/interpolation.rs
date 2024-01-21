@@ -287,7 +287,7 @@ fn opt_eq<T: Interpolation>(left: Option<&(T::Data, f32)>, right: Option<&(T::Da
 /// Trait for a marker type representing a target of interpolation.
 pub trait Interpolation: Sized + 'static {
     /// The data written and read from interpolation.
-    type FrontEnd: PartialEq + Copy;
+    type FrontEnd: PartialEq + Copy + Send + Sync + 'static;
     /// The data used for interpolation since FrontEnd like int may not be
     /// suitable for lerping.
     type Data: Add<Self::Data, Output = Self::Data> + Mul<f32, Output = Self::Data> + Debug + Copy + Send + Sync + 'static;

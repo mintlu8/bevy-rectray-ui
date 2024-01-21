@@ -1,6 +1,6 @@
-use bevy::{ecs::system::{Query, Res}, hierarchy::Children, math::Vec2};
+use bevy::{ecs::{component::Component, query::With, system::{Query, Res}}, hierarchy::Children, math::Vec2};
 
-use crate::{DimensionData, Transform2D, Anchor, AouiREM, sync::{StateId, SignalId, SignalState}};
+use crate::{DimensionData, Transform2D, Anchor, AouiREM, sync::{SignalId, SignalSender}};
 
 /// An signal sender that calculates how many pixels of the sprite's bounding
 /// rectangle is covered by children's **offset** or **dimension**.
@@ -11,9 +11,6 @@ use crate::{DimensionData, Transform2D, Anchor, AouiREM, sync::{StateId, SignalI
 #[derive(Debug, Clone)]
 pub enum CoveragePx {}
 
-impl StateId for CoveragePx {
-    type Data = Vec2;
-}
 impl SignalId for CoveragePx {
     type Data = Vec2;
 }
@@ -28,18 +25,18 @@ impl SignalId for CoveragePx {
 #[derive(Debug, Clone)]
 pub enum CoveragePercent {}
 
-impl StateId for CoveragePercent {
-    type Data = Vec2;
-}
 impl SignalId for CoveragePercent {
     type Data = Vec2;
 }
 
+#[derive(Debug, Clone, Component)]
+pub enum CalculateDimensionCoverage {}
+
 pub fn calculate_coverage(
     rem: Res<AouiREM>,
     query: Query<(&Transform2D, &DimensionData, Option<&Children>,
-        SignalState<CoveragePx>,
-        SignalState<CoveragePercent>)>
+        SignalSender<CoveragePx>,
+        SignalSender<CoveragePercent>), With<CalculateDimensionCoverage>>
 ) {
 
     let rem = rem.get();

@@ -1,6 +1,5 @@
 #![allow(non_upper_case_globals)]
 
-use crate::signal_ids;
 use crate::sync::RoleSignal;
 use crate::sync::SignalId;
 use crate::sync::TypedSignal;
@@ -21,30 +20,13 @@ pub use crate::{Transform2D, Hitbox, Dimension, Opacity, Detach, SizeUnit, Size2
 pub use crate::layout::LayoutControl::{Linebreak, IgnoreLayout};
 pub use crate::anim::{Interpolate, Offset, Rotation, Scale, Index};
 pub use interpolation::EaseFunction;
-pub use crate::sync::{Signals, States};
-pub use crate::sync::{SigSend, SigRecv, State};
+pub use crate::sync::{SigSend, SigRecv, Signals};
 pub use crate::sync::{AsyncEntityQuery as Aeq, AsyncEntityCommands as AsyncCommands, AsyncWorldQuery as Awq};
-pub use crate::sync::{AsyncComponent as Ac, AsyncResource as Ar, FPS};
+pub use crate::sync::{AsyncComponent as Ac, AsyncResource as Ar, Fps};
 /// Return this inside `AsyncSystem` functions.
 #[allow(nonstandard_style)]
 pub const AsyncOk: Result<(), crate::sync::AsyncFailure> = Ok(());
-pub use crate::events::{
-    EventFlags,
-    CustomCursor, TrackCursor,
-    EvLeftDown, EvLeftClick,
-    EvMidDown, EvMidClick,
-    EvRightDown, EvRightClick,
-    EvDragEnd, EvDrop, EvClickOutside,
-    EvHover,
-    EvLeftPressed, EvLeftDrag,
-    EvMidPressed, EvMidDrag,
-    EvRightPressed, EvRightDrag,
-
-    EvButtonClick, EvToggleChange,
-    EvObtainFocus, EvLoseFocus,
-    EvMouseDrag, EvTextChange, EvTextSubmit,
-    EvPositionFactor,
-};
+pub use crate::events::{EventFlags, CustomCursor, TrackCursor};
 pub use bevy::window::CursorIcon;
 pub use crate::widgets::SharedPosition;
 pub use crate::widgets::button::{
@@ -86,27 +68,20 @@ pub use crate::{material_sprite, material_mesh};
 pub use crate::{padding, paragraph, hstack, vstack, hbox, vbox, linebreak};
 pub use crate::{inputbox, button, check_button, radio_button, camera_frame, scrolling};
 pub use crate::rectangle;
-pub use crate::async_systems;
+pub use crate::signal_ids;
 
 use bevy::ecs::bundle::Bundle;
 use bevy::transform::components::GlobalTransform;
-use crate::util::Object;
-
-signal_ids!(
-    /// A standard signal id with type `String`.
-    SetText: String,
-    /// A standard signal id with type `&'static str`.
-    SetTextStatic: &'static str,
-    /// A standard signal id for generic button output.
-    Invocation: Object
-);
 
 pub use crate::util::signal;
+pub use crate::widgets::signals::*;
 
+/// A signal with the sender role.
 pub fn sender<T: SignalId>(sig: TypedSignal<T::Data>) -> RoleSignal<T> {
     RoleSignal::Sender(sig)
 }
 
+/// A signal with the receiver role.
 pub fn receiver<T: SignalId>(sig: TypedSignal<T::Data>) -> RoleSignal<T> {
     RoleSignal::Receiver(sig)
 }

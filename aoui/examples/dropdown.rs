@@ -28,10 +28,10 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: async_systems!(|fps: FPS, text: Ac<Text>| {
+        system: |fps: Fps, text: Ac<Text>| {
             let fps = fps.get().await;
             text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
-        })
+        }
     });
     
     let (send, rot_recv, fold_recv) = signal();
@@ -59,8 +59,8 @@ pub fn init(mut commands: AouiCommands) {
                     anchor: Left,
                     text: "",
                     font: "ComicNeue-Bold.ttf",
-                    signal: receiver::<SetTextStatic>(text_recv),
-                    system: |x: SigRecv<SetTextStatic>, text: Ac<Text>| {
+                    signal: receiver::<FormatTextStatic>(text_recv),
+                    system: |x: SigRecv<FormatTextStatic>, text: Ac<Text>| {
                         let t = x.recv().await;
                         text.set(move |w| format_widget!(w, "{t}")).await?;
                     }

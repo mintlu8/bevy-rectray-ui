@@ -2,7 +2,7 @@ use std::{future::Future, sync::Arc};
 
 use bevy::ecs::entity::Entity;
 
-use super::{async_param::AsyncSystemParam, AsyncExecutor, AsyncFailure, Signals, States};
+use super::{async_param::AsyncSystemParam, AsyncExecutor, AsyncFailure, Signals};
 
 #[macro_export]
 macro_rules! async_system {
@@ -29,7 +29,6 @@ pub trait AsyncSystemFunction<M>: Send + Sync + 'static {
         entity: Entity,
         executor: &Arc<AsyncExecutor>,
         signals: &Signals,
-        states: &States,
     ) -> impl Future<Output = Result<(), AsyncFailure>> + Send + Sync + 'static;
 }
 
@@ -50,11 +49,10 @@ macro_rules! impl_async_system_fn {
                     entity: Entity,
                     executor: &Arc<AsyncExecutor>,
                     signals: &Signals,
-                    states: &States,
                 ) -> impl Future<Output = Result<(), AsyncFailure>> + Send + Sync + 'static {
                     self(
-                        $head::from_async_context(entity, executor, signals, states),
-                        $($tail::from_async_context(entity, executor, signals, states)),*
+                        $head::from_async_context(entity, executor, signals),
+                        $($tail::from_async_context(entity, executor, signals)),*
                     )
                 }
             }

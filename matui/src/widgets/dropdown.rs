@@ -1,29 +1,27 @@
-use bevy::asset::Handle;
 use bevy::ecs::entity::Entity;
-use bevy::ecs::system::Commands;
+use bevy::ecs::system::Query;
 use bevy::hierarchy::BuildChildren;
 use bevy::math::Vec2;
+use bevy::reflect::Reflect;
 use bevy::render::color::Color;
 use bevy::render::texture::Image;
-use bevy::sprite::Sprite;
-use bevy::text::{Font, Text};
+use bevy::text::Font;
 use bevy::window::CursorIcon;
 use bevy::ecs::component::Component;
 use bevy_aoui::dsl::OptionEx;
-use bevy_aoui::signals::SignalBuilder;
+use bevy_aoui::sync::{SignalReceiver, TypedSignal};
 use bevy_aoui::util::convert::IntoEntity;
-use bevy_aoui::util::{Object, WidgetBuilder};
-use bevy_aoui::widgets::TextFragment;
-use bevy_aoui::widgets::button::radio_button_group;
-use bevy_aoui::{Opacity, material_sprite, size2, color, inputbox, Anchor, text, Size2, rectangle, transition, frame, format_widget, check_button};
-use bevy_aoui::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxCursorArea, InputBoxCursorBar, InputBoxText};
-use bevy_aoui::{size, frame_extension, build_frame};
-use bevy_aoui::anim::{Interpolate, Easing, Offset, Scale, Rotation};
-use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvTextChange, EvTextSubmit};
+use bevy_aoui::util::{signal, DslFrom, Object};
+use bevy_aoui::widgets::signals::TextFromSignal;
+use bevy_aoui::{check_button, signal_ids, size2, text, transition, Anchor, Transform2D};
+use bevy_aoui::widgets::inputbox::InputOverflow;
+use bevy_aoui::{frame_extension, build_frame};
+use bevy_aoui::anim::{Attr, Easing, Interpolate, Offset, Rotation, Scale};
+use bevy_aoui::events::EventFlags;
 use bevy_aoui::util::{Widget, AouiCommands, DslInto, convert::IntoAsset};
 use crate::widgets::input::PlaceHolderText;
 use crate::widgets::spinner::FocusColors;
-use crate::{StrokeColoring, build_shape, mmenu};
+use crate::build_shape;
 use crate::shaders::RoundedRectangleMaterial;
 use crate::style::Palette;
 
@@ -56,8 +54,6 @@ frame_extension!(
         pub capsule: bool,
         pub radius: f32,
         pub shadow: OptionEx<ShadowInfo>,
-        pub on_change: Handlers<EvTextChange>,
-        pub on_submit: Handlers<EvTextSubmit>,
         pub overflow: InputOverflow,
 
         pub open_icon: IntoAsset<Image>,
@@ -67,11 +63,10 @@ frame_extension!(
         pub focus_palette: Option<Palette>,
         pub disabled_palette: Option<Palette>,
 
-        pub callback_signal: Option<SignalBuilder<bool>>,
+        pub callback_signal: TypedSignal<bool>,
 
         pub menu: IntoEntity,
         pub dial: IntoEntity,
-
     }
 );
 
@@ -110,9 +105,7 @@ impl Widget for MDropdownBuilder {
             text: default,
             font: self.font.clone(),
             z: 0.01,
-            extra: radio.recv().recv(|input: String, text: &mut Text| {
-                format_widget!(text, "{}", input)
-            }),
+            extra: TextFromSignal,
             extra: FocusColors {
                 idle: palette.background(),
                 focus: focus_palette.background(),
@@ -165,17 +158,59 @@ impl Widget for MDropdownBuilder {
     }
 }
 
-pub fn spin_dial(commands: &mut AouiCommands, sprite: impl DslInto<IntoAsset<Image>>, unchecked: f32, checked: f32) -> Entity {
-    let (send, recv) = commands.signal();
+signal_ids!(SpinSignal: bool);
+
+#[derive(Debug, Clone, Copy, PartialEq, Component, Reflect)]
+pub struct SpinDial{
+    pub from: f32,
+    pub to: f32,
+}
+
+pub fn spin_dial_system(mut q: Query<(SignalReceiver<SpinSignal>, &SpinDial, Attr<Transform2D, Rotation>)>){
+    for (mut sig, dial, mut rot) in q.iter_mut(){
+        if let Some(val) = sig.poll_once() {
+            if val {
+                rot.set(dial.to);
+            } else {
+                rot.set(dial.from);
+            }
+        }
+    }
+}
+
+pub fn spin_dial(commands: &mut AouiCommands, sprite: impl DslInto<IntoAsset<Image>>, spin: impl DslInto<SpinDial>) -> Entity {
+    let (send, recv) = signal();
     check_button!(commands {
         dimension: size2!(1.2 em, 1.2 em),
         on_change: send,
         extra: sprite.dinto().into_bundle(commands, Color::WHITE),
-        extra: recv.recv_select(true, 
-            Interpolate::<Rotation>::signal_to(checked), 
-            Interpolate::<Rotation>::signal_to(unchecked)
-        )
+        extra: spin.dinto(),
     })
+}
+
+impl DslFrom<(i32, i32)> for SpinDial {
+    fn dfrom((from, to): (i32, i32)) -> Self {
+        SpinDial { from: from as f32, to: to as f32}
+    }
+}
+
+impl DslFrom<(i32, f32)> for SpinDial {
+    fn dfrom((from, to): (i32, f32)) -> Self {
+        SpinDial { from: from as f32, to}
+    }
+}
+
+impl DslFrom<(f32, i32)> for SpinDial {
+    fn dfrom((from, to): (f32, i32)) -> Self {
+        SpinDial { from, to: to as f32}
+    }
+}
+
+
+impl DslFrom<(f32, f32)> for SpinDial {
+    fn dfrom((from, to): (f32, f32)) -> Self {
+        SpinDial { from, to }
+    }
 }
 
 #[macro_export]

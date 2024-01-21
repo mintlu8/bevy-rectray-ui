@@ -6,15 +6,16 @@ use bevy::render::color::Color;
 use bevy::render::texture::Image;
 use bevy::hierarchy::BuildChildren;
 use bevy::window::CursorIcon;
-use bevy_aoui::anim::{Interpolate, Padding};
 use bevy_aoui::layout::{Axis, BoundsLayout};
 use bevy_aoui::layout::LayoutControl::IgnoreLayout;
-use bevy_aoui::signals::{SignalBuilder, RawReceiver};
+use bevy_aoui::sync::TypedSignal;
+use bevy_aoui::util::{signal, ComposeExtension};
+use bevy_aoui::widgets::button::ToggleChange;
 use bevy_aoui::widgets::misc::LayoutOpacityLimiter;
-use bevy_aoui::{Hitbox, Size2, Opacity, transition, Dimension, Anchor};
+use bevy_aoui::{transition, Anchor, Dimension, Hitbox, Opacity, Size2};
 use bevy_aoui::widgets::drag::{Dragging, DragConstraint};
 use bevy_aoui::{frame, frame_extension, build_frame, size2, layout::StackLayout};
-use bevy_aoui::events::{EventFlags, Handlers, EvMouseDrag, Fetch, Evaluated};
+use bevy_aoui::events::EventFlags;
 use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
 use crate::mframe_extension;
 use crate::shaders::RoundedRectangleMaterial;
@@ -67,13 +68,7 @@ macro_rules! mdivider {
     };
 }
 
-#[derive(Debug, Component)]
-pub struct WindowDimensionQuery {
-    pub banner: RawReceiver<Vec2>,
-    pub padding: RawReceiver<Vec2>,
-    pub total: RawReceiver<Vec2>,
-}
-
+use super::states::ToggleOpacity;
 use super::util::ShadowInfo;
 
 frame_extension!(pub struct MRectangle {
@@ -140,6 +135,26 @@ impl Widget for MFrameBuilder {
     }
 }
 
+#[derive(Debug, Component)]
+pub struct DimensionPaddingWatcher{
+    dimension: TypedSignal<Size2>,
+    padding: TypedSignal<Size2>,
+}
+
+#[derive(Debug, Component)]
+pub struct DimensionWatcher{
+    dimension: TypedSignal<Size2>,
+}
+
+#[derive(Debug, Component)]
+pub struct WindowDimensionQuery{
+    dimension: TypedSignal<Size2>,
+    banner: TypedSignal<Size2>,
+    padding: TypedSignal<Size2>,
+}
+
+#[derive(Debug, Component)]
+pub struct OpacityToggle(pub f32, pub f32);
 
 mframe_extension!(
     pub struct MWindowBuilder {
@@ -148,7 +163,7 @@ mframe_extension!(
         /// This will set `color_pressed` if its not set
         pub texture: IntoAsset<Image>,
         pub banner_texture: IntoAsset<Image>,
-        pub collapse: Option<SignalBuilder<bool>>,
+        pub collapse: Option<TypedSignal<bool>>,
         pub banner: Option<Entity>,
         pub window_margin: Option<Vec2>,
     }
@@ -183,45 +198,51 @@ impl Widget for MWindowBuilder {
             extra: IgnoreLayout,
         });
         commands.entity(frame).add_child(background);
-        let (dim_max_send, dim_max_recv) = commands.signal();
-        let (dim_banner_send, dim_banner_recv) = commands.signal();
-        let (padding_send, padding_recv) = commands.signal();
+        let (dim_max_send, dim_max_recv) = signal();
+        let (dim_banner_send, dim_banner_recv) = signal();
+        let (padding_send, padding_recv) = signal();
         if let Some(collapse) = &self.collapse {
-            commands.entity(background).insert((
+            commands.entity(background)
+                .add_receiver::<ToggleChange>(collapse.clone())
+                .insert((
                 transition!(Dimension 0.2 Linear default Vec2::ONE),
                 WindowDimensionQuery {
-                    banner: dim_banner_recv.recv_raw(),
-                    padding: padding_recv.recv_raw(),
-                    total: dim_max_recv.recv_raw(),
+                    banner: dim_banner_recv,
+                    padding: padding_recv,
+                    dimension: dim_max_recv,
                 },
-                collapse.clone().recv(|open: bool, dim: &WindowDimensionQuery, inter: &mut Interpolate<Dimension>| {
-                    if open {
-                        inter.interpolate_to(Vec2::ONE);
-                    } else if let Some(frac) = (||Some((dim.banner.poll()?.y + dim.padding.poll()?.y * 2.0) / dim.total.poll()?.y))() {
-                            inter.interpolate_to(Vec2::new(1.0, frac))
-                    }
-                })
+
+                // collapse.clone().recv(|open: bool, dim: &WindowDimensionQuery, inter: &mut Interpolate<Dimension>| {
+                //     if open {
+                //         inter.interpolate_to(Vec2::ONE);
+                //     } else if let Some(frac) = (||Some((dim.banner.poll()?.y + dim.padding.poll()?.y * 2.0) / dim.total.poll()?.y))() {
+                //         inter.interpolate_to(Vec2::new(1.0, frac))
+                //     }
+                // })
             ));
-            commands.entity(frame).insert((
-                Handlers::<Fetch<Evaluated<Dimension>>>::new(dim_max_send),
-                Handlers::<Fetch<Evaluated<Padding>>>::new(padding_send)
-            ));
+            commands.entity(frame).insert(DimensionPaddingWatcher{
+                dimension: dim_max_send,
+                padding: padding_send,
+            });
         }
         if let OptionEx::Some(shadow) = self.shadow {
             let shadow = shadow.build_rect(commands, self.radius);
             commands.entity(background).add_child(shadow);
         }
         if let Some(banner) = self.banner {
-            let (drag_send, drag_recv) = commands.signal();
-            commands.entity(frame).insert(
-                drag_recv.invoke::<Dragging>()
+            let (drag_send, drag_recv) = signal();
+            commands.entity(frame).add_receiver::<Dragging>(drag_recv);
+            commands.entity(banner)
+                .add_sender::<Dragging>(drag_send)
+                .insert(
+                    (
+                        Hitbox::FULL,
+                        EventFlags::LeftDrag,
+                        DimensionWatcher{
+                            dimension: dim_banner_send
+                        },
+                    )
             );
-            commands.entity(banner).insert((
-                Hitbox::FULL,
-                EventFlags::LeftDrag,
-                Handlers::<EvMouseDrag>::new(drag_send),
-                Handlers::<Fetch<Evaluated<Dimension>>>::new(dim_banner_send),
-            ));
             commands.entity(frame).add_child(banner);
 
             let divider = mdivider!(commands{
@@ -232,12 +253,11 @@ impl Widget for MWindowBuilder {
             commands.entity(frame).add_child(divider);
 
             if let Some(collapse) = &self.collapse {
-                commands.entity(divider).insert((
+                commands.entity(divider)
+                    .add_receiver::<ToggleChange>(collapse.clone())
+                    .insert((
                     transition!(Opacity 0.2 CubicOut default 1.0),
-                    collapse.clone().recv_select(true,
-                        Interpolate::<Opacity>::signal_to(1.0),
-                        Interpolate::<Opacity>::signal_to(0.0)
-                    ),
+                    ToggleOpacity::new(0.0, 1.0)
                 ));
             }
         }
@@ -253,12 +273,11 @@ impl Widget for MWindowBuilder {
         });
 
         if let Some(collapse) = self.collapse {
-            commands.entity(rest).insert((
+            commands.entity(rest)
+                .add_receiver::<ToggleChange>(collapse.clone())
+                .insert((
                 transition!(Opacity 0.2 CubicInOut default 1.0),
-                collapse.recv_select(true,
-                    Interpolate::<Opacity>::signal_to(1.0),
-                    Interpolate::<Opacity>::signal_to(0.0)
-                )
+                ToggleOpacity::new(0.0, 1.0)
             ));
         }
         commands.entity(frame).add_child(rest);

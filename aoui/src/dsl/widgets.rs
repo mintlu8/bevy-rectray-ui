@@ -1,6 +1,5 @@
 use bevy::ecs::entity::Entity;
 use bevy::hierarchy::BuildChildren;
-use bevy::render::color::Color;
 
 use bevy::text::Font;
 use bevy::window::CursorIcon;
@@ -21,7 +20,6 @@ frame_extension!(
     pub struct InputBoxBuilder {
         pub text: String,
         pub font: IntoAsset<Font>,
-        pub color: Option<Color>,
         pub width: Option<Size>,
         pub text_area: Option<Entity>,
         pub cursor_bar: Option<Entity>,

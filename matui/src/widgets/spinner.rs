@@ -5,13 +5,15 @@ use bevy::render::texture::Image;
 use bevy::{hierarchy::BuildChildren, text::Font};
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
-use bevy_aoui::util::Object;
-use bevy_aoui::widgets::spinbox::{SpinnerText, Decrement, Increment};
+use bevy_aoui::dsl::prelude::receiver;
+use bevy_aoui::sync::TypedSignal;
+use bevy_aoui::util::{signal, Object};
+use bevy_aoui::widgets::spinner::{SpinnerText, Decrement, Increment};
 use bevy_aoui::{Opacity, button, Size2};
 use bevy_aoui::layout::{LayoutRange, Axis};
 use bevy_aoui::{frame_extension, build_frame, Hitbox, size2, frame, text, layout::{Container, StackLayout}, sprite};
 use bevy_aoui::anim::{Interpolate, Easing};
-use bevy_aoui::events::{EventFlags, Handlers, DescendantHasFocus, EvSpinChange, EvTextChange};
+use bevy_aoui::events::{EventFlags, DescendantHasFocus};
 use bevy_aoui::widgets::util::PropagateFocus;
 use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
 use crate::shaders::{RoundedRectangleMaterial, StrokeColoring};
@@ -85,8 +87,8 @@ frame_extension!(
         pub selected: Object,
         
         pub font: IntoAsset<Font>,
-        pub signal: Handlers<EvSpinChange>,
-        pub text_signal: Handlers<EvTextChange>,
+        pub signal: TypedSignal<Object>,
+        pub text_signal: TypedSignal<String>,
     }
 );
 
@@ -140,8 +142,8 @@ impl Widget for MSpinnerBuilder {
         }
         let frame = frame.id();
 
-        let (decr_send, decr_recv) = commands.signal();
-        let (incr_send, incr_recv) = commands.signal();
+        let (decr_send, decr_recv) = signal();
+        let (incr_send, incr_recv) = signal();
 
         let left = button!(commands{
             dimension: size2!(1.2 em, 1.2 em),
@@ -202,10 +204,10 @@ impl Widget for MSpinnerBuilder {
                     palette.foreground(),
                     0.15
                 ),
-                extra: decr_recv.invoke::<Decrement>(),
-                extra: incr_recv.invoke::<Increment>(),
-                extra: self.signal,
-                extra: self.text_signal,
+                signal: receiver::<Decrement>(decr_recv),
+                signal: receiver::<Increment>(incr_recv),
+                // extra: self.signal,
+                // extra: self.text_signal,
             }
         });
         commands.entity(frame).add_child(left);

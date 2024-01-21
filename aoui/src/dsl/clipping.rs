@@ -2,8 +2,9 @@ use bevy::math::Vec2;
 use bevy::{render::texture::Image, hierarchy::BuildChildren, ecs::entity::Entity, asset::Handle};
 use crate::events::{CoveragePx, CoveragePercent};
 use crate::sync::{Signals, TypedSignal};
+use crate::widgets::scroll::Scrolling;
 use crate::{frame_extension, build_frame, Clipping, frame, Size2, events::EventFlags};
-use crate::widgets::{scroll::IntoScrollingBuilder, clipping::ScopedCameraBundle};
+use crate::widgets::clipping::ScopedCameraBundle;
 use crate::util::{Widget, AouiCommands, ComposeExtension};
 
 frame_extension!(
@@ -30,9 +31,9 @@ impl Widget for CameraFrameBuilder {
 }
 
 frame_extension!(
-    pub struct ScrollingFrameBuilder[B: IntoScrollingBuilder] {
+    pub struct ScrollingFrameBuilder {
         /// If set, configure scrolling for this widget.
-        pub scroll: Option<B>,
+        pub scroll: Scrolling,
         /// Send a signal regarding how much of the sprite is covered by child sprites's
         /// anchor, min bound and max bound.
         pub coverage_px: Option<TypedSignal<Vec2>>,
@@ -42,11 +43,11 @@ frame_extension!(
     }
 );
 
-impl<B: IntoScrollingBuilder> Widget for ScrollingFrameBuilder<B> {
+impl Widget for ScrollingFrameBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         self.event |= EventFlags::MouseWheel;
         let entity = build_frame!(commands, self).id();
-        commands.entity(entity).insert(self.scroll.expect("Expect `scroll`").with_constraints());
+        commands.entity(entity).insert(self.scroll.with_constraints());
         if self.clipping.is_none(){
             commands.entity(entity).insert(Clipping::new(true));
         }

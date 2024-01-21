@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::{AouiPlugin, util::WorldExtension, util::AouiCommands};
 use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, palette, mwindow, mslider, minput, mmenu, menu_items, mspinner, mdropdown};
@@ -29,10 +31,11 @@ pub fn init(mut commands: AouiCommands) {
     text!(commands {
         anchor: TopRight,
         text: "FPS: 0.00",
-        color: color!(black),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
-            format_widget!(text, "FPS: {:.2}", fps);
-        })
+        color: color!(gold),
+        system: |fps: Fps, text: Ac<Text>| {
+            let fps = fps.get().await;
+            text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
+        }
     });
 
     let palette_idle = palette! {
@@ -53,7 +56,7 @@ pub fn init(mut commands: AouiCommands) {
         stroke: none,
     };
 
-    let (collapse_send, collapse_recv, collapse_spin) = commands.signal();
+    let (collapse_send, collapse_recv, collapse_spin) = signal();
 
     mwindow!(commands {
         radius: 5,
@@ -84,10 +87,10 @@ pub fn init(mut commands: AouiCommands) {
                     sprite: "tri.png",
                     color: color!(black),
                     extra: transition!(Rotation 0.2 Linear default 0.0),
-                    extra: collapse_spin.recv_select(true,
-                        Interpolate::<Rotation>::signal_to(0.0),
-                        Interpolate::<Rotation>::signal_to(PI),
-                    )
+                    // extra: collapse_spin.recv_select(true,
+                    //     Interpolate::<Rotation>::signal_to(0.0),
+                    //     Interpolate::<Rotation>::signal_to(PI),
+                    // )
                 }
             }
         },
@@ -169,13 +172,13 @@ pub fn init(mut commands: AouiCommands) {
             radius: 5,
             palette: palette_idle,
         },
-        child: mdropdown! {
+        // child: mdropdown! {
 
-            placeholder: "Say Hello:",
-            width: 20,
-            radius: 5,
-            palette: palette_idle,
-        },
+        //     placeholder: "Say Hello:",
+        //     width: 20,
+        //     radius: 5,
+        //     palette: palette_idle,
+        // },
         child: mmenu! {
             shadow: 5,
             radius: 5,

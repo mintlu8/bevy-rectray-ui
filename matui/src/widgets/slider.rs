@@ -1,24 +1,21 @@
 use std::ops::Range;
 
 use bevy::ecs::component::Component;
-use bevy::ecs::system::Res;
 use bevy::math::Vec2;
 use bevy::{render::texture::Image, window::CursorIcon, ecs::entity::Entity};
-use bevy_aoui::signals::SignalSender;
-use bevy_aoui::widgets::drag::Dragging;
-use bevy_aoui::RotatedRect;
+use bevy_aoui::sync::TypedSignal;
+use bevy_aoui::util::ComposeExtension;
 use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
-use bevy_aoui::{frame_extension, build_frame, layout::Axis, events::EvPositionFactor, Anchor};
-use bevy_aoui::events::{Handlers, CursorState};
+use bevy_aoui::{frame_extension, build_frame, layout::Axis, Anchor};
 
 use crate::shaders::RoundedRectangleMaterial;
 use crate::style::Palette;
-use crate::widgets::button::CursorStateColors;
+use crate::widgets::states::ButtonColors;
 
 use super::util::ShadowInfo;
 
 #[derive(Debug, Clone, Component)]
-pub struct SliderRebase(SignalSender<Vec2>);
+pub struct SliderRebase(TypedSignal<Vec2>);
 
 pub trait SliderData {}
 
@@ -38,7 +35,7 @@ frame_extension!(
         pub cursor: Option<CursorIcon>,
         pub range: Range<T>,
         /// Sends a `bool` signal whenever the button is clicked.
-        pub signal: Handlers<EvPositionFactor>,
+        pub signal: TypedSignal<f32>,
         /// Sets whether the default value is checked or not.
         pub checked: bool,
 
@@ -80,24 +77,24 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
         self.dimension = Size2::em(2.0 + horiz_len, 2.0).dinto();
         self.event |= EventFlags::Hover | EventFlags::LeftDrag;
 
-        let (fac_send, fac_recv) = commands.signal();
-        let (rebase_send, rebase_recv) = commands.signal();
-        let (drag_send_root, drag_send_dial, drag_recv) = commands.signal();
+        //let (fac_send, fac_recv) = signal();
+        let rebase_send = signal();
+        let (drag_send_root, drag_send_dial) = signal();
 
 
         let mut frame = build_frame!(commands, self);
 
-        frame.insert((
-            PropagateFocus,
-            SliderRebase(rebase_send.send()),
-            Handlers::<EvMouseDrag>::new(drag_send_root),
-            Handlers::<EvLeftDown>::new(Mutation::with_context(
-                |res: Res<CursorState>| {res.down_position()},
-                |down: Vec2, rect: &RotatedRect, fac: &mut SliderRebase| {
-                    let hdim = rect.half_dim();
-                    fac.0.send(rect.local_space(down) + Vec2::new(hdim.x - hdim.y, 0.0));
-                }
-            )),
+        frame.add_sender::<Dragging>(drag_send_root)
+            .insert((
+                PropagateFocus,
+                SliderRebase(rebase_send),
+                // Handlers::<EvLeftDown>::new(Mutation::with_context(
+                //     |res: Res<CursorState>| {res.down_position()},
+                //     |down: Vec2, rect: &RotatedRect, fac: &mut SliderRebase| {
+                //         let hdim = rect.half_dim();
+                //         fac.0.send(rect.local_space(down) + Vec2::new(hdim.x - hdim.y, 0.0));
+                //     }
+                // )),
         ));
 
         let frame = frame.id();
@@ -117,9 +114,9 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
                 extra: RoundedRectangleMaterial::capsule(palette.foreground())
                     .with_stroke((palette.stroke(), self.background_stroke))
                     .into_bundle(commands),
-                extra: fac_recv.recv(|fac: f32, dim: &mut Dimension| {
-                    dim.edit_raw(|v| v.x = fac);
-                }),
+                // extra: fac_recv.recv(|fac: f32, dim: &mut Dimension| {
+                //     dim.edit_raw(|v| v.x = fac);
+                // }),
                 extra: transition!(Color 0.2 CubicInOut default {palette.foreground()}),
             }
         });
@@ -136,11 +133,12 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
             child: frame! {
                 anchor: Left,
                 dimension: [0, 0],
-                extra: DragX.with_recv(drag_recv)
-                    .with_handler(self.signal.and(fac_send)),
-                extra: rebase_recv.recv(|pos: Vec2, state: &mut Dragging|{
-                    state.drag_start.x = pos.x
-                }),
+                extra: DragX.with_constraints(),
+                    // .with_recv(drag_recv)
+                    // .with_handler(self.signal.and(fac_send)),
+                // extra: rebase_recv.recv(|pos: Vec2, state: &mut Dragging|{
+                //     state.drag_start.x = pos.x
+                // }),
                 child: frame! {
                     entity: dial,
                     dimension: Size2::em(dial_size, dial_size),
@@ -150,14 +148,14 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
                         .into_bundle(commands),
                     event: EventFlags::LeftDrag | EventFlags::Hover,
                     hitbox: Hitbox::ellipse(1),
-                    extra: CursorStateColors {
+                    extra: ButtonColors {
                         idle: palette.foreground(),
                         hover: hover_palette.foreground(),
                         pressed: drag_palette.foreground(),
                         disabled: disabled_palette.foreground(),
                     },
                     extra: transition!(Color 0.2 CubicInOut default {palette.foreground()}),
-                    extra: Handlers::<EvMouseDrag>::new(drag_send_dial),
+                    signal: sender::<Dragging>(drag_send_dial),
                     extra: SetCursor {
                         flags: EventFlags::LeftDrag | EventFlags::Hover | EventFlags::LeftDown,
                         icon: CursorIcon::Hand,

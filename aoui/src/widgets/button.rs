@@ -4,6 +4,7 @@ use crate::util::{Object, AsObject};
 use crate::util::CloneSplit;
 use bevy::ecs::system::{Commands, Query};
 use bevy::ecs::{component::Component, query::With};
+use bevy::reflect::std_traits::ReflectDefault;
 use bevy::{
     ecs::{entity::Entity, query::Has},
     reflect::Reflect,
@@ -74,9 +75,12 @@ impl From<bool> for CheckButton {
 /// Component of `radio_button` containing the shared state.
 ///
 /// Discriminant is the [`Payload`] component.
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, Reflect)]
+#[reflect(Default)]
 pub struct RadioButton{
+    #[reflect(ignore)]
     pub(crate) storage: Arc<Mutex<Object>>,
+    #[reflect(ignore)]
     pub(crate) sender: Signal<Object>,
 }
 
@@ -131,12 +135,14 @@ impl PartialEq<Payload> for RadioButton {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 pub struct ButtonClick;
 
 impl SignalId for ButtonClick {
     type Data = Object;
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 pub struct ToggleChange;
 
 impl SignalId for ToggleChange {
@@ -145,7 +151,7 @@ impl SignalId for ToggleChange {
 
 
 /// Component for making `RadioButton` behave like `CheckButton`.
-#[derive(Debug, Clone, Component, Reflect)]
+#[derive(Debug, Clone, Copy, Component, PartialEq, Eq, Default, Reflect)]
 pub struct RadioButtonCancel;
 
 pub(crate) fn button_on_click(
@@ -236,7 +242,7 @@ pub(crate) fn generate_check_button_state(
 /// * `radio_button` `EvButtonClick`: sends `Payload`, which is required.
 /// * `check_button` `EvButtonClick`: If checked, sends `Payload` or `()`.
 ///
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct Payload(Object);
 
 impl Payload {

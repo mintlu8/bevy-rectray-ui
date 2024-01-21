@@ -1,9 +1,11 @@
 
 
+use bevy::ecs::component::Component;
 use bevy::ecs::world::Mut;
 use bevy::math::Vec2;
 use bevy::text::Text;
 use crate::layout::{Layout, LayoutObject};
+use crate::sync::{AsyncComponent, AsyncResult};
 use crate::widgets::TextFragment;
 use crate::widgets::inputbox::InputBox;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit, Size};
@@ -530,6 +532,13 @@ impl WidgetWrite for Mut<'_, InputBox> {
 impl WidgetWrite for Mut<'_, TextFragment> {
     fn write(mut self, s: String) {
         self.text = s
+    }
+}
+
+impl<C: Component> AsyncComponent<C> where for<'t> &'t mut C: WidgetWrite {
+    pub async fn write(self, s: impl Into<String>) -> AsyncResult<()> {
+        let s = s.into();
+        self.set(move |x| x.write(s)).await
     }
 }
 

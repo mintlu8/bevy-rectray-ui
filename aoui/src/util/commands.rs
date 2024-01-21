@@ -7,7 +7,7 @@ use bevy::hierarchy::{Children, DespawnRecursive, BuildChildren, DespawnRecursiv
 use bevy::render::texture::{Image, BevyDefault};
 use bevy::render::render_resource::{TextureDescriptor, Extent3d, TextureDimension, TextureUsages};
 use bevy::asset::{AssetServer, Asset, Handle, AssetPath};
-use crate::sync::{TypedSignal, SignalPool};
+use crate::sync::{SignalPool, TypedSignal};
 use crate::util::{CloneSplit, Widget, AsObject};
 use crate::widgets::button::RadioButton;
 

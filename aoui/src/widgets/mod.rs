@@ -66,8 +66,9 @@ pub mod richtext;
 pub mod scroll;
 pub mod clipping;
 pub mod button;
-pub mod spinbox;
+pub mod spinner;
 pub mod util;
+pub mod signals;
 mod text;
 use bevy::ecs::system::IntoSystem;
 pub use text::TextFragment;
@@ -75,7 +76,7 @@ mod constraints;
 mod atlas;
 pub mod misc;
 pub use atlas::DeferredAtlasBuilder;
-pub use constraints::SharedPosition;
+pub use constraints::{SharedPosition, PositionFac};
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::app::{Plugin, PreUpdate, Update, PostUpdate, Last};
 
@@ -115,18 +116,19 @@ impl Plugin for WidgetsPlugin {
                 //util::propagate_focus::<InputBoxState> NOT NEEDED
                 drag::drag_start,
                 drag::drag_end,
-                drag::dragging.after(drag::drag_start),
+                drag::dragging
+                    .pipe(constraints::drag_constraint)
+                    .after(drag::drag_start),
                 scroll::scrolling_senders,
                 (
-                    scroll::scrolling_system::<Scrolling>,
-                    scroll::scrolling_system::<ScrollDiscrete>,
+                    scroll::scrolling_system::<Scrolling>
+                        .pipe(constraints::scroll_constraint),
+                    scroll::scrolling_system::<ScrollDiscrete>
+                        .pipe(constraints::discrete_scroll_sync),
                 ).after(scroll::scrolling_senders),
                 clipping::sync_camera_dimension,
             ).in_set(AouiWidgetEventSet))
             .add_systems(Update, (
-                constraints::scroll_constraint,
-                constraints::drag_constraint,
-                constraints::discrete_scroll_sync,
                 util::set_cursor,
                 util::event_conditional_visibility,
                 util::check_conditional_visibility,
@@ -137,7 +139,8 @@ impl Plugin for WidgetsPlugin {
                 atlas::build_deferred_atlas,
                 text::sync_text_text_fragment,
                 text::sync_sprite_text_fragment,
-                spinbox::sync_spin_text_with_text,
+                spinner::sync_spin_text_with_text,
+                signals::sig_set_text,
             ))
             .add_systems(Update, (
                 misc::layout_opacity_limit.pipe(misc::set_layout_opactiy_limit),
@@ -151,7 +154,6 @@ impl Plugin for WidgetsPlugin {
             ).in_set(AouiStoreOutputSet))
             .add_systems(Last, util::remove_all::<CheckButtonState>.in_set(AouiCleanupSet))
             .add_systems(Last, util::remove_all::<InputBoxState>.in_set(AouiCleanupSet))
-            .add_systems(Last, constraints::remove_position_changed.in_set(AouiCleanupSet))
         ;
     }
 }

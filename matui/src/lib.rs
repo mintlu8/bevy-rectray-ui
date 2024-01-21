@@ -25,11 +25,12 @@
 #![allow(clippy::too_many_arguments)]
 
 
-use aoui::anim::InterpolateAssociation;
-use bevy::{app::{Plugin, PostUpdate, Update}, asset::load_internal_asset, render::render_resource::Shader, ecs::schedule::IntoSystemConfigs, sprite::Material2dPlugin};
+use aoui::anim::{FgsmPairing, InterpolateAssociation};
+use bevy::{asset::load_internal_asset, render::render_resource::Shader, ecs::schedule::IntoSystemConfigs, sprite::Material2dPlugin};
+use bevy::app::{Plugin, PostUpdate, Update};
 use bevy_aoui::schedule::AouiStoreOutputSet;
 
-use crate::{shaders::*, widgets::{cursor_color_change, toggle_color_change, toggle_dial_change, button::cursor_stroke_change, menu::rebuild_dropdown_children, input::text_placeholder}};
+use crate::{shaders::*, widgets::{input::text_placeholder, menu::rebuild_dropdown_children, states::{ButtonColors, ToggleColors, ToggleOpacity}, toggle::{ToggleDialDimension, ToggleDialOffset}, StrokeColors}};
 
 /// `[u8;4]` this reduces the size of `Color` by `1/5`.
 pub type Color8 = [u8; 4];
@@ -61,11 +62,14 @@ impl Plugin for MatuiPlugin {
             interpolate_stroke_color,
             StrokeColoring::system,
         ));
+        app.add_plugins(ButtonColors::plugin());
+        app.add_plugins(StrokeColors::<ButtonColors>::plugin());
+        app.add_plugins(ToggleColors::plugin());
+        app.add_plugins(StrokeColors::<ToggleColors>::plugin());
+        app.add_plugins(ToggleOpacity::plugin());
+        app.add_plugins(ToggleDialOffset::plugin());
+        app.add_plugins(ToggleDialDimension::plugin());
         app.add_systems(Update, (
-            cursor_color_change,
-            cursor_stroke_change,
-            toggle_color_change,
-            toggle_dial_change,
             rebuild_dropdown_children,
             text_placeholder,
         ).in_set(AouiStoreOutputSet));

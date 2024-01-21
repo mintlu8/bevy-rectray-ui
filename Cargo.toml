@@ -2,7 +2,7 @@
 members = [
     "aoui",
     # "shapes",
-    # "matui"
+    "matui"
 ]
 resolver="2"
 

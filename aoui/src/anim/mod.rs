@@ -68,6 +68,8 @@ mod interpolation;
 pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Index, Padding, Margin};
 mod assoc;
 pub use assoc::{Attr, InterpolateAssociation};
+mod fgsm;
+pub use fgsm::{Fgsm, FgsmPairing, ComponentFgsm};
 
 use crate::{Opacity, Transform2D, Dimension, Coloring};
 

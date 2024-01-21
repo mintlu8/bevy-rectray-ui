@@ -2,7 +2,7 @@ use std::mem;
 
 use bevy::{ecs::{query::{With, Without}, entity::Entity, system::{Commands, Query, Res, Resource}, component::Component}, hierarchy::Children, window::{PrimaryWindow, Window, CursorIcon}, reflect::Reflect};
 
-use crate::{dsl::prelude::EventFlags, events::CursorFocus, anim::VisibilityToggle};
+use crate::{anim::VisibilityToggle, dsl::prelude::EventFlags, events::CursorFocus};
 
 use super::button::CheckButtonState;
 
@@ -126,5 +126,23 @@ pub fn remove_all<T: Component>(mut commands: Commands,
 ) {
     for entity in query.iter() {
         commands.entity(entity).remove::<T>();
+    }
+}
+
+pub(crate) trait OptionDo<T> {
+    fn exec(self, f: impl FnOnce());
+    fn exec_with(self, f: impl FnOnce(T));
+}
+
+impl<T> OptionDo<T> for Option<T> {
+    fn exec(self, f: impl FnOnce()) {
+        if self.is_some() {
+            f()
+        }
+    }
+    fn exec_with(self, f: impl FnOnce(T)) {
+        if let Some(val) = self {
+            f(val)
+        }
     }
 }

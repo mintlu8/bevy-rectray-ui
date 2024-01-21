@@ -34,12 +34,12 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: async_systems!(|fps: FPS, text: Ac<Text>| {
+        extra: async_systems!(|fps: Fps, text: Ac<Text>| {
             let fps = fps.get().await;
             text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
         })
     });
-    
+
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
     let mut last = commands.spawn_bundle((AouiSpriteBundle {

@@ -57,8 +57,6 @@ frame_extension!(pub struct AtlasBuilder {
     pub sprites: AtlasSprites,
     /// Size of the sprite
     pub size: Option<Vec2>,
-    /// Color of the sprite
-    pub color: Option<Color>,
     /// Flips the sprite.
     pub flip: [bool; 2],
     /// Index of the atlas.

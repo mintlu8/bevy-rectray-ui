@@ -145,6 +145,35 @@ pub mod intrinsics {
 
     pub struct IntrinsicSystem {
         /// An asynchronous system function [`AsyncSystem`](crate::sync::AsyncSystem).
+        /// As the name suggests the function is `async` and most arguments
+        /// supplied requires await.
+        /// 
+        /// All parameters implement [`AsyncSystemParam`](crate::sync::AsyncSystemParam).
+        /// 
+        /// The input function is transformed by the macro like so:
+        /// 
+        /// ```
+        /// |field1: Type1, field2: Type2| {
+        ///     body
+        /// }
+        /// ```
+        /// 
+        /// this becomes a function that returns a `Result<(), AsyncFailure>`.
+        /// 
+        /// ```
+        /// |field1: Type1, field2: Type2| async move{
+        ///     let _ = {body};
+        ///     Ok(())
+        /// }
+        /// ```
+        /// 
+        /// This means you can use ? to propagate [`AsyncFailure`](crate::sync::AsyncFailure)s,
+        /// and you should use 
+        /// ```
+        /// return AsyncOk;
+        /// ```
+        /// for an early return.
+        /// 
         pub system: AsyncSystem
     }
 }

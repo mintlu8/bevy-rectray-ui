@@ -10,7 +10,7 @@ use super::{LayoutOutput, LayoutObject};
 ///
 /// This means different things with different layout, could be
 /// entities, rows or pages.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Reflect)]
 pub enum LayoutRange {
     #[default]
     All,
@@ -82,7 +82,7 @@ impl DslFrom<RangeInclusive<usize>> for LayoutRange {
 }
 
 /// A configurable container that lays out a sequence of Entities.
-#[derive(Debug, Component, Clone)]
+#[derive(Debug, Component, Clone, Reflect)]
 pub struct Container {
     /// Layout of the container.
     pub layout: LayoutObject,

@@ -3,7 +3,7 @@ use bevy::{prelude::{Vec2, Resource}, reflect::Reflect};
 /// The root font size of the window.
 ///
 /// By default this is `16 px`.
-#[derive(Debug, Resource)]
+#[derive(Debug, Resource, Reflect)]
 pub struct AouiREM(f32);
 
 impl AouiREM {

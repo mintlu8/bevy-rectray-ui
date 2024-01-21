@@ -1,64 +1,36 @@
 use bevy::{window::CursorIcon, hierarchy::BuildChildren, math::Vec2};
 use bevy::render::{color::Color, texture::Image};
-use bevy::ecs::{component::Component, system::Query, entity::Entity};
-use bevy_aoui::{frame_extension, build_frame, Hitbox, Dimension, Size2, sprite, size2};
+use bevy::ecs::entity::Entity;
+use bevy_aoui::sync::TypedSignal;
+use bevy_aoui::util::{ComposeExtension, Object};
+use bevy_aoui::{build_frame, fgsm_interpolation, frame_extension, size2, sprite, Dimension, Hitbox, Size2};
 use bevy_aoui::util::{AouiCommands, Widget, convert::{OptionEx, IntoAsset}};
 use bevy_aoui::anim::{Interpolate, Easing, Offset, EaseFunction};
-use bevy_aoui::events::{EventFlags, Handlers, EvButtonClick, EvToggleChange};
-use bevy_aoui::widgets::button::{CheckButton, Payload, CheckButtonState};
+use bevy_aoui::events::EventFlags;
+use bevy_aoui::widgets::button::{ButtonClick, CheckButton, Payload, ToggleChange};
 use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
 
+use crate::widgets::states::ToggleColors;
 use crate::{shaders::{RoundedRectangleMaterial, StrokeColoring}, style::Palette};
 
+use super::states::CoreToggleState;
 use super::util::{ShadowInfo, StrokeColors};
 
-#[derive(Debug, Clone, Copy, Component)]
-pub struct ToggleColors {
-    active: Color,
-    inactive: Color,
-}
 
-pub fn toggle_color_change(mut query: Query<(&CheckButtonState, &ToggleColors, &mut Interpolate<Color>)>) {
-    query.iter_mut().for_each(|(check, colors, mut color)| {
-        match check {
-            CheckButtonState::Checked => color.interpolate_to(colors.active),
-            CheckButtonState::Unchecked => color.interpolate_to(colors.inactive),
-        }
-    })
-}
-
-pub fn toggle_stroke_change(mut query: Query<(&CheckButtonState, &StrokeColors<ToggleColors>, &mut Interpolate<StrokeColoring>)>) {
-    query.iter_mut().for_each(|(check, colors, mut color)| {
-        match check {
-            CheckButtonState::Checked => color.interpolate_to(colors.active),
-            CheckButtonState::Unchecked => color.interpolate_to(colors.inactive),
-        }
-    })
-}
+fgsm_interpolation!(
+    pub struct ToggleDialOffset: CoreToggleState as Vec2 => Offset {
+        unchecked: Unchecked,
+        checked: Checked,
+    }
+);
 
 
-#[derive(Debug, Clone, Copy, Component)]
-pub struct ToggleDial {
-    active_offset: Vec2,
-    active_dimension: Vec2,
-    inactive_offset: Vec2,
-    inactive_dimension: Vec2,
-}
-
-pub fn toggle_dial_change(mut query: Query<(&CheckButtonState, &ToggleDial, &mut Interpolate<Offset>, &mut Interpolate<Dimension>)>) {
-    query.iter_mut().for_each(|(check, dial, mut offset, mut dimension)| {
-        match check {
-            CheckButtonState::Checked => {
-                offset.interpolate_to(dial.active_offset);
-                dimension.interpolate_to(dial.active_dimension);
-            },
-            CheckButtonState::Unchecked => {
-                offset.interpolate_to(dial.inactive_offset);
-                dimension.interpolate_to(dial.inactive_dimension);
-            },
-        }
-    })
-}
+fgsm_interpolation!(
+    pub struct ToggleDialDimension: CoreToggleState as Vec2 => Dimension {
+        unchecked: Unchecked,
+        checked: Checked,
+    }
+);
 
 frame_extension!(
     pub struct MToggleBuilder {
@@ -69,9 +41,9 @@ frame_extension!(
         /// Sends a signal whenever the button is clicked and its value is `true`.
         ///
         /// Like button, this sends either `()` or `Payload`.
-        pub on_checked: Handlers<EvButtonClick>,
+        pub on_checked: Option<TypedSignal<Object>>,
         /// Sends a `bool` signal whenever the button is clicked.
-        pub on_toggle: Handlers<EvToggleChange>,
+        pub on_toggle: Option<TypedSignal<bool>>,
         /// Sets whether the default value is checked or not.
         pub checked: bool,
 
@@ -80,6 +52,7 @@ frame_extension!(
 
         pub palette: Palette,
         pub checked_palette: Option<Palette>,
+        pub disabled_palette: Option<Palette>,
 
         /// Size of the background in em, default is `Full` (evaluates to 2.0 em).
         pub background_size: Option<f32>,
@@ -112,6 +85,7 @@ impl Widget for MToggleBuilder {
 
         let unchecked_palette = self.palette;
         let checked_palette = self.checked_palette.unwrap_or(unchecked_palette);
+        let disabled_palette = self.disabled_palette.unwrap_or(unchecked_palette);
         let active_palette = if self.checked {
             checked_palette
         } else {
@@ -132,11 +106,11 @@ impl Widget for MToggleBuilder {
         if self.hitbox.is_none() {
             frame.insert(Hitbox::FULL);
         }
-        if !self.on_checked.is_empty()  {
-            frame.insert(self.on_checked);
+        if let Some(on_checked) = self.on_checked {
+            frame.add_sender::<ButtonClick>(on_checked);
         }
-        if !self.on_toggle.is_empty()  {
-            frame.insert(self.on_toggle);
+        if let Some(on_toggle) = self.on_toggle {
+            frame.add_sender::<ToggleChange>(on_toggle);
         }
         if let Some(payload) = self.payload  {
             frame.insert(payload);
@@ -152,12 +126,14 @@ impl Widget for MToggleBuilder {
                 .with_stroke((active_palette.stroke(), self.background_stroke))
                 .into_bundle(commands),
             extra: ToggleColors {
-                inactive: unchecked_palette.background(),
-                active: checked_palette.background(),
+                unchecked: unchecked_palette.background(),
+                checked: checked_palette.background(),
+                disabled: disabled_palette.background(),
             },
             extra: StrokeColors(ToggleColors {
-                inactive: unchecked_palette.stroke(),
-                active: checked_palette.stroke(),
+                unchecked: unchecked_palette.stroke(),
+                checked: checked_palette.stroke(),
+                disabled: disabled_palette.stroke(),
             }),
             extra: Interpolate::<Color>::new(
                 Easing::Linear,
@@ -185,18 +161,22 @@ impl Widget for MToggleBuilder {
                 .with_stroke((active_palette.foreground_stroke(), self.dial_stroke))
                 .into_bundle(commands),
             extra: ToggleColors {
-                inactive: unchecked_palette.foreground(),
-                active: checked_palette.foreground(),
+                unchecked: unchecked_palette.foreground(),
+                checked: checked_palette.foreground(),
+                disabled: disabled_palette.foreground(),
             },
             extra: StrokeColors(ToggleColors {
-                inactive: unchecked_palette.foreground_stroke(),
-                active: checked_palette.foreground_stroke(),
+                unchecked: unchecked_palette.foreground_stroke(),
+                checked: checked_palette.foreground_stroke(),
+                disabled: disabled_palette.foreground_stroke(),
             }),
-            extra: ToggleDial {
-                inactive_offset: Vec2::new(-horiz_len / 2.0, 0.0),
-                inactive_dimension: Vec2::new(dial_size, dial_size),
-                active_offset: Vec2::new(horiz_len / 2.0, 0.0),
-                active_dimension: Vec2::new(checked_size, checked_size),
+            extra: ToggleDialOffset { 
+                unchecked: Vec2::new(-horiz_len / 2.0, 0.0), 
+                checked: Vec2::new(horiz_len / 2.0, 0.0) 
+            },
+            extra: ToggleDialDimension { 
+                unchecked: Vec2::new(dial_size, dial_size),
+                checked: Vec2::new(checked_size, checked_size),
             },
             extra: Interpolate::<Color>::new(
                 Easing::Ease(EaseFunction::CubicInOut),
@@ -241,8 +221,9 @@ impl Widget for MToggleBuilder {
                     0.25
                 ),
                 extra: ToggleColors {
-                    inactive: unchecked_palette.on_foreground(),
-                    active: checked_palette.on_foreground(),
+                    unchecked: unchecked_palette.on_foreground(),
+                    checked: checked_palette.on_foreground(),
+                    disabled: disabled_palette.on_foreground(),
                 }
             });
             commands.entity(dial).add_child(icon);
@@ -255,9 +236,18 @@ impl Widget for MToggleBuilder {
                     if self.checked { Color::NONE } else { unchecked_palette.on_foreground() },
                     0.25
                 ),
-                extra: ToggleColors {
-                    inactive: unchecked_palette.on_foreground(),
-                    active: Color::NONE,
+                extra: if self.icon_checked.is_none() {
+                    ToggleColors {
+                        unchecked: unchecked_palette.on_foreground(),
+                        checked: checked_palette.on_foreground(),
+                        disabled: disabled_palette.on_foreground(),
+                    }
+                } else {
+                    ToggleColors {
+                        unchecked: unchecked_palette.on_foreground(),
+                        checked: Color::NONE,
+                        disabled: Color::NONE,
+                    }
                 }
             });
             commands.entity(dial).add_child(icon);
@@ -272,8 +262,9 @@ impl Widget for MToggleBuilder {
                     0.25
                 ),
                 extra: ToggleColors {
-                    inactive: Color::NONE,
-                    active: checked_palette.on_foreground(),
+                    unchecked: Color::NONE,
+                    checked: checked_palette.on_foreground(),
+                    disabled: Color::NONE,
                 }
             });
             commands.entity(dial).add_child(icon);

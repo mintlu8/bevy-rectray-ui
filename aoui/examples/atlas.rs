@@ -72,10 +72,10 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: async_systems!(|fps: FPS, text: Ac<Text>| {
+        system: |fps: Fps, text: Ac<Text>| {
             let fps = fps.get().await;
             text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
-        })
+        }
     });
     
     vstack!(commands  {

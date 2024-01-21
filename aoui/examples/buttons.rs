@@ -44,10 +44,10 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: async_systems!(|fps: FPS, text: Ac<Text>| {
+        system: |fps: Fps, text: Ac<Text>| {
             let fps = fps.get().await;
             text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
-        })
+        }
     });
 
     let (send1, recv1) = signal();
@@ -130,8 +130,8 @@ pub fn init(mut commands: AouiCommands) {
         offset: [300, -100],
         color: color!(gold),
         text: "<= Click the radio button and this will change!",
-        signal: receiver::<SetTextStatic>(sig),
-        system: |x: SigRecv<SetTextStatic>, text: Ac<Text>| {
+        signal: receiver::<FormatTextStatic>(sig),
+        system: |x: SigRecv<FormatTextStatic>, text: Ac<Text>| {
             let checked = x.recv().await;
             text.set(move |text| format_widget!(text, "<= {}!", checked)).await?;
         }

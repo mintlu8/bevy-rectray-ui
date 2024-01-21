@@ -84,7 +84,7 @@ pub enum InputOverflow {
 ///
 /// Warning: This widget does not rebuild its glyph entities every frame,
 /// might not behave properly if tempered externally.
-#[derive(Debug, Component, Default, Reflect)]
+#[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct InputBox {
     overflow: InputOverflow,
     cursor_start: usize,
@@ -97,7 +97,7 @@ pub struct InputBox {
 }
 
 /// Marker component for a sprite containing renderred glyphs.
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct InputBoxText;
 
 /// Marker component for a vertical bar of the cursor.
@@ -105,7 +105,7 @@ pub struct InputBoxText;
 /// This component can be any sprite.
 ///
 /// Requires `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct InputBoxCursorBar;
 
 /// Marker component for the area of the cursor.
@@ -114,7 +114,7 @@ pub struct InputBoxCursorBar;
 /// updates alongside dimension can be used here.
 ///
 /// Requires `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct InputBoxCursorArea;
 
 impl InputBox {

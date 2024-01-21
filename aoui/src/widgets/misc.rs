@@ -1,11 +1,12 @@
-use bevy::{ecs::{system::{Query, In}, query::With, component::Component, entity::Entity}, hierarchy::Children};
-
+use bevy::{hierarchy::Children, reflect::Reflect};
+use bevy::ecs::{query::With, component::Component, entity::Entity};
+use bevy::ecs::system::{Query, In};
 use crate::{Opacity, layout::LayoutControl};
 
 /// Limit opacity in a layout based on insertion order.
 ///
 /// Useful for a simple dropdown fade implementation.
-#[derive(Debug, Clone, Copy, Component)]
+#[derive(Debug, Clone, Copy, Component, Default, Reflect)]
 pub struct LayoutOpacityLimiter;
 
 pub fn layout_opacity_limit(

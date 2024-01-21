@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use bevy::{render::color::Color, ecs::{component::Component, entity::Entity}};
-use bevy_aoui::{util::{AouiCommands, convert::DslFromOptionEx}, material_sprite, size2, layout::LayoutControl, Coloring};
+use bevy_aoui::{layout::LayoutControl, material_sprite, size2, util::{AouiCommands, convert::DslFromOptionEx}, Coloring};
 
 use crate::shaders::RoundedShadowMaterial;
 

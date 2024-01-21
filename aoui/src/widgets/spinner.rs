@@ -11,13 +11,13 @@ use super::{TextFragment, inputbox::TextChange};
 pub enum Increment {}
 
 impl SignalId for Increment {
-    type Data = ();
+    type Data = Object;
 }
 #[derive(Debug)]
 pub enum Decrement {}
 
 impl SignalId for Decrement {
-    type Data = ();
+    type Data = Object;
 }
 
 #[derive(Debug)]

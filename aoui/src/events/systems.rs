@@ -1,24 +1,8 @@
 use bevy::{prelude::*, window::{Window, PrimaryWindow}};
 
+use crate::widgets::util::OptionDo;
+
 use super::{*, cursor::CameraQuery};
-
-trait OptionDo<T> {
-    fn exec(self, f: impl FnOnce());
-    fn exec_with(self, f: impl FnOnce(T));
-}
-
-impl<T> OptionDo<T> for Option<T> {
-    fn exec(self, f: impl FnOnce()) {
-        if self.is_some() {
-            f()
-        }
-    }
-    fn exec_with(self, f: impl FnOnce(T)) {
-        if let Some(val) = self {
-            f(val)
-        }
-    }
-}
 
 trait End: Sized {
     fn end(self) {}

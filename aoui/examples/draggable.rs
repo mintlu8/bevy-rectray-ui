@@ -1,7 +1,7 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::{AouiPlugin, util::{WorldExtension, AouiCommands}};
+use bevy_aoui::{util::{WorldExtension, AouiCommands}, widgets::PositionFac, AouiPlugin};
 
 pub fn main() {
     App::new()
@@ -42,10 +42,10 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: async_systems!(|fps: FPS, text: Ac<Text>| {
+        system: |fps: Fps, text: Ac<Text>| {
             let fps = fps.get().await;
             text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
-        })
+        }
     });
 
     material_sprite! (commands {
@@ -65,7 +65,7 @@ pub fn init(mut commands: AouiCommands) {
         extra: transition!(Offset 4.0 BounceOut default Vec2::ZERO),
     });
 
-    let (send1, recv1) = commands.signal();
+    let (send1, recv1) = signal();
 
     rectangle!(commands {
         dimension: [400, 50],
@@ -80,14 +80,15 @@ pub fn init(mut commands: AouiCommands) {
                 flags: EventFlags::Hover|EventFlags::LeftDrag,
                 icon: CursorIcon::Hand,
             },
-            extra: DragX.with_handler(
-                Handlers::new(send1).and_mutate(
-                    |fac: f32, transform: &mut Transform2D, dim: &mut Dimension| {
-                        transform.rotation = fac * 2.0 * PI;
-                        dim.edit_raw(|v| v.y = 50.0 + (1.0 - fac) * 50.0)
-                    }
-                )
-            ),
+            extra: DragX.with_constraints(),
+            signal: sender::<PositionFac>(send1),
+            system: |fac: SigSend<PositionFac>, transform: Ac<Transform2D>, dim: Ac<Dimension>| {
+                let fac = fac.recv().await;
+                futures::try_join!(
+                    transform.set(move |x| x.rotation = fac * 2.0 * PI),
+                    dim.set(move |v| v.edit_raw(|v| v.y = 50.0 + (1.0 - fac) * 50.0))
+                )?;
+            }
         }
     });
 
@@ -95,11 +96,15 @@ pub fn init(mut commands: AouiCommands) {
         offset: [300, 100],
         color: color!(gold),
         text: "<= Drag and this will change!",
-        extra: recv1.recv(|x: f32, text: &mut Text| format_widget!(text, "<= has value {:.2}!", x))
+        signal: receiver::<PositionFac>(recv1),
+        system: |x: SigRecv<PositionFac>, text: Ac<Text>| {
+            let fac = x.recv().await;
+            text.set(move |text| format_widget!(text, "<= has value {:.2}!", fac)).await?;
+        }
     });
 
-    let (send2, recv2) = commands.signal();
-    let (send3, recv3) = commands.signal();
+    let (send2, recv2) = signal();
+    let (send3, recv3) = signal();
 
     rectangle!(commands {
         dimension: [400, 50],
@@ -108,9 +113,9 @@ pub fn init(mut commands: AouiCommands) {
             dimension: [50, 50],
             anchor: Left,
             color: color!(aqua),
-            extra: DragX
-                .with_recv(recv2)
-                .with_handler(send3),
+            extra: DragX.with_constraints(),
+            signal: sender::<PositionFac>(send3),
+            signal: receiver::<Dragging>(recv2),
         }
     });
 
@@ -127,13 +132,17 @@ pub fn init(mut commands: AouiCommands) {
             flags: EventFlags::Hover|EventFlags::LeftDrag,
             icon: CursorIcon::Hand,
         },
-        extra: Handlers::<EvMouseDrag>::new(send2),
+        signal: sender::<Dragging>(send2),
     });
 
     text! (commands {
         offset: [300, -100],
         color: color!(gold),
         text: "<= Drag and this will change!",
-        extra: recv3.recv(|x: f32, text: &mut Text| format_widget!(text, "<= has value {:.2}!", x))
+        signal: receiver::<PositionFac>(recv3),
+        system: |x: SigRecv<PositionFac>, text: Ac<Text>| {
+            let fac = x.recv().await;
+            text.set(move |text| format_widget!(text, "<= has value {:.2}!", fac)).await?;
+        }   
     });
 }

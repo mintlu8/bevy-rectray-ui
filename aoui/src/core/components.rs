@@ -118,7 +118,7 @@ impl DslFrom<bool> for Opacity {
 pub struct IgnoreAlpha;
 
 /// Data related to clipping.
-#[derive(Debug, Clone, Copy, Component, Default)]
+#[derive(Debug, Clone, Copy, Component, Default, Reflect)]
 pub struct Clipping {
     /// If set, use this sprite's bounding rectangle to clip its children.
     ///

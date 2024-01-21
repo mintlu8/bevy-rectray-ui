@@ -1,8 +1,9 @@
+use bevy::core::Name;
 use bevy::sprite::Sprite;
 use bevy::ecs::entity::Entity;
 use bevy::math::{Vec2, Rect};
 use bevy::text::{Text, TextSection, TextStyle, BreakLineOn, Text2dBounds, TextLayoutInfo, Font};
-use bevy::render::{color::Color, texture::{Image, BevyDefault}};
+use bevy::render::texture::{Image, BevyDefault};
 use bevy::render::render_resource::{Extent3d, TextureDimension};
 
 use crate::{DimensionType, Transform2D, Dimension, Coloring};
@@ -18,8 +19,6 @@ frame_extension!(
         pub sprite: IntoAsset<Image>,
         /// Size of the image.
         pub size: Option<Vec2>,
-        /// Color of the image.
-        pub color: Option<Color>,
         /// Atlas rectangle of the image.
         pub rect: Option<Rect>,
         /// Flips the image.
@@ -31,8 +30,6 @@ frame_extension!(
     pub struct RectangleBuilder {
         /// Size of the image.
         pub size: Option<Vec2>,
-        /// Color of the image.
-        pub color: Option<Color>,
     }
 );
 
@@ -47,8 +44,6 @@ frame_extension!(
         ///
         /// If not specified this is `UNBOUNDED`.
         pub bounds: Option<Vec2>,
-        /// Color of the text.
-        pub color: Option<Color>,
         /// Sets if the text wraps.
         pub wrap: bool,
         /// Break line on, maybe use wrap instead.
@@ -83,6 +78,9 @@ impl Widget for FrameBuilder {
                 ..Default::default()
             }
         );
+        if !self.name.is_empty() {
+            base.insert(Name::new(self.name));
+        }
         if !self.event.is_empty() {
             base.insert(self.event);
         }

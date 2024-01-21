@@ -7,12 +7,13 @@ use bevy::text::Font;
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
 use bevy_aoui::dsl::OptionEx;
+use bevy_aoui::sync::TypedSignal;
 use bevy_aoui::widgets::TextFragment;
 use bevy_aoui::{Opacity, material_sprite, size2, color, inputbox, Anchor, text, Size2, rectangle, transition, frame};
 use bevy_aoui::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxCursorArea, InputBoxCursorBar, InputBoxText};
 use bevy_aoui::{size, frame_extension, build_frame};
 use bevy_aoui::anim::{Interpolate, Easing, Offset, Scale};
-use bevy_aoui::events::{EventFlags, CursorFocus, Handlers, EvTextChange, EvTextSubmit};
+use bevy_aoui::events::{EventFlags, CursorFocus};
 use bevy_aoui::util::{Widget, AouiCommands, DslInto, convert::IntoAsset};
 use crate::{StrokeColoring, build_shape};
 use crate::shaders::RoundedRectangleMaterial;
@@ -126,8 +127,8 @@ frame_extension!(
         pub capsule: bool,
         pub radius: f32,
         pub shadow: OptionEx<ShadowInfo>,
-        pub on_change: Handlers<EvTextChange>,
-        pub on_submit: Handlers<EvTextSubmit>,
+        pub on_change: TypedSignal<String>,
+        pub on_submit: TypedSignal<String>,
         pub overflow: InputOverflow,
         /// Sets the CursorIcon when hovering this button, default is `Text`
         pub cursor_icon: Option<CursorIcon>,

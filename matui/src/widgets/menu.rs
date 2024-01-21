@@ -6,17 +6,18 @@ use bevy::render::color::Color;
 use bevy::render::texture::Image;
 use bevy::{window::CursorIcon, hierarchy::BuildChildren};
 use bevy::ecs::{entity::Entity, query::Changed, system::Query};
-use bevy_aoui::anim::Interpolate;
-use bevy_aoui::events::{EventFlags, Handlers, EvFocusChange};
+use bevy_aoui::dsl::prelude::sender;
+use bevy_aoui::events::{EventFlags, FocusChange, FocusStateMachine};
+use bevy_aoui::sync::TypedSignal;
 use bevy_aoui::widgets::util::{DisplayIf, BlockPropagation};
 use bevy_aoui::{Anchor, size2, Size2, markers, frame, transition, Opacity};
-use bevy_aoui::util::Object;
-use bevy_aoui::signals::SignalBuilder;
+use bevy_aoui::util::{signal, ComposeExtension, Object};
 use bevy_aoui::layout::StackLayout;
-use bevy_aoui::widgets::button::{RadioButton, Payload, radio_button_group};
+use bevy_aoui::widgets::button::{radio_button_group, Payload, RadioButton, ToggleChange};
 use bevy_aoui::util::{Widget, AouiCommands, WidgetBuilder};
 
 use crate::style::Palette;
+use crate::widgets::states::ToggleOpacity;
 use crate::{mdivider, mframe_extension, build_mframe, mcapsule, palette, mrectangle};
 
 
@@ -218,7 +219,7 @@ pub fn rebuild_dropdown_children(
                     commands.entity(entity).add_child(item);
                 },
                 MenuItem::Nest { key, value, icon, right, nest } => {
-                    let (sender, receiver) = commands.signal();
+                    let (send, recv) = signal();
                     let item = bevy_aoui::radio_button!(commands {
                         dimension: size2!(width em, 2.2 em),
                         context: builder.radio.clone(),
@@ -227,17 +228,15 @@ pub fn rebuild_dropdown_children(
                         child: icon.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
                         child: right.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
                         extra: MenuItemMarker,
-                        extra: Handlers::<EvFocusChange>::new(sender),
+                        extra: FocusStateMachine::new(),
+                        signal: sender::<FocusChange>(send),
                     });
                     let child = commands.spawn_fn(builder.nested.as_ref()
                         .expect("Expect menu builder."), 
                         nest.clone());
-                    commands.entity(child).insert(
-                        receiver.recv_select(true,
-                            Interpolate::<Opacity>::signal_to(1.0), 
-                            Interpolate::<Opacity>::signal_to(0.0),
-                        )
-                    );
+                    commands.entity(child)
+                        .add_receiver::<ToggleChange>(recv)
+                        .insert(ToggleOpacity::new(0.0, 1.0));
                     commands.entity(item).add_child(child);
 
                     if builder.hover_background.a() > 0.0 && builder.hover_capsule{
@@ -308,7 +307,7 @@ mframe_extension!(
         pub hover_capsule: bool,
 
         /// Signal for building bools.
-        pub open_signal: Option<SignalBuilder<bool>>,
+        pub open_signal: Option<TypedSignal<bool>>,
     }
 );
 
@@ -390,12 +389,9 @@ impl Widget for MMenuBuilder {
                 },
             )).id();
         if let Some(signal) = self.open_signal {
-            commands.entity(frame).insert(
-                signal.recv_filter(
-                    |op: &mut Interpolate<Opacity>| op.interpolate_to(1.0),
-                    |op: &mut Interpolate<Opacity>| op.interpolate_to(0.0),
-                ),
-            );
+            commands.entity(frame)
+                .add_receiver::<ToggleChange>(signal)
+                .insert(ToggleOpacity::new(0.0, 1.0));
         }
         (frame, frame)
     }

@@ -4,17 +4,14 @@ use bevy::ecs::query::{With, WorldQuery, QueryItem};
 use bevy::ecs::system::{Res, SystemParam};
 use bevy::math::{Vec2, IVec2};
 use bevy::ecs::{component::Component, query::Without};
-use bevy::ecs::system::{Query, Commands};
-use crate::sync::{SignalSender, SignalReceiver};
+use bevy::ecs::system::Query;
+use crate::sync::{SignalId, SignalReceiver, SignalSender};
 use crate::{Transform2D, anim::Attr, anim::Offset, AouiREM, DimensionData};
 use crate::events::MouseWheelAction;
 use crate::layout::Container;
-use crate::util::convert::DslInto;
 
 use crate::events::MovementUnits;
 pub use super::constraints::ScrollConstraint;
-
-use super::constraints::{SharedPosition, PositionChanged};
 
 /// Add mouse wheel scrolling support.
 ///
@@ -46,6 +43,10 @@ pub struct Scrolling {
     pub neg_x: bool,
     pub pos_y: bool,
     pub neg_y: bool,
+}
+
+impl SignalId for Scrolling{
+    type Data = MovementUnits;
 }
 
 impl Scrolling {
@@ -99,6 +100,10 @@ impl Scrolling {
     pub fn y_scroll(&self) -> bool {
         self.neg_y || self.pos_y
     }
+
+    pub fn with_constraints(self) -> impl Bundle {
+        (self, ScrollConstraint)
+    }
 }
 
 impl Default for Scrolling {
@@ -108,7 +113,7 @@ impl Default for Scrolling {
 }
 
 pub(crate) fn scrolling_senders(
-    sender: Query<(&MouseWheelAction, SignalSender<MouseWheelAction>), Without<Scrolling>>,
+    sender: Query<(&MouseWheelAction, SignalSender<Scrolling>), Without<Scrolling>>,
 ) {
     for (action, signal) in sender.iter() {
         signal.send(action.get());
@@ -117,18 +122,21 @@ pub(crate) fn scrolling_senders(
 
 pub(crate) fn scrolling_system<'t, T: Movement>(
     mut fetched: T::Ctx<'_, '_>,
-    mut scroll: Query<(T::Query<'t>, &MouseWheelAction)>,
-    mut receiver: Query<(T::Query<'t>, SignalReceiver<MouseWheelAction>), Without<MouseWheelAction>>,
-) {
+    mut scroll: Query<(Entity, T::Query<'t>, &MouseWheelAction)>,
+    mut receiver: Query<(Entity, T::Query<'t>, SignalReceiver<Scrolling>), Without<MouseWheelAction>>,
+) -> Vec<Entity>{
     let iter = scroll.iter_mut()
-        .map(|(query, action)|
-            (query, action.get()))
-        .chain(receiver.iter_mut().filter_map(|(query, mut receiver)|
-            Some((query, receiver.poll_once()?)))); {
+        .map(|(entity, query, action)|
+            (entity, query, action.get()))
+        .chain(receiver.iter_mut().filter_map(|(entity, query, mut receiver)|
+            Some((entity, query, receiver.poll_once()?)))); {
     }
-    for (mut query, input) in iter {
+    let mut out = Vec::new();
+    for (entity, mut query, input) in iter {
+        out.push(entity);
         T::run(&mut query, &mut fetched, input);
     }
+    out
 }
 
 pub trait Movement {
@@ -138,12 +146,12 @@ pub trait Movement {
 }
 
 impl Movement for Scrolling {
-    type Query<'t> = (Entity, &'t Scrolling, &'t DimensionData, &'t Children);
-    type Ctx<'w, 's> = (Commands<'w, 's>, Res<'w, AouiREM>, Query<'w, 's, Attr<Transform2D, Offset>, With<Children>>);
+    type Query<'t> = (&'t Scrolling, &'t DimensionData, &'t Children);
+    type Ctx<'w, 's> = (Res<'w, AouiREM>, Query<'w, 's, Attr<Transform2D, Offset>, With<Children>>);
 
     fn run(this: &mut QueryItem<Self::Query<'_>>, ctx: &mut Self::Ctx::<'_, '_>, delta: MovementUnits) {
-        let (entity, scroll, dim, children) = this;
-        let (commands, rem, child_query) = ctx;
+        let (scroll, dim, children) = this;
+        let (rem, child_query) = ctx;
         let delta_scroll = match (scroll.x_scroll(), scroll.y_scroll()) {
             (true, true) => delta.pixels,
             (true, false) => Vec2::new(delta.pixels.x + delta.pixels.y, 0.0),
@@ -158,7 +166,6 @@ impl Movement for Scrolling {
         if let Ok(mut transform) = child_query.get_mut(container){
             transform.force_set_pixels(transform.get_pixels(dim.size, dim.em, rem.get()) + delta_scroll);
         }
-        commands.entity(*entity).insert(PositionChanged);
     }
 }
 
@@ -192,12 +199,12 @@ impl ScrollDiscrete {
 }
 
 impl Movement for ScrollDiscrete {
-    type Query<'t> = (Entity, &'t ScrollDiscrete, &'t mut Container);
+    type Query<'t> = (&'t ScrollDiscrete, &'t mut Container);
 
-    type Ctx<'w, 's> = Commands<'w, 's>;
+    type Ctx<'w, 's> = ();
 
-    fn run(this: &mut QueryItem<Self::Query<'_>>, commands: &mut Self::Ctx::<'_, '_>, delta: MovementUnits) {
-        let (entity, scroll, container) = this;
+    fn run(this: &mut QueryItem<Self::Query<'_>>, _: &mut Self::Ctx::<'_, '_>, delta: MovementUnits) {
+        let (scroll, container) = this;
         let delta = delta.lines.dot(scroll.get());
         match delta {
             ..=-1 => {
@@ -208,19 +215,18 @@ impl Movement for ScrollDiscrete {
             }
             0 => return,
         };
-        commands.entity(*entity).insert(PositionChanged);
     }
 }
 
 
-/// For a texture allow scrolling on the sprite's UV.
-/// [`Sprite::rect`](bevy::sprite::Sprite::rect).
-///
-/// ## Experimental
-#[derive(Debug, Clone, Copy, Component, Default, Reflect)]
-pub enum ScrollUV {
-    X, Y, #[default] XY
-}
+// /// For a texture allow scrolling on the sprite's UV.
+// /// [`Sprite::rect`](bevy::sprite::Sprite::rect).
+// ///
+// /// ## Experimental
+// #[derive(Debug, Clone, Copy, Component, Default, Reflect)]
+// pub enum ScrollUV {
+//     X, Y, #[default] XY
+// }
 
 // impl Movement for ScrollUV {
 //     type Query<'t> = (Entity, &'t mut Sprite, &'t ScrollUV);
@@ -232,27 +238,3 @@ pub enum ScrollUV {
 
 //     }
 // }
-
-/// Builder trait for a scrollable widget.
-pub trait IntoScrollingBuilder: Bundle + Default {
-
-    fn with_constraints(self) -> impl IntoScrollingBuilder {
-        (ScrollConstraint, self)
-    }
-
-    fn with_shared_position(self, position: impl DslInto<SharedPosition>) -> impl IntoScrollingBuilder {
-        (self.with_constraints(), position.dinto())
-    }
-}
-
-impl IntoScrollingBuilder for Scrolling {}
-
-impl<T, A> IntoScrollingBuilder for (T, A) where T: IntoScrollingBuilder, A: Bundle + Default {
-    fn with_constraints(self) -> impl IntoScrollingBuilder {
-        (T::with_constraints(self.0), self.1)
-    }
-}
-
-impl<T> IntoScrollingBuilder for (ScrollConstraint, T) where T: IntoScrollingBuilder {
-    fn with_constraints(self) -> impl IntoScrollingBuilder { self }
-}

@@ -6,19 +6,18 @@ use bevy::ecs::bundle::Bundle;
 use bevy::ecs::change_detection::DetectChanges;
 use bevy::ecs::component::Component;
 use bevy::ecs::{query::WorldQuery, entity::Entity, world::World};
-use bevy::ecs::system::{Query, RunSystemOnce, SystemParam, StaticSystemParam, Command, Resource};
+use bevy::ecs::system::{Command, Query, Resource, RunSystemOnce, StaticSystemParam, SystemParam};
 use bevy::hierarchy::{DespawnRecursive, DespawnChildrenRecursive, AddChild};
 use futures::Future;
 use futures::channel::oneshot::channel;
 
-use super::{AsyncExecutor, AsyncFailure, AsyncQuery, AsyncResult, Signals, States};
+use super::{AsyncExecutor, AsyncFailure, AsyncQuery, AsyncReadonlyQuery, AsyncResult, Signals};
 
 pub trait AsyncSystemParam: Sized {
     fn from_async_context(
         entity: Entity,
         executor: &Arc<AsyncExecutor>,
         signals: &Signals,
-        states: &States,
     ) -> Self;
 }
 
@@ -36,7 +35,6 @@ impl<Q: WorldQuery> AsyncSystemParam for AsyncEntityQuery<Q> {
         entity: Entity,
         executor: &Arc<AsyncExecutor>,
         _: &Signals,
-        _: &States,
     ) -> Self {
         AsyncEntityQuery {
             entity,
@@ -78,7 +76,7 @@ impl<Q: WorldQuery + 'static> AsyncEntityQuery<Q> {
         match receiver.await {
             Ok(Some(x)) => Ok(x),
             Ok(None) => Err(AsyncFailure::EntityQueryNotFound),
-            Err(_) => Err(AsyncFailure::ChannelDestroyed),
+            Err(_) => Err(AsyncFailure::ChannelClosed),
         }
     }
 
@@ -121,7 +119,6 @@ impl<P: SystemParam> AsyncSystemParam for AsyncWorldQuery<P> {
         _: Entity,
         executor: &Arc<AsyncExecutor>,
         _: &Signals,
-        _: &States,
     ) -> Self {
         AsyncWorldQuery {
             executor: executor.clone(),
@@ -155,7 +152,7 @@ impl<Q: SystemParam + 'static> AsyncWorldQuery<Q> {
             lock.push(query);
         }
         async {
-            receiver.await.map_err(|_|AsyncFailure::ChannelDestroyed)
+            receiver.await.map_err(|_|AsyncFailure::ChannelClosed)
         }
     }
 }
@@ -170,7 +167,6 @@ impl AsyncSystemParam for AsyncEntityCommands {
         entity: Entity,
         executor: &Arc<AsyncExecutor>,
         _: &Signals,
-        _: &States,
     ) -> Self {
         AsyncEntityCommands {
             entity,
@@ -299,7 +295,6 @@ impl<C: Component> AsyncSystemParam for AsyncComponent<C> {
         entity: Entity,
         executor: &Arc<AsyncExecutor>,
         _: &Signals,
-        _: &States,
     ) -> Self {
         Self {
             entity,
@@ -314,23 +309,23 @@ impl<C: Component> AsyncComponent<C> {
             -> impl Future<Output = AsyncResult<Out>> {
         let (sender, receiver) = channel::<Option<Out>>();
         let entity = self.entity;
-        let query = AsyncQuery::new(
-            move |world: &mut World| {
-                world.entity_mut(entity)
+        let query = AsyncReadonlyQuery::new(
+            move |world: &World| {
+                world.entity(entity)
                     .get::<C>()
                     .map(f)
             },
             sender
         );
         {
-            let mut lock = self.executor.queries.lock();
+            let mut lock = self.executor.readonly.lock();
             lock.push(query);
         }
         async {
             match receiver.await {
                 Ok(Some(out)) => Ok(out),
                 Ok(None) => Err(AsyncFailure::ComponentNotFound),
-                Err(_) => Err(AsyncFailure::ChannelDestroyed),
+                Err(_) => Err(AsyncFailure::ChannelClosed),
             }
         }
     }
@@ -356,7 +351,7 @@ impl<C: Component> AsyncComponent<C> {
             lock.push(query);
         }
         async {
-            receiver.await.map_err(|_| AsyncFailure::ChannelDestroyed)
+            receiver.await.map_err(|_| AsyncFailure::ChannelClosed)
         }
     }
 
@@ -380,7 +375,7 @@ impl<C: Component> AsyncComponent<C> {
             match receiver.await {
                 Ok(Some(out)) => Ok(out),
                 Ok(None) => Err(AsyncFailure::ComponentNotFound),
-                Err(_) => Err(AsyncFailure::ChannelDestroyed),
+                Err(_) => Err(AsyncFailure::ChannelClosed),
             }
         }
     }
@@ -397,7 +392,6 @@ impl<R: Resource> AsyncSystemParam for AsyncResource<R> {
         _: Entity,
         executor: &Arc<AsyncExecutor>,
         _: &Signals,
-        _: &States,
     ) -> Self {
         Self {
             executor: executor.clone(),
@@ -424,7 +418,7 @@ impl<R: Resource> AsyncResource<R> {
             match receiver.await {
                 Ok(Some(out)) => Ok(out),
                 Ok(None) => Err(AsyncFailure::ResourceNotFound),
-                Err(_) => Err(AsyncFailure::ChannelDestroyed),
+                Err(_) => Err(AsyncFailure::ChannelClosed),
             }
         }
     }
@@ -447,31 +441,30 @@ impl<R: Resource> AsyncResource<R> {
             match receiver.await {
                 Ok(Some(out)) => Ok(out),
                 Ok(None) => Err(AsyncFailure::ComponentNotFound),
-                Err(_) => Err(AsyncFailure::ChannelDestroyed),
+                Err(_) => Err(AsyncFailure::ChannelClosed),
             }
         }
     }
 }
 
-pub struct FPS(Arc<AsyncExecutor>);
+pub struct Fps(Arc<AsyncExecutor>);
 
-impl AsyncSystemParam for FPS {
+impl AsyncSystemParam for Fps {
     fn from_async_context(
         _: Entity,
         executor: &Arc<AsyncExecutor>,
         _: &Signals,
-        _: &States,
     ) -> Self {
         Self (executor.clone())
     }
 }
 
 
-impl FPS {
+impl Fps {
     pub fn get(&self) -> impl Future<Output = f32> {
         let (sender, receiver) = channel::<f32>();
-        let query = AsyncQuery::new(
-            move |world: &mut World| {
+        let query = AsyncReadonlyQuery::new(
+            move |world: &World| {
                 world.get_resource::<DiagnosticsStore>().map(|x| x
                     .get(FrameTimeDiagnosticsPlugin::FPS)
                     .and_then(|fps| fps.smoothed().map(|x| x as f32)) 
@@ -480,7 +473,7 @@ impl FPS {
             sender
         );
         {
-            let mut lock = self.0.queries.lock();
+            let mut lock = self.0.readonly.lock();
             lock.push(query);
         }
         async {
