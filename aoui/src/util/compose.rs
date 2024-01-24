@@ -1,7 +1,9 @@
-use bevy::{ecs::{bundle::Bundle, component::Component, system::{Command, EntityCommands}, entity::Entity}, sprite::Sprite, render::{texture::Image, color::Color}, transform::components::GlobalTransform};
+use std::{any::TypeId, marker::PhantomData};
 
-use crate::{dsl::{prelude::Signals, IntoAsset}, sync::{SignalId, TypedSignal}, BuildTransform, Coloring};
+use bevy::{ecs::{bundle::Bundle, component::Component, entity::Entity, system::{Command, EntityCommands}}, sprite::Sprite, render::{texture::Image, color::Color}, transform::components::GlobalTransform};
 
+use crate::{dsl::{prelude::Signals, IntoAsset}, sync::{SignalId, SignalMapper, TypedSignal}, BuildTransform, Coloring};
+use crate::events::EventFlags;
 use super::AouiCommands;
 
 impl IntoAsset<Image> {
@@ -19,6 +21,12 @@ impl IntoAsset<Image> {
 
 pub trait ComponentCompose: Component {
     fn compose(&mut self, other: Self);
+}
+
+impl ComponentCompose for EventFlags {
+    fn compose(&mut self, other: Self) {
+        *self |= other
+    }
 }
 
 pub struct ComposeInsert<T: ComponentCompose>(pub Entity, pub T);
@@ -63,11 +71,26 @@ impl<T: SignalId> Command for AddSignalRecv<T> {
     }
 }
 
+pub struct AddSignalAdaptor<From: SignalId, To: SignalId>(pub Entity, pub SignalMapper, PhantomData<(From, To)>);
+
+impl<From: SignalId, To: SignalId> Command for AddSignalAdaptor<From, To> {
+    fn apply(self, world: &mut bevy::prelude::World) {
+        match world.get_entity_mut(self.0) {
+            Some(mut entity) => match entity.get_mut::<Signals>() {
+                Some(mut component) => component.add_adaptor::<To>(TypeId::of::<From>(), self.1),
+                None => { entity.insert(Signals::from_adaptor::<To>(TypeId::of::<From>(), self.1)); },
+            },
+            None => (),
+        }
+    }
+}
+
 pub trait ComposeExtension {
     fn compose(&mut self, component: impl ComponentCompose) -> &mut Self;
     fn compose2<T: ComponentCompose>(&mut self, a: Option<T>, b: Option<T>) -> &mut Self;
     fn add_sender<T: SignalId>(&mut self, component: TypedSignal<T::Data>) -> &mut Self;
     fn add_receiver<T: SignalId>(&mut self, component: TypedSignal<T::Data>) -> &mut Self;
+    fn add_adaptor<From: SignalId, To: SignalId>(&mut self, adaptor: impl Fn(From::Data) -> To::Data + Clone + Send + Sync + 'static)  -> &mut Self;
 }
 
 impl ComposeExtension for EntityCommands<'_, '_, '_> {
@@ -99,6 +122,12 @@ impl ComposeExtension for EntityCommands<'_, '_, '_> {
     fn add_receiver<T: SignalId>(&mut self, component: TypedSignal<T::Data>)  -> &mut Self{
         let entity = self.id();
         self.commands().add(AddSignalRecv::<T>(entity, component));
+        self
+    }
+
+    fn add_adaptor<From: SignalId, To: SignalId>(&mut self, adaptor: impl Fn(From::Data) -> To::Data + Clone + Send + Sync + 'static)  -> &mut Self {
+        let entity = self.id();
+        self.commands().add(AddSignalAdaptor::<From, To>(entity, SignalMapper::new::<From, To>(adaptor), PhantomData));
         self
     }
 }

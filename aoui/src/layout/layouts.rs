@@ -24,6 +24,8 @@ pub trait Layout: Downcast + Debug + Send + Sync + 'static {
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput;
     /// Clone the layout.
     fn dyn_clone(&self) -> Box<dyn Layout>;
+    /// Layout is the same regardless of parent dimension.
+    fn is_size_agnostic(&self) -> bool {false}
 }
 
 impl_downcast!(Layout);
@@ -45,6 +47,10 @@ impl LayoutObject {
 
     pub fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput {
         self.0.place(parent, entities, range)
+    }
+
+    pub fn is_size_agnostic(&self) -> bool {
+        self.0.is_size_agnostic()
     }
 
     pub fn downcast<T: Layout>(&self) -> Option<&T>{

@@ -2,13 +2,14 @@ use bevy::ecs::entity::Entity;
 
 use crate::{util::WidgetBuilder, dsl::prelude::AouiCommands};
 
-use super::{DslConvert, DslInto};
+use super::{DslConvert, DslInto, SealToken};
 
 
 impl<T, U> DslConvert<U, ' '> for T where T: DslInto<U> {
     fn parse(self) -> U {
         self.dinto()
     }
+    fn sealed(_: SealToken) {}
 }
 
 impl<F, T> DslConvert<WidgetBuilder<T>, 'W'> for F
@@ -16,6 +17,7 @@ impl<F, T> DslConvert<WidgetBuilder<T>, 'W'> for F
     fn parse(self) -> WidgetBuilder<T> {
         WidgetBuilder::new(self)
     }
+    fn sealed(_: SealToken) {}
 }
 
 impl<F, T> DslConvert<Option<WidgetBuilder<T>>, 'W'> for F
@@ -23,6 +25,7 @@ impl<F, T> DslConvert<Option<WidgetBuilder<T>>, 'W'> for F
     fn parse(self) -> Option<WidgetBuilder<T>> {
         Some(WidgetBuilder::new(self))
     }
+    fn sealed(_: SealToken) {}
 }
 
 impl<F> DslConvert<Option<WidgetBuilder<()>>, 'w'> for F
@@ -30,4 +33,5 @@ impl<F> DslConvert<Option<WidgetBuilder<()>>, 'w'> for F
     fn parse(self) -> Option<WidgetBuilder<()>> {
         Some(WidgetBuilder::new(self))
     }
+    fn sealed(_: SealToken) {}
 }

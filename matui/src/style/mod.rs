@@ -10,9 +10,8 @@ impl From<Color> for Color8 {
     }
 }
 
-impl Into<Color> for Color8 {
-    fn into(self) -> Color {
-        let Color8([r, g, b, a]) = self;
+impl From<Color8> for Color {
+    fn from(Color8([r, g, b, a]): Color8) -> Self {
         Color::rgba_u8(r, g, b, a)
     }
 }

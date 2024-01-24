@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use bevy::{app::{Plugin, Update}, ecs::{component::Component, query::WorldQuery, system::Query}};
+use bevy::{app::{FixedUpdate, Plugin}, ecs::{component::Component, query::WorldQuery, system::Query}};
 
 /// Fine-grained state machine.
 pub trait Fgsm: Sized {
@@ -44,7 +44,7 @@ pub struct FgsmPlugin<T: FgsmPairing>(PhantomData<T>);
 
 impl<T: FgsmPairing> Plugin for FgsmPlugin<T> {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(Update, T::system);
+        app.add_systems(FixedUpdate, T::system);
     }
 }
 

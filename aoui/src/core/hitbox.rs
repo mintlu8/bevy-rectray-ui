@@ -39,14 +39,16 @@ impl Hitbox {
 impl Hitbox {
     pub fn contains(&self, rect: &RotatedRect, point: Vec2) -> bool {
         let local = point - rect.center();
-        let x = rect.affine.transform_vector2(Vec2::new(0.5, 0.0)) / self.scale.x;
-        let y = rect.affine.transform_vector2(Vec2::new(0.0, 0.5)) / self.scale.y;
+        let x = rect.affine.transform_vector2(Vec2::new(0.5, 0.0));
+        let y = rect.affine.transform_vector2(Vec2::new(0.0, 0.5));
+        let x_squared = (x * self.scale.x).length_squared();
+        let y_squared = (y * self.scale.y).length_squared();
         match self.shape {
             HitboxShape::Rect => {
-                local.dot(x).abs() < x.length_squared() && local.dot(y).abs() < y.length_squared()
+                local.dot(x).abs() < x_squared && local.dot(y).abs() < y_squared
             },
             HitboxShape::Ellipse => {
-                local.dot(x).abs() / x.length_squared() + local.dot(y).abs() / y.length_squared() <= 1.0
+                local.dot(x).abs() / x_squared + local.dot(y).abs() / y_squared <= 1.0
             }
         }
     }

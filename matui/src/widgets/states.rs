@@ -1,5 +1,5 @@
-use bevy::render::color::Color;
-use bevy_aoui::{anim::Fgsm, events::{CursorFocus, EventFlags}, fgsm_interpolation, widgets::button::CheckButtonState, Opacity};
+use bevy::{ecs::{component::Component, query::Has, system::Query}, render::color::Color};
+use bevy_aoui::{anim::{Attr, Fgsm, Rotation}, events::{CursorFocus, DescendantHasFocus, EventFlags}, fgsm_interpolation, sync::SignalReceiver, widgets::button::{CheckButtonState, ToggleChange}, Opacity};
 
 use crate::StrokeColoring;
 
@@ -24,7 +24,7 @@ impl Fgsm for ButtonState {
             return Self::Disabled
         }
         if let Some(focus) = focus {
-            if focus.intersects(EventFlags::LeftPressed) {
+            if focus.intersects(EventFlags::LeftPressed | EventFlags::LeftDrag) {
                 return Self::Pressed
             } else if focus.intersects(EventFlags::Hover) {
                 return Self::Hover
@@ -66,7 +66,7 @@ impl Fgsm for ToggleState {
     fn from_state(state: &<Self::State as bevy::ecs::query::WorldQuery>::Item<'_>) -> Self {
         let (opacity, check) = state;
         if opacity.disabled {
-            return Self::Disabled;
+            Self::Disabled
         } else {
             match check {
                 CheckButtonState::Unchecked => Self::Unchecked,
@@ -75,6 +75,48 @@ impl Fgsm for ToggleState {
         }
     }
 }
+
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum FocusState {
+    #[default]
+    Idle,
+    Focus,
+    Disabled,
+}
+
+impl Fgsm for FocusState {
+    type State = (&'static Opacity, Has<DescendantHasFocus>);
+
+    fn from_state(state: &<Self::State as bevy::ecs::query::WorldQuery>::Item<'_>) -> Self {
+        let (opacity, focus) = state;
+        if opacity.disabled {
+            Self::Disabled
+        } else if *focus {
+            Self::Focus
+        } else {
+            Self::Idle
+        }
+    }
+}
+
+fgsm_interpolation!(
+    pub struct FocusColors: FocusState as Color => Color {
+        idle: Idle,
+        focus: Focus,
+        disabled: Disabled,
+    }
+);
+
+
+fgsm_interpolation!(
+    impl StrokeColors<FocusColors>: FocusState as Color => StrokeColoring {
+        idle: Idle,
+        focus: Focus,
+        disabled: Disabled,
+    }
+);
+
 
 fgsm_interpolation!(
     pub struct ButtonColors: ButtonState as Color => Color {
@@ -133,6 +175,18 @@ impl Default for ToggleColors {
     }
 }
 
+fgsm_interpolation!(
+    #[derive(Debug, Default)]
+    pub struct ToggleRotation: CoreToggleState as f32 => Rotation {
+        unchecked: Unchecked,
+        checked: Checked,
+    }
+);
+impl ToggleRotation {
+    pub fn new(unchecked: f32, checked: f32) -> Self {
+        Self { unchecked, checked }
+    }
+}
 
 
 fgsm_interpolation!(
@@ -145,5 +199,31 @@ fgsm_interpolation!(
 impl ToggleOpacity {
     pub fn new(unchecked: f32, checked: f32) -> Self {
         Self { unchecked, checked }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Component)]
+pub struct SignalToggleOpacity {
+    unchecked: f32,
+    checked: f32,
+}
+
+impl SignalToggleOpacity {
+    pub fn new(unchecked: f32, checked: f32) -> Self {
+        Self { unchecked, checked }
+    }
+}
+
+pub fn toggle_opacity_signal (
+    mut query: Query<(&SignalToggleOpacity, Attr<Opacity, Opacity>, SignalReceiver<ToggleChange>)>
+) {
+    for (opacity, mut attr, recv) in query.iter_mut() {
+        if let Some(val) = recv.poll_once() {
+            if val {
+                attr.set(opacity.checked)
+            } else {
+                attr.set(opacity.unchecked)
+            }
+        }
     }
 }

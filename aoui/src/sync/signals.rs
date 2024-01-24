@@ -1,6 +1,5 @@
-use std::{any::{Any, TypeId}, marker::PhantomData, sync::Arc};
-use bevy::{utils::HashMap, ecs::{component::Component, entity::Entity, query::WorldQuery}};
-use futures::Future;
+use std::{any::{Any, TypeId}, fmt::Debug, marker::PhantomData, sync::Arc};
+use bevy::{ecs::{component::Component, entity::Entity, query::WorldQuery}, log::debug, utils::hashbrown::HashMap};
 use once_cell::sync::Lazy;
 use crate::util::{Object, AsObject, ComponentCompose};
 use super::{AsyncExecutor, AsyncSystemParam, Signal, SignalData, SignalInner, YieldNow};
@@ -38,27 +37,70 @@ impl<T: AsObject> TypedSignal<T> {
             p: PhantomData 
         }
     }
-
 }
 
-pub(super) static DUMMY_SIGNALS: Lazy<Signals> = Lazy::new(||Signals::new());
+pub(super) static DUMMY_SIGNALS: Lazy<Signals> = Lazy::new(Signals::new);
+
+pub trait SignalMapperTrait: Send + Sync + 'static {
+    fn map(&self, obj: &mut Object);
+    fn dyn_clone(&self) -> Box<dyn SignalMapperTrait>;
+}
+
+impl<T> SignalMapperTrait for T where T: Fn(&mut Object) + Clone + Send + Sync + 'static {
+    fn map(&self, obj: &mut Object) {
+        self(obj)
+    }
+    fn dyn_clone(&self) -> Box<dyn SignalMapperTrait> {
+        Box::new(self.clone())
+    }
+}
+
+pub struct SignalMapper(Box<dyn SignalMapperTrait>);
+
+impl Debug for SignalMapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SignalMapper").finish()
+    }
+}
+
+impl Clone for SignalMapper {
+    fn clone(&self) -> Self {
+        Self(self.0.dyn_clone())
+    }
+}
+
+impl SignalMapper {
+    pub fn new<A: SignalId, B: SignalId>(f: impl Fn(A::Data) -> B::Data + Clone + Send + Sync + 'static) -> Self {
+        Self(Box::new(move |obj: &mut Object| {
+            let Some(item) = obj.clone().get::<A::Data>() else {return};
+            *obj = Object::new(f(item));
+        }))
+    }
+
+    pub fn map<T: AsObject>(&self, mut obj: Object) -> Option<T> {
+        self.0.map(&mut obj);
+        obj.get()
+    }
+}
 
 #[derive(Debug, Component, Default)]
 pub struct Signals {
     pub senders: HashMap<TypeId, Signal<Object>>,
     pub receivers: HashMap<TypeId, Signal<Object>>,
+    pub adaptors: HashMap<TypeId, (TypeId, SignalMapper)>
 }
 
 impl ComponentCompose for Signals {
     fn compose(&mut self, other: Self) {
         self.senders.extend(other.senders);
         self.receivers.extend(other.receivers);
+        self.adaptors.extend(other.adaptors);
     }
 }
 
 impl Signals {
     pub fn new() -> Self {
-        Self { senders: HashMap::new(), receivers: HashMap::new() }
+        Self { senders: HashMap::new(), receivers: HashMap::new(), adaptors: HashMap::new() }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -77,6 +119,13 @@ impl Signals {
         this
     }
 
+    pub fn from_adaptor<T: SignalId>(ty: TypeId, mapper: SignalMapper) -> Self {
+        let mut this = Self::new();
+        this.add_adaptor::<T>(ty, mapper);
+        this
+    }
+
+
     pub fn with_sender<T: SignalId>(mut self, signal: TypedSignal<T::Data>) -> Self {
         self.add_sender::<T>(signal);
         self
@@ -87,29 +136,54 @@ impl Signals {
         self
     }
 
+    pub fn with_adaptor<T: SignalId>(mut self, ty: TypeId, mapper: SignalMapper) -> Self {
+        self.add_adaptor::<T>(ty, mapper);
+        self
+    }
+
     pub fn send<T: SignalId>(&self, item: T::Data) {
         match self.senders.get(&TypeId::of::<T>()){
-            Some(x) => x.write(Object::new(item)),
+            Some(x) => {
+                debug!("Signal {} sent with value {:?}", std::any::type_name::<T>(), &item);
+                x.write(Object::new(item))
+            },
             None => (),
         }
     }
 
     pub fn broadcast<T: SignalId>(&self, item: T::Data) {
         match self.senders.get(&TypeId::of::<T>()){
-            Some(x) => x.broadcast(Object::new(item)),
+            Some(x) => {
+                debug!("Signal {} sent value {:?}", std::any::type_name::<T>(), &item);
+                x.broadcast(Object::new(item))
+            },
             None => (),
         }
     }
 
-    pub fn poll_once<T: SignalId>(&mut self) -> Option<T::Data>{
-        match self.receivers.get_mut(&TypeId::of::<T>()){
-            Some(sig) => sig.try_read().and_then(|x| x.get()),
-            None => None,
+    pub fn poll_once<T: SignalId>(&self) -> Option<T::Data>{
+        match self.receivers.get(&TypeId::of::<T>()){
+            Some(sig) => sig.try_read().and_then(|x| x.get()).map(|x| {
+                debug!("Signal {} received value {:?}", std::any::type_name::<T>(), &x);
+                x
+            }),
+            None => match &self.adaptors.get(&TypeId::of::<T>()) {
+                Some((ty, map)) => match self.receivers.get(ty){
+                    Some(sig) => sig.try_read().and_then(|x| {
+                        map.map(x).map(|x| {
+                            debug!("Signal {} received and adapted value {:?}", std::any::type_name::<T>(), &x);
+                            x
+                        })
+                    }),
+                    None => None
+                }
+                None => None
+            },
         }
     }
 
-    pub fn poll_senders_once<T: SignalId>(&mut self) -> Option<T::Data>{
-        match self.senders.get_mut(&TypeId::of::<T>()){
+    pub fn poll_senders_once<T: SignalId>(&self) -> Option<T::Data>{
+        match self.senders.get(&TypeId::of::<T>()){
             Some(sig) => sig.try_read().and_then(|x| x.get()),
             None => None,
         }
@@ -126,6 +200,9 @@ impl Signals {
     }
     pub fn add_receiver<T: SignalId>(&mut self, signal: TypedSignal<T::Data>) {
         self.receivers.insert(TypeId::of::<T>(), Signal::from_typed(signal));
+    }
+    pub fn add_adaptor<T: SignalId>(&mut self, ty: TypeId, mapper: SignalMapper) {
+        self.adaptors.insert(TypeId::of::<T>(), (ty, mapper));
     }
 
     pub fn has_sender<T: SignalId>(&self) -> bool {
@@ -156,16 +233,14 @@ impl<T: SignalId> SigSend<T> {
     /// Receive a value from the sender, 
     /// can receive value `send` sent from this signal,
     /// but not from `broadcast`.
-    pub fn recv(self) -> impl Future<Output = T::Data> + Send + Sync + 'static {
-        async move {
-            loop {
-                let signal = self.0.clone();
-                let obj = signal.async_read().await;
-                if let Some(data) = obj.get() {
-                    return data;
-                } else {
-                    YieldNow::new().await
-                }
+    pub async fn recv(self) -> T::Data {
+        loop {
+            let signal = self.0.clone();
+            let obj = signal.async_read().await;
+            if let Some(data) = obj.get() {
+                return data;
+            } else {
+                YieldNow::new().await
             }
         }
     }
@@ -179,7 +254,7 @@ impl <T: SignalId> AsyncSystemParam for SigSend<T>  {
         ) -> Self {
         SigSend(
             signals.sender::<T>()
-                .expect(&format!("Signal sender of type <{}> missing", stringify!(T))),
+                .unwrap_or_else(|| panic!("Signal sender of type <{}> missing", stringify!(T))),
             PhantomData
         )
     }
@@ -188,32 +263,28 @@ impl <T: SignalId> AsyncSystemParam for SigSend<T>  {
 pub struct SigRecv<T: SignalId>(Arc<SignalInner<Object>>, PhantomData<T>);
 
 impl<T: SignalId> SigRecv<T> {
-    pub fn recv(self) -> impl Future<Output = T::Data> + Send + Sync + 'static {
-        async move {
-            loop {
-                let signal = self.0.clone();
-                let obj = signal.async_read().await;
-                if let Some(data) = obj.get() {
-                    return data;
-                } else {
-                    YieldNow::new().await
-                }
+    pub async fn recv(self) -> T::Data {
+        loop {
+            let signal = self.0.clone();
+            let obj = signal.async_read().await;
+            if let Some(data) = obj.get() {
+                return data;
+            } else {
+                YieldNow::new().await
             }
         }
     }
 }
 
 impl<T: SignalId<Data = Object>> SigRecv<T> {
-    pub fn recv_as<A: AsObject>(self) -> impl Future<Output = A> + Send + Sync + 'static {
-        async move {
-            loop {
-                let signal = self.0.clone();
-                let obj = signal.async_read().await;
-                if let Some(data) = obj.get() {
-                    return data;
-                } else {
-                    YieldNow::new().await
-                }
+    pub async fn recv_as<A: AsObject>(self) -> A {
+        loop {
+            let signal = self.0.clone();
+            let obj = signal.async_read().await;
+            if let Some(data) = obj.get() {
+                return data;
+            } else {
+                YieldNow::new().await
             }
         }
     }
@@ -228,7 +299,7 @@ impl <T: SignalId> AsyncSystemParam for SigRecv<T>  {
         ) -> Self {
         SigRecv(
             signals.receiver::<T>()
-                .expect(&format!("Signal receiver of type <{}> missing", stringify!(T))),
+                .unwrap_or_else(|| panic!("Signal receiver of type <{}> missing", stringify!(T))),
             PhantomData
         )
     }
@@ -263,18 +334,18 @@ impl<T: SignalId> SignalSenderItem<'_, T> {
 #[derive(Debug, WorldQuery)]
 #[world_query(mutable)]
 pub struct SignalReceiver<T: SignalId>{
-    signals: Option<&'static mut Signals>,
+    signals: Option<&'static Signals>,
     p: PhantomData<T>,
 }
 
 impl<T: SignalId> SignalReceiverItem<'_, T> {
-    pub fn poll_once(&mut self) -> Option<T::Data> {
-        self.signals.as_mut()
+    pub fn poll_once(&self) -> Option<T::Data> {
+        self.signals.as_ref()
             .and_then(|sig| sig.poll_once::<T>())
     }
 
-    pub fn poll_any(&mut self) -> bool {
-        self.signals.as_mut()
+    pub fn poll_any(&self) -> bool {
+        self.signals.as_ref()
             .and_then(|sig| sig.poll_once::<T>())
             .is_some()
     }
@@ -284,6 +355,7 @@ impl<T: SignalId> SignalReceiverItem<'_, T> {
 pub enum RoleSignal<T: SignalId>{
     Sender(TypedSignal<T::Data>),
     Receiver(TypedSignal<T::Data>),
+    Adaptor(TypeId, SignalMapper),
 }
 
 impl<T: SignalId> RoleSignal<T> {
@@ -291,6 +363,11 @@ impl<T: SignalId> RoleSignal<T> {
         let base = match self {
             RoleSignal::Sender(s) => Signals::from_sender::<T>(s),
             RoleSignal::Receiver(r) => Signals::from_receiver::<T>(r),
+            RoleSignal::Adaptor(t, a) => {
+                let mut s = Signals::new();
+                s.add_adaptor::<T>(t, a);
+                s
+            },
         };
         base.and(other)
     }
@@ -299,6 +376,11 @@ impl<T: SignalId> RoleSignal<T> {
         match self {
             RoleSignal::Sender(s) => Signals::from_sender::<T>(s),
             RoleSignal::Receiver(r) => Signals::from_receiver::<T>(r),
+            RoleSignal::Adaptor(t, a) => {
+                let mut s = Signals::new();
+                s.add_adaptor::<T>(t, a);
+                s
+            },
         }
     }
 }
@@ -308,6 +390,7 @@ impl Signals {
         match other {
             RoleSignal::Sender(s) => self.with_sender::<A>(s),
             RoleSignal::Receiver(r) => self.with_receiver::<A>(r),
+            RoleSignal::Adaptor(t, a) => self.with_adaptor::<A>(t, a),
         }
     }
 

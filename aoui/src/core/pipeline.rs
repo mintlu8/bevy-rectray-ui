@@ -246,7 +246,6 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>>(
 
 #[derive(Debug, Clone, Copy)]
 struct OpacityStatus {
-    parent: Option<Entity>,
     opacity: f32,
     disabled: bool,
 }
@@ -261,7 +260,6 @@ fn propagate_aoui_opacity (
         opacity.computed_opacity = opacity.opacity * opacity.style_opacity * status.opacity;
         opacity.computed_disabled = opacity.disabled || status.disabled;
         let status = OpacityStatus {
-            parent: Some(entity),
             opacity: opacity.computed_opacity,
             disabled: opacity.computed_disabled,
         };
@@ -278,7 +276,6 @@ pub fn compute_aoui_opacity(
 ) {
     let mut queue: Vec<_> = query.iter_many(root.iter())
         .map(|(e, _)| (e, OpacityStatus {
-            parent: None,
             opacity: 1.0,
             disabled: false,
         }))

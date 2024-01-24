@@ -139,8 +139,12 @@ impl Plugin for WidgetsPlugin {
                 atlas::build_deferred_atlas,
                 text::sync_text_text_fragment,
                 text::sync_sprite_text_fragment,
+                spinner::spin_text_change,
                 spinner::sync_spin_text_with_text,
                 signals::sig_set_text,
+                signals::radio_button_clear_widget,
+                signals::inputbox_clear_widget,
+                signals::text_clear_widget,
             ))
             .add_systems(Update, (
                 misc::layout_opacity_limit.pipe(misc::set_layout_opactiy_limit),

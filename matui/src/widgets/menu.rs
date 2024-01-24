@@ -1,24 +1,47 @@
 
-
 use bevy::asset::Handle;
 use bevy::ecs::component::Component;
-use bevy::render::color::Color;
+use bevy::ecs::query::{With, Without};
 use bevy::render::texture::Image;
 use bevy::{window::CursorIcon, hierarchy::BuildChildren};
 use bevy::ecs::{entity::Entity, query::Changed, system::Query};
+use bevy_aoui::anim::Attr;
 use bevy_aoui::dsl::prelude::sender;
-use bevy_aoui::events::{EventFlags, FocusChange, FocusStateMachine};
-use bevy_aoui::sync::TypedSignal;
+use bevy_aoui::events::{CursorAction, EventFlags, FocusChange, FocusStateMachine};
+use bevy_aoui::sync::{SignalId, SignalReceiver, SignalSender, TypedSignal};
 use bevy_aoui::widgets::util::{DisplayIf, BlockPropagation};
-use bevy_aoui::{Anchor, size2, Size2, markers, frame, transition, Opacity};
+use bevy_aoui::{Anchor, size2, Size2, frame, transition, Opacity};
 use bevy_aoui::util::{signal, ComposeExtension, Object};
 use bevy_aoui::layout::StackLayout;
-use bevy_aoui::widgets::button::{radio_button_group, Payload, RadioButton, ToggleChange};
+use bevy_aoui::widgets::button::{CheckButton, RadioButton, ToggleChange};
 use bevy_aoui::util::{Widget, AouiCommands, WidgetBuilder};
 
-use crate::style::Palette;
-use crate::widgets::states::ToggleOpacity;
-use crate::{mdivider, mframe_extension, build_mframe, mcapsule, palette, mrectangle};
+use crate::style::{Color8, Palette};
+use crate::widgets::states::{SignalToggleOpacity, ToggleOpacity};
+use crate::{build_mframe, mcapsule, mdivider, mframe_extension, mrectangle};
+
+
+#[derive(Debug, Clone, Default, Component)]
+pub struct MenuCloseOnCallback;
+
+#[derive(Debug, Clone, Default, Component)]
+pub struct MenuState {
+    pub value: Object,
+    pub name: String,
+}
+
+impl PartialEq for MenuState {
+    fn eq(&self, other: &Self) -> bool {
+        self.value.equal_to(&other.value) && self.name == other.name
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MenuCallback{}
+
+impl SignalId for MenuCallback {
+    type Data = MenuState;
+}
 
 
 #[derive(Debug, Default, Component)]
@@ -27,12 +50,12 @@ pub struct DropdownItems(Vec<MenuItem>);
 #[derive(Debug, Component)]
 pub struct MenuBuilder {
     width: f32,
-    radio: RadioButton,
     divider: WidgetBuilder<()>,
     text: WidgetBuilder<String>,
     icon: WidgetBuilder<Handle<Image>>,
     nested: Option<WidgetBuilder<Vec<MenuItem>>>,
-    hover_background: Color,
+    signal: TypedSignal<MenuState>,
+    hover_background: Color8,
     hover_capsule: bool,
 }
 
@@ -45,13 +68,13 @@ pub struct MenuItemText {
     pub right: Option<Handle<Image>>,
 }
 
-impl Into<MenuItem> for MenuItemText {
-    fn into(self) -> MenuItem {
+impl From<MenuItemText> for MenuItem {
+    fn from(val: MenuItemText) -> Self {
         MenuItem::Text { 
-            key: self.key.or(self.value.clone()), 
-            value: self.value, 
-            icon: self.icon, 
-            right: self.right 
+            key: val.key.or(val.value.clone()), 
+            value: val.value, 
+            icon: val.icon, 
+            right: val.right 
         }
     }
 }
@@ -66,14 +89,14 @@ pub struct MenuItemNested {
     pub nested: Vec<MenuItem>
 }
 
-impl Into<MenuItem> for MenuItemNested {
-    fn into(self) -> MenuItem {
+impl From<MenuItemNested> for MenuItem {
+    fn from(val: MenuItemNested) -> Self {
         MenuItem::Nest { 
-            key: self.key.or(self.value.clone()), 
-            value: self.value, 
-            icon: self.icon, 
-            right: self.right,
-            nest: self.nested
+            key: val.key.or(val.value.clone()), 
+            value: val.value, 
+            icon: val.icon, 
+            right: val.right,
+            nest: val.nested
         }
     }
 }
@@ -168,12 +191,43 @@ macro_rules! menu_items {
     };
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
+pub struct MenuItemMarker;
+
+pub fn run_oneshot_menu(
+    mut query1: Query<(SignalReceiver<MenuCallback>, Attr<Opacity, Opacity>), (With<MenuCloseOnCallback>, With<MenuBuilder>)>,
+    mut query2: Query<(SignalReceiver<MenuCallback>, &mut CheckButton, SignalSender<ToggleChange>), (With<MenuCloseOnCallback>, Without<MenuBuilder>)>
+){
+    for (recv, mut vis) in query1.iter_mut() {
+        if recv.poll_any() {
+            vis.set(0.0);
+        }
+    }
+
+    for (recv, mut btn, send) in query2.iter_mut() {
+        if recv.poll_any() {
+            btn.set(false);
+            send.send(false);
+        }
+    }
+}
+
+
+pub fn run_dropdown_signals(
+    query: Query<(SignalSender<MenuCallback>, &CursorAction, &MenuState), With<MenuItemMarker>>
+){
+    for (sender, action, state) in query.iter() {
+        if action.intersects(EventFlags::LeftClick) {
+            sender.send(state.clone())
+        }
+    }
+}
+
 pub fn rebuild_dropdown_children(
     mut commands: AouiCommands,
     query: Query<(Entity, &DropdownItems, &MenuBuilder), Changed<DropdownItems>>
 ) {
     for (entity, items, builder) in query.iter() {
-        markers!(MenuItemMarker);
         commands.despawn_children_with::<MenuItemMarker>(entity);
         let width = builder.width;
         for item in &items.0 {
@@ -184,32 +238,37 @@ pub fn rebuild_dropdown_children(
                     commands.entity(entity).add_child(div);
                 },
                 MenuItem::Text { key, value, icon, right } => {
-                    let item = bevy_aoui::radio_button!(commands {
+                    let item = bevy_aoui::button!(commands {
                         dimension: size2!(width em, 2.2 em),
-                        context: builder.radio.clone(),
-                        value: key.clone(),
                         child: builder.text.build(&mut commands, value.clone()),
                         child: icon.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
                         child: right.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
                         extra: MenuItemMarker,
+                        extra: MenuState {
+                            name: value.clone(),
+                            value: key.clone(),
+                        },
+                        signal: sender::<MenuCallback>(builder.signal.clone())
                     });
-                    if builder.hover_background.a() > 0.0 && builder.hover_capsule{
+                    if builder.hover_background.0[3] > 0 && builder.hover_capsule{
                         let background = mcapsule!(commands {
                             dimension: Size2::FULL,
-                            palette: palette!(
-                                background: grey300,
-                            ),
+                            palette: Palette {
+                                background: builder.hover_background,
+                                ..Default::default()
+                            },
                             extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
                             extra: transition!(Opacity 0.15 Linear default 0.0),
                             z: 0.005,
                         });
                         commands.entity(item).add_child(background);
-                    } else if builder.hover_background.a() > 0.0 {
+                    } else if builder.hover_background.0[3] > 0 {
                         let background = mrectangle!(commands {
                             dimension: Size2::FULL,
-                            palette: palette!(
-                                background: grey300,
-                            ),
+                            palette: Palette {
+                                background: builder.hover_background,
+                                ..Default::default()
+                            },
                             extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
                             extra: transition!(Opacity 0.15 Linear default 0.0),
                             z: 0.005,
@@ -218,17 +277,15 @@ pub fn rebuild_dropdown_children(
                     }
                     commands.entity(entity).add_child(item);
                 },
-                MenuItem::Nest { key, value, icon, right, nest } => {
+                MenuItem::Nest { key:_, value, icon, right, nest } => {
                     let (send, recv) = signal();
-                    let item = bevy_aoui::radio_button!(commands {
+                    let item = bevy_aoui::button!(commands {
                         dimension: size2!(width em, 2.2 em),
-                        context: builder.radio.clone(),
-                        value: key.clone(),
                         child: builder.text.build(&mut commands, value.clone()),
                         child: icon.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
                         child: right.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
                         extra: MenuItemMarker,
-                        extra: FocusStateMachine::new(),
+                        extra: FocusStateMachine::NoFocus,
                         signal: sender::<FocusChange>(send),
                     });
                     let child = commands.spawn_fn(builder.nested.as_ref()
@@ -236,28 +293,29 @@ pub fn rebuild_dropdown_children(
                         nest.clone());
                     commands.entity(child)
                         .add_receiver::<ToggleChange>(recv)
-                        .insert(ToggleOpacity::new(0.0, 1.0));
+                        .insert(SignalToggleOpacity::new(0.0, 1.0));
                     commands.entity(item).add_child(child);
 
-                    if builder.hover_background.a() > 0.0 && builder.hover_capsule{
+                    if  builder.hover_background.0[3] > 0 && builder.hover_capsule{
                         let background = mcapsule!(commands {
                             dimension: Size2::FULL,
-                            palette: palette!(
-                                background: grey300,
-                                stroke: grey300,
-                            ),
+                            palette: Palette {
+                                background: builder.hover_background,
+                                ..Default::default()
+                            },
                             extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
                             extra: transition!(Opacity 0.15 Linear default 0.0),
                             z: 0.005,
                         });
                         commands.entity(item).add_child(background);
-                    } else if builder.hover_background.a() > 0.0 {
+                    } else if builder.hover_background.0[3] > 0 {
                         let background = mrectangle!(commands {
                             dimension: Size2::FULL,
-                            palette: palette!(
-                                background: grey300,
-                                stroke: grey300,
-                            ),                            extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
+                            palette: Palette {
+                                background: builder.hover_background,
+                                ..Default::default()
+                            },
+                            extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
                             extra: transition!(Opacity 0.15 Linear default 0.0),
                             z: 0.005,
                         });
@@ -279,19 +337,20 @@ mframe_extension!(
         /// If true, behave like a `CheckButton` and set context to `None` if already checked.
         pub cancellable: bool,
         /// Discriminant for this button's value, must be comparable.
-        pub value: Option<Payload>,
+        pub state: Option<MenuState>,
         /// Width of the divider.
         pub divider: Option<f32>,
         /// Selected
         pub selected: Object,
         /// Items.
         pub items: Vec<MenuItem>,
-        /// Palette for hovering.
-        pub hover_palette: Option<Palette>,
 
         pub width: Option<f32>,
 
         pub default_value: Object,
+
+        /// If not true, set visibility to false after signal sent.
+        pub persist: bool,
 
         /// Widget builder for text dropdown.
         pub icon_builder: Option<WidgetBuilder<Handle<Image>>>,
@@ -308,6 +367,9 @@ mframe_extension!(
 
         /// Signal for building bools.
         pub open_signal: Option<TypedSignal<bool>>,
+
+        /// Signal for building bools.
+        pub callback: Option<TypedSignal<MenuState>>,
     }
 );
 
@@ -334,23 +396,24 @@ impl Widget for MMenuBuilder {
             },
         };
 
-        let radio = radio_button_group(self.selected);
         let palette = self.palette;
-        let hover_palette = self.hover_palette.unwrap_or(self.palette);
         if self.layout.is_none() {
             self.layout = Some(StackLayout::VSTACK.into());
         }
         let divider_width = self.divider_width.unwrap_or(0.1);
+
+        let signal = self.callback.unwrap_or(signal());
         let frame = build_mframe!(commands, self)
             .insert((
                 BlockPropagation,
                 transition!(Opacity 0.15 Linear default self.opacity.opacity),
                 DropdownItems(self.items),
                 MenuBuilder {
-                    hover_background: Color::GRAY,
                     hover_capsule: self.hover_capsule,
+                    hover_background: self.palette.background_lite,
+                    nested: nested_builder,
+                    signal: signal.clone(),
                     width: self.width.unwrap_or(10.0),
-                    radio,
                     divider: WidgetBuilder::new(move |commands: &mut AouiCommands| {
                         frame!(commands {
                             dimension: size2!(100%, {divider_width + 0.3} em),
@@ -368,7 +431,7 @@ impl Widget for MMenuBuilder {
                                 anchor: Anchor::CENTER_LEFT,
                                 offset: size2!(2.2 em, 0),
                                 text: text,
-                                color: hover_palette.stroke(),
+                                color: palette.foreground(),
                                 z: 0.01,
                             })
                         })
@@ -380,14 +443,20 @@ impl Widget for MMenuBuilder {
                                 sprite: img,
                                 offset: size2!(-2.2 em, 0),
                                 dimension: size2!(2.2 em, 2.2 em),
-                                color: hover_palette.stroke(),
+                                color: palette.foreground(),
                                 z: 0.01,
                             })
                         })
                     ),
-                    nested: nested_builder,
                 },
             )).id();
+
+        if !self.persist {
+            commands.entity(frame)
+                .insert(MenuCloseOnCallback)
+                .add_receiver::<MenuCallback>(signal);
+        }
+
         if let Some(signal) = self.open_signal {
             commands.entity(frame)
                 .add_receiver::<ToggleChange>(signal)

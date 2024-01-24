@@ -5,13 +5,19 @@ mod impl_convert;
 mod vec_convert;
 pub use converters::*;
 
-mod sealed {
-    pub trait DslConvert<B, const C: char> {
-        fn parse(self) -> B;
-    }
+pub(crate) mod sealed {
+    pub enum SealToken{}
 }
 
-pub(crate) use sealed::DslConvert;
+pub trait DslConvertReadOnly<> {
+    
+}
+pub trait DslConvert<B, const C: char> {
+    fn parse(self) -> B;
+    fn sealed(seal: SealToken);
+}
+
+pub(crate) use sealed::SealToken;
 
 /// The `From` trait for `bevy_aoui`'s DSL.
 pub trait DslFrom<T> {
@@ -22,3 +28,5 @@ pub trait DslFrom<T> {
 pub trait DslInto<T> {
     fn dinto(self) -> T;
 }
+
+

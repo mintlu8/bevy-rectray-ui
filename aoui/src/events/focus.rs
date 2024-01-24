@@ -1,18 +1,29 @@
-use bevy::ecs::{component::Component, query::Has, system::Query};
+use bevy::{ecs::{component::Component, query::Has, system::{Query, Res}}, input::{mouse::MouseButton, Input}};
 
 use crate::sync::{SignalId, SignalSender};
 
-use super::DescendantHasFocus;
+use super::{CursorClickOutside, DescendantHasFocus};
 
-
-#[derive(Debug, Clone, Copy, Component)]
-pub struct FocusStateMachine(bool);
-
-impl FocusStateMachine {
-    pub fn new() -> FocusStateMachine {
-        Self(false)
-    }
+/// Tracks when this entity obtain and lose focus, operates signals 
+/// `ObtainedFocus`, `LoseFocus` and `FocusChange`.
+#[derive(Debug, Clone, Copy, Component, PartialEq, Eq)]
+pub enum FocusStateMachine{
+    NoFocus,
+    Focus
 }
+
+/// Tracks when this entity obtains and lose focus, operates signals 
+/// `ObtainedFocus`, `LoseFocus` and `FocusChange`.
+/// 
+/// Obtain `StrongFocus` when clicked, which can only be cancelled by clicking outside.
+/// Requires `EventFlags` `ClickOutside`.
+#[derive(Debug, Clone, Copy, Component, PartialEq, Eq)]
+pub enum StrongFocusStateMachine{
+    NoFocus,
+    Weak,
+    Strong
+}
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObtainedFocus {}
@@ -41,10 +52,43 @@ pub fn run_focus_signals(
         Has<DescendantHasFocus>)>
 ) {
     for (mut focus, obtain, lose, change, has) in query.iter_mut() {
-        if has != focus.0 {
-            focus.0 = has;
+        let new = if has {FocusStateMachine::Focus} else {FocusStateMachine::NoFocus};
+        if focus.as_ref() != &new {
+            *focus = new;
             change.send(has);
             if has {
+                obtain.send(())
+            } else {
+                lose.send(())
+            }
+        }
+    }
+}
+
+pub fn run_strong_focus_signals(
+    state: Res<Input<MouseButton>>,
+    mut query: Query<(&mut StrongFocusStateMachine, 
+        SignalSender<ObtainedFocus>, 
+        SignalSender<LoseFocus>, 
+        SignalSender<FocusChange>, 
+        Option<&CursorClickOutside>,
+        Has<DescendantHasFocus>)>
+) {
+    for (mut focus, obtain, lose, change, outside, has) in query.iter_mut() {
+        let new =  if outside.is_some() {
+            StrongFocusStateMachine::NoFocus
+        } else if has && state.any_pressed([MouseButton::Left, MouseButton::Middle, MouseButton::Right]) 
+                || focus.as_ref() == &StrongFocusStateMachine::Strong {
+            StrongFocusStateMachine::Strong
+        } else if has {
+            StrongFocusStateMachine::Weak
+        } else {
+            StrongFocusStateMachine::NoFocus
+        };
+        if focus.as_ref() != &new {
+            *focus = new;
+            change.send(has);
+            if new != StrongFocusStateMachine::NoFocus {
                 obtain.send(())
             } else {
                 lose.send(())

@@ -58,7 +58,7 @@
 //! * If target is the source of current animation, reverse.
 //! * Otherwise interpolate to the target.
 
-use bevy::{app::{Update, Plugin}, render::color::Color, sprite::TextureAtlasSprite};
+use bevy::{app::{FixedUpdate, Plugin, Update}, render::color::Color, sprite::TextureAtlasSprite};
 use bevy::ecs::{schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, query::WorldQuery};
 
 use ::interpolation::Ease;
@@ -71,7 +71,8 @@ pub use assoc::{Attr, InterpolateAssociation};
 mod fgsm;
 pub use fgsm::{Fgsm, FgsmPairing, ComponentFgsm};
 
-use crate::{Opacity, Transform2D, Dimension, Coloring};
+
+use crate::{Coloring, Dimension, Opacity, Transform2D};
 
 /// A easing function.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -146,7 +147,7 @@ impl Plugin for AnimationPlugin {
         app
             .configure_sets(Update, InterpolationSet)
             .configure_sets(Update, InterpolationUpdateSet.after(InterpolationSet))
-            .add_systems(Update, (
+            .add_systems(FixedUpdate, (
                 <(Transform2D, Offset)>::system,
                 <(Transform2D, Rotation)>::system,
                 <(Transform2D, Offset)>::system,
@@ -156,7 +157,7 @@ impl Plugin for AnimationPlugin {
                 <(Opacity, Opacity)>::system,
                 <(TextureAtlasSprite, Index)>::system,
             ).in_set(InterpolationSet))
-            .add_systems(Update, (
+            .add_systems(FixedUpdate, (
                 Offset::update_interpolate,
                 Rotation::update_interpolate,
                 Scale::update_interpolate,

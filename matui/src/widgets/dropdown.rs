@@ -8,23 +8,26 @@ use bevy::render::texture::Image;
 use bevy::text::Font;
 use bevy::window::CursorIcon;
 use bevy::ecs::component::Component;
+use bevy_aoui::dsl::prelude::{adaptor, receiver};
 use bevy_aoui::dsl::OptionEx;
 use bevy_aoui::sync::{SignalReceiver, TypedSignal};
-use bevy_aoui::util::convert::IntoEntity;
-use bevy_aoui::util::{signal, DslFrom, Object};
-use bevy_aoui::widgets::signals::TextFromSignal;
-use bevy_aoui::{check_button, signal_ids, size2, text, transition, Anchor, Transform2D};
+use bevy_aoui::util::{ComposeExtension, Object};
+use bevy_aoui::widgets::button::{ToggleChange, ToggleInvoke};
+use bevy_aoui::widgets::signals::{FormatText, Invocation, TextFromSignal};
+use bevy_aoui::{signal_ids, size2, text, transition, Anchor, Transform2D};
 use bevy_aoui::widgets::inputbox::InputOverflow;
 use bevy_aoui::{frame_extension, build_frame};
 use bevy_aoui::anim::{Attr, Easing, Interpolate, Offset, Rotation, Scale};
-use bevy_aoui::events::EventFlags;
+use bevy_aoui::events::{EventFlags, LoseFocus, StrongFocusStateMachine};
 use bevy_aoui::util::{Widget, AouiCommands, DslInto, convert::IntoAsset};
-use crate::widgets::input::PlaceHolderText;
-use crate::widgets::spinner::FocusColors;
+use crate::widgets::input::{DisplayIfHasText, PlaceHolderText};
 use crate::build_shape;
 use crate::shaders::RoundedRectangleMaterial;
 use crate::style::Palette;
+use crate::widgets::menu::{MenuCloseOnCallback, MenuItemMarker};
+use crate::widgets::states::{FocusColors, SignalToggleOpacity};
 
+use super::menu::{MenuCallback, MenuState};
 use super::{ShadowInfo, MenuItem};
 
 
@@ -44,7 +47,6 @@ frame_extension!(
         pub placeholder: String,
         pub content: Vec<MenuItem>,
         pub selected: Object,
-        pub cancellable: bool,
         // Width of text, in em.
         pub width: f32,
         pub dropdown_width: f32,
@@ -55,18 +57,17 @@ frame_extension!(
         pub radius: f32,
         pub shadow: OptionEx<ShadowInfo>,
         pub overflow: InputOverflow,
-
-        pub open_icon: IntoAsset<Image>,
         /// Sets the CursorIcon when hovering this button, default is `Text`
         pub cursor_icon: Option<CursorIcon>,
         pub palette: Palette,
         pub focus_palette: Option<Palette>,
         pub disabled_palette: Option<Palette>,
-
-        pub callback_signal: TypedSignal<bool>,
-
-        pub menu: IntoEntity,
-        pub dial: IntoEntity,
+        pub callback: TypedSignal<MenuState>,
+        pub menu: Option<Entity>,
+        pub cancel: Option<Entity>,
+        pub dial: Option<Entity>,
+        pub cancel_signal: TypedSignal<()>,
+        pub toggle_signal: TypedSignal<bool>,
     }
 );
 
@@ -75,50 +76,65 @@ impl Widget for MDropdownBuilder {
         self.event |= EventFlags::Hover|EventFlags::LeftDrag;
 
         self.dimension = size2!({self.width} em, 2.8 em).dinto();
-        
+
         let palette = self.palette;
         let focus_palette = self.focus_palette.unwrap_or(palette);
         let disabled_palette = self.disabled_palette.unwrap_or(palette);
 
-        let default = if self.selected.is_none() {
-            String::new()
-        } else {
-            self.content.iter().find_map(|x| {
-                match x {
-                    MenuItem::Divider => None,
-                    MenuItem::Text { key, value, .. } | MenuItem::Nest { key, value, .. } => {
-                        if key.equal_to(&self.selected) {
-                            Some(value.clone())
-                        } else {
-                            None
-                        }
-                    },
-                }
-            }).unwrap_or("???".to_owned())
-        };
-        
-        let (radio, ) = commands.radio_button_group(self.selected);
-
         let entity = build_frame!(commands, self).id();
-        let textbox = text!(commands {
-            color: palette.foreground(),
-            text: default,
-            font: self.font.clone(),
+
+        let text_area = text!(commands {
             z: 0.01,
+            offset: size2!(0.8 em, {if self.placeholder.is_empty() {
+                0.0
+            } else {
+                -0.4
+            }} em),
+            color: palette.foreground(),
+            anchor: Anchor::CENTER_LEFT,
             extra: TextFromSignal,
             extra: FocusColors {
-                idle: palette.background(),
-                focus: focus_palette.background(),
-                disabled: disabled_palette.background(),
+                idle: palette.foreground(),
+                focus: focus_palette.foreground(),
+                disabled: disabled_palette.foreground(),
             },
             extra: Interpolate::<Color>::new(
                 Easing::Linear,
-                palette.background(),
+                palette.foreground(),
                 0.15
             ),
+            signal: receiver::<MenuCallback>(self.callback.clone()),
+            signal: adaptor::<MenuCallback, FormatText>(|callback| callback.name),
         });
 
-        build_shape!(commands, self, textbox);
+        build_shape!(commands, self, entity);
+
+        if let Some(cancel) = self.cancel {
+            commands.entity(cancel).insert((
+                DisplayIfHasText { points_to: text_area },
+                MenuItemMarker,
+                MenuState {
+                    value: Object::NONE,
+                    name: String::new(),
+                }
+            ))
+            .add_sender::<MenuCallback>(self.callback.clone());
+            commands.entity(entity).add_child(cancel);
+        }
+
+        if let Some(button) = self.dial {
+            commands.entity(button).insert(MenuCloseOnCallback)
+                .add_sender::<ToggleChange>(self.toggle_signal.clone())
+                .add_receiver::<MenuCallback>(self.callback.clone())
+                .add_receiver::<Invocation>(self.cancel_signal.clone().type_erase())
+                .add_adaptor::<Invocation, ToggleInvoke>(|_| false);
+            commands.entity(entity).add_child(button);
+        }
+
+        commands.entity(entity)
+            .add_sender::<LoseFocus>(self.cancel_signal)
+            .compose(EventFlags::ClickOutside)
+            .insert(StrongFocusStateMachine::NoFocus);
         let has_placeholder = !self.placeholder.is_empty();
         if has_placeholder {
             let placeholder = text!(commands {
@@ -129,7 +145,8 @@ impl Widget for MDropdownBuilder {
                 text: self.placeholder,
                 extra: PlaceHolderText {
                     idle_color: palette.foreground(),
-                    active_color: focus_palette.foreground()
+                    active_color: focus_palette.foreground(),
+                    points_to: text_area,
                 },
                 extra: transition!(
                     Color 0.15 Linear default {self.palette.foreground()};
@@ -137,24 +154,18 @@ impl Widget for MDropdownBuilder {
                     Scale 0.15 Linear default {Vec2::ONE};
                 )
             });
-            commands.entity(textbox).add_child(placeholder);
+            commands.entity(entity).add_child(placeholder);
         };
 
-        let dial = self.dial.build_expect(commands, "Dial is required.");
-        let menu = self.menu.build_expect(commands, "Menu is required.");
-        commands.entity(dial).insert(
-            FocusColors {
-                idle: palette.foreground(),
-                focus: focus_palette.foreground(),
-                disabled: disabled_palette.foreground(),
-            }
-        );
+        commands.entity(entity).add_child(text_area);
 
-        commands.entity(entity)
-            .add_child(textbox)
-            .add_child(dial)
-            .add_child(menu);
-        (entity, textbox)
+        if let Some(menu) = self.menu {
+            commands.entity(menu)
+                .add_receiver::<ToggleChange>(self.toggle_signal)
+                .insert(SignalToggleOpacity::new(0.0, 1.0));
+            commands.entity(entity).add_child(menu);
+        }
+        (entity, entity)
     }
 }
 
@@ -167,7 +178,7 @@ pub struct SpinDial{
 }
 
 pub fn spin_dial_system(mut q: Query<(SignalReceiver<SpinSignal>, &SpinDial, Attr<Transform2D, Rotation>)>){
-    for (mut sig, dial, mut rot) in q.iter_mut(){
+    for (sig, dial, mut rot) in q.iter_mut(){
         if let Some(val) = sig.poll_once() {
             if val {
                 rot.set(dial.to);
@@ -175,41 +186,6 @@ pub fn spin_dial_system(mut q: Query<(SignalReceiver<SpinSignal>, &SpinDial, Att
                 rot.set(dial.from);
             }
         }
-    }
-}
-
-pub fn spin_dial(commands: &mut AouiCommands, sprite: impl DslInto<IntoAsset<Image>>, spin: impl DslInto<SpinDial>) -> Entity {
-    let (send, recv) = signal();
-    check_button!(commands {
-        dimension: size2!(1.2 em, 1.2 em),
-        on_change: send,
-        extra: sprite.dinto().into_bundle(commands, Color::WHITE),
-        extra: spin.dinto(),
-    })
-}
-
-impl DslFrom<(i32, i32)> for SpinDial {
-    fn dfrom((from, to): (i32, i32)) -> Self {
-        SpinDial { from: from as f32, to: to as f32}
-    }
-}
-
-impl DslFrom<(i32, f32)> for SpinDial {
-    fn dfrom((from, to): (i32, f32)) -> Self {
-        SpinDial { from: from as f32, to}
-    }
-}
-
-impl DslFrom<(f32, i32)> for SpinDial {
-    fn dfrom((from, to): (f32, i32)) -> Self {
-        SpinDial { from, to: to as f32}
-    }
-}
-
-
-impl DslFrom<(f32, f32)> for SpinDial {
-    fn dfrom((from, to): (f32, f32)) -> Self {
-        SpinDial { from, to }
     }
 }
 

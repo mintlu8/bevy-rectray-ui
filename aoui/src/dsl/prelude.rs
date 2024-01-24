@@ -2,6 +2,7 @@
 
 use crate::sync::RoleSignal;
 use crate::sync::SignalId;
+use crate::sync::SignalMapper;
 use crate::sync::TypedSignal;
 use crate::Anchor;
 use crate::BuildTransform;
@@ -84,6 +85,14 @@ pub fn sender<T: SignalId>(sig: TypedSignal<T::Data>) -> RoleSignal<T> {
 /// A signal with the receiver role.
 pub fn receiver<T: SignalId>(sig: TypedSignal<T::Data>) -> RoleSignal<T> {
     RoleSignal::Receiver(sig)
+}
+
+/// Add a adaptor that polls a signal type's value mapped from a signal of another type.
+/// 
+/// This only affects sync APIs on receivers, i.e. `poll_once`.
+/// Async systems are not affected by this.
+pub fn adaptor<From: SignalId, To: SignalId>(f: impl Fn(From::Data) -> To::Data + Clone + Send + Sync + 'static) -> RoleSignal<To> {
+    RoleSignal::Adaptor(std::any::TypeId::of::<From>(), SignalMapper::new::<From, To>(f))
 }
 
 /// Build transform at an anchor.

@@ -128,7 +128,7 @@ pub(crate) fn scrolling_system<'t, T: Movement>(
     let iter = scroll.iter_mut()
         .map(|(entity, query, action)|
             (entity, query, action.get()))
-        .chain(receiver.iter_mut().filter_map(|(entity, query, mut receiver)|
+        .chain(receiver.iter_mut().filter_map(|(entity, query, receiver)|
             Some((entity, query, receiver.poll_once()?)))); {
     }
     let mut out = Vec::new();
@@ -213,7 +213,7 @@ impl Movement for ScrollDiscrete {
             1.. => {
                 container.increment();
             }
-            0 => return,
+            0 => (),
         };
     }
 }

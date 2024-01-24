@@ -76,6 +76,9 @@ pub use cursor::CameraQuery;
 pub use coverage::{CoveragePx, CoveragePercent};
 pub use focus::*;
 
+use self::coverage::calculate_coverage;
+use self::cursor::{custom_cursor_controller, track_cursor};
+
 /// Marker component for Aoui's camera, optional.
 ///
 /// Used for cursor detection and has no effect on rendering.
@@ -136,6 +139,12 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .add_systems(PreUpdate, mouse_button_click_outside.in_set(AouiEventSet).after(mouse_button_input))
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
             .add_systems(PreUpdate, focus::run_focus_signals.in_set(AouiWidgetEventSet))
+            .add_systems(PreUpdate, focus::run_strong_focus_signals.in_set(AouiWidgetEventSet))
+            .add_systems(FixedUpdate, (
+                track_cursor,
+                custom_cursor_controller,
+                calculate_coverage,
+            ))
             .add_systems(Last, (
                 remove_all::<CursorAction>,
                 remove_all::<CursorFocus>,

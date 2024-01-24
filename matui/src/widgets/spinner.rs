@@ -1,68 +1,24 @@
 use bevy::ecs::entity::Entity;
-use bevy::ecs::query::Has;
 use bevy::render::color::Color;
 use bevy::render::texture::Image;
 use bevy::{hierarchy::BuildChildren, text::Font};
 use bevy::window::CursorIcon;
-use bevy::ecs::{component::Component, system::Query};
 use bevy_aoui::dsl::prelude::receiver;
 use bevy_aoui::sync::TypedSignal;
 use bevy_aoui::util::{signal, Object};
 use bevy_aoui::widgets::spinner::{SpinnerText, Decrement, Increment};
-use bevy_aoui::{Opacity, button, Size2};
+use bevy_aoui::{button, Size2};
 use bevy_aoui::layout::{LayoutRange, Axis};
 use bevy_aoui::{frame_extension, build_frame, Hitbox, size2, frame, text, layout::{Container, StackLayout}, sprite};
 use bevy_aoui::anim::{Interpolate, Easing};
-use bevy_aoui::events::{EventFlags, DescendantHasFocus};
+use bevy_aoui::events::EventFlags;
 use bevy_aoui::widgets::util::PropagateFocus;
 use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
 use crate::shaders::{RoundedRectangleMaterial, StrokeColoring};
 use crate::style::Palette;
+use crate::widgets::states::FocusColors;
 
 use super::util::{ShadowInfo, StrokeColors};
-
-/// A simple state machine that changes depending on status.
-#[derive(Debug, Component, Clone, Copy)]
-pub struct FocusColors {
-    pub idle: Color,
-    pub focus: Color,
-    pub disabled: Color,
-}
-
-impl Default for FocusColors {
-    fn default() -> Self {
-        Self {
-            idle: Color::NONE,
-            focus: Color::NONE,
-            disabled: Color::NONE
-        }
-    }
-}
-
-pub fn cursor_color_change(mut query: Query<(&FocusColors, &Opacity, Has<DescendantHasFocus>, &mut Interpolate<Color>)>) {
-    query.iter_mut().for_each(|(colors, opacity, focus, mut color)| {
-        if opacity.is_disabled() {
-            color.interpolate_to(colors.disabled);
-        } else if focus {
-            color.interpolate_to(colors.focus);
-        } else {
-            color.interpolate_to(colors.idle);
-        }
-    })
-}
-
-
-pub fn cursor_stroke_change(mut query: Query<(&StrokeColors<FocusColors>, &Opacity, Has<DescendantHasFocus>, &mut Interpolate<StrokeColoring>)>) {
-    query.iter_mut().for_each(|(colors, opacity, focus, mut color)| {
-        if opacity.is_disabled() {
-            color.interpolate_to(colors.disabled);
-        } else if focus {
-            color.interpolate_to(colors.focus);
-        } else {
-            color.interpolate_to(colors.idle);
-        }
-    })
-}
 
 frame_extension!(
     pub struct MSpinnerBuilder {
@@ -89,6 +45,8 @@ frame_extension!(
         pub font: IntoAsset<Font>,
         pub signal: TypedSignal<Object>,
         pub text_signal: TypedSignal<String>,
+
+        pub button_hitbox: Hitbox,
     }
 );
 
@@ -148,6 +106,7 @@ impl Widget for MSpinnerBuilder {
         let left = button!(commands{
             dimension: size2!(1.2 em, 1.2 em),
             on_click: decr_send,
+            hitbox: self.button_hitbox,
             extra: FocusColors {
                 idle: palette.foreground(),
                 focus: focus_palette.foreground(),
@@ -168,6 +127,7 @@ impl Widget for MSpinnerBuilder {
         let right = button!(commands{
             dimension: size2!(1.2 em, 1.2 em),
             on_click: incr_send,
+            hitbox: self.button_hitbox,
             extra: FocusColors {
                 idle: palette.foreground(),
                 focus: focus_palette.foreground(),

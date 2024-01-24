@@ -151,6 +151,7 @@ impl<A: Component, B: Interpolation> AttrItem<'_, A, B>
             <(A, B)>::set(&mut self.component, value);
         }
     }
+    
 
     /// This will move the interpolation without interpolating.
     pub fn force_set(&mut self, value: B::FrontEnd) {
@@ -177,6 +178,32 @@ impl<A: Component, B: Interpolation> AttrItem<'_, A, B>
     }
 }
 
+impl<A: Component, B: Interpolation<FrontEnd = Vec2>> AttrItem<'_, A, B>
+        where (A, B): InterpolateAssociation<Component = A, Interpolation = B> {
+
+    /// Set the value or move the interpolation.
+    pub fn set_x(&mut self, value: f32) {
+        if let Some(interpolate) = &mut self.interpolate {
+            let target = interpolate.target().y;
+            interpolate.interpolate_to(Vec2::new(value, target));
+        } else {
+            let y = <(A, B)>::get(&self.component).y;
+            <(A, B)>::set(&mut self.component, Vec2::new(value, y));
+        }
+    }
+    
+    /// Set the value or move the interpolation.
+    pub fn set_y(&mut self, value: f32) {
+        if let Some(interpolate) = &mut self.interpolate {
+            let target = interpolate.target().x;
+            interpolate.interpolate_to(Vec2::new(target, value));
+        } else {
+            let x = <(A, B)>::get(&self.component).x;
+            <(A, B)>::set(&mut self.component, Vec2::new(x, value));
+        }
+    }
+    
+}
 
 impl<A: Component, B: Interpolation> AttrReadOnlyItem<'_, A, B>
         where (A, B): InterpolateAssociation<Component = A, Interpolation = B> {

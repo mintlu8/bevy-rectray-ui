@@ -1,24 +1,27 @@
 use bevy::ecs::entity::Entity;
+use bevy::ecs::query::Has;
 use bevy::hierarchy::BuildChildren;
 use bevy::math::Vec2;
 use bevy::render::color::Color;
 use bevy::render::texture::Image;
-use bevy::text::Font;
+use bevy::text::{Font, Text};
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
 use bevy_aoui::dsl::OptionEx;
 use bevy_aoui::sync::TypedSignal;
+use bevy_aoui::util::{signal, ComposeExtension};
+use bevy_aoui::widgets::button::ButtonClick;
+use bevy_aoui::widgets::signals::ClearWidget;
 use bevy_aoui::widgets::TextFragment;
 use bevy_aoui::{Opacity, material_sprite, size2, color, inputbox, Anchor, text, Size2, rectangle, transition, frame};
 use bevy_aoui::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxCursorArea, InputBoxCursorBar, InputBoxText};
 use bevy_aoui::{size, frame_extension, build_frame};
-use bevy_aoui::anim::{Interpolate, Easing, Offset, Scale};
+use bevy_aoui::anim::{Easing, Interpolate, Offset, Scale, VisibilityToggle};
 use bevy_aoui::events::{EventFlags, CursorFocus};
 use bevy_aoui::util::{Widget, AouiCommands, DslInto, convert::IntoAsset};
 use crate::{StrokeColoring, build_shape};
 use crate::shaders::RoundedRectangleMaterial;
 use crate::style::Palette;
-
 use super::ShadowInfo;
 use super::util::StrokeColors;
 
@@ -26,33 +29,57 @@ use super::util::StrokeColors;
 pub struct PlaceHolderText {
     pub idle_color: Color,
     pub active_color: Color,
+    pub points_to: Entity,
+}
+
+#[derive(Debug, Clone, Copy, Component)]
+pub struct DisplayIfHasText{
+    pub points_to: Entity,
 }
 
 pub fn text_placeholder(
-    mut query: Query<(
+    mut input_box: Query<(
         &PlaceHolderText,
-        Option<&InputBoxState>,
         &mut Interpolate<Color>,
         &mut Interpolate<Offset>,
         &mut Interpolate<Scale>,
-)>) {
-    for (placeholder, state, mut color, mut offset, mut scale) in query.iter_mut() {
-        match state {
-            Some(_) => {
-                color.interpolate_to(placeholder.active_color);
-                offset.interpolate_to(Vec2::new(0.8, 0.7));
-                scale.interpolate_to(Vec2::new(0.8, 0.8));
-            },
-            None => {
-                color.interpolate_to(placeholder.idle_color);
-                offset.interpolate_to(Vec2::new(0.8, 0.0));
-                scale.interpolate_to(Vec2::new(1.0, 1.0));
-            }
+        Has<InputBoxState>,
+    )>,
+    text_query: Query<(Option<&TextFragment>, Option<&Text>)>
+) {
+    for (placeholder, mut color, mut offset, mut scale, has) in input_box.iter_mut() {
+        let has_text = has || match text_query.get(placeholder.points_to) {
+            Ok((frag, text)) => 
+                frag.map(|x| !x.text.is_empty()).unwrap_or(false) || 
+                text.map(|x| x.sections.iter().any(|x| !x.value.is_empty())).unwrap_or(false),
+            Err(_) => false,
+        };
+        if has_text {
+            color.interpolate_to(placeholder.active_color);
+            offset.interpolate_to(Vec2::new(0.8, 0.7));
+            scale.interpolate_to(Vec2::new(0.8, 0.8));
+        } else {
+            color.interpolate_to(placeholder.idle_color);
+            offset.interpolate_to(Vec2::new(0.8, 0.0));
+            scale.interpolate_to(Vec2::new(1.0, 1.0));
         }
     }
 }
 
-
+pub fn display_if_has_text(
+    mut display_if: Query<(&DisplayIfHasText, VisibilityToggle)>,
+    text_query: Query<(Option<&TextFragment>, Option<&Text>)>
+) {
+    for (display, mut visibility) in display_if.iter_mut() {
+        let has_text = match text_query.get(display.points_to) {
+            Ok((frag, text)) => 
+                frag.map(|x| !x.text.is_empty()).unwrap_or(false) || 
+                text.map(|x| x.sections.iter().any(|x| !x.value.is_empty())).unwrap_or(false),
+            Err(_) => false,
+        };
+        visibility.set_visible(has_text)
+    }
+}
 /// A simple state machine that changes depending on status.
 #[derive(Debug, Component, Clone, Copy)]
 pub struct CursorStateColors {
@@ -135,7 +162,7 @@ frame_extension!(
         pub palette: Palette,
         pub focus_palette: Option<Palette>,
         pub disabled_palette: Option<Palette>,
-
+        pub cancel: Option<Entity>,
         pub bottom_bar: Option<f32>,
     }
 );
@@ -150,6 +177,7 @@ impl Widget for MInputBuilder {
         let disabled_style = self.disabled_palette.unwrap_or(style);
 
         let entity = build_frame!(commands, self).id();
+        let text_area;
         let input_box = inputbox!(commands {
             color: style.foreground(),
             text: &self.text,
@@ -183,6 +211,7 @@ impl Widget for MInputBuilder {
                 extra: InputBoxCursorArea,
             },
             text_area: rectangle! {
+                entity: text_area,
                 z: 0.01,
                 offset: size2!(0.8 em, {if self.placeholder.is_empty() {
                     0.0
@@ -197,6 +226,15 @@ impl Widget for MInputBuilder {
             }
         });
 
+        if let Some(cancel) = self.cancel {
+            let (cancel_send, cancel_recv) = signal();
+            commands.entity(cancel).insert((
+                DisplayIfHasText { points_to: text_area},
+            )).add_sender::<ButtonClick>(cancel_send);
+            commands.entity(entity).add_child(cancel);
+            commands.entity(input_box).add_receiver::<ClearWidget>(cancel_recv);
+        }
+
         build_shape!(commands, self, input_box);
         let has_placeholder = !self.placeholder.is_empty();
         if has_placeholder {
@@ -208,7 +246,8 @@ impl Widget for MInputBuilder {
                 text: self.placeholder,
                 extra: PlaceHolderText {
                     idle_color: style.foreground(),
-                    active_color: focus_style.foreground()
+                    active_color: focus_style.foreground(),
+                    points_to: text_area,
                 },
                 extra: transition!(
                     Color 0.15 Linear default {self.palette.foreground()};

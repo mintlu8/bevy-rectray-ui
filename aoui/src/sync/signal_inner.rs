@@ -35,6 +35,7 @@ impl<T> Clone for Signal<T> {
         }
     }
 }
+
 pub(crate) struct YieldNow(bool);
 
 impl YieldNow {
@@ -69,6 +70,18 @@ impl<T: Send + Sync + 'static> Signal<T> {
     pub fn borrow_inner(&self) -> Arc<SignalInner<T>> {
         self.inner.clone()
     }
+
+    pub fn inner(&self) -> &Arc<SignalInner<T>> {
+        &self.inner
+    }
+}
+
+impl<T: Send + Sync + 'static> Deref for Signal<T> {
+    type Target = Arc<SignalInner<T>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl Signal<Object> {
@@ -77,14 +90,6 @@ impl Signal<Object> {
             inner: value.into_inner(),
             version: AtomicU32::new(0),
         })}
-    }
-}
-
-impl<T: Send + Sync + 'static> Deref for Signal<T> {
-    type Target = SignalInner<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
     }
 }
 
@@ -131,9 +136,9 @@ impl<T: Send + Sync + 'static> SignalInner<T> {
     pub fn try_read(&self) -> Option<T> where T: Clone {
         let version = self.inner.version.load(Ordering::Relaxed);
         if self.version.swap(version, Ordering::Relaxed) != version {
-            return Some(self.inner.data.lock().clone());
+            Some(self.inner.data.lock().clone())
         } else {
-            return None;
+            None
         }
     }
 
@@ -157,5 +162,18 @@ impl<T: Send + Sync + 'static> SignalInner<T> {
 
     pub fn get_shared(&self) -> Arc<SignalData<T>> {
         self.inner.clone()
+    }
+}
+
+
+impl SignalInner<Object> {
+    pub fn try_read_as<T: AsObject>(&self) -> Option<T> where T: Clone {
+        let version = self.inner.version.load(Ordering::Relaxed);
+        if self.version.swap(version, Ordering::Relaxed) != version {
+            Some(self.inner.data.lock().clone())
+                .and_then(|x| x.get())
+        } else {
+            None
+        }
     }
 }

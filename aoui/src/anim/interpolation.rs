@@ -4,6 +4,7 @@ use std::ops::{Add, Mul};
 use bevy::{render::color::Color, time::Time};
 use bevy::ecs::{component::Component, system::{Query, Res}};
 use bevy::math::{Vec2, Vec4};
+use crate::sync::AsyncResult;
 use crate::{Opacity, Dimension};
 use interpolation::EaseFunction;
 use smallvec::SmallVec;
@@ -383,4 +384,12 @@ impl Interpolation for Padding {
     type Data = Vec2;
     fn into_data(data: Self::FrontEnd) -> Self::Data { data }
     fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
+}
+
+use crate::sync::AsyncComponent;
+
+impl<T: Interpolation> AsyncComponent<Interpolate<T>> {
+    pub async fn interpolate_to(&self, to: T::FrontEnd) -> AsyncResult<()> {
+        self.set(move |x| x.interpolate_to(to)).await
+    }
 }

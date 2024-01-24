@@ -465,10 +465,10 @@ impl Fps {
         let (sender, receiver) = channel::<f32>();
         let query = AsyncReadonlyQuery::new(
             move |world: &World| {
-                world.get_resource::<DiagnosticsStore>().map(|x| x
+                world.get_resource::<DiagnosticsStore>().and_then(|x| x
                     .get(FrameTimeDiagnosticsPlugin::FPS)
                     .and_then(|fps| fps.smoothed().map(|x| x as f32)) 
-                ).flatten().unwrap_or(0.0)
+                ).unwrap_or(0.0)
             },
             sender
         );

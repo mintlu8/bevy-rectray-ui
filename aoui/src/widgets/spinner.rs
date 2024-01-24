@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use bevy::{ecs::{component::Component, system::Query, world::Mut, query::{Without, Changed}}, text::Text};
 use itertools::Itertools;
 
-use crate::{util::{Object, convert::DslConvert, AsObject}, sync::{SignalId, SignalReceiver, SignalSender}};
+use crate::{dsl::prelude::Signals, sync::SignalId, util::{Object, convert::{DslConvert, SealToken}, AsObject}};
 
 use super::{TextFragment, inputbox::TextChange};
 
@@ -156,28 +156,27 @@ impl<T: SpinDisplay, F> DslConvert<SpinnerText, '±'> for F where F: IntoIterato
             looping: false
         }
     }
+    fn sealed(_: SealToken) {}
 }
 
 pub fn spin_text_change(
-    mut query: Query<(&mut SpinnerText, SignalReceiver<Increment>, SignalReceiver<Decrement>, 
-        SignalSender<TextChange>, SignalSender<SpinChange>,
-    )>
+    mut query: Query<(&mut SpinnerText, &mut Signals)>,
 ) {
-    for (mut spin, mut increment, mut decrement, ev_text, ev_spin) in query.iter_mut() {
+    for (mut spin, signals) in query.iter_mut() {
         let mut changed = false;
-        if increment.poll_any() {
+        if signals.poll_once::<Increment>().is_some() {
             SpinnerText::increment(&mut spin);
             changed = true;
         }
 
-        if decrement.poll_any() {
+        if signals.poll_once::<Decrement>().is_some() {
             SpinnerText::decrement(&mut spin);
             changed = true;
         }
 
         if changed {
-            ev_text.send(spin.get());
-            ev_spin.send(spin.get_object());
+            signals.send::<TextChange>(spin.get());
+            signals.send::<SpinChange>(spin.get_object());
         }
     }
 }

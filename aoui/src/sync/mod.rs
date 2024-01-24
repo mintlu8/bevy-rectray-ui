@@ -77,7 +77,7 @@
 //! 
 //! ## Can I use a third party async crate?
 //! 
-//! Depends, a future is polled fixed a number of times per frame, which may
+//! Depends, a future is polled a fixed  number of times per frame, which may
 //! or may not be ideal.
 //! 
 //! ## Any tips regarding async usage?
@@ -280,7 +280,7 @@ impl AsyncSystem {
     pub fn new<F, M>(f: F) -> Self where F: AsyncSystemFunction<M>  {
         AsyncSystem {
             function: Box::new(move |entity, executor, signals| {
-                Box::pin(f.into_future(entity, executor, signals))
+                Box::pin(f.as_future(entity, executor, signals))
             }),
             marker: KeepAlive::new()
         }
@@ -310,7 +310,7 @@ impl AsyncSystems {
         AsyncSystems {
             systems: vec![AsyncSystem {
                 function: Box::new(move |entity, executor, signals| {
-                    Box::pin(f.into_future(entity, executor, signals))
+                    Box::pin(f.as_future(entity, executor, signals))
                 }),
                 marker: KeepAlive::new()
             }]
@@ -327,7 +327,7 @@ impl AsyncSystems {
         self.systems.push(
             AsyncSystem {
                 function: Box::new(move |entity, executor, signals| {
-                    Box::pin(f.into_future(entity, executor, signals))
+                    Box::pin(f.as_future(entity, executor, signals))
                 }),
                 marker: KeepAlive::new()
             }
@@ -347,7 +347,7 @@ pub fn run_async_systems(
         for system in systems.systems.iter(){
             if !system.marker.other_alive() {
                 let fut = SystemFuture{
-                    future: (system.function)(entity, &executor.0, &signals),
+                    future: (system.function)(entity, &executor.0, signals),
                     alive: system.marker.clone()
                 };
                 stream.push(fut)

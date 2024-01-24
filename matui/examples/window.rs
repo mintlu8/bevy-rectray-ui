@@ -1,9 +1,12 @@
 #![recursion_limit = "256"]
 
+use bevy::log::LogPlugin;
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::{AouiPlugin, util::WorldExtension, util::AouiCommands};
 use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, palette, mwindow, mslider, minput, mmenu, menu_items, mspinner, mdropdown};
 use bevy_aoui::layout::BoundsLayout;
+use bevy_matui::widgets::states::ToggleRotation;
+
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -12,6 +15,9 @@ pub fn main() {
                 //resolution: WindowResolution::new(1600.0, 800.0).with_scale_factor_override(1.0),
                 ..Default::default()
             }),
+            ..Default::default()
+        }).set(LogPlugin {
+            level: bevy::log::Level::DEBUG,
             ..Default::default()
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
@@ -40,8 +46,10 @@ pub fn init(mut commands: AouiCommands) {
 
     let palette_idle = palette! {
         background: red500,
+        background_lite: red600,
         foreground: white,
-        stroke: none,
+        stroke: white,
+        stroke_lite: neutral100,
     };
 
     let palette_hover = palette! {
@@ -57,14 +65,15 @@ pub fn init(mut commands: AouiCommands) {
     };
 
     let (collapse_send, collapse_recv, collapse_spin) = signal();
-
     mwindow!(commands {
         radius: 5,
-        palette: palette!(FramePalette {
+        palette: palette! {
             background: white,
             stroke: neutral400,
-        }),
+            stroke_lite: red,
+        },
         margin: size2!(0, 0.2 em),
+        padding: size2!(1 em, 1 em),
         z: 40,
         shadow: 12,
         collapse: collapse_recv,
@@ -72,7 +81,6 @@ pub fn init(mut commands: AouiCommands) {
             dimension: size2!(100%, 2 em),
             margin: size2!(1 em, 0),
             child: text! {
-                //font: "Roboto-Regular.ttf",
                 text: "Hello, World!",
                 color: color!(black),
             },
@@ -87,10 +95,14 @@ pub fn init(mut commands: AouiCommands) {
                     sprite: "tri.png",
                     color: color!(black),
                     extra: transition!(Rotation 0.2 Linear default 0.0),
-                    // extra: collapse_spin.recv_select(true,
-                    //     Interpolate::<Rotation>::signal_to(0.0),
-                    //     Interpolate::<Rotation>::signal_to(PI),
-                    // )
+                    signal: receiver::<ToggleChange>(collapse_spin),
+                    system: |sig: SigRecv<ToggleChange>, inter: Ac<Interpolate<Rotation>>|{
+                        if sig.recv().await {
+                            inter.interpolate_to(0.0).await?;
+                        } else {
+                            inter.interpolate_to(PI).await?;
+                        }
+                    }
                 }
             }
         },
@@ -171,34 +183,69 @@ pub fn init(mut commands: AouiCommands) {
             width: 20,
             radius: 5,
             palette: palette_idle,
+            cancel: button! {
+                z: 1,
+                dimension: size2!(1.2 em, 1.2 em),
+                anchor: Right,
+                offset: size2!(-1 em, 0),
+                extra: transition!(Opacity 0.2 Linear default 1.0),
+                child: sprite! {
+                    dimension: Size2::FULL,
+                    rotation: degrees(45),
+                    sprite: "plus.png",
+                }
+            }
         },
-        // child: mdropdown! {
+        child: {
+            let (callback_send, callback_recv) = signal();
 
-        //     placeholder: "Say Hello:",
-        //     width: 20,
-        //     radius: 5,
-        //     palette: palette_idle,
-        // },
-        child: mmenu! {
-            shadow: 5,
-            radius: 5,
-            padding: [0, 10],
-            palette: palette!(
-                background: white,
-                stroke: green,
-            ),
-            hover_palette: palette!(
-                background: white,
-                stroke: green,
-            ),
-            items: menu_items! {
-                "Rust", "Go", |, 
-                "Python" { "Python2", "Python3" }, 
-                "JVM" { "Java", "Kotlin" },
-                "CLR" { "C#", "F#" },
-            },
-        },
-
+            mdropdown!(commands {
+                placeholder: "Favorite Language:",
+                width: 20,
+                radius: 5,
+                palette: palette_idle,
+                callback: callback_recv,
+                dial: check_button! {
+                    dimension: size2!(1.2 em, 1.2 em),
+                    anchor: CenterRight,
+                    offset: size2!(-1 em, 0),
+                    child: sprite! {
+                        sprite: "tri.png",
+                        dimension: size2!(full),
+                        extra: transition!(Rotation 0.2 Linear default 0.0),
+                        extra: ToggleRotation::new(0.0, PI),
+                    },
+                },
+                cancel: button! {
+                    z: 1,
+                    dimension: size2!(1 em, 1 em),
+                    offset: size2!(-2.4 em, -0.4 em),
+                    anchor: Right,
+                    extra: transition!(Opacity 0.2 Linear default 1.0),
+                    child: sprite! {
+                        dimension: Size2::FULL,
+                        rotation: degrees(45),
+                        sprite: "plus.png",
+                    }
+                },
+                menu: mmenu! {
+                    parent_anchor: BottomRight,
+                    anchor: TopRight,
+                    opacity: 0.0,
+                    z: 1,
+                    shadow: 5,
+                    radius: 5,
+                    padding: [0, 10],
+                    callback: callback_send,
+                    palette: palette_idle,
+                    items: menu_items! {
+                        "Rust", "Go", "Python", "Zig", |, 
+                        "C" { "C", "C++", "C#", "Carbon" }, 
+                        "Java" { "Java", "JavaScript" },
+                    },
+                }
+            }
+        )},
         child: hstack! {
             margin: size2!(1 em, 0),
             child: text! {
@@ -211,7 +258,8 @@ pub fn init(mut commands: AouiCommands) {
                 palette_focus: palette_pressed,
                 decrement_icon: "left.png",
                 increment_icon: "right.png",
-                content: ["serde", "tokio", "bevy", "actix"]
+                content: ["serde", "tokio", "bevy", "actix"],
+                button_hitbox: Hitbox::rect(2.0),
             },
             child: mspinner!{
                 capsule: true,
@@ -223,6 +271,7 @@ pub fn init(mut commands: AouiCommands) {
                 decrement_icon: "left.png",
                 increment_icon: "right.png",
                 content: 0..=9,
+                button_hitbox: Hitbox::rect(2.0),
             },
         },
     });

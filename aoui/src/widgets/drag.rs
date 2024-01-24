@@ -117,7 +117,7 @@ pub(crate) fn drag_start(
                 None
             }
         }).chain(receive.iter_mut()
-        .filter_map(|(mut action, drag, transform, snap)|{
+        .filter_map(|(action, drag, transform, snap)|{
             if action.poll_once() == Some(DragState::Start) {
                 Some((drag, transform, snap))
             } else {
@@ -167,7 +167,7 @@ pub(crate) fn dragging(
             focus.intersects(EventFlags::LeftDrag | EventFlags::MidDrag | EventFlags:: RightDrag)
                 .then_some((entity, drag, transform))
         }).chain(receive.iter_mut()
-        .filter_map(|(entity, drag, transform, mut recv)|
+        .filter_map(|(entity, drag, transform, recv)|
             (recv.poll_once() == Some(DragState::Dragging)).then_some((entity, drag, transform))
         ));
 
@@ -209,7 +209,7 @@ pub(crate) fn drag_end(
                 None
             }
         }).chain(receive.iter_mut()
-        .filter_map(|(drag, transform, mut recv)|{
+        .filter_map(|(drag, transform, recv)|{
             if recv.poll_once() == Some(DragState::End) {
                 Some((drag, transform))
             } else {

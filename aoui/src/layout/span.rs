@@ -15,6 +15,10 @@ impl<D: Direction> Layout for StackLayout<D> {
     fn dyn_clone(&self) -> Box<dyn Layout> {
         Box::new(*self)
     }
+
+    fn is_size_agnostic(&self) -> bool {
+        true
+    }
 }
 
 impl<D: StretchDir> Layout for SpanLayout<D>  {

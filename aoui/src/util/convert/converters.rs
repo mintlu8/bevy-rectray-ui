@@ -1,7 +1,7 @@
 use bevy::{asset::{Asset, Handle}, ecs::entity::Entity};
 use crate::{widgets::button::Payload, util::{AsObject, WidgetBuilder}, util::AouiCommands};
 
-use super::{DslConvert, DslFrom};
+use super::{DslConvert, DslFrom, SealToken};
 
 
 /// Extended `Option` for the DSL.
@@ -59,12 +59,14 @@ impl<T, U> DslConvert<OptionEx<U>, 'O'> for T where U: DslFromOptionEx<T> {
     fn parse(self) -> OptionEx<U> {
         OptionEx::Some(U::dfrom_option(self))
     }
+    fn sealed(_: SealToken) {}
 }
 
 impl<T> DslConvert<Option<Payload>, 'P'> for T where T: AsObject{
     fn parse(self) -> Option<Payload> {
         Some(Payload::new(self))
     }
+    fn sealed(_: SealToken) {}
 }
 
 /// An [`Asset`], [`Handle<Asset>`], string path of an asset or none/default.
@@ -81,48 +83,53 @@ impl<T> DslConvert<IntoAsset<T>, 'A'> for T where T: Asset {
     fn parse(self) -> IntoAsset<T> {
         IntoAsset::Raw(self)
     }
+    fn sealed(_: SealToken) {}
 }
 
 impl<T> DslConvert<IntoAsset<T>, 'A'> for Handle<T> where T: Asset {
     fn parse(self) -> IntoAsset<T> {
         IntoAsset::Handle(self)
     }
+    fn sealed(_: SealToken) {}
 }
 
 impl<T> DslConvert<IntoAsset<T>, 'A'> for &Handle<T> where T: Asset {
     fn parse(self) -> IntoAsset<T> {
         IntoAsset::Handle(self.clone())
     }
+    fn sealed(_: SealToken) {}
 }
 
 impl<T> DslConvert<IntoAsset<T>, 'a'> for String where T: Asset {
     fn parse(self) -> IntoAsset<T> {
         IntoAsset::String(self)
     }
+    fn sealed(_: SealToken) {}
 }
 
 impl<T> DslConvert<IntoAsset<T>, 'a'> for &str where T: Asset {
     fn parse(self) -> IntoAsset<T> {
         IntoAsset::String(self.to_owned())
     }
+    fn sealed(_: SealToken) {}
 }
 
 
 /// An [`Entity`] or a [`WidgetBuilder`].
 #[derive(Debug, Clone, Default)]
-pub enum IntoEntity{
+pub enum IntoEntity<T>{
     #[default]
     None,
     Entity(Entity),
-    Builder(WidgetBuilder<()>),
+    Builder(WidgetBuilder<T>),
 }
 
-impl IntoEntity {
+impl IntoEntity<()> {
     pub fn build_expect(&self, commands: &mut AouiCommands, panic: &str) -> Entity {
         match self {
             IntoEntity::None => panic!("{}", panic),
             IntoEntity::Entity(e) => *e,
-            IntoEntity::Builder(b) => commands.spawn_dynamic(&b),
+            IntoEntity::Builder(b) => commands.spawn_dynamic(b),
         }
     }
 
@@ -130,27 +137,53 @@ impl IntoEntity {
         match self {
             IntoEntity::None => or(),
             IntoEntity::Entity(e) => *e,
-            IntoEntity::Builder(b) => commands.spawn_dynamic(&b),
+            IntoEntity::Builder(b) => commands.spawn_dynamic(b),
         }
     }
 }
 
-impl DslFrom<Entity> for IntoEntity {
+impl<T> IntoEntity<T> {
+    pub fn build_with_expect(&self, commands: &mut AouiCommands, arg: T, panic: &str) -> Entity {
+        match self {
+            IntoEntity::None => panic!("{}", panic),
+            IntoEntity::Entity(e) => *e,
+            IntoEntity::Builder(b) => commands.spawn_fn(b, arg),
+        }
+    }
+
+    pub fn build_with_or(&self, commands: &mut AouiCommands, arg: T, or: impl FnOnce(T) -> Entity) -> Entity {
+        match self {
+            IntoEntity::None => or(arg),
+            IntoEntity::Entity(e) => *e,
+            IntoEntity::Builder(b) => commands.spawn_fn(b, arg),
+        }
+    }
+}
+
+impl<T> DslFrom<Entity> for IntoEntity<T> {
     fn dfrom(value: Entity) -> Self {
         IntoEntity::Entity(value)
     }
 }
 
-impl DslFrom<WidgetBuilder<()>> for IntoEntity {
-    fn dfrom(value: WidgetBuilder<()>) -> Self {
+impl<T> DslFrom<WidgetBuilder<T>> for IntoEntity<T> {
+    fn dfrom(value: WidgetBuilder<T>) -> Self {
         IntoEntity::Builder(value)
     }
 }
 
-impl<F> DslConvert<IntoEntity, 'ë'> for F where F: Fn(&mut AouiCommands) -> Entity + Send + Sync + 'static {
-    fn parse(self) -> IntoEntity {
+impl<F> DslConvert<IntoEntity<()>, 'ë'> for F where F: Fn(&mut AouiCommands) -> Entity + Send + Sync + 'static {
+    fn parse(self) -> IntoEntity<()> {
         IntoEntity::Builder(WidgetBuilder::new(self))
     }
+    fn sealed(_: SealToken) {}
+}
+
+impl<F, T> DslConvert<IntoEntity<T>, 'ê'> for F where F: Fn(&mut AouiCommands, T) -> Entity + Send + Sync + 'static {
+    fn parse(self) -> IntoEntity<T> {
+        IntoEntity::Builder(WidgetBuilder::new(self))
+    }
+    fn sealed(_: SealToken) {}
 }
 
 

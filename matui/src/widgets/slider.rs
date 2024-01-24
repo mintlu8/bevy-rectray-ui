@@ -1,11 +1,17 @@
 use std::ops::Range;
 
 use bevy::ecs::component::Component;
+use bevy::ecs::system::{Query, Res};
 use bevy::math::Vec2;
 use bevy::{render::texture::Image, window::CursorIcon, ecs::entity::Entity};
-use bevy_aoui::sync::TypedSignal;
+use bevy_aoui::anim::Attr;
+use bevy_aoui::events::{CursorAction, CursorState, EventFlags};
+use bevy_aoui::sync::{Signal, SignalId, SignalReceiver, TypedSignal};
 use bevy_aoui::util::ComposeExtension;
 use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
+use bevy_aoui::widgets::drag::Dragging;
+use bevy_aoui::widgets::PositionFac;
+use bevy_aoui::{Dimension, RotatedRect};
 use bevy_aoui::{frame_extension, build_frame, layout::Axis, Anchor};
 
 use crate::shaders::RoundedRectangleMaterial;
@@ -15,7 +21,30 @@ use crate::widgets::states::ButtonColors;
 use super::util::ShadowInfo;
 
 #[derive(Debug, Clone, Component)]
-pub struct SliderRebase(TypedSignal<Vec2>);
+pub struct SliderRebaseSend(Signal<Vec2>);
+
+#[derive(Debug, Clone, Component)]
+pub struct SliderRebaseRecv(Signal<Vec2>);
+
+
+pub fn slider_rebase(
+    res: Res<CursorState>,
+    sender: Query<(&SliderRebaseSend, &CursorAction, &RotatedRect)>,
+    mut receiver: Query<(&SliderRebaseRecv, &mut Dragging)>
+) {
+    let down = res.down_position();
+    for (send, action, rect) in sender.iter() {
+        if action.intersects(EventFlags::LeftDown) {
+            let hdim = rect.half_dim();
+            send.0.write(rect.local_space(down) + Vec2::new(hdim.x - hdim.y, 0.0));
+        }
+    }
+    for (recv, mut drag) in receiver.iter_mut() {
+        if let Some(pos) = recv.0.try_read(){
+            drag.drag_start.x = pos.x
+        }
+    }
+}
 
 pub trait SliderData {}
 
@@ -27,6 +56,27 @@ impl SliderData for i32 {
 impl SliderData for f32 {
 
 }
+
+#[derive(Debug, Clone, Copy, Component)]
+pub enum ProgressBar {
+    X, Y
+}
+
+impl SignalId for ProgressBar {
+    type Data = f32;
+}
+
+pub fn sync_progress_bar(mut query: Query<(SignalReceiver<ProgressBar>, &ProgressBar, Attr<Dimension, Dimension>)>) {
+    for (sig, bar, mut dim) in query.iter_mut() {
+        if let Some(fac) = sig.poll_once() {
+            match bar {
+                ProgressBar::X => dim.set_x(fac),
+                ProgressBar::Y => dim.set_y(fac),
+            }
+        }
+    }
+}
+
 
 frame_extension!(
     pub struct MSliderBuilder[T: SliderData] {
@@ -77,24 +127,17 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
         self.dimension = Size2::em(2.0 + horiz_len, 2.0).dinto();
         self.event |= EventFlags::Hover | EventFlags::LeftDrag;
 
-        //let (fac_send, fac_recv) = signal();
-        let rebase_send = signal();
-        let (drag_send_root, drag_send_dial) = signal();
+        let (fac_send, fac_recv) = signal();
+        let (drag_send_root, drag_send_dial, drag_recv) = signal();
 
+        let rebase = Signal::new(Vec2::ZERO);
 
         let mut frame = build_frame!(commands, self);
 
         frame.add_sender::<Dragging>(drag_send_root)
             .insert((
                 PropagateFocus,
-                SliderRebase(rebase_send),
-                // Handlers::<EvLeftDown>::new(Mutation::with_context(
-                //     |res: Res<CursorState>| {res.down_position()},
-                //     |down: Vec2, rect: &RotatedRect, fac: &mut SliderRebase| {
-                //         let hdim = rect.half_dim();
-                //         fac.0.send(rect.local_space(down) + Vec2::new(hdim.x - hdim.y, 0.0));
-                //     }
-                // )),
+                SliderRebaseSend(rebase.clone()),
         ));
 
         let frame = frame.id();
@@ -114,9 +157,8 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
                 extra: RoundedRectangleMaterial::capsule(palette.foreground())
                     .with_stroke((palette.stroke(), self.background_stroke))
                     .into_bundle(commands),
-                // extra: fac_recv.recv(|fac: f32, dim: &mut Dimension| {
-                //     dim.edit_raw(|v| v.x = fac);
-                // }),
+                extra: ProgressBar::X,
+                signal: receiver::<ProgressBar>(fac_recv),
                 extra: transition!(Color 0.2 CubicInOut default {palette.foreground()}),
             }
         });
@@ -134,10 +176,13 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
                 anchor: Left,
                 dimension: [0, 0],
                 extra: DragX.with_constraints(),
+                signal: receiver::<Dragging>(drag_recv),
+                signal: sender::<PositionFac>(fac_send),
+                extra: SliderRebaseRecv(rebase),
                     // .with_recv(drag_recv)
                     // .with_handler(self.signal.and(fac_send)),
                 // extra: rebase_recv.recv(|pos: Vec2, state: &mut Dragging|{
-                //     state.drag_start.x = pos.x
+                //     
                 // }),
                 child: frame! {
                     entity: dial,

@@ -24,7 +24,7 @@ macro_rules! async_systems {
 }
 
 pub trait AsyncSystemFunction<M>: Send + Sync + 'static {
-    fn into_future(
+    fn as_future(
         &self,
         entity: Entity,
         executor: &Arc<AsyncExecutor>,
@@ -44,7 +44,7 @@ macro_rules! impl_async_system_fn {
                     AsyncSystemFunction<($head, $($tail,)*)> for F where $head: AsyncSystemParam, $($tail: AsyncSystemParam,)*
                         F: Fn($head $(,$tail)*) -> Fut + Send + Sync + 'static,
                          {
-                fn into_future(
+                fn as_future(
                     &self,
                     entity: Entity,
                     executor: &Arc<AsyncExecutor>,

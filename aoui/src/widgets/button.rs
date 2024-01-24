@@ -1,3 +1,4 @@
+use crate::dsl::prelude::Signals;
 use crate::events::{CursorAction, EventFlags};
 use crate::sync::{Signal, SignalId, SignalSender, TypedSignal};
 use crate::util::{Object, AsObject};
@@ -49,16 +50,11 @@ impl CheckButton {
         }
     }
 
-    pub fn rev(&mut self) -> bool {
-        match self {
-            CheckButton::Unchecked => {
-                *self = CheckButton::Checked;
-                true
-            }
-            CheckButton::Checked => {
-                *self = CheckButton::Unchecked;
-                false
-            }
+    pub fn set(&mut self, value: bool) {
+        if value{
+            *self = CheckButton::Checked;
+        } else {
+            *self = CheckButton::Unchecked;
         }
     }
 }
@@ -149,6 +145,14 @@ impl SignalId for ToggleChange {
     type Data = bool;
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+pub struct ToggleInvoke;
+
+impl SignalId for ToggleInvoke {
+    type Data = bool;
+}
+
+
 
 /// Component for making `RadioButton` behave like `CheckButton`.
 #[derive(Debug, Clone, Copy, Component, PartialEq, Eq, Default, Reflect)]
@@ -170,25 +174,27 @@ pub(crate) fn button_on_click(
 }
 
 pub(crate) fn check_button_on_click(
-    mut query: Query<(&CursorAction, &mut CheckButton,
-        SignalSender<ToggleChange>,
-        SignalSender<ButtonClick>,
-        Option<&Payload>,
-    )>,
+    mut query: Query<(Option<&CursorAction>, &mut CheckButton, Option<&mut Signals>, Option<&Payload>)>,
 ) {
-    for (action, mut state, change, submit, payload) in query.iter_mut() {
-        if !action.is(EventFlags::LeftClick) {
-            continue;
-        }
-        let state = state.rev();
-        change.send(state);
-        if !state {
-            continue;
-        }
-        if let Some(payload) = payload {
-            submit.send(payload.0.clone());
+    for (action, mut state, mut signals, payload) in query.iter_mut() {
+        let val = if action.map(|x| x.intersects(EventFlags::LeftClick)).unwrap_or(false) {
+            !state.get()
+        } else if let Some(val) = signals.as_mut().and_then(|s| s.poll_once::<ToggleInvoke>()){
+            val
         } else {
-            submit.send(Object::new(()));
+            continue;
+        };
+        if state.get() != val {
+            state.set(val);
+            let Some(signals) = signals.as_ref() else {continue};
+            signals.send::<ToggleChange>(val);
+            if val {
+                if let Some(payload) = payload {
+                    signals.send::<ButtonClick>(payload.0.clone());
+                } else {
+                    signals.send::<ButtonClick>(Object::new(()));
+                }
+            }
         }
     }
 }

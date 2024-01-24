@@ -12,7 +12,7 @@ use crate::{Hitbox, HitboxShape, Anchor, SizeUnit, Size};
 use crate::{Size2, FontSize, layout::Alignment, layout::LayoutDir};
 
 use super::DslFrom;
-use crate::util::convert::{DslInto, DslConvert};
+use crate::util::convert::{DslConvert, DslInto, SealToken};
 
 impl Hitbox {
     pub fn rect(value: impl DslInto<OneOrTwo<Vec2>>) -> Self {
@@ -291,6 +291,8 @@ impl<A, T> DslConvert<OneOrTwo<T>, '2'> for A where A: DslInto<T>{
     fn parse(self) -> OneOrTwo<T> {
         OneOrTwo(self.dinto())
     }
+
+    fn sealed(_: SealToken) {}
 }
 
 macro_rules! impl_one_or_two {
@@ -337,6 +339,7 @@ impl<A> DslConvert<Scale, 's'> for A where A: DslInto<Vec2>{
     fn parse(self) -> Scale {
         Scale(self.dinto())
     }
+    fn sealed(_: SealToken) {}
 }
 
 impl DslInto<Scale> for i32 {
@@ -370,6 +373,7 @@ impl<A> DslConvert<ParentAnchor, 'A'> for A where A: DslInto<Anchor>{
     fn parse(self) -> ParentAnchor {
         ParentAnchor(self.dinto())
     }
+    fn sealed(_: SealToken) {}
 }
 
 
