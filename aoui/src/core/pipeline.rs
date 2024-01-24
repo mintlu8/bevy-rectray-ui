@@ -11,6 +11,7 @@ type AouiEntity<'t> = (
     &'t mut RotatedRect,
     &'t mut Opacity,
     &'t mut Clipping,
+    &'t LayoutControl,
 );
 
 const Z_INCREMENT: f32 = 0.01;
@@ -26,7 +27,6 @@ fn propagate(
     parent_query: &Query<&Parent>,
     child_query: &Query<&Children>,
     not_root: &Query<Entity, Without<Detach>>,
-    control_query: &Query<&LayoutControl>,
     queue: &mut Vec<(Entity, ParentInfo)>) {
 
     if !mut_query.contains(entity) { return; }
@@ -59,9 +59,9 @@ fn propagate(
             let dimension = if dim.is_owned() {dimension} else {Vec2::ZERO};
 
             // SAFETY: safe since double mut access is gated by the hierarchy check
-            if let Ok((_, mut child_dim, child_transform, ..)) = unsafe { mut_query.get_unchecked(child) } {
-                match control_query.get(child) {
-                    Ok(LayoutControl::IgnoreLayout) => other_entities.push((
+            if let Ok((_, mut child_dim, child_transform, .., control)) = unsafe { mut_query.get_unchecked(child) } {
+                match control {
+                    LayoutControl::IgnoreLayout => other_entities.push((
                         child,
                         child_transform.get_parent_anchor()
                     )),
@@ -71,7 +71,7 @@ fn propagate(
                             entity: child,
                             anchor: child_transform.get_parent_anchor(),
                             dimension: child_dim.estimate(dimension, em, rem),
-                            control: control.copied().unwrap_or_default(),
+                            control: *control,
                         });
                     }
                 };
@@ -208,7 +208,6 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>>(
     parent_query: Query<&Parent>,
     child_query: Query<&Children>,
     not_root: Query<Entity, Without<Detach>>,
-    control_query: Query<&LayoutControl>,
     res_rem: Option<Res<AouiREM>>,
 ) {
     let rem = res_rem.map(|x| x.get()).unwrap_or(16.0);
@@ -239,7 +238,6 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>>(
                 &parent_query,
                 &child_query,
                 &not_root,
-                &control_query,
                 &mut queue
             );
         }
@@ -248,7 +246,6 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>>(
 
 #[derive(Debug, Clone, Copy)]
 struct OpacityStatus {
-    parent: Option<Entity>,
     opacity: f32,
     disabled: bool,
 }
@@ -256,20 +253,15 @@ struct OpacityStatus {
 fn propagate_aoui_opacity (
     queue: &mut Vec<(Entity, OpacityStatus)>,
     query: &mut Query<(Entity, &mut Opacity)>,
-    parent_query: &Query<&Parent>,
     child_query: &Query<&Children>,
 ) {
     for (entity, status) in mem::take(queue) {
         let Ok((_, mut opacity)) = query.get_mut(entity) else {continue};
-        if parent_query.get(entity).map(|x| x.get()).ok() != status.parent {
-            panic!("Malformed hierarchy, parent child mismatch.")
-        }
-        opacity.computed_opacity = opacity.opacity * status.opacity;
+        opacity.computed_opacity = opacity.opacity * opacity.style_opacity * status.opacity;
         opacity.computed_disabled = opacity.disabled || status.disabled;
         let status = OpacityStatus {
-            parent: Some(entity),
             opacity: opacity.computed_opacity,
-            disabled: opacity.disabled,
+            disabled: opacity.computed_disabled,
         };
         if let Ok(children) = child_query.get(entity){
             queue.extend(children.iter().map(|x| (*x, status)));
@@ -280,17 +272,15 @@ fn propagate_aoui_opacity (
 pub fn compute_aoui_opacity(
     root: Query<Entity, Without<Parent>>,
     mut query: Query<(Entity, &mut Opacity)>,
-    parent_query: Query<&Parent>,
     child_query: Query<&Children>,
 ) {
     let mut queue: Vec<_> = query.iter_many(root.iter())
         .map(|(e, _)| (e, OpacityStatus {
-            parent: None,
             opacity: 1.0,
             disabled: false,
         }))
         .collect();
     while !queue.is_empty() {
-        propagate_aoui_opacity(&mut queue, &mut query, &parent_query, &child_query)
+        propagate_aoui_opacity(&mut queue, &mut query, &child_query)
     }
 }

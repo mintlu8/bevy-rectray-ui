@@ -66,16 +66,21 @@ pub mod richtext;
 pub mod scroll;
 pub mod clipping;
 pub mod button;
+pub mod spinner;
 pub mod util;
+pub mod signals;
 mod text;
+use bevy::ecs::system::IntoSystem;
 pub use text::TextFragment;
 mod constraints;
 mod atlas;
+pub mod misc;
 pub use atlas::DeferredAtlasBuilder;
-pub use constraints::SharedPosition;
+pub use constraints::{SharedPosition, PositionFac};
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::app::{Plugin, PreUpdate, Update, PostUpdate, Last};
 
+use crate::events::{CursorAction, CursorFocus};
 use crate::schedule::{AouiButtonEventSet, AouiWidgetEventSet, AouiLoadInputSet, AouiStoreOutputSet, AouiCleanupSet, AouiEventSet};
 
 use self::button::CheckButtonState;
@@ -103,34 +108,46 @@ impl Plugin for WidgetsPlugin {
                     inputbox::text_on_click_outside,
                     inputbox::text_on_mouse_double_click,
                     inputbox::inputbox_keyboard
-                ).before(util::propagate_focus::<InputBoxState>),
+                ).before(inputbox::text_propagate_focus),
+                util::propagate_focus::<CursorAction>,
+                util::propagate_focus::<CursorFocus>,
                 util::propagate_focus::<CheckButtonState>,
-                util::propagate_focus::<InputBoxState>,
+                inputbox::text_propagate_focus,
+                //util::propagate_focus::<InputBoxState> NOT NEEDED
                 drag::drag_start,
                 drag::drag_end,
-                drag::dragging.after(drag::drag_start),
+                drag::dragging
+                    .pipe(constraints::drag_constraint)
+                    .after(drag::drag_start),
                 scroll::scrolling_senders,
                 (
-                    scroll::scrolling_system::<Scrolling>,
-                    scroll::scrolling_system::<ScrollDiscrete>,
+                    scroll::scrolling_system::<Scrolling>
+                        .pipe(constraints::scroll_constraint),
+                    scroll::scrolling_system::<ScrollDiscrete>
+                        .pipe(constraints::discrete_scroll_sync),
                 ).after(scroll::scrolling_senders),
                 clipping::sync_camera_dimension,
             ).in_set(AouiWidgetEventSet))
             .add_systems(Update, (
-                constraints::scroll_constraint,
-                constraints::drag_constraint,
-                constraints::discrete_scroll_sync,
                 util::set_cursor,
                 util::event_conditional_visibility,
                 util::check_conditional_visibility,
                 inputbox::draw_input_box
                     .before(text::sync_text_text_fragment)
                     .before(text::sync_sprite_text_fragment),
-                inputbox::text_propagate_focus,
                 inputbox::inputbox_conditional_visibility,
                 atlas::build_deferred_atlas,
                 text::sync_text_text_fragment,
                 text::sync_sprite_text_fragment,
+                spinner::spin_text_change,
+                spinner::sync_spin_text_with_text,
+                signals::sig_set_text,
+                signals::radio_button_clear_widget,
+                signals::inputbox_clear_widget,
+                signals::text_clear_widget,
+            ))
+            .add_systems(Update, (
+                misc::layout_opacity_limit.pipe(misc::set_layout_opactiy_limit),
             ))
             .add_systems(PostUpdate, (
                 richtext::synchronize_glyph_spaces
@@ -140,7 +157,7 @@ impl Plugin for WidgetsPlugin {
                 inputbox::sync_em_inputbox
             ).in_set(AouiStoreOutputSet))
             .add_systems(Last, util::remove_all::<CheckButtonState>.in_set(AouiCleanupSet))
-            .add_systems(Last, constraints::remove_position_changed.in_set(AouiCleanupSet))
+            .add_systems(Last, util::remove_all::<InputBoxState>.in_set(AouiCleanupSet))
         ;
     }
 }

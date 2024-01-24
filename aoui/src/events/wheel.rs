@@ -1,14 +1,14 @@
-use bevy::{input::mouse::{MouseWheel, MouseScrollUnit}, math::{Vec2, IVec2}, window::{Window, PrimaryWindow}, render::camera::Camera, transform::components::GlobalTransform, ecs::{component::Component, system::{Resource, Local, Res}}};
+use bevy::{ecs::{component::Component, system::{Resource, Local, Res}}, input::mouse::{MouseWheel, MouseScrollUnit}, math::{Vec2, IVec2}, reflect::Reflect, render::camera::Camera, transform::components::GlobalTransform, window::{Window, PrimaryWindow}};
 use bevy::ecs::{system::{Query, Commands}, event::EventReader, query::{With, Without}, entity::Entity};
 
-use crate::widgets::clipping::CameraClip;
+use crate::{widgets::clipping::CameraClip, sync::SignalId};
 
 use super::{EventFlags, AouiCamera, CursorDetection, ActiveDetection};
 
 
 
 /// Resource that determines the direction and magnitude of mouse wheel scrolling.
-#[derive(Debug, Clone, Copy, Resource)]
+#[derive(Debug, Clone, Copy, Resource, Reflect)]
 pub struct ScrollScaling{
     pub line_to_pixels: Vec2,
     pub pixel_scale: Vec2,
@@ -25,7 +25,7 @@ impl Default for ScrollScaling {
 }
 
 /// Movement units associated with dragging or scrolling.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Reflect)]
 pub struct MovementUnits{
     pub lines: IVec2,
     pub pixels: Vec2,
@@ -33,7 +33,7 @@ pub struct MovementUnits{
 
 /// This is relatively independent, as the mousewheel action does not take
 /// the drag target and the cursor action target into account.
-#[derive(Debug, Clone, Copy, PartialEq, Component)]
+#[derive(Debug, Clone, Copy, PartialEq, Component, Reflect)]
 #[component(storage="SparseSet")]
 pub struct MouseWheelAction(pub MovementUnits);
 
@@ -48,6 +48,10 @@ impl MovementUnits {
         lines: IVec2::ZERO,
         pixels: Vec2::ZERO
     };
+}
+
+impl SignalId for MouseWheelAction {
+    type Data = MovementUnits;
 }
 
 pub(crate) fn mousewheel_event(

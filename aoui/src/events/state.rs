@@ -1,7 +1,8 @@
-use bevy::{ecs::{system::{Resource, Commands, EntityCommands}, entity::Entity}, math::Vec2, input::mouse::MouseButton};
+use bevy::{ecs::entity::Entity, input::mouse::MouseButton, math::Vec2, reflect::Reflect};
+use bevy::ecs::system::{Resource, Commands, EntityCommands};
 
 /// Time threshold in seconds for double click.
-#[derive(Debug, Resource)]
+#[derive(Debug, Resource, Reflect)]
 pub struct DoubleClickThreshold(f32);
 
 impl Default for DoubleClickThreshold {
@@ -21,7 +22,7 @@ impl DoubleClickThreshold {
 }
 
 /// State of the cursor system.
-#[derive(Debug, Resource)]
+#[derive(Debug, Resource, Reflect)]
 pub struct CursorState{
     pub(super) last_lmb_down_time: [f32; 2],
     pub(super) cursor_pos: Vec2,

@@ -2,7 +2,7 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, bundles::*, dsl::AouiCommands};
+use bevy_aoui::{*, bundles::*, util::AouiCommands};
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_egui::{EguiContexts, egui::{self, Slider}, EguiPlugin};
 pub fn main() {
@@ -63,9 +63,10 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
-            format_widget!(text, "FPS: {:.2}", fps);
-        })
+        system: |fps: Fps, text: Ac<Text>| {
+            let fps = fps.get().await;
+            text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
+        }
     });
 
     use rand::prelude::*;

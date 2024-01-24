@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder, dsl::AouiCommands};
+use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder, util::AouiCommands};
 
 pub fn main() {
     App::new()
@@ -25,9 +25,10 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
-            format_widget!(text, "FPS: {:.2}", fps);
-        })
+        system: |fps: Fps, text: Ac<Text>| {
+            let fps = fps.get().await;
+            text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
+        }
     });
     
     let (target_in, target_out) = commands.render_target([800, 800]);

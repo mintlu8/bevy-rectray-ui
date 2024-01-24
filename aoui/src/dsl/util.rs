@@ -1,15 +1,18 @@
 
 
+use bevy::ecs::component::Component;
+use bevy::ecs::world::Mut;
 use bevy::math::Vec2;
 use bevy::text::Text;
-use crate::layout::Layout;
+use crate::layout::{Layout, LayoutObject};
+use crate::sync::{AsyncComponent, AsyncResult};
 use crate::widgets::TextFragment;
 use crate::widgets::inputbox::InputBox;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit, Size};
 use crate::{Size2, FontSize, layout::Alignment, layout::LayoutDir};
 
 use super::DslFrom;
-use super::convert::{DslInto, DslConvert};
+use crate::util::convert::{DslConvert, DslInto, SealToken};
 
 impl Hitbox {
     pub fn rect(value: impl DslInto<OneOrTwo<Vec2>>) -> Self {
@@ -50,9 +53,9 @@ impl DslFrom<f32> for Aspect {
     }
 }
 
-impl<T> DslFrom<T> for Option<Box<dyn Layout>> where T: Layout {
+impl<T> DslFrom<T> for Option<LayoutObject> where T: Layout {
     fn dfrom(value: T) -> Self {
-        Some(Box::new(value))
+        Some(LayoutObject::new(value))
     }
 }
 
@@ -284,10 +287,12 @@ impl DslFrom<Size> for FontSize {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct OneOrTwo<T>(pub T);
 
-impl<A, T> DslConvert<OneOrTwo<T>, 1> for A where A: DslInto<T>{
+impl<A, T> DslConvert<OneOrTwo<T>, '2'> for A where A: DslInto<T>{
     fn parse(self) -> OneOrTwo<T> {
         OneOrTwo(self.dinto())
     }
+
+    fn sealed(_: SealToken) {}
 }
 
 macro_rules! impl_one_or_two {
@@ -330,10 +335,11 @@ impl Default for Scale{
     }
 }
 
-impl<A> DslConvert<Scale, 1> for A where A: DslInto<Vec2>{
+impl<A> DslConvert<Scale, 's'> for A where A: DslInto<Vec2>{
     fn parse(self) -> Scale {
         Scale(self.dinto())
     }
+    fn sealed(_: SealToken) {}
 }
 
 impl DslInto<Scale> for i32 {
@@ -347,6 +353,29 @@ impl DslInto<Scale> for f32 {
         Scale(Vec2::splat(self))
     }
 }
+
+/// A `Anchor` with default value `INHERIT`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ParentAnchor(pub Anchor);
+impl Default for ParentAnchor{
+    fn default() -> Self {
+        Self(Anchor::INHERIT)
+    }
+}
+
+impl From<Anchor> for ParentAnchor {
+    fn from(value: Anchor) -> Self {
+        ParentAnchor(value)
+    }
+}
+
+impl<A> DslConvert<ParentAnchor, 'A'> for A where A: DslInto<Anchor>{
+    fn parse(self) -> ParentAnchor {
+        ParentAnchor(self.dinto())
+    }
+    fn sealed(_: SealToken) {}
+}
+
 
 /// Construct a [`Size`](crate::Size) through CSS like syntax.
 #[macro_export]
@@ -467,26 +496,53 @@ macro_rules! size2 {
 
 /// Format trait for a widget.
 pub trait WidgetWrite {
-    fn write(&mut self, s: String);
+    fn write(self, s: String);
 }
 
-impl WidgetWrite for Text {
-    fn write(&mut self, s: String) {
+impl WidgetWrite for &mut Text {
+    fn write(self, s: String) {
         if let Some(section) = self.sections.first_mut() {
             section.value = s;
         }
     }
 }
 
-impl WidgetWrite for InputBox {
-    fn write(&mut self, s: String) {
+impl WidgetWrite for &mut InputBox {
+    fn write(self, s: String) {
         self.set(s)
     }
 }
 
-impl WidgetWrite for TextFragment {
-    fn write(&mut self, s: String) {
+impl WidgetWrite for &mut TextFragment {
+    fn write(self, s: String) {
         self.text = s
+    }
+}
+
+impl WidgetWrite for Mut<'_, Text> {
+    fn write(mut self, s: String) {
+        if let Some(section) = self.sections.first_mut() {
+            section.value = s;
+        }
+    }
+}
+
+impl WidgetWrite for Mut<'_, InputBox> {
+    fn write(mut self, s: String) {
+        self.set(s)
+    }
+}
+
+impl WidgetWrite for Mut<'_, TextFragment> {
+    fn write(mut self, s: String) {
+        self.text = s
+    }
+}
+
+impl<C: Component> AsyncComponent<C> where for<'t> &'t mut C: WidgetWrite {
+    pub async fn write(self, s: impl Into<String>) -> AsyncResult<()> {
+        let s = s.into();
+        self.set(move |x| x.write(s)).await
     }
 }
 
@@ -497,5 +553,21 @@ impl WidgetWrite for TextFragment {
 macro_rules! format_widget {
     ($widget: expr, $s: literal $(,$rest: expr),* $(,)?) => {
         $crate::dsl::WidgetWrite::write($widget, format!($s, $($rest),*))
+    };
+}
+
+/// Quickly construct multiple signal_ids at once.
+#[macro_export]
+macro_rules! signal_ids {
+    ($($(#[$($attr:tt)*])*$name: ident: $ty: ty),* $(,)?) => {
+        $(
+            $(#[$($attr)*])*
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            pub enum $name {}
+
+            impl $crate::sync::SignalId for $name{
+                type Data = $ty;
+            }
+        )*
     };
 }

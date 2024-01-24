@@ -1,7 +1,7 @@
 //! Demo for the `quote!` syntax.
 
 use bevy::prelude::*;
-use bevy_aoui::{AouiPlugin, dsl::AouiCommands};
+use bevy_aoui::{AouiPlugin, util::AouiCommands};
 
 pub fn main() {
     App::new()

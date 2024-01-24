@@ -1,6 +1,7 @@
 use bevy::asset::{AssetServer, Assets, Handle};
 use bevy::ecs::system::{Commands, Query, Res, ResMut};
 use bevy::ecs::{component::Component, entity::Entity};
+use bevy::reflect::Reflect;
 use bevy::sprite::{TextureAtlas, TextureAtlasBuilder};
 use bevy::{
     log::warn,
@@ -10,7 +11,7 @@ use bevy::{
 use std::mem;
 
 /// A deferred [`TextureAtlas`] builder that waits for all its sprites to be loaded.
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Reflect)]
 pub enum DeferredAtlasBuilder {
     Subdivide {
         image: Handle<Image>,

@@ -1,8 +1,8 @@
 use std::mem;
 
-use bevy::{ecs::{query::With, entity::Entity, system::{Commands, Query, Res, Resource}, component::Component}, hierarchy::Children, window::{PrimaryWindow, Window, CursorIcon}, reflect::Reflect};
+use bevy::{ecs::{query::{With, Without}, entity::Entity, system::{Commands, Query, Res, Resource}, component::Component}, hierarchy::Children, window::{PrimaryWindow, Window, CursorIcon}, reflect::Reflect};
 
-use crate::{dsl::prelude::EventFlags, events::CursorFocus, anim::VisibilityToggle};
+use crate::{anim::VisibilityToggle, dsl::prelude::EventFlags, events::CursorFocus};
 
 use super::button::CheckButtonState;
 
@@ -92,25 +92,29 @@ pub(crate) fn set_cursor(
 #[derive(Debug, Clone, Copy, Component, Default, Reflect)]
 pub struct PropagateFocus;
 
+/// Blocks [`PropagateFocus`] from propagating through this.
+#[derive(Debug, Clone, Copy, Component, Default, Reflect)]
+pub struct BlockPropagation;
+
 /// Propagate [`CursorFocus`] and [`CursorAction`](crate::events::CursorAction) down descendants.
 pub fn propagate_focus<T: Component + Clone>(
     mut commands: Commands,
     query: Query<(&T, &Children), With<PropagateFocus>>,
-    descendent: Query<&Children>
+    descendent: Query<Option<&Children>, Without<BlockPropagation>>
 ) {
     let mut queue = Vec::new();
     for (focus, children) in query.iter() {
         for child in children {
             commands.entity(*child).insert(focus.clone());
-            queue.push((child, focus));
+            queue.push((*child, focus));
         }
     }
     while !queue.is_empty() {
         for (entity, focus) in mem::take(&mut queue) {
-            let Ok(children) = descendent.get(*entity) else {return};
+            commands.entity(entity).insert(focus.clone());
+            let Ok(Some(children)) = descendent.get(entity) else {continue};
             for child in children {
-                commands.entity(*child).insert(focus.clone());
-                queue.push((child, focus));
+                queue.push((*child, focus));
             }
         }
     }
@@ -122,5 +126,23 @@ pub fn remove_all<T: Component>(mut commands: Commands,
 ) {
     for entity in query.iter() {
         commands.entity(entity).remove::<T>();
+    }
+}
+
+pub(crate) trait OptionDo<T> {
+    fn exec(self, f: impl FnOnce());
+    fn exec_with(self, f: impl FnOnce(T));
+}
+
+impl<T> OptionDo<T> for Option<T> {
+    fn exec(self, f: impl FnOnce()) {
+        if self.is_some() {
+            f()
+        }
+    }
+    fn exec_with(self, f: impl FnOnce(T)) {
+        if let Some(val) = self {
+            f(val)
+        }
     }
 }

@@ -3,6 +3,8 @@ use std::marker::PhantomData;
 
 use bevy::ecs::entity::Entity;
 use bevy::prelude::{Vec2, UVec2};
+use bevy::reflect::std_traits::ReflectDefault;
+use bevy::reflect::Reflect;
 use downcast_rs::{impl_downcast, Downcast};
 use crate::{Size2, SizeUnit, Size};
 
@@ -20,9 +22,61 @@ const _: Option<Box<dyn Layout>> = None;
 pub trait Layout: Downcast + Debug + Send + Sync + 'static {
     /// Place sprites in the layout.
     fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput;
+    /// Clone the layout.
+    fn dyn_clone(&self) -> Box<dyn Layout>;
+    /// Layout is the same regardless of parent dimension.
+    fn is_size_agnostic(&self) -> bool {false}
 }
 
 impl_downcast!(Layout);
+
+#[derive(Debug, Reflect)]
+#[reflect(Default)]
+pub struct LayoutObject(#[reflect(ignore)]Box<dyn Layout>);
+
+impl Default for LayoutObject {
+    fn default() -> Self {
+        Self(Box::new(BoundsLayout::PADDING))
+    }
+}
+
+impl LayoutObject {
+    pub fn new(layout: impl Layout) -> Self {
+        Self(Box::new(layout))
+    }
+
+    pub fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput {
+        self.0.place(parent, entities, range)
+    }
+
+    pub fn is_size_agnostic(&self) -> bool {
+        self.0.is_size_agnostic()
+    }
+
+    pub fn downcast<T: Layout>(&self) -> Option<&T>{
+        self.0.downcast_ref()
+    }
+
+    pub fn into_downcast<T: Layout>(self) -> Result<T, Self>{
+        match self.0.downcast() {
+            Ok(x) => Ok(*x),
+            Err(x) => Err(Self(x)),
+        }
+    }
+}
+
+impl Clone for LayoutObject {
+    fn clone(&self) -> Self {
+        Self(self.0.dyn_clone())
+    }
+}
+
+impl<T> From<T> for LayoutObject where T: Layout {
+    fn from(value: T) -> Self {
+        Self(Box::new(value))
+    }
+}
+
 
 /// Output of a layout, containing anchors of entities, and the computed dimension of the layout.
 #[derive(Debug)]
@@ -48,7 +102,7 @@ impl LayoutOutput {
 /// to the maximum of its children.
 ///
 /// This layout usually should contain only one child with no offset.
-#[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
+#[derive(Debug, Clone, Copy, Reflect)]
 pub struct BoundsLayout {
     /// If set, use `Dimension` on that axis.
     pub fixed: [bool; 2],
@@ -127,11 +181,22 @@ impl Layout for BoundsLayout {
         );
         LayoutOutput { entity_anchors, dimension, max_count: entities.len() }
     }
+
+    fn dyn_clone(&self) -> Box<dyn Layout> {
+        Box::new(*self)
+    }
 }
 
 /// A size agnostic mono-directional container.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct StackLayout<D: Direction = X>(PhantomData<D>);
+#[derive(Debug, Default, Reflect)]
+pub struct StackLayout<D: Direction = X>(#[reflect(ignore)] PhantomData<D>);
+
+impl<D: Direction> Copy for StackLayout<D> {}
+impl<D: Direction> Clone for StackLayout<D> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 
 impl StackLayout {
     /// A left to right layout.
@@ -148,8 +213,15 @@ impl<D: Direction> StackLayout<D> {
 
 
 /// A fix-sized mono-directional container.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct SpanLayout<D: StretchDir = X>(PhantomData<D>);
+#[derive(Debug, Default, Reflect)]
+pub struct SpanLayout<D: StretchDir = X>(#[reflect(ignore)] PhantomData<D>);
+
+impl<D: StretchDir> Copy for SpanLayout<D> {}
+impl<D: StretchDir> Clone for SpanLayout<D> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 
 impl SpanLayout {
     /// A left to right layout with fixed dimension.
@@ -171,8 +243,15 @@ impl<D: StretchDir> SpanLayout<D> {
 
 
 /// A multiline version of the `span` layout, similar to the layout of a paragraph.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct ParagraphLayout<D1: StretchDir=X, D2: Direction=Rev<Y>>(PhantomData<(D1, D2)>) where (D1, D2): DirectionPair;
+#[derive(Debug, Default, Reflect)]
+pub struct ParagraphLayout<D1: StretchDir=X, D2: Direction=Rev<Y>>(#[reflect(ignore)] PhantomData<(D1, D2)>) where (D1, D2): DirectionPair;
+
+impl<D1: StretchDir, D2: Direction> Copy for ParagraphLayout<D1, D2> where (D1, D2): DirectionPair {}
+impl<D1: StretchDir, D2: Direction> Clone for ParagraphLayout<D1, D2> where (D1, D2): DirectionPair {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 
 impl ParagraphLayout {
     /// A left to right, top to bottom paragraph, similar to the default layout of a webpage.
@@ -194,7 +273,7 @@ impl<D1: StretchDir, D2: Direction> ParagraphLayout<D1, D2> where (D1, D2): Dire
 /// # Panics
 ///
 /// * If `row_dir` is not orthogonal to `column_dir`.
-#[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
+#[derive(Debug, Clone, Copy, Reflect)]
 pub struct SizedGridLayout {
     /// Determines the size of a cell.
     pub cell_size: Size2,
@@ -215,7 +294,7 @@ pub struct SizedGridLayout {
 /// # Panics
 ///
 /// * If `row_dir` is not orthogonal to `column_dir`.
-#[derive(Debug, Clone, Copy, bevy::prelude::Reflect)]
+#[derive(Debug, Clone, Copy, Reflect)]
 pub struct FixedGridLayout {
     /// Determines the number of cells
     pub cells: UVec2,
@@ -234,7 +313,7 @@ pub struct FixedGridLayout {
 /// # Panics
 ///
 /// * If `row_dir` is not orthogonal to `column_dir`.
-#[derive(Debug, Clone, bevy::prelude::Reflect)]
+#[derive(Debug, Clone, Reflect)]
 pub struct DynamicTableLayout {
     /// Determines the number of columns, use a large number for infinite.
     pub columns: usize,
@@ -251,7 +330,7 @@ pub struct DynamicTableLayout {
 /// # Panics
 ///
 /// * If `row_dir` is not orthogonal to `column_dir`.
-#[derive(Debug, Clone, bevy::prelude::Reflect)]
+#[derive(Debug, Clone, Reflect)]
 pub struct TableLayout {
     /// Determines the number and size of columns
     pub columns: Vec<(SizeUnit, f32)>,

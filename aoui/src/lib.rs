@@ -3,21 +3,22 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::single_match)]
 pub(crate) mod core;
+pub mod util;
 pub mod layout;
 pub mod dsl;
 pub mod widgets;
 pub mod events;
 pub mod anim;
 
-pub mod signals;
+pub mod sync;
+
+//pub mod signals;
 pub use core::*;
 
 #[doc(hidden)]
 pub use bevy;
 
 pub mod schedule;
-mod extension;
-pub use extension::WorldExtension;
 
 pub use schedule::CorePlugin;
 
@@ -29,10 +30,11 @@ impl bevy::prelude::Plugin for AouiPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .add_plugins(schedule::CorePlugin)
-            .add_plugins(signals::SignalsPlugin)
+            //.add_plugins(signals::SignalsPlugin)
             .add_plugins(events::CursorEventsPlugin)
             .add_plugins(anim::AnimationPlugin)
             .add_plugins(widgets::WidgetsPlugin)
+            .add_plugins(sync::AsyncExecutorPlugin)
         ;
     }
 }

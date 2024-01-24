@@ -1,6 +1,6 @@
 //! Showcases a simple skeletal system by chaining rectangles.
 
-use bevy_aoui::{*, bundles::*, dsl::AouiCommands};
+use bevy_aoui::{*, bundles::*, util::AouiCommands};
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{Slider, self}};
 pub fn main() {
@@ -34,10 +34,12 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
-            format_widget!(text, "FPS: {:.2}", fps);
+        extra: async_systems!(|fps: Fps, text: Ac<Text>| {
+            let fps = fps.get().await;
+            text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
         })
     });
+
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
     let mut last = commands.spawn_bundle((AouiSpriteBundle {

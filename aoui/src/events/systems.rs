@@ -1,46 +1,8 @@
 use bevy::{prelude::*, window::{Window, PrimaryWindow}};
 
-use super::{*, cursor::CameraQuery, wheel::MouseWheelAction};
+use crate::widgets::util::OptionDo;
 
-
-/// Remove [`CursorFocus`], [`CursorAction`], [`CursorClickOutside`] and [`Submit`];
-pub fn remove_focus(mut commands: Commands,
-    query1: Query<Entity, With<CursorFocus>>,
-    query2: Query<Entity, With<CursorAction>>,
-    query3: Query<Entity, With<CursorClickOutside>>,
-    query4: Query<Entity, With<MouseWheelAction>>,
-) {
-    for entity in query1.iter() {
-        commands.entity(entity).remove::<CursorFocus>();
-    }
-    for entity in query2.iter() {
-        commands.entity(entity).remove::<CursorAction>();
-    }
-    for entity in query3.iter() {
-        commands.entity(entity).remove::<CursorClickOutside>();
-    }
-    for entity in query4.iter() {
-        commands.entity(entity).remove::<MouseWheelAction>();
-    }
-}
-
-trait OptionDo<T> {
-    fn exec(self, f: impl FnOnce());
-    fn exec_with(self, f: impl FnOnce(T));
-}
-
-impl<T> OptionDo<T> for Option<T> {
-    fn exec(self, f: impl FnOnce()) {
-        if self.is_some() {
-            f()
-        }
-    }
-    fn exec_with(self, f: impl FnOnce(T)) {
-        if let Some(val) = self {
-            f(val)
-        }
-    }
-}
+use super::{*, cursor::CameraQuery};
 
 trait End: Sized {
     fn end(self) {}
@@ -119,9 +81,6 @@ pub fn mouse_button_input(
         } else if !buttons.pressed(state.drag_button) {
             state.dragging = false;
             state.drag_target = None;
-            iter(EventFlags::ClickOutside)
-            .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-            .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         }
     } else if buttons.pressed(MouseButton::Left) {
         if buttons.just_pressed(MouseButton::Left) {
@@ -223,9 +182,6 @@ pub fn mouse_button_input(
                     }
                 )
                 .exec(|| state.caught = true);
-            iter(EventFlags::ClickOutside)
-                .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-                .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         } else if buttons.just_released(MouseButton::Right) {
             let down = state.down_pos;
             iter(EventFlags::RightClick)
@@ -233,9 +189,6 @@ pub fn mouse_button_input(
                 .max_by(|(.., a), (.., b)| a.compare(b))
                 .map(|(entity, ..)| commands.entity(entity).insert(CursorAction(EventFlags::RightClick)).end())
                 .exec(|| state.caught = true);
-            iter(EventFlags::ClickOutside)
-                .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-                .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         } else if buttons.just_released(MouseButton::Middle) {
             let down = state.down_pos;
             iter(EventFlags::MidClick)
@@ -243,9 +196,6 @@ pub fn mouse_button_input(
                 .max_by(|(.., a), (.., b)| a.compare(b))
                 .map(|(entity, ..)| commands.entity(entity).insert(CursorAction(EventFlags::MidClick)).end())
                 .exec(|| state.caught = true);
-            iter(EventFlags::ClickOutside)
-                .filter(|(.., hitbox)| !hitbox.contains(mouse_pos))
-                .for_each(|(entity, ..)| commands.entity(entity).insert(CursorClickOutside).end());
         }
         if state.focused.is_none() {
             iter(EventFlags::Hover)
@@ -258,4 +208,32 @@ pub fn mouse_button_input(
                 .exec(|| state.caught = true);
         }
     }
+}
+
+pub fn mouse_button_click_outside(
+    mut commands: Commands,
+    state: Res<CursorState>,
+    buttons: Res<Input<MouseButton>>,
+    parents: Query<&Parent>,
+    query: Query<(Entity, &EventFlags)>,
+) {
+    let mut focused = Vec::new();
+
+    if let Some(mut active) = state.focused {
+        focused.push(active);
+        while let Ok(parent) = parents.get(active) {
+            focused.push(parent.get());
+            active = parent.get();
+        }
+    }
+    for entity in &focused {
+        commands.entity(*entity).insert(DescendantHasFocus);
+    }
+    if !buttons.any_just_released([MouseButton::Left, MouseButton::Middle, MouseButton::Right]) {
+        return;
+    }
+    query.iter()
+        .filter(|(_, flags)| flags.contains(EventFlags::ClickOutside))
+        .filter(|(entity, _)| !focused.contains(entity))
+        .for_each(|(entity, _)| commands.entity(entity).insert(CursorClickOutside).end())
 }

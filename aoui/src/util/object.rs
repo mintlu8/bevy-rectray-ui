@@ -1,4 +1,5 @@
 use std::{fmt::Debug, any::TypeId, mem};
+use bevy::reflect::{std_traits::ReflectDefault, Reflect};
 use downcast_rs::{impl_downcast, Downcast};
 
 const _: Option<Box<dyn DataTransfer>> = None;
@@ -32,7 +33,9 @@ pub trait AsObject: Sized + Debug + Clone + Send + Sync + 'static {
     fn get(obj: &Object) -> Option<Self>;
     fn get_ref(obj: &Object) -> Option<&Self>;
     fn from_object(obj: Object) -> Option<Self>;
-    fn into_object(self) -> Object;
+    fn into_object(self) -> Object;    
+    fn equals_object(&self, obj: &Object) -> bool;
+
 }
 
 impl<T> AsObject for T where T: DataTransfer + Clone {
@@ -51,6 +54,14 @@ impl<T> AsObject for T where T: DataTransfer + Clone {
     fn into_object(self) -> Object {
         Object(Some(Box::new(self)))
     }
+
+    fn equals_object(&self, obj: &Object) -> bool {
+        match &obj.0 {
+            Some(item) => self.dyn_eq(item.as_ref()),
+            None => false,
+        }
+    }
+
 }
 
 impl AsObject for Object  {
@@ -81,12 +92,17 @@ impl AsObject for Object  {
     fn into_object(self) -> Object {
         self
     }
+    
+    fn equals_object(&self, obj: &Object) -> bool{
+        self.equal_to(obj)
+    }
 }
 
 /// A boxed type erased nullable dynamic object.
 #[derive(Debug)]
-#[derive(Default)]
-pub struct Object(Option<Box<dyn DataTransfer>>);
+#[derive(Default, Reflect)]
+#[reflect(Default)]
+pub struct Object(#[reflect(ignore)] Option<Box<dyn DataTransfer>>);
 
 impl Clone for Object {
     fn clone(&self) -> Self {
@@ -157,6 +173,14 @@ impl Object {
             (Some(a), Some(b)) => a.dyn_eq(b.as_ref()),
             (None, None) => true,
             _ => false
+        }
+    }
+
+    pub fn or<T: AsObject>(self, item: T) -> Object {
+        if self.is_none() {
+            Object::new(item)
+        } else {
+            self
         }
     }
 }

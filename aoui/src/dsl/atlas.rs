@@ -2,9 +2,9 @@ use bevy::{asset::Handle, sprite::{TextureAtlas, TextureAtlasSprite}, math::UVec
 use bevy::math::{Vec2, Rect};
 use bevy::render::{texture::Image, color::Color};
 
-use crate::{widget_extension, widgets::DeferredAtlasBuilder, bundles::BuildTransformBundle, build_frame};
+use crate::{frame_extension, widgets::DeferredAtlasBuilder, bundles::BuildTransformBundle, build_frame};
 
-use super::{Widget, DslFrom, AouiCommands};
+use crate::util::{Widget, DslFrom, AouiCommands};
 
 #[derive(Debug, Default)]
 pub enum AtlasSprites {
@@ -32,7 +32,7 @@ pub enum AtlasRectangles {
     },
 }
 
-widget_extension!(pub struct AtlasBuilder {
+frame_extension!(pub struct AtlasBuilder {
     /// Either the atlas or the rectangle of the atlas.
     ///
     /// # Accepts
@@ -57,8 +57,6 @@ widget_extension!(pub struct AtlasBuilder {
     pub sprites: AtlasSprites,
     /// Size of the sprite
     pub size: Option<Vec2>,
-    /// Color of the sprite
-    pub color: Option<Color>,
     /// Flips the sprite.
     pub flip: [bool; 2],
     /// Index of the atlas.

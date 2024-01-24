@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_aoui::{AouiPlugin, WorldExtension, dsl::AouiCommands};
+use bevy_aoui::{AouiPlugin, util::WorldExtension, util::AouiCommands};
 
 
 pub fn main() {
@@ -21,8 +21,8 @@ pub fn main() {
 pub fn init(mut commands: AouiCommands) {
     use bevy_aoui::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
-    let (submit_sender, recv_s1, recv_s2) = commands.signal();
-    let (change_sender, recv_c1, recv_c2) = commands.signal();
+    let (submit_sender, recv_s1, recv_s2) = signal();
+    let (change_sender, recv_c1, recv_c2) = signal();
     inputbox! (commands {
         dimension: size2!(800, 1 em),
         offset: [0, 200],
@@ -54,27 +54,37 @@ pub fn init(mut commands: AouiCommands) {
         text: "This is a receiver.",
         offset: [-200, 0],
         font: "RobotoCondensed.ttf",
-        extra: recv_s1.recv(|s: String, text: &mut Text| format_widget!(text, "{}", s))
+        signal: receiver::<FormatText>(recv_s1),
+        extra: TextFromSignal,
     });
 
     text!(commands {
         text: "This is a formatter.",
         offset: [-200, -200],
         font: "RobotoCondensed.ttf",
-        extra: recv_s2.recv(|s: String, text: &mut Text| format_widget!(text, "Received string \"{}\"!", s))
+        signal: receiver::<FormatText>(recv_s2),
+        system: |sig: SigRecv<FormatText>, text: Ac<Text>| {
+            let s = sig.recv().await;
+            text.write(format!("Received string \"{}\"!", s)).await?;
+        }
     });
 
     text!(commands {
         text: "This is a change detector.",
         offset: [200, 0],
         font: "RobotoCondensed.ttf",
-        extra: recv_c1.recv(|s: String, text: &mut Text| format_widget!(text, "{}", s))
+        signal: receiver::<FormatText>(recv_c1),
+        extra: TextFromSignal,
     });
 
     text!(commands {
         text: "This is a change detecting formatter.",
         offset: [200, -200],
         font: "RobotoCondensed.ttf",
-        extra: recv_c2.recv(|s: String, text: &mut Text| format_widget!(text, "Received string \"{}\"!", s))
+        signal: receiver::<FormatText>(recv_c2),
+        system: |sig: SigRecv<FormatText>, text: Ac<Text>| {
+            let s = sig.recv().await;
+            text.write(format!("Received string \"{}\"!", s)).await?;
+        }
     });
 }

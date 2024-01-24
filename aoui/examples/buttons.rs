@@ -2,11 +2,11 @@
 #![recursion_limit = "256"]
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
+use bevy_aoui::sync::Signal;
 use bevy_aoui::AouiPlugin;
-use bevy_aoui::WorldExtension;
-use bevy_aoui::dsl::AouiCommands;
-use bevy_aoui::signals::Invoke;
-use bevy_aoui::signals::ReceiveInvoke;
+use bevy_aoui::util::Object;
+use bevy_aoui::util::WorldExtension;
+use bevy_aoui::util::AouiCommands;
 
 pub fn main() {
     App::new()
@@ -26,15 +26,11 @@ pub fn main() {
 }
 
 #[derive(Debug, Component)]
-pub struct Listen(Invoke<Listen>);
-
-impl ReceiveInvoke for Listen {
-    type Type = ();
-}
+pub struct Listen(Signal<Object>);
 
 pub fn recv(query: Query<&Listen>) {
     for item in query.iter() {
-        if item.0.poll_any() {
+        if item.0.try_read().is_some() {
             println!("Signal is received!");
         }
     }
@@ -48,14 +44,14 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
-            format_widget!(text, "FPS: {:.2}", fps);
-        })
+        system: |fps: Fps, text: Ac<Text>| {
+            let fps = fps.get().await;
+            text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
+        }
     });
-    
 
-    let (send1, recv1) = commands.signal();
-    let (send2, recv2) = commands.signal();
+    let (send1, recv1) = signal();
+    let (send2, recv2) = signal();
 
     vstack!(commands {
         offset: [0, 100],
@@ -108,15 +104,24 @@ pub fn init(mut commands: AouiCommands) {
         offset: [300, 120],
         color: color!(gold),
         text: "<= true!",
-        extra: recv1.recv0(|x: bool, text: &mut Text| format_widget!(text, "<= {}!", x))
+        signal: receiver::<ToggleChange>(recv1),
+        system: |toggle: SigRecv<ToggleChange>, text: Aeq<&mut Text>| {
+            let checked = toggle.recv().await;
+            text.set(move |mut text| format_widget!(text.as_mut(), "<= {}!", checked)).await;
+        }
     });
+
     text! (commands {
         offset: [300, 80],
         color: color!(gold),
         text: "<= false!",
-        extra: recv2.recv0(|x: bool, text: &mut Text| format_widget!(text, "<= {}!", x))
+        signal: receiver::<ToggleChange>(recv2),
+        system: |x: SigRecv<ToggleChange>, text: Aeq<&mut Text>| {
+            let checked = x.recv().await;
+            text.set(move |mut text| format_widget!(text.as_mut(), "<= {}!", checked)).await;
+        }
     });
-    
+
     let ctx = radio_button_group::<[_; 4]>("Fire");
     let sig = ctx[0].recv();
     let elements = ["Fire", "Water", "Earth", "Wind"];
@@ -124,8 +129,12 @@ pub fn init(mut commands: AouiCommands) {
     text! (commands {
         offset: [300, -100],
         color: color!(gold),
-        text: "<= This reflects the value of the radio button.",
-        extra: sig.recv0(|x: &str, text: &mut Text| format_widget!(text, "<= has value {}!", x))
+        text: "<= Click the radio button and this will change!",
+        signal: receiver::<FormatTextStatic>(sig),
+        system: |x: SigRecv<FormatTextStatic>, text: Ac<Text>| {
+            let checked = x.recv().await;
+            text.set(move |text| format_widget!(text, "<= {}!", checked)).await?;
+        }
     });
 
     vstack!(commands {
@@ -153,22 +162,29 @@ pub fn init(mut commands: AouiCommands) {
             },
         },
     });
-    
-    let (send, recv, recv2) = commands.signal();
 
-    commands.spawn_bundle(Listen(recv2.invoke()));
+    let (send, recv, recv2) = signal::<Object, _>();
+
+    commands.spawn_bundle(Listen(Signal::from_typed(recv2)));
 
     text! (commands {
         offset: [300, 0],
         color: color!(gold),
         text: "<= Click this button.",
-        extra: recv.recv0(|text: &mut Text| format_widget!(text, "You clicked it!"))
+        signal: receiver::<Invocation>(recv),
+        system: |sig: SigRecv<Invocation>, text: Aeq<&mut Text>| {
+            sig.recv().await;
+            text
+                .set(|text| format_widget!(text, "You clicked it!"))
+                .await;
+        }
     });
 
     button! (commands {
         dimension: size2!(12 em, 2 em),
         font_size: em(2),
         cursor: CursorIcon::Hand,
+        on_click: send,
         child: rectangle!{
             dimension: size2!(100%, 100%),
             color: color!(blue500),
@@ -197,8 +213,9 @@ pub fn init(mut commands: AouiCommands) {
             extra: DisplayIf(EventFlags::LeftPressed),
             z: 0.1
         },
-        extra: Handlers::<EvLeftClick>::oneshot(&mut commands, ||println!("Clicked"))
-            .and(send),
-        extra: Handlers::<EvHover>::oneshot(&mut commands, ||println!("Hovering")),
+        system: |sender: SigSend<ButtonClick>| {
+            sender.recv().await;
+            println!("Clicked")
+        }
     });
 }

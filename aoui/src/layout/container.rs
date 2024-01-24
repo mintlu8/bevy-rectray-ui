@@ -1,16 +1,16 @@
-use std::ops::Range;
+use std::ops::{Range, RangeFull, RangeInclusive};
 
 use bevy::prelude::*;
 
-use crate::{Size2, layout::Layout};
+use crate::{Size2, util::DslFrom};
 
-use super::LayoutOutput;
+use super::{LayoutOutput, LayoutObject};
 
 /// Range of content displayed in the layout, default is `All`.
-/// 
+///
 /// This means different things with different layout, could be
 /// entities, rows or pages.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Reflect)]
 pub enum LayoutRange {
     #[default]
     All,
@@ -59,11 +59,33 @@ impl LayoutRange {
     }
 }
 
+impl DslFrom<RangeFull> for LayoutRange {
+    fn dfrom(_: RangeFull) -> Self {
+        LayoutRange::All
+    }
+}
+
+impl DslFrom<Range<usize>> for LayoutRange {
+    fn dfrom(value: Range<usize>) -> Self {
+        LayoutRange::Bounded { min: value.start, len: value.len() }
+    }
+}
+
+
+impl DslFrom<RangeInclusive<usize>> for LayoutRange {
+    fn dfrom(value: RangeInclusive<usize>) -> Self {
+        LayoutRange::Bounded {
+            min: *value.start(),
+            len: value.end() - value.start() + 1
+        }
+    }
+}
+
 /// A configurable container that lays out a sequence of Entities.
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Clone, Reflect)]
 pub struct Container {
     /// Layout of the container.
-    pub layout: Box<dyn Layout>,
+    pub layout: LayoutObject,
     /// Margin between cells, always corresponds to the X and Y axis
     /// regardless of layout directions.
     pub margin: Size2,
@@ -183,7 +205,7 @@ pub struct LayoutInfo {
 /// Cause special behaviors when inserted into a [`Container`].
 pub enum LayoutControl {
     #[default]
-    /// Does not cause special behaviors, optional.
+    /// Does not cause special behaviors.
     None,
     /// Breaks the line in a container after rendering this item.
     Linebreak,

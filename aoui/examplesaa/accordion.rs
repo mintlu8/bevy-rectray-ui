@@ -1,9 +1,9 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::WorldExtension;
+use bevy_aoui::util::WorldExtension;
 use bevy_aoui::AouiPlugin;
-use bevy_aoui::dsl::AouiCommands;
+use bevy_aoui::util::AouiCommands;
 use bevy_aoui::events::MovementUnits;
-use bevy_aoui::signals::Object;
+use bevy_aoui::util::Object;
 use bevy_aoui::signals::SignalBuilder;
 use bevy_aoui::widgets::button::RadioButton;
 
@@ -12,6 +12,7 @@ pub fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 present_mode: bevy::window::PresentMode::AutoNoVsync,
+                //resolution: WindowResolution::new(1600.0, 800.0).with_scale_factor_override(1.0),
                 ..Default::default()
             }),
             ..Default::default()
@@ -124,7 +125,7 @@ pub fn accordion_page(
                     layer: 1,
                     extra: DragY.with_position(pos_scroll.flip(false, true)),
                     extra: cov_percent_recv.recv(|fac: Vec2, dim: &mut Dimension| {
-                        dim.edit_raw(|v| v.y = if fac.y > 1.0 {1.0 / fac.y} else {fac.y})
+                        dim.edit_raw(|v| v.y = if fac.y > 1.0 {1.0 / fac.y} else {fac.y});
                     }),
                 }
             },
@@ -151,14 +152,15 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
-            format_widget!(text, "FPS: {:.2}", fps);
+        extra: async_systems!(|fps: FPS, text: Ac<Text>| {
+            let fps = fps.get().await;
+            text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
         })
     });
 
     let group = radio_button_group(0usize);
 
-    let (scroll_send, scroll_recv) = commands.signal();
+    let (scroll_send, scroll_recv) = signal();
 
     let texts = [TEXT, TEXT, "Hello, Hello, Hello!", &format!("{TEXT}{TEXT}"), "apple\norange\nbanana", TEXT];
 

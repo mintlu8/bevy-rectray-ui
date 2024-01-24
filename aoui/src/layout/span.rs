@@ -11,9 +11,17 @@ impl<D: Direction> Layout for StackLayout<D> {
         range.resolve(entities.len());
         stack::<D>(margin, &entities[range.to_range(entities.len())]).normalized().with_max(entities.len())
     }
+
+    fn dyn_clone(&self) -> Box<dyn Layout> {
+        Box::new(*self)
+    }
+
+    fn is_size_agnostic(&self) -> bool {
+        true
+    }
 }
 
-impl<D: StretchDir> Layout for SpanLayout<D> {
+impl<D: StretchDir> Layout for SpanLayout<D>  {
     fn place(&self, parent: &LayoutInfo, mut entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput {
         let margin = parent.margin;
         let dimension = parent.dimension;
@@ -22,6 +30,10 @@ impl<D: StretchDir> Layout for SpanLayout<D> {
         let entity_anchors = span::<D>(dimension, margin, &mut entities[range.to_range(len)]);
         LayoutOutput { entity_anchors, dimension, max_count: entities.len() }.normalized().with_max(entities.len())
     }
+
+    fn dyn_clone(&self) -> Box<dyn Layout> {
+        Box::new(*self)
+    }
 }
 
 impl<D1: StretchDir, D2: Direction> Layout for ParagraphLayout<D1, D2> where (D1, D2): DirectionPair {
@@ -29,6 +41,10 @@ impl<D1: StretchDir, D2: Direction> Layout for ParagraphLayout<D1, D2> where (D1
         let margin = parent.margin;
         let dim = parent.dimension;
         paragraph::<D1, D2>(dim, margin, entities).normalized()
+    }
+
+    fn dyn_clone(&self) -> Box<dyn Layout> {
+        Box::new(*self)
     }
 }
 

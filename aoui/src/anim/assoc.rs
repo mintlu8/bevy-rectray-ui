@@ -1,8 +1,9 @@
-use bevy::{render::color::Color, text::Text, math::Vec2};
+use bevy::{render::color::Color, math::Vec2};
 use bevy::ecs::{component::Component, system::Query};
-use bevy::sprite::{TextureAtlasSprite, Sprite};
-use bevy::ecs::query::{WorldQuery, ReadOnlyWorldQuery, Without};
-use crate::{Transform2D, Dimension, Opacity, widgets::TextFragment};
+use bevy::sprite::TextureAtlasSprite;
+use bevy::ecs::query::{WorldQuery, ReadOnlyWorldQuery};
+use crate::Coloring;
+use crate::{Transform2D, Dimension, Opacity};
 use super::{Interpolation, Interpolate, Offset, Rotation, Scale, Index};
 
 
@@ -115,26 +116,10 @@ impl InterpolateAssociation for (Opacity, Opacity) {
     }
 }
 
-impl InterpolateAssociation for (Opacity, Color) {
-    type Component = Opacity;
+impl InterpolateAssociation for (Coloring, Color) {
+    type Component = Coloring;
     type Interpolation = Color;
     type Condition = ();
-
-    fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
-        component.opacity = value.a()
-    }
-
-    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
-        let o = component.opacity;
-        Color::rgba_linear(o, o, o, o)
-    }
-}
-
-
-impl InterpolateAssociation for (Sprite, Color) {
-    type Component = Sprite;
-    type Interpolation = Color;
-    type Condition = Without<TextFragment>;
 
     fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
         component.color = value
@@ -145,49 +130,7 @@ impl InterpolateAssociation for (Sprite, Color) {
     }
 }
 
-impl InterpolateAssociation for (TextureAtlasSprite, Color) {
-    type Component = TextureAtlasSprite;
-    type Interpolation = Color;
-    type Condition = Without<TextFragment>;
 
-    fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
-        component.color = value
-    }
-
-    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
-        component.color
-    }
-}
-
-impl InterpolateAssociation for (Text, Color) {
-    type Component = Text;
-    type Interpolation = Color;
-    type Condition = Without<TextFragment>;
-
-    fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
-        for section in &mut component.sections {
-            section.style.color = value;
-        }
-    }
-
-    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
-        component.sections.first().map(|x| x.style.color).unwrap_or(Color::NONE)
-    }
-}
-
-impl InterpolateAssociation for (TextFragment, Color) {
-    type Component = TextFragment;
-    type Interpolation = Color;
-    type Condition = ();
-
-    fn set<'t>(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd) {
-        component.color = value;
-    }
-
-    fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd {
-        component.color
-    }
-}
 
 /// Query for either setting a field or setting its associated interpolation.
 #[derive(Debug, WorldQuery)]
@@ -208,6 +151,7 @@ impl<A: Component, B: Interpolation> AttrItem<'_, A, B>
             <(A, B)>::set(&mut self.component, value);
         }
     }
+    
 
     /// This will move the interpolation without interpolating.
     pub fn force_set(&mut self, value: B::FrontEnd) {
@@ -234,6 +178,32 @@ impl<A: Component, B: Interpolation> AttrItem<'_, A, B>
     }
 }
 
+impl<A: Component, B: Interpolation<FrontEnd = Vec2>> AttrItem<'_, A, B>
+        where (A, B): InterpolateAssociation<Component = A, Interpolation = B> {
+
+    /// Set the value or move the interpolation.
+    pub fn set_x(&mut self, value: f32) {
+        if let Some(interpolate) = &mut self.interpolate {
+            let target = interpolate.target().y;
+            interpolate.interpolate_to(Vec2::new(value, target));
+        } else {
+            let y = <(A, B)>::get(&self.component).y;
+            <(A, B)>::set(&mut self.component, Vec2::new(value, y));
+        }
+    }
+    
+    /// Set the value or move the interpolation.
+    pub fn set_y(&mut self, value: f32) {
+        if let Some(interpolate) = &mut self.interpolate {
+            let target = interpolate.target().x;
+            interpolate.interpolate_to(Vec2::new(target, value));
+        } else {
+            let x = <(A, B)>::get(&self.component).x;
+            <(A, B)>::set(&mut self.component, Vec2::new(x, value));
+        }
+    }
+    
+}
 
 impl<A: Component, B: Interpolation> AttrReadOnlyItem<'_, A, B>
         where (A, B): InterpolateAssociation<Component = A, Interpolation = B> {

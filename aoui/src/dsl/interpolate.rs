@@ -102,7 +102,7 @@ macro_rules! transition_impl {
             $($out,)*
             $crate::anim::Interpolate::<$name>::new(
                 $crate::easing!($ease),
-                $crate::dsl::DslInto::dinto($value),
+                $crate::util::DslInto::dinto($value),
                 $time as f32
             )
         }

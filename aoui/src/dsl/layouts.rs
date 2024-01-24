@@ -10,15 +10,13 @@ macro_rules! linebreak {
     };
     (($commands: expr $(, $tt:expr)*), $size: expr $(,)?) => {
         {
-            use $crate::dsl::DslInto;            
-            let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
+            let OneOrTwo(size) = $crate::util::DslInto::<OneOrTwo<Size2>>::dinto($size);
             $commands.spawn_bundle($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
     (($commands: expr $(, $tt:expr)*) {$size: expr}) => {
         {
-            use $crate::dsl::DslInto;            
-            let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
+            let OneOrTwo(size) = $crate::util::DslInto::<OneOrTwo<Size2>>::dinto($size);
             $commands.spawn_bundle($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
@@ -27,32 +25,30 @@ macro_rules! linebreak {
     };
     ($commands: tt $size: expr $(,)?) => {
         {
-            use $crate::dsl::DslInto;
-            let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
+            let OneOrTwo(size) = $crate::util::DslInto::<OneOrTwo<Size2>>::dinto($size);
             $commands.spawn_bundle($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
     ($commands: tt {$size: expr}) => {
         {
-            use $crate::dsl::DslInto;
-            let OneOrTwo(size) = DslInto::<OneOrTwo<Size2>>::dinto($size);
+            let OneOrTwo(size) = $crate::util::DslInto::<OneOrTwo<Size2>>::dinto($size);
             $commands.spawn_bundle($crate::bundles::LinebreakBundle::new(size)).id()
         }
     };
 }
 
-use crate::widget_extension;
+use crate::frame_extension;
 
-use super::{Widget, AouiCommands};
+use crate::util::{Widget, AouiCommands};
 
 
-widget_extension! {
+frame_extension! {
     pub struct PaddingBuilder {}
 }
 
 impl Widget for PaddingBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        self.layout = Some(Box::new(BoundsLayout::PADDING));
+        self.layout = Some(BoundsLayout::PADDING.into());
         let entity = build_frame!(commands, self).id();
         (entity, entity)
     }

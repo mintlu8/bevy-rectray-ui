@@ -56,39 +56,34 @@
 
 use bevy::{prelude::*, ecs::query::WorldQuery};
 use crate::{Hitbox, Clipping, RotatedRect, Opacity};
-use crate::widgets::util::CursorDefault;
-use crate::schedule::{AouiEventSet, AouiCleanupSet};
+use crate::widgets::util::{CursorDefault, remove_all};
+use crate::schedule::{AouiCleanupSet, AouiEventSet, AouiWidgetEventSet};
 
 mod systems;
 mod state;
 mod event;
-mod handler;
 mod wheel;
 mod cursor;
-pub(crate) mod mutation;
-mod oneshot;
 mod coverage;
-mod fetch;
+mod focus;
 
 pub use event::*;
 pub use state::*;
 use systems::*;
-pub use handler::*;
 pub use wheel::{MovementUnits, ScrollScaling, MouseWheelAction};
 pub use cursor::{CustomCursor, TrackCursor};
-pub use mutation::Mutation;
-pub use oneshot::OneShot;
-pub use fetch::{Fetch, Evaluated};
 pub use cursor::CameraQuery;
+pub use coverage::{CoveragePx, CoveragePercent};
+pub use focus::*;
 
+use self::coverage::calculate_coverage;
 use self::cursor::{custom_cursor_controller, track_cursor};
-pub use coverage::{FetchCoveragePercent, FetchCoveragePx};
 
 /// Marker component for Aoui's camera, optional.
 ///
 /// Used for cursor detection and has no effect on rendering.
 /// If not present, we will try the `.get_single()` method instead.
-#[derive(Debug, Clone, Copy, Component, Default)]
+#[derive(Debug, Clone, Copy, Component, Default, Reflect)]
 pub struct AouiCamera;
 
 
@@ -141,47 +136,22 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .init_resource::<DoubleClickThreshold>()
             .init_resource::<CursorDefault>()
             .add_systems(PreUpdate, mouse_button_input.in_set(AouiEventSet))
+            .add_systems(PreUpdate, mouse_button_click_outside.in_set(AouiEventSet).after(mouse_button_input))
             .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
-            .add_systems(Last, remove_focus.in_set(AouiCleanupSet))
-            .add_systems(Update, (
-                handle_event::<EvLeftClick>,
-                handle_event::<EvLeftDown>,
-                handle_event::<EvDragEnd>,
-                handle_event::<EvRightClick>,
-                handle_event::<EvRightDown>,
-                handle_event::<EvMidClick>,
-                handle_event::<EvMidDown>,
-                handle_event::<EvDoubleClick>,
-                handle_event::<EvDragEnd>,
-                handle_event::<EvClickOutside>,
-                handle_event::<EvHover>,
-                handle_event::<EvLeftPressed>,
-                handle_event::<EvLeftDrag>,
-                handle_event::<EvMidPressed>,
-                handle_event::<EvMidDrag>,
-                handle_event::<EvRightPressed>,
-                handle_event::<EvRightDrag>,
-            ))
-            .add_systems(Update, (
-                fetch::transfer_offset,
-                fetch::transfer_offset_evaluated,
-                fetch::transfer_dimension,
-                fetch::transfer_dimension_evaluated,
-                fetch::transfer_rotation,
-                fetch::transfer_scale,
-                fetch::transfer_opacity,
-                fetch::transfer_margin,
-                fetch::transfer_padding,
-                fetch::transfer_margin_evaluated,
-                fetch::transfer_padding_evaluated,
-            ))
-            .add_systems(Update, (
-                lose_focus_detection,
-                obtain_focus_detection,
+            .add_systems(PreUpdate, focus::run_focus_signals.in_set(AouiWidgetEventSet))
+            .add_systems(PreUpdate, focus::run_strong_focus_signals.in_set(AouiWidgetEventSet))
+            .add_systems(FixedUpdate, (
                 track_cursor,
                 custom_cursor_controller,
-                coverage::calculate_coverage,
+                calculate_coverage,
             ))
+            .add_systems(Last, (
+                remove_all::<CursorAction>,
+                remove_all::<CursorFocus>,
+                remove_all::<CursorClickOutside>,
+                remove_all::<MouseWheelAction>,
+                remove_all::<DescendantHasFocus>,
+            ).in_set(AouiCleanupSet))
         ;
     }
 }

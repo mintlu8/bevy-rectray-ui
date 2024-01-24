@@ -1,18 +1,17 @@
-use crate::dsl::{prelude::SignalSender, CloneSplit};
+use crate::dsl::prelude::Signals;
 use crate::events::{CursorAction, EventFlags};
-use crate::events::{EvButtonClick, EvToggleChange, Handlers};
-use crate::signals::{AsObject, Signal};
-use crate::signals::{Object, SignalBuilder};
+use crate::sync::{Signal, SignalId, SignalSender, TypedSignal};
+use crate::util::{Object, AsObject};
+use crate::util::CloneSplit;
 use bevy::ecs::system::{Commands, Query};
 use bevy::ecs::{component::Component, query::With};
+use bevy::reflect::std_traits::ReflectDefault;
 use bevy::{
     ecs::{entity::Entity, query::Has},
     reflect::Reflect,
 };
-use std::{
-    ops::Deref,
-    sync::{Arc, Mutex},
-};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 /// Marker for sending the `Submit` signal on click.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Component, Reflect)]
@@ -51,16 +50,11 @@ impl CheckButton {
         }
     }
 
-    pub fn rev(&mut self) -> bool {
-        match self {
-            CheckButton::Unchecked => {
-                *self = CheckButton::Checked;
-                true
-            }
-            CheckButton::Checked => {
-                *self = CheckButton::Unchecked;
-                false
-            }
+    pub fn set(&mut self, value: bool) {
+        if value{
+            *self = CheckButton::Checked;
+        } else {
+            *self = CheckButton::Unchecked;
         }
     }
 }
@@ -77,117 +71,140 @@ impl From<bool> for CheckButton {
 /// Component of `radio_button` containing the shared state.
 ///
 /// Discriminant is the [`Payload`] component.
-#[derive(Debug, Clone, Component)]
-pub struct RadioButton(Arc<Mutex<Object>>, SignalSender<Object>);
+#[derive(Debug, Clone, Component, Reflect)]
+#[reflect(Default)]
+pub struct RadioButton{
+    #[reflect(ignore)]
+    pub(crate) storage: Arc<Mutex<Object>>,
+    #[reflect(ignore)]
+    pub(crate) sender: Signal<Object>,
+}
+
+impl Default for RadioButton {
+    fn default() -> Self {
+        Self::new_empty()
+    }
+}
 
 impl RadioButton {
     /// Create an empty `RadioButton` context, usually unchecked by default.
     pub fn new_empty() -> Self {
-        RadioButton(
-            Arc::new(Mutex::new(Object::NONE)),
-            SignalBuilder::new(Signal::new()).send(),
-        )
+        RadioButton {
+            storage: Arc::new(Mutex::new(Object::NONE)),
+            sender: Default::default(),
+        }
     }
 
     pub fn new(default: impl AsObject) -> Self {
-        RadioButton(
-            Arc::new(Mutex::new(Object::new(default))),
-            SignalBuilder::new(Signal::new()).send(),
-        )
+        let obj = Object::new(default);
+        RadioButton {
+            storage: Arc::new(Mutex::new(obj.clone())),
+            sender: Signal::new(obj),
+        }
     }
 
     pub fn set(&self, payload: &Payload) {
-        let mut lock = self.0.lock().unwrap();
-        *lock = payload.0.clone();
-        self.1.send_dyn(payload.0.clone())
+        let mut lock = self.storage.lock();
+        *lock = payload.get();
+        self.sender.write(payload.get())
     }
 
     pub fn get<T: AsObject>(&self) -> Option<T> {
-        self.0.lock().unwrap().get()
+        self.storage.lock().get()
     }
 
-    pub fn recv<T: AsObject>(&self) -> SignalBuilder<T> {
-        self.1.specialize_receiver()
+    pub fn recv<T: AsObject>(&self) -> TypedSignal<T> {
+        TypedSignal::from_inner(self.sender.get_shared())
     }
 
     pub fn clear(&self) {
-        let mut lock = self.0.lock().unwrap();
+        let mut lock = self.storage.lock();
         *lock = Object::NONE;
-        self.1.send(Object::unnameable())
+        self.sender.write(Object::unnameable())
     }
 }
 
 impl PartialEq<Payload> for RadioButton {
     fn eq(&self, other: &Payload) -> bool {
-        let lock = self.0.lock().unwrap();
-        lock.deref().equal_to(&other.0)
+        let lock = self.storage.lock();
+        lock.equal_to(&other.0)
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+pub struct ButtonClick;
+
+impl SignalId for ButtonClick {
+    type Data = Object;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+pub struct ToggleChange;
+
+impl SignalId for ToggleChange {
+    type Data = bool;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+pub struct ToggleInvoke;
+
+impl SignalId for ToggleInvoke {
+    type Data = bool;
+}
+
+
+
 /// Component for making `RadioButton` behave like `CheckButton`.
-#[derive(Debug, Clone, Component, Reflect)]
+#[derive(Debug, Clone, Copy, Component, PartialEq, Eq, Default, Reflect)]
 pub struct RadioButtonCancel;
 
 pub(crate) fn button_on_click(
-    mut commands: Commands,
-    query: Query<(Entity, &CursorAction, &Handlers<EvButtonClick>, Option<&Payload>), With<Button>>,
+    query: Query<(&CursorAction, SignalSender<ButtonClick>, Option<&Payload>), With<Button>>,
 ) {
-    for (entity, action, submit, payload) in query.iter() {
+    for (action, submit, payload) in query.iter() {
         if !action.is(EventFlags::LeftClick) {
             continue;
         }
-        let mut commands = commands.entity(entity);
         if let Some(payload) = payload {
-            submit.handle_dyn(&mut commands, payload.0.clone());
+            submit.send(payload.0.clone());
         } else {
-            submit.handle_dyn(&mut commands, Object::new(()));
+            submit.send(Object::new(()));
         }
     }
 }
 
 pub(crate) fn check_button_on_click(
-    mut commands: Commands,
-    mut query: Query<(Entity, &CursorAction, &mut CheckButton,
-        Option<&Handlers<EvToggleChange>>,
-        Option<&Handlers<EvButtonClick>>,
-        Option<&Payload>,
-    )>,
+    mut query: Query<(Option<&CursorAction>, &mut CheckButton, Option<&mut Signals>, Option<&Payload>)>,
 ) {
-    for (entity, action, mut state, change, submit, payload) in query.iter_mut() {
-        if !action.is(EventFlags::LeftClick) {
+    for (action, mut state, mut signals, payload) in query.iter_mut() {
+        let val = if action.map(|x| x.intersects(EventFlags::LeftClick)).unwrap_or(false) {
+            !state.get()
+        } else if let Some(val) = signals.as_mut().and_then(|s| s.poll_once::<ToggleInvoke>()){
+            val
+        } else {
             continue;
-        }
-        let state = state.rev();
-        let mut commands = commands.entity(entity);
-        if let Some(signal) = change {
-            signal.handle(&mut commands, state);
-        }
-        if !state {
-            continue;
-        }
-        if let Some(signal) = submit {
-            if let Some(payload) = payload {
-                signal.handle_dyn(&mut commands, payload.0.clone());
-            } else {
-                signal.handle_dyn(&mut commands, Object::new(()));
+        };
+        if state.get() != val {
+            state.set(val);
+            let Some(signals) = signals.as_ref() else {continue};
+            signals.send::<ToggleChange>(val);
+            if val {
+                if let Some(payload) = payload {
+                    signals.send::<ButtonClick>(payload.0.clone());
+                } else {
+                    signals.send::<ButtonClick>(Object::new(()));
+                }
             }
         }
     }
 }
 
 pub(crate) fn radio_button_on_click(
-    mut commands: Commands,
     mut query: Query<(
-        Entity,
-        &CursorAction,
-        &RadioButton,
-        &Payload,
-        Option<&Handlers<EvButtonClick>>,
-        Has<RadioButtonCancel>,
+        &CursorAction, &RadioButton, &Payload, SignalSender<ButtonClick>, Has<RadioButtonCancel>,
     )>,
 ) {
-    for (entity, action, state, payload, submit, cancellable) in query.iter_mut() {
-        let mut commands = commands.entity(entity);
+    for (action, state, payload, submit, cancellable) in query.iter_mut() {
         if !action.is(EventFlags::LeftClick) {
             continue;
         }
@@ -198,9 +215,7 @@ pub(crate) fn radio_button_on_click(
             continue;
         }
         state.set(payload);
-        if let Some(signal) = submit {
-            signal.handle_dyn(&mut commands, payload.0.clone());
-        }
+        submit.send(payload.0.clone());
     }
 }
 
@@ -233,7 +248,7 @@ pub(crate) fn generate_check_button_state(
 /// * `radio_button` `EvButtonClick`: sends `Payload`, which is required.
 /// * `check_button` `EvButtonClick`: If checked, sends `Payload` or `()`.
 ///
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct Payload(Object);
 
 impl Payload {
@@ -243,6 +258,10 @@ impl Payload {
 
     pub fn new(value: impl AsObject) -> Self {
         Self(Object::new(value))
+    }
+
+    pub fn get(&self) -> Object {
+        self.0.clone()
     }
 
     /// Mutate the payload.

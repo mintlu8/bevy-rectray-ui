@@ -1,8 +1,8 @@
 use bevy::asset::AssetLoader;
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::WorldExtension;
+use bevy_aoui::util::WorldExtension;
 use bevy_aoui::AouiPlugin;
-use bevy_aoui::dsl::AouiCommands;
+use bevy_aoui::util::AouiCommands;
 
 pub fn main() {
     App::new()
@@ -72,9 +72,10 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
-            format_widget!(text, "FPS: {:.2}", fps);
-        })
+        system: |fps: Fps, text: Ac<Text>| {
+            let fps = fps.get().await;
+            text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
+        }
     });
     
     vstack!(commands  {

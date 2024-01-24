@@ -2,10 +2,10 @@ use std::mem;
 use crate::anim::VisibilityToggle;
 use crate::dimension::DimensionMut;
 use crate::events::{
-    ActiveDetection, CursorAction, CursorClickOutside, CursorFocus, CursorState, EvTextChange,
-    EvTextSubmit, EventFlags, Handlers,
+    ActiveDetection, CursorAction, CursorClickOutside, CursorFocus, CursorState,
+    EventFlags,
 };
-use crate::signals::{Invoke, ReceiveInvoke};
+use crate::sync::{SignalId, SignalSender};
 use crate::{RotatedRect, Transform2D, DimensionData, Size, size, AouiREM};
 use ab_glyph::{Font as FontTrait, ScaleFont};
 use bevy::asset::{Assets, Handle};
@@ -14,14 +14,28 @@ use bevy::ecs::query::Or;
 use bevy::ecs::{event::EventReader, query::Changed, system::Commands};
 use bevy::hierarchy::Children;
 use bevy::input::{keyboard::KeyCode, Input};
-use bevy::prelude::{Component, Entity, Query, Res, Visibility, With, Without};
+use bevy::prelude::{Component, Entity, Query, Res, With, Without};
 use bevy::reflect::Reflect;
 
 use bevy::text::Font;
 use bevy::window::ReceivedCharacter;
 use super::TextFragment;
 use super::text::measure_string;
-use super::util::DisplayIf;
+use super::util::{DisplayIf, BlockPropagation};
+
+#[derive(Debug)]
+pub enum TextChange {}
+
+impl SignalId for TextChange {
+    type Data = String;
+}
+
+#[derive(Debug)]
+pub enum TextSubmit {}
+
+impl SignalId for TextSubmit {
+    type Data = String;
+}
 
 #[derive(Debug, Default, Clone, Copy, Reflect)]
 enum LeftRight {
@@ -70,7 +84,7 @@ pub enum InputOverflow {
 ///
 /// Warning: This widget does not rebuild its glyph entities every frame,
 /// might not behave properly if tempered externally.
-#[derive(Debug, Component, Default, Reflect)]
+#[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct InputBox {
     overflow: InputOverflow,
     cursor_start: usize,
@@ -82,13 +96,8 @@ pub struct InputBox {
     em: f32,
 }
 
-
-impl ReceiveInvoke for InputBox {
-    type Type = ();
-}
-
 /// Marker component for a sprite containing renderred glyphs.
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct InputBoxText;
 
 /// Marker component for a vertical bar of the cursor.
@@ -96,7 +105,7 @@ pub struct InputBoxText;
 /// This component can be any sprite.
 ///
 /// Requires `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct InputBoxCursorBar;
 
 /// Marker component for the area of the cursor.
@@ -105,7 +114,7 @@ pub struct InputBoxCursorBar;
 /// updates alongside dimension can be used here.
 ///
 /// Requires `Center`, `TopCenter` or `BottomCenter` Anchor to function properly.
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Clone, Component, Default, Reflect)]
 pub struct InputBoxCursorArea;
 
 impl InputBox {
@@ -410,7 +419,7 @@ pub(crate) fn text_on_mouse_double_click(mut query: Query<(&mut InputBox, &Curso
 pub(crate) fn text_propagate_focus(
     mut commands: Commands,
     query: Query<(Entity, &InputBox)>,
-    entities: Query<&Children>,
+    entities: Query<Option<&Children>, Without<BlockPropagation>>,
 ) {
     let mut queue = Vec::new();
     for (entity, input_box) in query.iter() {
@@ -428,7 +437,7 @@ pub(crate) fn text_propagate_focus(
     while !queue.is_empty() {
         for (entity, focus) in mem::take(&mut queue) {
             commands.entity(entity).insert(focus);
-            if let Ok(children) = entities.get(entity) {
+            if let Ok(Some(children)) = entities.get(entity) {
                 for entity in children {
                     queue.push((*entity, focus))
                 }
@@ -458,14 +467,23 @@ pub(crate) fn update_inputbox_cursor(
     query: Query<(&InputBox,  &Handle<Font>, ActiveDetection, &Children),
         (Changed<InputBox>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBoxCursorArea>)>,
     text: Query<(&Children, &DimensionData), With<InputBoxText>>,
-    mut bar: Query<(&mut Transform2D, &mut Visibility),
+    mut bar: Query<(&mut Transform2D, VisibilityToggle),
         (With<InputBoxCursorBar>, Without<InputBoxText>, Without<InputBoxCursorArea>, Without<InputBox>)>,
-    mut area: Query<(&mut Transform2D, DimensionMut, &mut Visibility),
+    mut area: Query<(&mut Transform2D, DimensionMut, VisibilityToggle),
         (With<InputBoxCursorArea>, Without<InputBoxText>, Without<InputBoxCursorBar>, Without<InputBox>)>,
 ) {
-    use bevy::prelude::*;
     for (input_box, font_handle, active, children) in query.iter() {
         if !active.is_active() || !input_box.focus {
+            let Some((children, _)) = text.iter_many(children).next() else {continue};
+            let mut iter = bar.iter_many_mut(children);
+            while let Some((.., mut vis)) = iter.fetch_next() {
+                vis.set_visible(false)
+            }
+
+            let mut iter = area.iter_many_mut(children);
+            while let Some((.., mut vis)) = iter.fetch_next() {
+                vis.set_visible(false)
+            }
             continue;
         }
 
@@ -513,23 +531,23 @@ pub(crate) fn update_inputbox_cursor(
             let mut iter = bar.iter_many_mut(children);
             while let Some((mut transform, mut vis)) = iter.fetch_next() {
                 transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
-                *vis = Visibility::Inherited;
+                vis.set_visible(true)
             }
 
             let mut iter = area.iter_many_mut(children);
             while let Some((.., mut vis)) = iter.fetch_next() {
-                *vis = Visibility::Hidden;
+                vis.set_visible(false)
             }
         } else {
             let mut iter = bar.iter_many_mut(children);
             while let Some((.., mut vis)) = iter.fetch_next() {
-                *vis = Visibility::Hidden;
+                vis.set_visible(false)
             }
             let mut iter = area.iter_many_mut(children);
             while let Some((mut transform, mut dimension, mut vis)) = iter.fetch_next() {
                 transform.offset.edit_raw(|v| v.x = (start + end) / 2.0);
                 dimension.edit_raw(|v| v.x = end - start);
-                *vis = Visibility::Inherited;
+                vis.set_visible(true)
             }
         }
     }
@@ -545,19 +563,41 @@ pub(crate) fn text_on_click_outside(mut query: Query<&mut InputBox, With<CursorC
     }
 }
 pub(crate) fn inputbox_keyboard(
-    mut commands: Commands,
     rem: Res<AouiREM>,
     fonts: Res<Assets<Font>>,
-    mut query: Query<(Entity, &DimensionData, &mut InputBox, &Handle<Font>,
-        Option<&Handlers<EvTextChange>>, Option<&Handlers<EvTextSubmit>>,
-        Option<&Invoke<InputBox>>, ActiveDetection)>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,
+    mut query: Query<(&DimensionData, &mut InputBox, &Handle<Font>,
+        &Children,
+        SignalSender<TextChange>,
+        SignalSender<TextSubmit>,
+        ActiveDetection)>,
+    text: Query<&Children, With<InputBoxText>>,
+    mut bar: Query<VisibilityToggle,
+        (With<InputBoxCursorBar>, Without<InputBoxCursorArea>, Without<InputBox>)>,
+    mut area: Query<VisibilityToggle,
+        (With<InputBoxCursorArea>, Without<InputBoxCursorBar>, Without<InputBox>)>,
 ) {
-    for (entity, dimension, mut inputbox, font_handle, change, submit, invoke, active) in
-        query.iter_mut().filter(|(_, _, input, ..)| input.has_focus())
+    // Since the order is input -> draw text -> propagate -> move cursor
+    // We can't resolve dimension on the same frame
+    // therefore we hide cursor area for a frame here if it is removed 
+    // to prevent an off-by-1-frame error.
+    // keeping bar is fine since it moves at most half a glyph to the target on this frame
+    let mut temp_set_invisible = |children: &Children| {
+        let Some(children) = text.iter_many(children).next() else {return};
+        let mut iter = bar.iter_many_mut(children);
+        while let Some(mut vis) = iter.fetch_next() {
+            vis.set_visible(false)
+        }
+        let mut iter = area.iter_many_mut(children);
+        while let Some(mut vis) = iter.fetch_next() {
+            vis.set_visible(false)
+        }
+    };
+
+    for (dimension, mut inputbox, font_handle, children, change, submit, active) in
+        query.iter_mut().filter(|(_, input, ..)| input.has_focus())
     {
-        let mut commands = commands.entity(entity);
         let em = dimension.em;
         let dimension = inputbox.max_len.as_pixels(dimension.size.x, dimension.em, rem.get());
         if !active.is_active() {
@@ -565,11 +605,11 @@ pub(crate) fn inputbox_keyboard(
             continue;
         }
         let mut changed = false;
+        let is_area = inputbox.cursor_len() > 0;
         if keys.any_pressed(CONTROL) {
             if keys.just_pressed(KeyCode::C) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
-                    let _ = clipboard.set_text(inputbox.get());
-                    changed = true;
+                    let _ = clipboard.set_text(inputbox.selected());
                 }
             } else if keys.just_pressed(KeyCode::V) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
@@ -621,9 +661,7 @@ pub(crate) fn inputbox_keyboard(
                 match char.char {
                     '\t' => (),
                     '\r' | '\n' => {
-                        if let Some(submit) = submit {
-                            submit.handle(&mut commands, inputbox.get().to_owned())
-                        }
+                        submit.send(inputbox.get().to_owned())
                     }
                     '\x08' | '\x7f' => inputbox.backspace(),
                     _ => {
@@ -649,17 +687,11 @@ pub(crate) fn inputbox_keyboard(
                 changed = true;
             }
         }
-        if let Some(invoke) = invoke {
-            if invoke.poll().is_some() {
-                if let Some(submit) = submit {
-                    submit.handle(&mut commands, inputbox.get().to_owned())
-                }
-            }
-        }
         if changed {
-            if let Some(change) = change {
-                change.handle(&mut commands, inputbox.get().to_owned())
+            if is_area{
+                temp_set_invisible(children);
             }
+            change.send(inputbox.get().to_owned())
         }
     }
 }

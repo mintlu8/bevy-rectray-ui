@@ -1,6 +1,11 @@
-use bevy::{ecs::{component::Component, system::{Query, Res, ResMut}, query::Changed, world::Mut}, reflect::Reflect, asset::{Handle, Assets}, text::{Font, Text, TextStyle}, render::{color::Color, texture::Image, render_resource::{Extent3d, TextureDimension, TextureFormat}}, sprite::Sprite};
+use bevy::{reflect::Reflect, asset::{Handle, Assets}};
+use bevy::render::texture::Image;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::text::{Font, Text, TextStyle};
+use bevy::ecs::{component::Component, query::Changed, world::Mut};
+use bevy::ecs::system::{Query, Res, ResMut};
 
-use crate::{DimensionData, systems::ScalingFactor};
+use crate::{DimensionData, systems::ScalingFactor, Coloring};
 
 use ab_glyph::{Font as _, point};
 use ab_glyph::ScaleFont as _;
@@ -16,7 +21,6 @@ use ab_glyph::ScaleFont as _;
 pub struct TextFragment {
     pub text: String,
     pub font: Handle<Font>,
-    pub color: Color,
     pub size: f32,
 }
 
@@ -31,11 +35,6 @@ impl TextFragment {
 
     pub fn with_font(mut self, font: Handle<Font>) -> Self{
         self.font = font;
-        self
-    }
-
-    pub fn with_color(mut self, color: Color) -> Self{
-        self.color = color;
         self
     }
 
@@ -71,9 +70,9 @@ pub fn sync_em_text_fragment(
 
 
 pub fn sync_text_text_fragment(
-    mut query: Query<(&mut Text, &TextFragment), Changed<TextFragment>, >
+    mut query: Query<(&mut Text, &Coloring, &TextFragment), Changed<TextFragment>, >
 ) {
-    query.iter_mut().for_each(|(mut text, frag)| {
+    query.iter_mut().for_each(|(mut text, color, frag)| {
         if frag.size <= 0.0 {return}
         text.sections.clear();
         text.sections.push(bevy::text::TextSection {
@@ -81,7 +80,7 @@ pub fn sync_text_text_fragment(
             style: TextStyle {
                 font: frag.font.clone(),
                 font_size: frag.size,
-                color: frag.color,
+                color: color.color,
             }
         })
     })
@@ -105,10 +104,10 @@ pub fn sync_sprite_text_fragment(
     scale_factor: ScalingFactor,
     mut images: ResMut<Assets<Image>>,
     fonts: Res<Assets<Font>>,
-    mut query: Query<(&TextFragment, &Handle<Image>, &mut Sprite), Changed<TextFragment>>
+    mut query: Query<(&TextFragment, &Handle<Image>), Changed<TextFragment>>
 ) {
     let scale_factor = scale_factor.get();
-    for (fragment, handle, mut sprite) in query.iter_mut() {
+    for (fragment, handle) in query.iter_mut() {
         if fragment.size <= 0.0 {continue;}
         let font = match fonts.get(&fragment.font) {
             Some(font) => font.font.as_scaled(fragment.size * scale_factor),
@@ -123,9 +122,6 @@ pub fn sync_sprite_text_fragment(
 
         let mut cursor = 0.0;
         let mut last = '\0';
-        if sprite.color != fragment.color {
-            sprite.color = fragment.color;
-        }
         for c in fragment.text.chars() {
             let mut glyph = font.scaled_glyph(c);
             glyph.position = point(cursor, 0.0 + font.ascent());

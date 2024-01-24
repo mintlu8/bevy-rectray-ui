@@ -1,8 +1,8 @@
 #![recursion_limit = "256"]
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::WorldExtension;
+use bevy_aoui::util::WorldExtension;
 use bevy_aoui::AouiPlugin;
-use bevy_aoui::dsl::AouiCommands;
+use bevy_aoui::util::AouiCommands;
 
 pub fn main() {
     App::new()
@@ -28,12 +28,13 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: fps_signal(|fps: f32, text: &mut Text| {
-            format_widget!(text, "FPS: {:.2}", fps);
-        })
+        system: |fps: Fps, text: Ac<Text>| {
+            let fps = fps.get().await;
+            text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
+        }
     });
     
-    let (send, recv_rot, fold_recv) = commands.signal();
+    let (send, rot_recv, fold_recv) = signal();
 
     let elements = [
         "Water", "Earth", "Fire", "Air"
@@ -58,7 +59,11 @@ pub fn init(mut commands: AouiCommands) {
                     anchor: Left,
                     text: "",
                     font: "ComicNeue-Bold.ttf",
-                    extra: text_recv.recv(|x: &str, text: &mut Text| format_widget!(text, "{}", x))
+                    signal: receiver::<FormatTextStatic>(text_recv),
+                    system: |x: SigRecv<FormatTextStatic>, text: Ac<Text>| {
+                        let t = x.recv().await;
+                        text.set(move |w| format_widget!(w, "{t}")).await?;
+                    }
                 },
             },
             child: text! {
@@ -67,11 +72,11 @@ pub fn init(mut commands: AouiCommands) {
                 center: Center,
                 rotation: degrees(90),
                 text: "v",
-                extra: recv_rot.recv(|x: bool, rot: &mut Interpolate<Rotation>| if x {
-                    rot.interpolate_to(0.0)
-                } else {
-                    rot.interpolate_to(PI / 2.0)
-                }),
+                signal: receiver::<ToggleChange>(rot_recv),
+                system: |x: SigRecv<ToggleChange>, text: Ac<Interpolate<Rotation>>| {
+                    let b = x.recv().await;
+                    text.set(move |rot| rot.interpolate_to(if b {0.0} else {PI / 2.0})).await?;
+                },
                 extra: transition! (Rotation 0.5 CubicInOut default PI/2.0)
             },
         },
@@ -81,11 +86,11 @@ pub fn init(mut commands: AouiCommands) {
             layer: 1,
             scroll: Scrolling::Y,
             clipping: false,
-            extra: fold_recv.recv(|x: bool, op: &mut Interpolate<Opacity>| if x {
-                op.interpolate_to(1.0)
-            } else {
-                op.interpolate_to(0.0)
-            }),
+            signal: receiver::<ToggleChange>(fold_recv),
+            system: |x: SigRecv<ToggleChange>, text: Ac<Interpolate<Opacity>>| {
+                let b = x.recv().await;
+                text.set(move |rot| rot.interpolate_to(if b {1.0} else {0.0})).await?;
+            },
             extra: transition! (Opacity 0.5 Linear default 0.0),
             dimension: size2!(14 em, 4 em),
             child: vstack! {

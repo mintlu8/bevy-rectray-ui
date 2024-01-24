@@ -58,7 +58,8 @@
 //! * If target is the source of current animation, reverse.
 //! * Otherwise interpolate to the target.
 
-use bevy::{ecs::{schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, query::WorldQuery}, app::{Update, Plugin}, render::{color::Color, view::Visibility}, sprite::{Sprite, TextureAtlasSprite}, text::Text};
+use bevy::{app::{FixedUpdate, Plugin, Update}, render::color::Color, sprite::TextureAtlasSprite};
+use bevy::ecs::{schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, query::WorldQuery};
 
 use ::interpolation::Ease;
 /// Enum for easing functions.
@@ -67,8 +68,11 @@ mod interpolation;
 pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Index, Padding, Margin};
 mod assoc;
 pub use assoc::{Attr, InterpolateAssociation};
+mod fgsm;
+pub use fgsm::{Fgsm, FgsmPairing, ComponentFgsm};
 
-use crate::{Opacity, Transform2D, Dimension, widgets::TextFragment};
+
+use crate::{Coloring, Dimension, Opacity, Transform2D};
 
 /// A easing function.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -117,7 +121,6 @@ pub struct InterpolationUpdateSet;
 #[derive(Debug, WorldQuery)]
 #[world_query(mutable)]
 pub struct VisibilityToggle {
-    pub visibility: &'static mut Visibility,
     pub opacity: &'static mut Opacity,
     pub interpolate: Option<&'static mut Interpolate<Opacity>>,
 }
@@ -126,7 +129,7 @@ impl VisibilityToggleItem<'_> {
     pub fn set_visible(&mut self, value: bool) {
         match &mut self.interpolate {
             Some(inter) => {
-                self.opacity.disabled = value;
+                self.opacity.disabled = !value;
                 inter.interpolate_to(if value {1.0} else {0.0});
             },
             None => {
@@ -144,24 +147,17 @@ impl Plugin for AnimationPlugin {
         app
             .configure_sets(Update, InterpolationSet)
             .configure_sets(Update, InterpolationUpdateSet.after(InterpolationSet))
-            .add_systems(Update, (
+            .add_systems(FixedUpdate, (
                 <(Transform2D, Offset)>::system,
                 <(Transform2D, Rotation)>::system,
                 <(Transform2D, Offset)>::system,
                 <(Transform2D, Scale)>::system,
                 <(Dimension, Dimension)>::system,
-                <(Sprite, Color)>::system,
-                <(TextureAtlasSprite, Color)>::system,
-                <(Text, Color)>::system,
-                <(TextFragment, Color)>::system,
-                <(Sprite, Color)>::system,
-                <(Opacity, Color)>::system,
-                <(Opacity, Opacity)>::system.after(
-                    <(Opacity, Color)>::system
-                ),
+                <(Coloring, Color)>::system,
+                <(Opacity, Opacity)>::system,
                 <(TextureAtlasSprite, Index)>::system,
             ).in_set(InterpolationSet))
-            .add_systems(Update, (
+            .add_systems(FixedUpdate, (
                 Offset::update_interpolate,
                 Rotation::update_interpolate,
                 Scale::update_interpolate,
