@@ -9,9 +9,13 @@ pub(crate) mod sealed {
     pub enum SealToken{}
 }
 
-pub trait DslConvertReadOnly<> {
-    
-}
+/// The core conversion trait for DSL conversion. 
+/// See [`DslFrom`] and [`DslInto`] for the main implementors.
+/// 
+/// This trait uses a marker type for extra flexibility
+/// compared to its counterpart [`Into`]. 
+/// Since any ambiguity can break `bevy_aoui`'s DSL,
+/// this trait is sealed and cannot be implemented downstream.
 pub trait DslConvert<B, const C: char> {
     fn parse(self) -> B;
     fn sealed(seal: SealToken);

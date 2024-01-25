@@ -30,10 +30,6 @@ use crate::widgets::states::{FocusColors, SignalToggleOpacity};
 use super::menu::{MenuCallback, MenuState};
 use super::{ShadowInfo, MenuItem};
 
-
-#[derive(Debug, Component, Clone, Copy, Default)]
-pub struct ColorOnClick;
-
 /// A simple state machine that changes depending on status.
 #[derive(Debug, Component, Clone, Copy)]
 pub struct InputStateColors {

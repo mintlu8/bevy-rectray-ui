@@ -12,7 +12,7 @@ use ab_glyph::ScaleFont as _;
 
 /// A simple text manager representing a fragment of text,
 /// fragment as in no explicit support for linebreaks.
-/// When paired with [`Sprite`], this will render it with `ab_glyph`,
+/// When paired with [`Sprite`](bevy::sprite::Sprite), this will render it with `ab_glyph`,
 /// when paired when [`Text`] this will update its contents.
 ///
 /// This struct is designed with change detection in mind to maximize performance.

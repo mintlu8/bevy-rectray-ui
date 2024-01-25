@@ -26,13 +26,13 @@ use super::constraints::SharedPosition;
 /// * [`EventFlags`]: Requires `Drag` to be set.
 /// * [`Constraint`]: If specified, the sprite cannot go over bounds of its parent.
 /// * [`DragSnapBack`]: Move the sprite back to its original position when dropped.
-/// * [`Handlers<EvMouseDrag>`]: A signal that transfers the `being dragged` status onto another entity.
-/// * [`Invoke<SigDrag>`]:
-///     Receives `EvMouseDrag` on a draggable sprite with no event listener.
+/// * [`Dragging`]: When used as a signal, 
+///     receives `MouseDrag` on a draggable sprite with no event listener.
 ///     This is useful for creating a small draggable area, like a banner.
 /// * [`SharedPosition`]: Shares relative position in its parent's bounds with another widget.
 ///     For example synchronizing scrollbar with a textbox.
-/// * [`Handlers<EvPositionFac>`]: A signal that sends a value in `0..=1` in its constraints when being dragged.
+/// * [`PositionFac`](super::constraints::PositionFac): 
+///     A signal that sends a value in `0..=1` in its constraints when being dragged.
 
 #[derive(Debug, Clone, Copy, Component)]
 pub struct Dragging {

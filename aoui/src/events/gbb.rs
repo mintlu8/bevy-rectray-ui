@@ -1,5 +1,3 @@
-//! This is a proof of concept as stacking camera is basically not gonna work in real games.
-
 use bevy::{ecs::{component::Component, system::Query}, hierarchy::Parent, math::Vec2};
 
 use crate::{sync::{SignalId, SignalSender}, util::{Rem, WindowSize}, Anchor, DimensionData, Transform2D};

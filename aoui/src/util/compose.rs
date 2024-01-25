@@ -1,24 +1,11 @@
 use std::{any::TypeId, marker::PhantomData};
 
-use bevy::{ecs::{bundle::Bundle, component::Component, entity::Entity, system::{Command, EntityCommands}}, sprite::Sprite, render::{texture::Image, color::Color}, transform::components::GlobalTransform};
+use bevy::ecs::{component::Component, entity::Entity, system::{Command, EntityCommands}};
 
-use crate::{dsl::{prelude::Signals, IntoAsset}, sync::{SignalId, SignalMapper, TypedSignal}, BuildTransform, Coloring};
+use crate::{dsl::prelude::Signals, sync::{SignalId, SignalMapper, TypedSignal}};
 use crate::events::EventFlags;
-use super::AouiCommands;
 
-impl IntoAsset<Image> {
-    pub fn into_bundle(self, commands: &mut AouiCommands, color: Color) -> impl Bundle {
-        let handle = commands.load_or_default(self);
-        (
-            Sprite::default(),
-            handle,
-            BuildTransform::default(),
-            GlobalTransform::default(),
-            Coloring::new(color)
-        )
-    }
-}
-
+/// A component that can be either inserted or composed.
 pub trait ComponentCompose: Component {
     fn compose(&mut self, other: Self);
 }
@@ -29,7 +16,7 @@ impl ComponentCompose for EventFlags {
     }
 }
 
-pub struct ComposeInsert<T: ComponentCompose>(pub Entity, pub T);
+pub(crate) struct ComposeInsert<T: ComponentCompose>(pub Entity, pub T);
 
 impl<T: ComponentCompose> Command for ComposeInsert<T> {
     fn apply(self, world: &mut bevy::prelude::World) {
@@ -85,8 +72,10 @@ impl<From: SignalId, To: SignalId> Command for AddSignalAdaptor<From, To> {
     }
 }
 
+/// Extension on `EntityCommands` that allows composition of components and signals.
 pub trait ComposeExtension {
     fn compose(&mut self, component: impl ComponentCompose) -> &mut Self;
+    #[doc(hidden)]
     fn compose2<T: ComponentCompose>(&mut self, a: Option<T>, b: Option<T>) -> &mut Self;
     fn add_sender<T: SignalId>(&mut self, component: TypedSignal<T::Data>) -> &mut Self;
     fn add_receiver<T: SignalId>(&mut self, component: TypedSignal<T::Data>) -> &mut Self;

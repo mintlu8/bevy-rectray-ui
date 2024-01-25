@@ -35,15 +35,16 @@ pub struct ScrollParent;
 /// # Supporting components
 ///
 /// * [`EventFlags`](crate::events::EventFlags): Requires `MouseWheel` to be set.
-/// * [`ScrollConstraint`]: If specified, the sprite cannot go over bounds of its parent.
-/// * [`Handlers<EvMouseWheel>`]:
+/// * [`Constraint`]: If specified, the sprite cannot go over bounds of its parent.
+/// * [`MouseWheelAction`]:
 ///     A signal that transfers the `being scrolled` status onto another entity.
 ///     This will trigger if either scrolled to the end or not scrollable to begin with.
-/// * [`Invoke<SigScroll>`]:
-///     Receives `EvMouseWheel` on another scrollable sprite.
-/// * [`SharedPosition`]: Shares relative position in its parent's bounds with another widget.
+/// * [`Scrolling`]:
+///     When used as a signal id, receives `EvMouseWheel` on another scrollable sprite.
+/// * [`SharedPosition`]: Signal for sharing relative position 
+///     in its parent's bounds with another widget.
 ///     For example synchronizing a scrollbar with a textbox.
-/// * [`Handlers<EvPositionFac>`]: A signal that sends a value
+/// * [`PositionFac`](super::constraints::PositionFac): A signal that sends a value
 ///     in `0..=1` in its constraints when being scrolled.
 #[derive(Debug, Clone, Copy, Component, Reflect)]
 pub struct Scrolling {

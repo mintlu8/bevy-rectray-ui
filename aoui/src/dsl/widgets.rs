@@ -214,7 +214,7 @@ impl Widget for RadioButtonBuilder {
 /// * Propagate its status `Down`, `Click`, `Hover`, `Pressed` to its descendants.
 /// * Allow usage of `EvButtonClick` event. Which uses the button's [`Payload`].
 ///
-/// You can use [`Handlers`] to handle clicks
+/// You can use signals to handle clicks
 /// and use [`DisplayIf`](crate::widgets::util::DisplayIf)
 /// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
 ///
@@ -246,7 +246,7 @@ macro_rules! button {
 /// * Generate `CheckButtonState` based on the context.
 /// * Allow usage of `EvButtonClick` event. Which uses the button's [`Payload`].
 ///
-/// You can use [`Handlers`] to handle clicks
+/// You can use signals to handle clicks
 /// and use [`DisplayIf`](crate::widgets::util::DisplayIf)
 /// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
 ///
@@ -281,7 +281,7 @@ macro_rules! check_button {
 /// * Generate `CheckButtonState` based on the context and payload.
 /// * Send payload value through `EvButtonClick`.
 ///
-/// You can use [`Handlers`] to handle clicks
+/// You can use signals to handle clicks
 /// and use [`DisplayIf`](crate::widgets::util::DisplayIf)
 /// or [`Interpolate`](crate::anim::Interpolate) for simple UI interaction.
 ///

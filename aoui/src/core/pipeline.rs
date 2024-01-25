@@ -208,7 +208,7 @@ pub fn compute_aoui_transforms<'t, R: RootQuery<'t>>(
     parent_query: Query<&Parent>,
     child_query: Query<&Children>,
     not_root: Query<Entity, Without<Detach>>,
-    res_rem: Option<Res<AouiREM>>,
+    res_rem: Option<Res<AouiRem>>,
 ) {
     let rem = res_rem.map(|x| x.get()).unwrap_or(16.0);
 

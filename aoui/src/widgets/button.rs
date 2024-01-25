@@ -238,7 +238,7 @@ pub(crate) fn generate_check_button_state(
 
 /// A dynamic piece of data.
 /// When attached to a widget in the button family,
-/// the [`EvButtonClick`] signals will send the containing data.
+/// the [`ButtonClick`] signals will send the containing data.
 ///
 /// This component is required in `radio_button` as its discriminant.
 ///

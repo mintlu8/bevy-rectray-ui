@@ -4,13 +4,11 @@ use bevy::log::LogPlugin;
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_aoui::sync::TypedSignal;
 use bevy_aoui::util::WorldExtension;
-use bevy_aoui::widgets::scroll::ScrollParent;
 use bevy_aoui::{signal_ids, AouiPlugin};
 use bevy_aoui::util::AouiCommands;
 use bevy_aoui::events::MovementUnits;
 use bevy_aoui::util::Object;
 use bevy_aoui::widgets::button::RadioButton;
-use bevy_aoui::events::{GreaterBoundingBox, GreaterBoundingBoxPercent, GreaterBoundingBoxPx};
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {

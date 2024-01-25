@@ -10,7 +10,6 @@ use bevy_aoui::sync::{Signal, SignalId, SignalReceiver, TypedSignal};
 use bevy_aoui::util::ComposeExtension;
 use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
 use bevy_aoui::widgets::drag::Dragging;
-use bevy_aoui::widgets::constraints::PositionFac;
 use bevy_aoui::{Dimension, RotatedRect};
 use bevy_aoui::{frame_extension, build_frame, layout::Axis, Anchor};
 

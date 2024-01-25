@@ -6,7 +6,7 @@ use crate::events::{
     EventFlags,
 };
 use crate::sync::{SignalId, SignalSender};
-use crate::{RotatedRect, Transform2D, DimensionData, Size, size, AouiREM};
+use crate::{RotatedRect, Transform2D, DimensionData, Size, size, AouiRem};
 use ab_glyph::{Font as FontTrait, ScaleFont};
 use bevy::asset::{Assets, Handle};
 use bevy::ecs::query::Or;
@@ -563,7 +563,7 @@ pub(crate) fn text_on_click_outside(mut query: Query<&mut InputBox, With<CursorC
     }
 }
 pub(crate) fn inputbox_keyboard(
-    rem: Res<AouiREM>,
+    rem: Res<AouiRem>,
     fonts: Res<Assets<Font>>,
     mut events: EventReader<ReceivedCharacter>,
     keys: Res<Input<KeyCode>>,

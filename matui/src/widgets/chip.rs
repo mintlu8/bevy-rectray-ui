@@ -19,7 +19,7 @@ use crate::widgets::states::ButtonColors;
 use super::util::StrokeColors;
 
 mframe_extension!(
-    pub struct MButtonBuilder {
+    pub struct MChipBuilder {
         pub cursor: Option<CursorIcon>,
         pub sprite: Option<IntoAsset<Image>>,
         pub palette_hover: Option<Palette>,
@@ -36,7 +36,7 @@ mframe_extension!(
     }
 );
 
-impl Widget for MButtonBuilder {
+impl Widget for MChipBuilder {
     fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
         self.event |= EventFlags::LeftClick | EventFlags::Hover;
         let mut frame = build_frame!(commands, self);
@@ -142,9 +142,9 @@ impl Widget for MButtonBuilder {
 }
 
 #[macro_export]
-macro_rules! mbutton {
+macro_rules! mchip {
     ($ctx: tt {$($tt: tt)*}) => {
-        $crate::aoui::meta_dsl!($ctx [$crate::widgets::MButtonBuilder] {
+        $crate::aoui::meta_dsl!($ctx [$crate::widgets::MChipBuilder] {
             $($tt)*
         })
     };

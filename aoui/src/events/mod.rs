@@ -31,24 +31,6 @@
 //! * `CursorClickOutside`: Mouse up outside of the sprite's boundary.
 //! * `MouseWheelAction`: Stores the value of mouse wheel scrolling.
 //!
-//! # Event Handlers
-//!
-//! A [`Handlers`] listens for `CursorAction` and `CursorFocus`,
-//! pseudo-events like `EvObtainFocus` and `EvLoseFocus`,
-//! widget events like `EvButtonChange` etc and can perform.
-//! many action based on the event and its associated input.
-//!
-//! Events starting with `Ev` are one-shot events.
-//! They should be registered with `register_event` to be removed at the end of the frame.
-//!
-//! Additionally [`Fetch<T>`] is a persistent channel that transfers data.
-//!
-//! Event handlers can do the following things:
-//!
-//! * Run a [one-shot system](OneShot).
-//! * [Mutate](Mutation) components associated with the entity.
-//! * Send a signal.
-//!
 //! # What about Keyboard Events or Joysticks?
 //!
 //! We provide abstractions that you can use for other types of input,

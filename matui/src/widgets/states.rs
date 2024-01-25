@@ -43,6 +43,34 @@ pub enum ToggleState {
     Disabled,
 }
 
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ToggleFocusState {
+    #[default]
+    Unchecked,
+    Checked,
+    UncheckedFocused,
+    CheckedFocused,
+    Disabled,
+}
+
+impl Fgsm for ToggleFocusState {
+    type State = (&'static CheckButtonState, Has<DescendantHasFocus>, &'static Opacity);
+
+    fn from_state(state: &<Self::State as bevy::ecs::query::WorldQuery>::Item<'_>) -> Self {
+        let (check, has, opacity) = state;
+        if opacity.computed_disabled {
+            return Self::Disabled
+        } 
+        match (check, has) {
+            (CheckButtonState::Unchecked, true) => Self::UncheckedFocused,
+            (CheckButtonState::Unchecked, false) => Self::Unchecked,
+            (CheckButtonState::Checked, true) => Self::CheckedFocused,
+            (CheckButtonState::Checked, false) => Self::Checked,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum CoreToggleState {
     #[default]
@@ -227,3 +255,13 @@ pub fn toggle_opacity_signal (
         }
     }
 }
+
+fgsm_interpolation!(
+    pub struct ToggleFocusColors: ToggleFocusState as Color => Color {
+        unchecked: Unchecked,
+        unchecked_focused: UncheckedFocused,
+        checked: Checked,        
+        checked_focused: CheckedFocused,
+        disabled: Disabled,
+    }
+);

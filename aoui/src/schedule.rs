@@ -6,7 +6,7 @@ use bevy::transform::systems::{propagate_transforms, sync_simple_transforms};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::AouiREM;
+use crate::AouiRem;
 
 use crate::core::pipeline::{compute_aoui_transforms, compute_aoui_opacity};
 use crate::core::systems::*;
@@ -59,7 +59,7 @@ pub struct CorePlugin;
 impl bevy::prelude::Plugin for CorePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
-            .init_resource::<AouiREM>()
+            .init_resource::<AouiRem>()
             .configure_sets(PreUpdate, AouiEventSet.after(InputSystem))
             .add_systems(PreUpdate, bevy::ecs::prelude::apply_deferred
                 .after(AouiEventSet)

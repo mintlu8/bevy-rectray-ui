@@ -1,3 +1,5 @@
+//! Utilities for `bevy_aoui`.
+
 mod widget;
 mod commands;
 mod cloning;
@@ -5,8 +7,8 @@ mod extension;
 mod mesh;
 mod object;
 mod compose;
-mod children;
 mod queries;
+mod to_bundle;
 
 pub mod convert;
 
@@ -17,6 +19,5 @@ pub use cloning::CloneSplit;
 pub use extension::WorldExtension;
 pub use convert::{DslFrom, DslInto};
 pub use object::{Object, AsObject};
-pub use compose::{ComponentCompose, ComposeInsert, ComposeExtension};
-pub use children::ChildIter;
+pub use compose::{ComponentCompose, ComposeExtension};
 pub use queries::*;

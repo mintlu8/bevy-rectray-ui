@@ -4,6 +4,7 @@ use bevy::ecs::entity::Entity;
 
 use super::{async_param::AsyncSystemParam, AsyncExecutor, AsyncFailure, Signals};
 
+/// Macro for simplifying construction of an async system.
 #[macro_export]
 macro_rules! async_system {
     (|$($field: ident :$ty: ty),* $(,)?| $body: expr) => {
@@ -14,15 +15,7 @@ macro_rules! async_system {
     };
 }
 
-#[macro_export]
-macro_rules! async_systems {
-    ($(|$($field: ident: $ty: ty),* $(,)?| $body: expr),* $(,)?) => {
-        $crate::sync::AsyncSystems::from_systems([
-            $($crate::async_system!(|$($field: $ty),*| $body)),*
-        ]);
-    };
-}
-
+/// Core trait for an async system function.
 pub trait AsyncSystemFunction<M>: Send + Sync + 'static {
     fn as_future(
         &self,

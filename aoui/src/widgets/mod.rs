@@ -1,37 +1,31 @@
 //! Widget primitives for `bevy_aoui`
 //!
 //! `bevy_aoui` has no standard styles, sprites or shaders,
-//! meaning we only provide behaviors.
+//! meaning we only provide building blocks for creating widgets.
+//! `bevy_matui` is a case study for building real widgets using `bevy_aoui`'s primitives.
 //!
 //! # Button
 //!
 //! | Component | Description |
 //! | --------- | ----------- |
-//! | [`Button`](button::Button) | Marker for enabling the `EvButtonClick` event. |
+//! | [`Button`](button::Button) | Marker for enabling the `ButtonClick` event. |
 //! | [`CheckButton`](button::CheckButton) | Context, checked or unchecked for a `check_button`. |
 //! | [`RadioButton`](button::RadioButton) | Context for a `radio_button`. |
-//! | [`Payload`](button::Button) | Data sent by `EvButtonClick`. |
+//! | [`Payload`](button::Button) | Data sent by `ButtonClick`. |
 //! | [`RadioButtonCancel`](button::RadioButtonCancel) | Allow clicking radio button again to remove its value. |
 //!
-//! # Scrolling
-//!
-//! | Component | Description |
-//! | --------- | ----------- |
-//! | [`Scrolling`](scroll::Scrolling) | Enable scrolling of children. |
-//! | [`ScrollConstraint`](scroll::ScrollConstraint) | Constraint scrolling to the sprite's dimension. |
-//! | [`ScrollDiscrete`](scroll::ScrollDiscrete) | Discrete scrolling for [`Layout`](crate::layout::Layout). |
-//! | [`SharedPosition`] | Share position between draggable/scrollable widgets. |
-//!
-//! # Dragging
+//! # Dragging And Scrolling
 //!
 //! | Component | Description |
 //! | --------- | ----------- |
 //! | [`Dragging`](drag::Dragging) | Enable scrolling of children. |
-//! | [`DragConstraint`](drag::DragConstraint) | Constraint scrolling to the sprite's dimension. |
+//! | [`Scrolling`](scroll::Scrolling) | Enable scrolling of children. |
+//! | [`Constraint`](constraints::Constraint) | Constraint movement to the parent's dimension. |
+//! | [`ScrollDiscrete`](scroll::ScrollDiscrete) | Discrete scrolling for [`Layout`](crate::layout::Layout). |
 //! | [`DragSnapBack`](drag::DragSnapBack) | Snap dragged sprite back to the source. |
-//! | [`SharedPosition`] | Share position between draggable/scrollable widgets. |
+//! | [`SharedPosition`](constraints::SharedPosition) | Share position between draggable/scrollable widgets. |
 //!
-//! # Clipping
+//! # Camera
 //!
 //! | Bundle | Description |
 //! | --------- | ----------- |
@@ -39,7 +33,7 @@
 //!
 //! # Misc
 //!
-//! | Bundle | Description |
+//! | Component | Description |
 //! | --------- | ----------- |
 //! | [`PropagateFocus`](util::PropagateFocus) | Propagate `CursorFocus` and `CheckButtonState`. |
 //! | [`SetCursor`](util::SetCursor) | Set cursor icon during some cursor events. |
@@ -58,7 +52,7 @@
 //!
 //! | Builder | Description |
 //! | --------- | ----------- |
-//! | [`RichTextBuilder`](richtext::RichTextBuilder) | Builder for `rich_text` |
+//! | [`RichTextBuilder`](richtext::RichTextBuilder) | Builder for `rich_text` (wip) |
 //!
 pub mod inputbox;
 pub mod drag;

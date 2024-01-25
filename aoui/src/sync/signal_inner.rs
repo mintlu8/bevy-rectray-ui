@@ -8,18 +8,21 @@ use crate::util::{AsObject, Object};
 
 use super::TypedSignal;
 
+/// The data component of a signal.
 #[derive(Debug, Default)]
 pub struct SignalData<T> {
     data: Mutex<T>,
     version: AtomicU32,
 }
 
+/// The shared component of a signal.
 #[derive(Debug, Default)]
 pub struct SignalInner<T> {
     inner: Arc<SignalData<T>>,
     version: AtomicU32,
 }
 
+/// A piece of shared data that contains a version number for synchronization.
 #[derive(Debug, Default)]
 pub struct Signal<T> {
     pub(super) inner: Arc<SignalInner<T>>

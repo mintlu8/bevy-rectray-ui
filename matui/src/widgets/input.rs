@@ -130,10 +130,6 @@ pub fn cursor_stroke_change(mut query: Query<(&StrokeColors<CursorStateColors>, 
     })
 }
 
-
-#[derive(Debug, Component, Clone, Copy, Default)]
-pub struct ColorOnClick;
-
 /// A simple state machine that changes depending on status.
 #[derive(Debug, Component, Clone, Copy)]
 pub struct InputStateColors {

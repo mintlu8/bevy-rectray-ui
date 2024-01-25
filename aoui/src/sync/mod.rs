@@ -43,16 +43,17 @@
 //! in this case `FormatText::Data` is `String`.
 //! 
 //! ```
-//! system: |x: SigRecv<FormatText>, text: Ac<Text>| {
+//! system: |x: SigRecv<FormatText>, text: Ac<Text>| { ... }
 //! ```
 //! 
 //! We define an [`AsyncSystem`] like a regular system, note this function is async
 //! and should be `|..| async move {}`, but the macro saves us from writing that.
 //! 
 //! [`SigRecv`] receives the signal, `Ac` is an alias for [`AsyncComponent`], which
-//! allows us to get or set data on a component within the same entity. You can use
-//! `WorldQuery` as well with [`AsyncEntityQuery`]
-//! and `SystemParam` with [`AsyncWorldQuery`],
+//! allows us to get or set data on a component within the same entity. 
+//! 
+//! You can use `WorldQuery` as well with [`AsyncEntityQuery`]
+//! and `SystemParam` with [`AsyncQuery`],
 //! but those are unfortunately slower
 //! due to bevy current not being optimized for this type of usage.
 //! 
@@ -94,6 +95,7 @@ use bevy::ecs::{entity::Entity, system::{Query, Res}, schedule::IntoSystemConfig
 use bevy::app::{Plugin, PreUpdate, Update, PostUpdate, First};
 use bevy::ecs::world::World;
 use bevy::ecs::system::Resource;
+use parking_lot::Mutex;
 mod signals;
 mod async_param;
 mod async_system;
@@ -103,15 +105,16 @@ use parking_lot::RwLock;
 pub use signals::*;
 pub use async_system::*;
 pub use async_param::*;
-pub use parking_lot::Mutex;
 pub use signal_inner::*;
 pub use special_query::*;
 
 use crate::util::{ComponentCompose, Object};
 
+/// Storage for named signals.
 #[derive(Debug, Resource, Default)]
 pub struct SignalPool(pub(crate) RwLock<HashMap<String, Arc<SignalData<Object>>>>);
 
+/// Standard errors for the async runtime.
 #[derive(Debug, thiserror::Error)]
 pub enum AsyncFailure {
     #[error("async channel destroyed")]
@@ -124,9 +127,11 @@ pub enum AsyncFailure {
     ResourceNotFound,
 }
 
+/// Result type of `AsyncSystemFunction`.
 pub type AsyncResult<T> = Result<T, AsyncFailure>;
 
-
+/// A shared storage that cleans up associated futures
+/// when their associated entity is destroyed.
 #[derive(Debug, Clone, Default)]
 pub struct KeepAlive(Arc<()>);
 
@@ -139,12 +144,13 @@ impl KeepAlive {
     }
 }
 
+/// A future representing a running async system.
 pub struct SystemFuture{
     future: Pin<Box<dyn Future<Output = Result<(), AsyncFailure>> + Send + Sync + 'static>>,
     alive: KeepAlive,
 }
 
-
+/// A parallelizable query on a `World`.
 pub struct AsyncReadonlyQuery {
     command: Option<Box<dyn FnOnce(&World) + Send + Sync + 'static>>
 }
@@ -165,11 +171,12 @@ impl AsyncReadonlyQuery {
     }
 }
 
-pub struct AsyncQuery {
-    command: Box<dyn FnOnce(&mut World) -> Option<AsyncQuery> + Send + Sync + 'static>
+
+pub(crate) struct BoxedQueryCallback {
+    command: Box<dyn FnOnce(&mut World) -> Option<BoxedQueryCallback> + Send + Sync + 'static>
 }
 
-impl AsyncQuery {
+impl BoxedQueryCallback {
     pub fn new<Out: Send + Sync + 'static>(
         query: impl (FnOnce(&mut World) -> Out) + Send + Sync + 'static,
         channel: futures::channel::oneshot::Sender<Out>
@@ -199,7 +206,7 @@ impl AsyncQuery {
                         None
                     }
                     None => {
-                        Some(AsyncQuery::repeat(query, channel))
+                        Some(BoxedQueryCallback::repeat(query, channel))
                     }
                 }
 
@@ -208,13 +215,15 @@ impl AsyncQuery {
     }
 }
 
+/// A simple async executor for `bevy_aoui`.
 #[derive(Default)]
 pub struct AsyncExecutor {
     stream: Mutex<Vec<SystemFuture>>,
     readonly: Mutex<Vec<AsyncReadonlyQuery>>,
-    queries: Mutex<Vec<AsyncQuery>>,
+    queries: Mutex<Vec<BoxedQueryCallback>>,
 }
 
+/// Resource containing a reference to an async executor.
 #[derive(Default, Resource)]
 pub struct ResAsyncExecutor(Arc<AsyncExecutor>);
 
@@ -267,6 +276,7 @@ pub fn run_async_executor(
     })
 }
 
+// A system constructed by an `AsyncSystemFunction`.
 pub struct AsyncSystem {
     function: Box<dyn Fn(
         Entity,
@@ -293,6 +303,7 @@ impl Debug for AsyncSystem {
     }
 }
 
+/// A composable component containing an entity's `AsyncSystem`s.
 #[derive(Debug, Component, Reflect)]
 pub struct AsyncSystems {
     #[reflect(ignore)]

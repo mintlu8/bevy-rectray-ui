@@ -4,10 +4,12 @@ use once_cell::sync::Lazy;
 use crate::util::{Object, AsObject, ComponentCompose};
 use super::{AsyncExecutor, AsyncSystemParam, Signal, SignalData, SignalInner, YieldNow};
 
+/// A marker type that indicates the type and purpose of a signal.
 pub trait SignalId: Any + Send + Sync + 'static{
     type Data: AsObject;
 }
 
+/// A type erased signal with a nominal type.
 #[derive(Debug, Clone)]
 pub struct TypedSignal<T: AsObject> {
     inner: Arc<SignalData<Object>>,
@@ -50,7 +52,7 @@ impl TypedSignal<Object> {
 
 pub(super) static DUMMY_SIGNALS: Lazy<Signals> = Lazy::new(Signals::new);
 
-pub trait SignalMapperTrait: Send + Sync + 'static {
+pub(crate) trait SignalMapperTrait: Send + Sync + 'static {
     fn map(&self, obj: &mut Object);
     fn dyn_clone(&self) -> Box<dyn SignalMapperTrait>;
 }
@@ -64,6 +66,7 @@ impl<T> SignalMapperTrait for T where T: Fn(&mut Object) + Clone + Send + Sync +
     }
 }
 
+/// A function that maps a signal's value.
 pub struct SignalMapper(Box<dyn SignalMapperTrait>);
 
 impl Debug for SignalMapper {
@@ -92,6 +95,7 @@ impl SignalMapper {
     }
 }
 
+/// A composable component that contains signals on an `Entity`.
 #[derive(Debug, Component, Default)]
 pub struct Signals {
     pub senders: HashMap<TypeId, Signal<Object>>,
@@ -225,6 +229,7 @@ impl Signals {
     }
 }
 
+/// `AsyncSystemParam` for sending a signal.
 pub struct SigSend<T: SignalId>(Arc<SignalInner<Object>>, PhantomData<T>);
 
 impl<T: SignalId> SigSend<T> {
@@ -272,6 +277,7 @@ impl <T: SignalId> AsyncSystemParam for SigSend<T>  {
     }
 }
 
+/// `AsyncSystemParam` for receiving a signal.
 pub struct SigRecv<T: SignalId>(Arc<SignalInner<Object>>, PhantomData<T>);
 
 impl<T: SignalId> SigRecv<T> {
@@ -317,6 +323,7 @@ impl <T: SignalId> AsyncSystemParam for SigRecv<T>  {
     }
 }
 
+/// `WorldQuery` for sending a signal synchronously.
 #[derive(Debug, WorldQuery)]
 pub struct SignalSender<T: SignalId>{
     signals: Option<&'static Signals>,
@@ -348,6 +355,7 @@ impl<T: SignalId> SignalSenderItem<'_, T> {
     
 }
 
+/// `WorldQuery` for receiving a signal synchronously.
 #[derive(Debug, WorldQuery)]
 #[world_query(mutable)]
 pub struct SignalReceiver<T: SignalId>{
@@ -368,7 +376,7 @@ impl<T: SignalId> SignalReceiverItem<'_, T> {
     }
 }
 
-
+/// A signal with a role, that can be composed with [`Signals`].
 pub enum RoleSignal<T: SignalId>{
     Sender(TypedSignal<T::Data>),
     Receiver(TypedSignal<T::Data>),

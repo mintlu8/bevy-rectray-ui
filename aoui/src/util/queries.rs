@@ -1,8 +1,10 @@
-use bevy::{ecs::{query::With, system::{Query, Res, SystemParam}}, math::Vec2, window::{PrimaryWindow, Window}};
+use std::{iter::Copied, slice::Iter};
 
-use crate::AouiREM;
+use bevy::{ecs::{entity::Entity, query::{With, WorldQuery}, system::{Query, Res, SystemParam}}, hierarchy::Children, math::Vec2, window::{PrimaryWindow, Window}};
 
+use crate::AouiRem;
 
+/// Query for scaling factor from [`Window`].
 #[derive(SystemParam)]
 pub struct ScalingFactor<'w, 's> {
     window: Query<'w, 's, &'static Window, With<PrimaryWindow>>,
@@ -17,6 +19,7 @@ impl ScalingFactor<'_, '_> {
     }
 }
 
+/// Query for size from [`Window`].
 #[derive(SystemParam)]
 pub struct WindowSize<'w, 's> {
     window: Query<'w, 's, &'static Window, With<PrimaryWindow>>,
@@ -31,9 +34,10 @@ impl WindowSize<'_, '_> {
     }
 }
 
+/// Query for `rem` from [`AouiRem`].
 #[derive(SystemParam)]
 pub struct Rem<'w> {
-    rem: Option<Res<'w, AouiREM>>,
+    rem: Option<Res<'w, AouiRem>>,
 }
 
 impl Rem<'_> {
@@ -41,5 +45,38 @@ impl Rem<'_> {
         self.rem.as_ref()
             .map(|x| x.get())
             .unwrap_or(16.0)
+    }
+}
+
+/// Query for children that can also be empty.
+#[derive(WorldQuery)]
+pub struct ChildIter {
+    children: Option<&'static Children>
+}
+
+impl ChildIterItem<'_> {
+
+    pub fn is_empty(&self) -> bool {
+        self.children.map(|x| x.is_empty()).unwrap_or(true)
+    }
+
+    pub fn len(&self) -> usize {
+        self.children.map(|x| x.len()).unwrap_or(0)
+    }
+
+    pub fn iter(&self) -> Copied<Iter<Entity>> {
+        match &self.children {
+            Some(children) => children.iter().copied(),
+            None => [].iter().copied(),
+        }
+    }
+
+    pub fn get_single(&self) -> Option<Entity> {
+        self.children
+            .and_then(|x| if x.len() == 1 {
+                x.first().copied()
+            } else {
+                None
+            })
     }
 }

@@ -11,9 +11,7 @@ use super::button::CheckButtonState;
 /// if the sprite has obtained [`CursorFocus`]
 /// and the `CursorFocus` is some [`EventFlags`].
 ///
-/// Call [`register_cursor_default`](crate::WorldExtension::register_cursor_default)
-/// on the `App` if your cursor does not revert.
-/// On the other hand, try remove the [`CursorDefault`] resource
+/// Try remove the [`CursorDefault`] resource
 /// if you want to have more control over cursor logic.
 #[derive(Debug, Clone, Copy, Component, Reflect)]
 pub struct SetCursor {

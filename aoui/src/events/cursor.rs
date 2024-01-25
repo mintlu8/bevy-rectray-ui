@@ -2,7 +2,7 @@ use std::mem::discriminant;
 
 use bevy::{ecs::{system::{Query, SystemParam, Res}, query::{With, Without}, component::Component, bundle::Bundle}, render::{camera::Camera, view::Visibility}, transform::components::GlobalTransform, reflect::Reflect, math::Vec2};
 use bevy::window::{CursorIcon, Window, PrimaryWindow};
-use crate::{Transform2D, util::convert::DslInto, Size2, DimensionData, AouiREM};
+use crate::{Transform2D, util::convert::DslInto, Size2, DimensionData, AouiRem};
 
 use crate::widgets::clipping::CameraClip;
 
@@ -84,7 +84,7 @@ pub fn custom_cursor_controller(
 }
 
 pub fn track_cursor(
-    rem: Res<AouiREM>,
+    rem: Res<AouiRem>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: CameraQuery,
     mut query: Query<(&TrackCursor, &mut Transform2D, &DimensionData)>

@@ -24,11 +24,13 @@ pub enum StrongFocusStateMachine{
     Strong
 }
 
-
+/// Signal for obtaining `DescendantHasFocus`
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObtainedFocus {}
+/// Signal for losing `DescendantHasFocus`
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoseFocus {}
+/// Signal for `DescendantHasFocus` being added or removed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FocusChange {}
 
@@ -44,7 +46,7 @@ impl SignalId for FocusChange {
     type Data = bool;
 }
 
-pub fn run_focus_signals(
+pub(crate) fn run_focus_signals(
     mut query: Query<(&mut FocusStateMachine, 
         SignalSender<ObtainedFocus>, 
         SignalSender<LoseFocus>, 
@@ -65,7 +67,7 @@ pub fn run_focus_signals(
     }
 }
 
-pub fn run_strong_focus_signals(
+pub(crate) fn run_strong_focus_signals(
     state: Res<Input<MouseButton>>,
     mut query: Query<(&mut StrongFocusStateMachine, 
         SignalSender<ObtainedFocus>, 
