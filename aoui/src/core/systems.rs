@@ -1,12 +1,11 @@
-use bevy::ecs::system::SystemParam;
 use bevy::math::Affine3A;
 use bevy::sprite::{Sprite, TextureAtlasSprite};
 use bevy::text::{TextLayoutInfo, Text2dBounds};
 use bevy::prelude::*;
 
 use bevy::sprite::Anchor as BevyAnchor;
-use bevy::window::PrimaryWindow;
 use crate::dimension::DimensionMut;
+use crate::util::ScalingFactor;
 use crate::{RotatedRect, BuildTransform, Transform2D, Opacity, IgnoreAlpha, BuildMeshTransform, Anchor, DimensionData, Dimension, Coloring};
 
 
@@ -30,20 +29,6 @@ pub fn copy_anchor_sprite(
     query.iter_mut().for_each(|(mut sp, anc)| {
         sp.anchor = anc.anchor.into();
     })
-}
-
-#[derive(SystemParam)]
-pub struct ScalingFactor<'w, 's> {
-    window: Query<'w, 's, &'static Window, With<PrimaryWindow>>,
-}
-
-impl ScalingFactor<'_, '_> {
-    pub fn get(&self) -> f32 {
-        self.window
-            .get_single()
-            .map(|x| x.scale_factor() as f32)
-            .unwrap_or(2.0)
-    }
 }
 
 /// Copy anchor to the `TextureAtlasSprite` component

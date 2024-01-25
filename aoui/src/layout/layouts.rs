@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
+use std::ops::Deref;
 
 use bevy::ecs::entity::Entity;
 use bevy::prelude::{Vec2, UVec2};
@@ -44,15 +45,7 @@ impl LayoutObject {
     pub fn new(layout: impl Layout) -> Self {
         Self(Box::new(layout))
     }
-
-    pub fn place(&self, parent: &LayoutInfo, entities: Vec<LayoutItem>, range: &mut LayoutRange) -> LayoutOutput {
-        self.0.place(parent, entities, range)
-    }
-
-    pub fn is_size_agnostic(&self) -> bool {
-        self.0.is_size_agnostic()
-    }
-
+    
     pub fn downcast<T: Layout>(&self) -> Option<&T>{
         self.0.downcast_ref()
     }
@@ -77,6 +70,12 @@ impl<T> From<T> for LayoutObject where T: Layout {
     }
 }
 
+impl Deref for LayoutObject {
+    type Target = dyn Layout;
+    fn deref(&self) -> &Self::Target {
+        self.0.as_ref()
+    }
+}
 
 /// Output of a layout, containing anchors of entities, and the computed dimension of the layout.
 #[derive(Debug)]

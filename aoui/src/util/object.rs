@@ -176,6 +176,14 @@ impl Object {
         }
     }
 
+    /// Object does not impl `PartialEq` for specialization.
+    pub fn equals_dyn<T: DataTransfer>(&self, other: &T) -> bool {
+        match &self.0 {
+            Some(a) => a.dyn_eq(other),
+            None => false,
+        }
+    }
+
     pub fn or<T: AsObject>(self, item: T) -> Object {
         if self.is_none() {
             Object::new(item)

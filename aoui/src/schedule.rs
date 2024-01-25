@@ -38,11 +38,15 @@ pub struct AouiCleanupSet;
 /// SystemSet for handling button clicks in `PreUpdate`,
 /// has elevated precedence for signal piping.
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
-pub struct AouiButtonEventSet;
+pub struct AouiPostEventSet;
 
 /// SystemSet for handling widget events in `PreUpdate`.
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct AouiWidgetEventSet;
+
+/// SystemSet for handling widget events in `PreUpdate`.
+#[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
+pub struct AouiPostWidgetEventSet;
 
 /// SystemSet for deferred loading assets in `PostUpdate`.
 #[derive(SystemSet, Debug, Hash, Clone, Copy, PartialEq, Eq)]
@@ -59,9 +63,16 @@ impl bevy::prelude::Plugin for CorePlugin {
             .configure_sets(PreUpdate, AouiEventSet.after(InputSystem))
             .add_systems(PreUpdate, bevy::ecs::prelude::apply_deferred
                 .after(AouiEventSet)
-                .before(AouiButtonEventSet))
-            .configure_sets(PreUpdate, AouiButtonEventSet.after(AouiEventSet))
-            .configure_sets(PreUpdate, AouiWidgetEventSet.after(AouiButtonEventSet))
+                .before(AouiPostEventSet))
+            .configure_sets(PreUpdate, AouiPostEventSet.after(AouiEventSet))
+            .add_systems(PreUpdate, bevy::ecs::prelude::apply_deferred
+                .after(AouiPostEventSet)
+                .before(AouiWidgetEventSet))
+            .configure_sets(PreUpdate, AouiWidgetEventSet.after(AouiPostEventSet))
+            .add_systems(PreUpdate, bevy::ecs::prelude::apply_deferred
+                .after(AouiWidgetEventSet)
+                .before(AouiPostWidgetEventSet))
+            .configure_sets(PreUpdate, AouiPostWidgetEventSet.after(AouiPostEventSet))
             .configure_sets(Last, AouiCleanupSet)
             .configure_sets(PostUpdate, AouiLoadInputSet
                 .before(AouiTreeUpdateSet)

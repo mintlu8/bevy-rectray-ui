@@ -72,20 +72,18 @@ pub mod signals;
 mod text;
 use bevy::ecs::system::IntoSystem;
 pub use text::TextFragment;
-mod constraints;
+pub mod constraints;
 mod atlas;
 pub mod misc;
 pub use atlas::DeferredAtlasBuilder;
-pub use constraints::{SharedPosition, PositionFac};
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::app::{Plugin, PreUpdate, Update, PostUpdate, Last};
 
 use crate::events::{CursorAction, CursorFocus};
-use crate::schedule::{AouiButtonEventSet, AouiWidgetEventSet, AouiLoadInputSet, AouiStoreOutputSet, AouiCleanupSet, AouiEventSet};
+use crate::schedule::{AouiCleanupSet, AouiLoadInputSet, AouiPostEventSet, AouiPostWidgetEventSet, AouiStoreOutputSet, AouiWidgetEventSet};
 
 use self::button::CheckButtonState;
 use self::inputbox::InputBoxState;
-use self::scroll::{Scrolling, ScrollDiscrete};
 
 pub(crate) struct WidgetsPlugin;
 
@@ -96,38 +94,33 @@ impl Plugin for WidgetsPlugin {
                 button::button_on_click,
                 button::check_button_on_click,
                 button::radio_button_on_click,
-            ).in_set(AouiButtonEventSet))
-            .add_systems(PreUpdate, (
                 button::generate_check_button_state,
-            ).in_set(AouiEventSet))
+                scroll::propagate_mouse_wheel_action,
+                util::propagate_focus::<CursorAction>,
+                util::propagate_focus::<CursorFocus>,
+            ).in_set(AouiPostEventSet))
             .add_systems(PreUpdate, (
                 inputbox::update_inputbox_cursor
                     .before(inputbox::inputbox_keyboard),
-                (
-                    inputbox::text_on_mouse_down,
-                    inputbox::text_on_click_outside,
-                    inputbox::text_on_mouse_double_click,
-                    inputbox::inputbox_keyboard
-                ).before(inputbox::text_propagate_focus),
-                util::propagate_focus::<CursorAction>,
-                util::propagate_focus::<CursorFocus>,
-                util::propagate_focus::<CheckButtonState>,
+                inputbox::text_on_mouse_down,
+                inputbox::text_on_click_outside,
+                inputbox::text_on_mouse_double_click,
+                inputbox::inputbox_keyboard,
                 inputbox::text_propagate_focus,
-                //util::propagate_focus::<InputBoxState> NOT NEEDED
                 drag::drag_start,
                 drag::drag_end,
-                drag::dragging
-                    .pipe(constraints::drag_constraint)
-                    .after(drag::drag_start),
+                drag::dragging.after(drag::drag_start),
                 scroll::scrolling_senders,
                 (
-                    scroll::scrolling_system::<Scrolling>
-                        .pipe(constraints::scroll_constraint),
-                    scroll::scrolling_system::<ScrollDiscrete>
-                        .pipe(constraints::discrete_scroll_sync),
+                    scroll::scrolling_system,
+                    scroll::scroll_discrete_system,
                 ).after(scroll::scrolling_senders),
                 clipping::sync_camera_dimension,
             ).in_set(AouiWidgetEventSet))
+            .add_systems(PreUpdate, (
+                util::propagate_focus::<CheckButtonState>,
+                inputbox::text_propagate_focus,
+            ).in_set(AouiPostWidgetEventSet))
             .add_systems(Update, (
                 util::set_cursor,
                 util::event_conditional_visibility,

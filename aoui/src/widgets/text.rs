@@ -5,7 +5,7 @@ use bevy::text::{Font, Text, TextStyle};
 use bevy::ecs::{component::Component, query::Changed, world::Mut};
 use bevy::ecs::system::{Query, Res, ResMut};
 
-use crate::{DimensionData, systems::ScalingFactor, Coloring};
+use crate::{DimensionData, util::ScalingFactor, Coloring};
 
 use ab_glyph::{Font as _, point};
 use ab_glyph::ScaleFont as _;

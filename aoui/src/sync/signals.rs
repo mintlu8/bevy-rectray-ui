@@ -39,6 +39,15 @@ impl<T: AsObject> TypedSignal<T> {
     }
 }
 
+impl TypedSignal<Object> {
+    pub fn of_type<T: AsObject>(self) -> TypedSignal<T> {
+        TypedSignal { 
+            inner: self.inner, 
+            p: PhantomData 
+        }
+    }
+}
+
 pub(super) static DUMMY_SIGNALS: Lazy<Signals> = Lazy::new(Signals::new);
 
 pub trait SignalMapperTrait: Send + Sync + 'static {
@@ -182,9 +191,12 @@ impl Signals {
         }
     }
 
-    pub fn poll_senders_once<T: SignalId>(&self) -> Option<T::Data>{
+    pub fn poll_sender_once<T: SignalId>(&self) -> Option<T::Data>{
         match self.senders.get(&TypeId::of::<T>()){
-            Some(sig) => sig.try_read().and_then(|x| x.get()),
+            Some(sig) => sig.try_read().and_then(|x| x.get()).map(|x| {
+                debug!("Signal sender {} received value {:?}", std::any::type_name::<T>(), &x);
+                x
+            }),
             None => None,
         }
     }
@@ -329,6 +341,11 @@ impl<T: SignalId> SignalSenderItem<'_, T> {
             signals.broadcast::<T>(item);
         }
     }
+
+    pub fn poll_sender(&self) -> Option<T::Data> {
+        self.signals.and_then(|s| s.poll_sender_once::<T>())
+    }
+    
 }
 
 #[derive(Debug, WorldQuery)]

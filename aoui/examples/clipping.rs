@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder, util::AouiCommands};
+use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder, util::{AouiCommands, ComposeExtension}};
 
 pub fn main() {
     App::new()
@@ -47,14 +47,15 @@ pub fn init(mut commands: AouiCommands) {
     });
     
 
-    scrolling!(commands {
+    frame!(commands {
         dimension: [400, 400],
         offset: [-200, 0],
-        scroll: Scrolling::Y,
         child: text! {
             anchor: TopLeft,
             bounds: [390, 999999],
             color: color!(gold),
+            event: EventFlags::MouseWheel,
+            extra: Scrolling::Y,
             wrap: true,
             layer: 1,
             text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris semper magna nibh, nec tincidunt metus fringilla id. Phasellus viverra elit volutpat orci lacinia, non suscipit odio egestas. Praesent urna ipsum, viverra non dui id, auctor sodales sem. Quisque ut mi sit amet quam ultricies cursus at vitae justo. Morbi egestas pulvinar dui id elementum. Aliquam non aliquam eros. Nam euismod in lectus sit amet blandit. Aenean mauris diam, auctor ut massa sed, convallis congue leo. Maecenas non nibh semper, tempor velit sit amet, facilisis lacus. Curabitur nec leo nisl. Proin vitae fringilla nisl. Sed vel hendrerit mi. Donec et cursus risus, at euismod justo.
@@ -99,12 +100,13 @@ Aenean fringilla faucibus augue, at commodo lectus vestibulum placerat. Fusce et
             anchor: TopLeft,
             dimension: [400, 400],
         });
-        commands.entity(para).push_children(&children).id()
+        commands.entity(para).push_children(&children)
+            .compose(EventFlags::MouseWheel)
+            .insert(Scrolling::Y).id()
     };
-    scrolling!(commands {
+    frame!(commands {
         dimension: [400, 400],
         offset: [200, 0],
-        scroll: Scrolling::Y,
         layer: 2,
         child: entity
     });

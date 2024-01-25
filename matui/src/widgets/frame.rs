@@ -206,7 +206,7 @@ impl Widget for MWindowBuilder {
         let frame = vstack!(commands{
             offset: self.offset,
             z: self.z,
-            extra: Dragging::BOTH.with_constraints()
+            extra: Dragging::BOTH
         });
         let mat = if let Some(im) = commands.try_load(self.texture) {
             RoundedRectangleMaterial::from_image(im, style.background(), self.radius)

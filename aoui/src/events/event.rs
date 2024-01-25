@@ -106,6 +106,21 @@ pub(super) mod sealed {
         #[allow(non_upper_case_globals)]
         pub const All: Self = Self::all();
 
+        #[allow(non_upper_case_globals)]
+        pub const AnyClick: Self = Self(
+            Self::LeftClick.0 | Self::MidClick.0 | Self::RightClick.0
+        );
+
+        #[allow(non_upper_case_globals)]
+        pub const AnyDown: Self = Self(
+            Self::LeftDown.0 | Self::MidDown.0 | Self::RightDown.0
+        );
+
+        #[allow(non_upper_case_globals)]
+        pub const AnyDrag: Self = Self(
+            Self::LeftDrag.0 | Self::MidDrag.0 | Self::RightDrag.0
+        );
+
         /// Blocks all event listeners underneath.
         #[allow(non_upper_case_globals)]
         pub const BlockAll: Self = Self(

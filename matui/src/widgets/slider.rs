@@ -10,7 +10,7 @@ use bevy_aoui::sync::{Signal, SignalId, SignalReceiver, TypedSignal};
 use bevy_aoui::util::ComposeExtension;
 use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
 use bevy_aoui::widgets::drag::Dragging;
-use bevy_aoui::widgets::PositionFac;
+use bevy_aoui::widgets::constraints::PositionFac;
 use bevy_aoui::{Dimension, RotatedRect};
 use bevy_aoui::{frame_extension, build_frame, layout::Axis, Anchor};
 
@@ -175,15 +175,10 @@ impl<T: SliderData> Widget for MSliderBuilder<T> {
             child: frame! {
                 anchor: Left,
                 dimension: [0, 0],
-                extra: DragX.with_constraints(),
+                extra: Dragging::X,
                 signal: receiver::<Dragging>(drag_recv),
                 signal: sender::<PositionFac>(fac_send),
                 extra: SliderRebaseRecv(rebase),
-                    // .with_recv(drag_recv)
-                    // .with_handler(self.signal.and(fac_send)),
-                // extra: rebase_recv.recv(|pos: Vec2, state: &mut Dragging|{
-                //     
-                // }),
                 child: frame! {
                     entity: dial,
                     dimension: Size2::em(dial_size, dial_size),

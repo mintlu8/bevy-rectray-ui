@@ -1,7 +1,7 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::{util::{WorldExtension, AouiCommands}, widgets::PositionFac, AouiPlugin};
+use bevy_aoui::{util::{WorldExtension, AouiCommands}, widgets::constraints::PositionFac, AouiPlugin};
 
 pub fn main() {
     App::new()
@@ -57,7 +57,7 @@ pub fn init(mut commands: AouiCommands) {
             stroke: Color::BLACK
         },
         event: EventFlags::Hover|EventFlags::LeftDrag,
-        extra: DragBoth.with_snap_back(),
+        extra: Dragging::BOTH.without_constraint().with_snap_back(),
         extra: SetCursor {
             flags: EventFlags::Hover|EventFlags::LeftDrag,
             icon: CursorIcon::Hand,
@@ -80,7 +80,7 @@ pub fn init(mut commands: AouiCommands) {
                 flags: EventFlags::Hover|EventFlags::LeftDrag,
                 icon: CursorIcon::Hand,
             },
-            extra: DragX.with_constraints(),
+            extra: Dragging::X,
             signal: sender::<PositionFac>(send1),
             system: |fac: SigSend<PositionFac>, transform: Ac<Transform2D>, dim: Ac<Dimension>| {
                 let fac = fac.recv().await;
@@ -113,7 +113,7 @@ pub fn init(mut commands: AouiCommands) {
             dimension: [50, 50],
             anchor: Left,
             color: color!(aqua),
-            extra: DragX.with_constraints(),
+            extra: Dragging::X,
             signal: sender::<PositionFac>(send3),
             signal: receiver::<Dragging>(recv2),
         }

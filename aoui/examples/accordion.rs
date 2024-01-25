@@ -1,20 +1,26 @@
+//! This is a proof of concept as stacking camera is basically not gonna work in real games.
+
+use bevy::log::LogPlugin;
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
+use bevy_aoui::sync::TypedSignal;
 use bevy_aoui::util::WorldExtension;
-use bevy_aoui::AouiPlugin;
+use bevy_aoui::widgets::scroll::ScrollParent;
+use bevy_aoui::{signal_ids, AouiPlugin};
 use bevy_aoui::util::AouiCommands;
 use bevy_aoui::events::MovementUnits;
 use bevy_aoui::util::Object;
-use bevy_aoui::signals::SignalBuilder;
 use bevy_aoui::widgets::button::RadioButton;
-
+use bevy_aoui::events::{GreaterBoundingBox, GreaterBoundingBoxPercent, GreaterBoundingBoxPx};
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 present_mode: bevy::window::PresentMode::AutoNoVsync,
-                //resolution: WindowResolution::new(1600.0, 800.0).with_scale_factor_override(1.0),
                 ..Default::default()
             }),
+            ..Default::default()
+        }).set(LogPlugin {
+            level: bevy::log::Level::DEBUG,
             ..Default::default()
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
@@ -31,11 +37,15 @@ Ut luctus tellus mi. Donec non lacus ex. Vivamus non rutrum quam. Curabitur in b
 pub struct ScrollDimension(f32);
 
 
+signal_ids!(
+    SyncDim: usize,
+);
+
 pub fn accordion_page(
     commands: &mut AouiCommands,
     index: usize,
     group: &RadioButton,
-    scroll: &SignalBuilder<MovementUnits>,
+    scroll: &TypedSignal<MovementUnits>,
     text: &str,
 ) -> [Entity; 2] {
     use bevy_aoui::dsl::prelude::*;
@@ -43,9 +53,9 @@ pub fn accordion_page(
 
     const HEIGHT: f32 = 200.0;
 
-    let (pos_text, pos_scroll) = SharedPosition::many();
-    let (cov_send, cov_recv) = commands.signal();
-    let (cov_percent_send, cov_percent_recv) = commands.signal();
+    let (pos_text, pos_scroll) = signal();
+    let (cov_send, cov_recv) = signal();
+    let (cov_percent_send, cov_percent_recv) = signal();
     let (render_in, render_out) = commands.render_target([800, 800]);
     [
         hbox! (commands{
@@ -66,44 +76,67 @@ pub fn accordion_page(
                 child: text! {
                     text: "v",
                     layer: 1,
-                    extra: sig.clone().recv_select(index,
-                        Interpolate::<Rotation>::signal_to(PI),
-                        Interpolate::<Rotation>::signal_to(0.0),
-                    ),
+                    signal: receiver::<Invocation>(sig.clone()),
+                    system: |recv: SigRecv<Invocation>, rot: Ac<Interpolate<Rotation>>| {
+                        let index = index;
+                        if recv.recv().await.equals_dyn(&index) {
+                            rot.interpolate_to(PI).await
+                        } else {
+                            rot.interpolate_to(0.0).await
+                        }
+                    },
                     extra: transition! (Rotation 0.5 CubicInOut default (if index == 0 {PI} else {0.0}))
                 },
             }
         }),
         hstack! (commands {
             anchor: Top,
-            extra: sig.clone().recv_select(index,
-                Interpolate::<Opacity>::signal_to(1.0),
-                Interpolate::<Opacity>::signal_to(0.0),
-            ),
+            signal: receiver::<Invocation>(sig.clone()),
+            extra: ScrollParent,
+            system: |recv: SigRecv<Invocation>, rot: Ac<Interpolate<Opacity>>| {
+                if recv.recv().await.equals_dyn(&index) {
+                    rot.interpolate_to(1.0).await
+                } else {
+                    rot.interpolate_to(0.0).await
+                }
+            },
             extra: transition! (Opacity 0.5 CubicInOut default (if index == 0 {1.0} else {0.0})),
-            child: scrolling! {
+            child: frame! {
                 anchor: Top,
                 dimension: [380, 200],
-                scroll: Scrolling::Y
-                    .with_shared_position(pos_text)
-                    .with_invoke(scroll.clone()),
-                coverage_px: cov_send,
-                coverage_percent: cov_percent_send,
+                signal: receiver::<Scrolling>(scroll.clone()),
                 extra: ScrollDimension(200.0),
-                extra: sig.clone().recv_select(index,
-                    |dim: &ScrollDimension, interpolate: &mut Interpolate<Dimension>| {
-                        interpolate.interpolate_to_y(dim.0)
-                    },
-                    Interpolate::<Dimension>::signal_to_y(0.0),
-                ),
-                extra: cov_recv.recv(
-                    |fac: Vec2, dim: &mut ScrollDimension| {
-                        dim.0 = fac.y.min(HEIGHT);
+
+                signal: receiver::<Fac2>(cov_recv),
+                system: |recv: SigRecv<Fac2>, dim: Ac<ScrollDimension>| {
+                    let fac = recv.recv().await.y;
+                    dbg!(fac);
+                    dim.set(move |x| x.0 = fac.min(HEIGHT)).await?;
+                },
+                signal: receiver::<Invocation>(sig.clone()),
+                system: |recv: SigRecv<Invocation>, dim: Ac<Interpolate<Dimension>>, sd: Ac<ScrollDimension>| {
+                    let index = index;
+                    let (invoke, dim_y) = futures::join!(
+                        recv.recv(), sd.get(|x| x.0)
+                    );
+                    if invoke.equals_dyn(&index) {
+                        dim.interpolate_to_y(dim_y?).await?;
+                    } else {
+                        dim.interpolate_to_y(0.0).await?;
                     }
-                ).with_slot::<1>(),
+                },
                 extra: transition! (Dimension 0.5 Linear default [380, if index == 0 {200} else {0}]),
                 layer: 1,
                 child: text! {
+                    event: EventFlags::MouseWheel,
+                    extra: Scrolling::Y,
+                    extra: SharedPosition::new(false, false),
+                    signal: sender::<SharedPosition>(pos_text),
+                    extra: GreaterBoundingBox::new(),
+                    signal: sender::<GreaterBoundingBoxPx>(cov_send),
+                    signal: sender::<GreaterBoundingBoxPercent>(cov_percent_send),
+                    // coverage_px: cov_send,
+                    // coverage_percent: cov_percent_send,
                     anchor: Top,
                     bounds: [370, 999999],
                     color: color!(gold),
@@ -123,10 +156,18 @@ pub fn accordion_page(
                     dimension: size2!(20, 20 %),
                     color: color!(red),
                     layer: 1,
-                    extra: DragY.with_position(pos_scroll.flip(false, true)),
-                    extra: cov_percent_recv.recv(|fac: Vec2, dim: &mut Dimension| {
-                        dim.edit_raw(|v| v.y = if fac.y > 1.0 {1.0 / fac.y} else {fac.y});
-                    }),
+                    extra: Dragging::Y,
+                    extra: SharedPosition::new(false, true),
+                    signal: sender::<SharedPosition>(pos_scroll),
+                    signal: receiver::<Fac2>(cov_percent_recv),
+                    system: |recv: SigRecv<Fac2>, dim: Ac<Dimension>| {
+                        let fac = recv.recv().await;
+                        dim.set(move |dim| dim.edit_raw(|v| v.y = if fac.y > 1.0 {
+                            1.0 / fac.y
+                        } else {
+                            fac.y
+                        })).await?;
+                    },
                 }
             },
             child: camera_frame! {
@@ -152,10 +193,10 @@ pub fn init(mut commands: AouiCommands) {
         anchor: TopRight,
         text: "FPS: 0.00",
         color: color!(gold),
-        extra: async_systems!(|fps: FPS, text: Ac<Text>| {
+        system: |fps: Fps, text: Ac<Text>| {
             let fps = fps.get().await;
             text.set(move |text| format_widget!(text, "FPS: {:.2}", fps)).await?;
-        })
+        }
     });
 
     let group = radio_button_group(0usize);
@@ -179,13 +220,13 @@ pub fn init(mut commands: AouiCommands) {
         }
     });
 
-    scrolling!(commands {
+    frame!(commands {
         dimension: [400, 400],
-        scroll: Scrolling::POS_Y
-            .with_recv(scroll_recv),
         child: vstack! {
             anchor: Top,
             child: children,
+            extra: Scrolling::POS_Y,
+            signal: receiver::<Scrolling>(scroll_recv),
         }
     });
 

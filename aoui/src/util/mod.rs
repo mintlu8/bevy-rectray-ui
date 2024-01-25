@@ -6,6 +6,7 @@ mod mesh;
 mod object;
 mod compose;
 mod children;
+mod queries;
 
 pub mod convert;
 
@@ -18,3 +19,4 @@ pub use convert::{DslFrom, DslInto};
 pub use object::{Object, AsObject};
 pub use compose::{ComponentCompose, ComposeInsert, ComposeExtension};
 pub use children::ChildIter;
+pub use queries::*;

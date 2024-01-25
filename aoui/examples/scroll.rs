@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{util::AouiCommands, widgets::PositionFac, AouiPlugin};
+use bevy_aoui::{util::AouiCommands, widgets::{constraints::PositionFac, scroll::ScrollParent}, AouiPlugin};
 
 pub fn main() {
     App::new()
@@ -51,15 +51,13 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
-        extra: Scrolling::X.with_constraints(),
-        signal: sender::<PositionFac>(send1),
-        child: frame! {
-            dimension: size2!(100%, 100%),
-            child: sprite! {
-                dimension: [60, 60],
-                sprite: commands.load("square.png"),
-                color: color!(red),
-            }
+        extra: ScrollParent,
+        child: sprite! {
+            extra: Scrolling::X,
+            signal: sender::<PositionFac>(send1),
+            dimension: [60, 60],
+            sprite: commands.load("square.png"),
+            color: color!(red),
         }
     });
     sprite! (commands {
@@ -68,14 +66,12 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
-        extra: Scrolling::BOTH.with_constraints(),
-        child: frame! {
-            dimension: size2!(100%, 100%),
-            child: sprite! {
-                dimension: [60, 150],
-                sprite: commands.load("square.png"),
-                color: color!(red),
-            }
+        extra: ScrollParent,
+        child: sprite! {
+            extra: Scrolling::BOTH,
+            dimension: [60, 150],
+            sprite: commands.load("square.png"),
+            color: color!(red),
         }
     });
     sprite! (commands {
@@ -84,14 +80,12 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
-        extra: Scrolling::X.with_constraints(),
-        child: frame! {
-            dimension: size2!(100%, 100%),
-            child: sprite! {
-                dimension: [200, 60],
-                sprite: commands.load("square.png"),
-                color: color!(red),
-            }
+        extra: ScrollParent,
+        child: sprite! {
+            extra: Scrolling::X,
+            dimension: [200, 60],
+            sprite: commands.load("square.png"),
+            color: color!(red),
         }
     });
     sprite! (commands {
@@ -100,14 +94,12 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
-        extra: Scrolling::BOTH.with_constraints(),
-        child: frame! {
-            dimension: size2!(100%, 100%),
-            child: sprite! {
-                dimension: [60, 60],
-                sprite: commands.load("square.png"),
-                color: color!(red),
-            }
+        extra: ScrollParent,
+        child: sprite! {
+            extra: Scrolling::BOTH,
+            dimension: [60, 60],
+            sprite: commands.load("square.png"),
+            color: color!(red),
         }
     });
     sprite! (commands {
@@ -115,24 +107,25 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
-        extra: Scrolling::BOTH.with_constraints(),
+        extra: ScrollParent,
         child: frame! {
-            dimension: size2!(100%, 100%),
+            extra: Scrolling::BOTH,
+            dimension: [150, 150],
             child: sprite! {
                 dimension: [60, 60],
-                offset: [-40, 0],
+                anchor: Left,
                 sprite: commands.load("square.png"),
                 color: color!(red),
             },
             child: sprite! {
                 dimension: [60, 60],
-                offset: [40, 20],
+                anchor: Bottom,
                 sprite: commands.load("square.png"),
                 color: color!(red),
             },
             child: sprite! {
                 dimension: [60, 60],
-                offset: [30, -50],
+                anchor: TopRight,
                 sprite: commands.load("square.png"),
                 color: color!(red),
             }
@@ -144,15 +137,13 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         extra: EventFlags::MouseWheel,
-        extra: Scrolling::BOTH.with_constraints(),
-        child: frame! {
-            dimension: size2!(100%, 100%),
-            child: sprite! {
-                dimension: [200, 200],
-                z: -1,
-                sprite: commands.load("square.png"),
-                color: color!(red),
-            }
+        extra: ScrollParent,
+        child: sprite! {
+            extra: Scrolling::BOTH,
+            dimension: [200, 200],
+            z: -1,
+            sprite: commands.load("square.png"),
+            color: color!(red),
         }
     });
 
@@ -175,15 +166,13 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
-        extra: Scrolling::Y.with_constraints(),
-        signal: sender::<PositionFac>(send2),
-        child: frame! {
-            dimension: size2!(100%, 100%),
-            child: sprite! {
-                dimension: [60, 60],
-                sprite: commands.load("square.png"),
-                color: color!(red),
-            }
+        extra: ScrollParent,
+        child: sprite! {
+            extra: Scrolling::Y,
+            signal: sender::<PositionFac>(send2),
+            dimension: [60, 60],
+            sprite: commands.load("square.png"),
+            color: color!(red),
         }
     });
 
@@ -193,14 +182,12 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
-        extra: Scrolling::BOTH.with_constraints(),
-        child: frame! {
-            dimension: size2!(100%, 100%),
-            child: sprite! {
-                dimension: [150, 60],
-                sprite: commands.load("square.png"),
-                color: color!(red),
-            }
+        extra: ScrollParent,
+        child: sprite! {
+            extra: Scrolling::BOTH,
+            dimension: [150, 60],
+            sprite: commands.load("square.png"),
+            color: color!(red),
         }
     });
 
@@ -210,14 +197,12 @@ pub fn init(mut commands: AouiCommands) {
         hitbox: Hitbox::rect(1),
         sprite: commands.load("square.png"),
         event: EventFlags::MouseWheel,
-        extra: Scrolling::Y.with_constraints(),
-        child: frame! {
-            dimension: size2!(100%, 100%),
-            child: sprite! {
-                dimension: [60, 200],
-                sprite: commands.load("square.png"),
-                color: color!(red),
-            }
+        extra: ScrollParent,
+        child: sprite! {
+            extra: Scrolling::Y,
+            dimension: [60, 200],
+            sprite: commands.load("square.png"),
+            color: color!(red),
         }
     });
 }

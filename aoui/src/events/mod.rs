@@ -59,12 +59,12 @@ use crate::{Hitbox, Clipping, RotatedRect, Opacity};
 use crate::widgets::util::{CursorDefault, remove_all};
 use crate::schedule::{AouiCleanupSet, AouiEventSet, AouiWidgetEventSet};
 
-mod systems;
+pub(crate) mod systems;
+pub(crate) mod wheel;
 mod state;
 mod event;
-mod wheel;
 mod cursor;
-mod coverage;
+mod gbb;
 mod focus;
 
 pub use event::*;
@@ -73,10 +73,10 @@ use systems::*;
 pub use wheel::{MovementUnits, ScrollScaling, MouseWheelAction};
 pub use cursor::{CustomCursor, TrackCursor};
 pub use cursor::CameraQuery;
-pub use coverage::{CoveragePx, CoveragePercent};
+pub use gbb::{GreaterBoundingBox, GreaterBoundingBoxPercent, GreaterBoundingBoxPx};
 pub use focus::*;
 
-use self::coverage::calculate_coverage;
+use self::gbb::calculate_greater_bounding_box;
 use self::cursor::{custom_cursor_controller, track_cursor};
 
 /// Marker component for Aoui's camera, optional.
@@ -143,7 +143,7 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .add_systems(FixedUpdate, (
                 track_cursor,
                 custom_cursor_controller,
-                calculate_coverage,
+                calculate_greater_bounding_box,
             ))
             .add_systems(Last, (
                 remove_all::<CursorAction>,

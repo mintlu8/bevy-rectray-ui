@@ -80,11 +80,10 @@ pub fn init(mut commands: AouiCommands) {
                 extra: transition! (Rotation 0.5 CubicInOut default PI/2.0)
             },
         },
-        child: scrolling! {
+        child: frame! {
             anchor: TopRight,
             parent_anchor: BottomRight,
             layer: 1,
-            scroll: Scrolling::Y,
             clipping: false,
             signal: receiver::<ToggleChange>(fold_recv),
             system: |x: SigRecv<ToggleChange>, text: Ac<Interpolate<Opacity>>| {
@@ -95,6 +94,7 @@ pub fn init(mut commands: AouiCommands) {
             dimension: size2!(14 em, 4 em),
             child: vstack! {
                 anchor: Top,
+                extra: Scrolling::Y,
                 child: #radio_button! {
                     dimension: size2!(14 em, 2 em),
                     context: #text_ctx,

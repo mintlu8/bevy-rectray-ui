@@ -443,9 +443,9 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                             font_size: self.line_gap.1,
                             ..Default::default()
                         },
+                        control: LayoutControl::LinebreakMarker,
                         ..Default::default()
                     },
-                    LayoutControl::LinebreakMarker,
                     GlyphSpace {
                         font: self.line_gap.0.clone()
                     }

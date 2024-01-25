@@ -38,7 +38,7 @@ pub mod builders {
     pub use super::layouts::PaddingBuilder;
     pub use super::widgets::{InputBoxBuilder, CheckButtonBuilder, RadioButtonBuilder, ButtonBuilder};
     pub use super::mesh2d::{MaterialSpriteBuilder, MaterialMeshBuilder};
-    pub use super::clipping::{CameraFrameBuilder, ScrollingFrameBuilder};
+    pub use super::clipping::CameraFrameBuilder;
 }
 
 

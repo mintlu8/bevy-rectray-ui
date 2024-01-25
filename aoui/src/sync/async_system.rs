@@ -7,7 +7,7 @@ use super::{async_param::AsyncSystemParam, AsyncExecutor, AsyncFailure, Signals}
 #[macro_export]
 macro_rules! async_system {
     (|$($field: ident :$ty: ty),* $(,)?| $body: expr) => {
-        $crate::sync::AsyncSystem::new(|$($field :$ty),*| async move {
+        $crate::sync::AsyncSystem::new(move |$($field :$ty),*| async move {
             let _ = $body;
             Ok(())
         })

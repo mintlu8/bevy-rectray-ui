@@ -2,13 +2,17 @@
 /// 
 /// Libraries should avoid using async systems, directly polling signals is advisable here.
 
-use bevy::{ecs::{component::Component, query::{With, Without}, system::Query}, text::Text};
+use bevy::{ecs::{component::Component, query::{With, Without}, system::Query}, math::Vec2, text::Text};
 
 use crate::{signal_ids, sync::SignalReceiver, util::Object};
 
 use super::{button::RadioButton, inputbox::InputBox, TextFragment};
 
 signal_ids!(
+    /// A standard signal with value `f32`.
+    Fac: f32,
+    /// A standard signal with value `Vec2`.
+    Fac2: Vec2,
     /// A standard signal id with type `String`.
     FormatText: String,
     /// A standard signal id with type `&'static str`.

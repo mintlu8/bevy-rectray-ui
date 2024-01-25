@@ -49,12 +49,12 @@ impl LayoutRange {
         }
     }
 
-    pub fn to_range(&self, len: usize) -> Range<usize> {
+    pub fn to_range(&self, total: usize) -> Range<usize> {
         match *self {
-            LayoutRange::All => 0..len,
-            LayoutRange::Bounded { min, len } => min..(min+len).min(len),
-            LayoutRange::Capped { min, len } => min..(min+len).min(len),
-            LayoutRange::Stepped { step, len } => step*len..(step*len+step).min(len),
+            LayoutRange::All => 0..total,
+            LayoutRange::Bounded { min, len } => min..(min+len).min(total),
+            LayoutRange::Capped { min, len } => min..(min+len).min(total),
+            LayoutRange::Stepped { step, len } => step*len..(step*len+step).min(total),
         }
     }
 }

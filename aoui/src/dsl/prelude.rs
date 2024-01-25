@@ -29,7 +29,7 @@ pub use crate::sync::{AsyncComponent as Ac, AsyncResource as Ar, Fps};
 pub const AsyncOk: Result<(), crate::sync::AsyncFailure> = Ok(());
 pub use crate::events::{EventFlags, CustomCursor, TrackCursor};
 pub use bevy::window::CursorIcon;
-pub use crate::widgets::SharedPosition;
+pub use crate::widgets::constraints::SharedPosition;
 pub use crate::widgets::button::{
     CheckButtonState, radio_button_group,
     CheckButton, RadioButton, ToggleChange, ButtonClick
@@ -43,20 +43,7 @@ pub use crate::widgets::drag::Dragging;
 pub const FlipX: [bool; 2] = [true, false];
 pub const FlipY: [bool; 2] = [false, true];
 pub const FlipBoth: [bool; 2] = [true, true];
-
-pub const DragX: crate::widgets::drag::Dragging = crate::widgets::drag::Dragging::X;
-pub const DragY: crate::widgets::drag::Dragging = crate::widgets::drag::Dragging::Y;
-pub const DragBoth: crate::widgets::drag::Dragging = crate::widgets::drag::Dragging::BOTH;
 pub const DragSnapBack: crate::widgets::drag::DragSnapBack = crate::widgets::drag::DragSnapBack::DEFAULT;
-
-pub const ScrollX: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::X;
-pub const ScrollY: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::Y;
-pub const ScrollNegX: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::NEG_X;
-pub const ScrollNegY: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::NEG_Y;
-pub const ScrollPosX: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::POS_X;
-pub const ScrollPosY: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::POS_Y;
-
-pub const ScrollBoth: crate::widgets::scroll::Scrolling = crate::widgets::scroll::Scrolling::BOTH;
 pub const Inherit: Anchor = Anchor::INHERIT;
 
 pub use crate::widgets::inputbox::InputOverflow;
@@ -67,7 +54,7 @@ pub use crate::{frame, sprite, text, atlas};
 pub use crate::{material_sprite, material_mesh};
 //pub use crate::{one_shot, handler};
 pub use crate::{padding, paragraph, hstack, vstack, hbox, vbox, linebreak};
-pub use crate::{inputbox, button, check_button, radio_button, camera_frame, scrolling};
+pub use crate::{inputbox, button, check_button, radio_button, camera_frame};
 pub use crate::rectangle;
 pub use crate::signal_ids;
 

@@ -393,3 +393,12 @@ impl<T: Interpolation> AsyncComponent<Interpolate<T>> {
         self.set(move |x| x.interpolate_to(to)).await
     }
 }
+
+impl<T: Interpolation<FrontEnd = Vec2>> AsyncComponent<Interpolate<T>> {
+    pub async fn interpolate_to_x(&self, to: f32) -> AsyncResult<()> {
+        self.set(move |x| x.interpolate_to_x(to)).await
+    }
+    pub async fn interpolate_to_y(&self, to: f32) -> AsyncResult<()> {
+        self.set(move |x| x.interpolate_to_y(to)).await
+    }
+}
