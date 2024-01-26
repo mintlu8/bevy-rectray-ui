@@ -1,7 +1,7 @@
 # Bevy Defer
 
 [![Crates.io](https://img.shields.io/crates/v/bevy_defer.svg)](https://crates.io/crates/bevy_defer)
-[![Docs](https://docs.rs/bevy_defer/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_defer/)
+[![Docs](https://docs.rs/bevy_defer/badge.svg)](https://docs.rs/bevy_defer/latest/bevy_defer/)
 [![Bevy tracking](https://img.shields.io/badge/Bevy%20tracking-released%20version-lightblue)](https://bevyengine.org/learn/book/plugin-development/)
 
 A simple asynchronous runtime for executing deferred queries.

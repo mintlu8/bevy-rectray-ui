@@ -136,7 +136,7 @@ pub fn init(mut commands: AouiCommands) {
                     layout: BoundsLayout::PADDING,
                     extra: DisplayIf(EventFlags::Hover|EventFlags::LeftPressed),
                     child: text! {
-                        text: "Just please, click me, my friend!",
+                        text: "Click me, my friend!",
                         color: color!(darkblue),
                     }
                 }
