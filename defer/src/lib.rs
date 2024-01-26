@@ -131,8 +131,7 @@
 //! Depends, this crate excels at waiting for events to occur, for example using signals. 
 //! As an async executor that runs queries with extra steps,
 //! things that happens every frame should ideally not run here.
-//! 
-//! 
+#![allow(clippy::type_complexity)]
 use bevy::app::{Plugin, PreUpdate, Update, PostUpdate, First};
 mod signals;
 mod async_param;

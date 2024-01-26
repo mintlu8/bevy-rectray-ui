@@ -181,32 +181,26 @@ impl Signals {
     }
 
     pub fn send<T: SignalId>(&self, item: T::Data) {
-        match self.senders.get(&TypeId::of::<T>()){
-            Some(x) => {
-                debug!("Signal {} sent with value {:?}", std::any::type_name::<T>(), &item);
-                x.write(Object::new(item))
-            },
-            None => (),
+        if let Some(x) = self.senders.get(&TypeId::of::<T>()) {
+            debug!("Signal {} sent with value {:?}", std::any::type_name::<T>(), &item);
+            x.write(Object::new(item))
         }
     }
 
     pub fn broadcast<T: SignalId>(&self, item: T::Data) {
-        match self.senders.get(&TypeId::of::<T>()){
-            Some(x) => {
-                debug!("Signal {} sent value {:?}", std::any::type_name::<T>(), &item);
-                x.broadcast(Object::new(item))
-            },
-            None => (),
+        if let Some(x) = self.senders.get(&TypeId::of::<T>()) {
+            debug!("Signal {} sent value {:?}", std::any::type_name::<T>(), &item);
+            x.broadcast(Object::new(item))
         }
     }
 
     pub fn poll_once<T: SignalId>(&self) -> Option<T::Data>{
-        match self.receivers.get(&TypeId::of::<T>()){
-            Some(sig) => sig.try_read().and_then(|x| x.get()).map(|x| {
-                debug!("Signal {} received value {:?}", std::any::type_name::<T>(), &x);
-                x
-            }),
-            None => match &self.adaptors.get(&TypeId::of::<T>()) {
+        if let Some(sig) = self.receivers.get(&TypeId::of::<T>()) {
+            sig.try_read().and_then(|x| x.get()).map(|x| {
+            debug!("Signal {} received value {:?}", std::any::type_name::<T>(), &x);
+            x
+        })} else {
+            match &self.adaptors.get(&TypeId::of::<T>()) {
                 Some((ty, map)) => match self.receivers.get(ty){
                     Some(sig) => sig.try_read().and_then(|x| {
                         map.map(x).map(|x| {
@@ -217,7 +211,7 @@ impl Signals {
                     None => None
                 }
                 None => None
-            },
+            }
         }
     }
 
