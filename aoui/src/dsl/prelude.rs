@@ -20,7 +20,8 @@ pub use interpolation::EaseFunction;
 
 /// Return this inside `AsyncSystem` functions.
 #[allow(nonstandard_style)]
-pub const AsyncOk: Result<(), crate::sync::AsyncFailure> = Ok(());
+pub const AsyncOk: Result<(), bevy_defer::AsyncFailure> = Ok(());
+
 pub use crate::events::{
     EventFlags, CustomCursor, TrackCursor,
     GreaterBoundingBox, GreaterBoundingBoxPx, GreaterBoundingBoxPercent,
@@ -39,10 +40,10 @@ pub use crate::widgets::{
     drag::Dragging,
     inputbox::InputOverflow
 };
-pub use crate::sync:: {
+pub use bevy_defer:: {
     SigSend, SigRecv, Signals,
     AsyncEntityQuery as Aeq, AsyncEntityCommands, AsyncQuery as Aq,
-    AsyncComponent as Ac, AsyncResource as Ar, Fps,
+    AsyncComponent as Ac, AsyncResource as Ar,
     TypedSignal, RoleSignal, SignalId, SignalMapper,
 };
 
@@ -61,13 +62,16 @@ pub use crate::{material_sprite, material_mesh};
 pub use crate::{padding, paragraph, hstack, vstack, hbox, vbox, linebreak};
 pub use crate::{inputbox, button, check_button, radio_button, camera_frame};
 pub use crate::rectangle;
-pub use crate::signal_ids;
+pub use bevy_defer::signal_ids;
+
+pub use crate::util::Fps;
 
 use bevy::ecs::bundle::Bundle;
 use bevy::transform::components::GlobalTransform;
 
 pub use crate::util::signal;
 pub use crate::widgets::signals::*;
+pub use crate::anim::{AsyncInterpolate, AsyncInterpolateVec2};
 
 /// A signal with the sender role.
 pub fn sender<T: SignalId>(sig: TypedSignal<T::Data>) -> RoleSignal<T> {

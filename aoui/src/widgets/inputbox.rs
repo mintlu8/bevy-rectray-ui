@@ -5,7 +5,7 @@ use crate::events::{
     ActiveDetection, CursorAction, CursorClickOutside, CursorFocus, CursorState,
     EventFlags,
 };
-use crate::sync::{SignalId, SignalSender};
+use bevy_defer::{SignalId, SignalSender};
 use crate::{RotatedRect, Transform2D, DimensionData, Size, size, AouiRem};
 use ab_glyph::{Font as FontTrait, ScaleFont};
 use bevy::asset::{Assets, Handle};

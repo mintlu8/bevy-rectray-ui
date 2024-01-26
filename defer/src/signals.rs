@@ -1,13 +1,41 @@
-use std::{any::{Any, TypeId}, fmt::Debug, marker::PhantomData, sync::Arc};
+use std::{any::{type_name, Any, TypeId}, fmt::Debug, marker::PhantomData};
+use triomphe::Arc;
 use bevy::{ecs::{component::Component, entity::Entity, query::WorldQuery}, log::debug, utils::hashbrown::HashMap};
 use once_cell::sync::Lazy;
-use crate::util::{Object, AsObject, ComponentCompose};
+use crate::object::{Object, AsObject};
 use super::{AsyncExecutor, AsyncSystemParam, Signal, SignalData, SignalInner, YieldNow};
 
 /// A marker type that indicates the type and purpose of a signal.
 pub trait SignalId: Any + Send + Sync + 'static{
     type Data: AsObject;
 }
+
+/// Quickly construct multiple marker [`SignalId`]s at once.
+/// 
+/// # Example
+/// ```
+/// signal_ids!{
+///     /// Shared factor as a f32
+///     SharedFactor: f32,
+///     /// Shared position as a Vec2
+///     pub SharedPosition: Vec2,
+/// }
+/// ```
+#[macro_export]
+macro_rules! signal_ids {
+    ($($(#[$($attr:tt)*])*$vis: vis $name: ident: $ty: ty),* $(,)?) => {
+        $(
+            $(#[$($attr)*])*
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            $vis enum $name {}
+
+            impl $crate::SignalId for $name{
+                type Data = $ty;
+            }
+        )*
+    };
+}
+
 
 /// A type erased signal with a nominal type.
 #[derive(Debug, Clone)]
@@ -23,12 +51,18 @@ impl<T: AsObject> Default for TypedSignal<T> {
 }
 
 impl<T: AsObject> TypedSignal<T> {
+
+    pub fn new() -> Self {
+        Self { inner: Default::default(), p: PhantomData }
+    }
+
     pub fn from_inner(inner: Arc<SignalData<Object>>) -> Self {
         Self {
             inner,
             p: PhantomData
         }
     }
+    
     pub fn into_inner(self) -> Arc<SignalData<Object>> {
         self.inner
     }
@@ -101,14 +135,6 @@ pub struct Signals {
     pub senders: HashMap<TypeId, Signal<Object>>,
     pub receivers: HashMap<TypeId, Signal<Object>>,
     pub adaptors: HashMap<TypeId, (TypeId, SignalMapper)>
-}
-
-impl ComponentCompose for Signals {
-    fn compose(&mut self, other: Self) {
-        self.senders.extend(other.senders);
-        self.receivers.extend(other.receivers);
-        self.adaptors.extend(other.adaptors);
-    }
 }
 
 impl Signals {
@@ -205,10 +231,10 @@ impl Signals {
         }
     }
     
-    pub fn sender<T: SignalId>(&self) -> Option<Arc<SignalInner<Object>>> {
+    pub fn borrow_sender<T: SignalId>(&self) -> Option<Arc<SignalInner<Object>>> {
         self.senders.get(&TypeId::of::<T>()).map(|x| x.borrow_inner())
     }
-    pub fn receiver<T: SignalId>(&self) ->  Option<Arc<SignalInner<Object>>> {
+    pub fn borrow_receiver<T: SignalId>(&self) ->  Option<Arc<SignalInner<Object>>> {
         self.receivers.get(&TypeId::of::<T>()).map(|x| x.borrow_inner())
     }
     pub fn add_sender<T: SignalId>(&mut self, signal: TypedSignal<T::Data>) {
@@ -219,6 +245,16 @@ impl Signals {
     }
     pub fn add_adaptor<T: SignalId>(&mut self, ty: TypeId, mapper: SignalMapper) {
         self.adaptors.insert(TypeId::of::<T>(), (ty, mapper));
+    }
+
+    pub fn remove_sender<T: SignalId>(&mut self) {
+        self.senders.remove(&TypeId::of::<T>());
+    }
+    pub fn remove_receiver<T: SignalId>(&mut self) {
+        self.receivers.remove(&TypeId::of::<T>());
+    }
+    pub fn remove_adaptor<T: SignalId>(&mut self) {
+        self.adaptors.remove(&TypeId::of::<T>());
     }
 
     pub fn has_sender<T: SignalId>(&self) -> bool {
@@ -233,23 +269,19 @@ impl Signals {
 pub struct SigSend<T: SignalId>(Arc<SignalInner<Object>>, PhantomData<T>);
 
 impl<T: SignalId> SigSend<T> {
-    /// Send a value with a signal.
+    /// Send a value with a signal, can be polled by the same sender.
     pub fn send(self, item: T::Data) -> impl Fn() + Send + Sync + 'static  {
         let obj = Object::new(item);
         move ||self.0.write(obj.clone())
     }
 
-    /// Send a value with a signal.
-    /// 
-    /// Unlike `send` this is guaranteed to not be polled by the same sender.
+    /// Send a value with a signal, cannot be polled by the same sender.
     pub fn broadcast(self, item: T::Data) -> impl Fn() + Send + Sync + 'static  {
         let obj = Object::new(item);
         move ||self.0.broadcast(obj.clone())
     }
 
-    /// Receive a value from the sender, 
-    /// can receive value `send` sent from this signal,
-    /// but not from `broadcast`.
+    /// Receives a value from the sender.
     pub async fn recv(self) -> T::Data {
         loop {
             let signal = self.0.clone();
@@ -270,8 +302,8 @@ impl <T: SignalId> AsyncSystemParam for SigSend<T>  {
             signals: &Signals,
         ) -> Self {
         SigSend(
-            signals.sender::<T>()
-                .unwrap_or_else(|| panic!("Signal sender of type <{}> missing", stringify!(T))),
+            signals.borrow_sender::<T>()
+                .unwrap_or_else(|| panic!("Signal sender of type <{}> missing", type_name::<T>())),
             PhantomData
         )
     }
@@ -281,7 +313,8 @@ impl <T: SignalId> AsyncSystemParam for SigSend<T>  {
 pub struct SigRecv<T: SignalId>(Arc<SignalInner<Object>>, PhantomData<T>);
 
 impl<T: SignalId> SigRecv<T> {
-    pub async fn recv(self) -> T::Data {
+    /// Receive a signal.
+    pub async fn recv(&self) -> T::Data {
         loop {
             let signal = self.0.clone();
             let obj = signal.async_read().await;
@@ -295,7 +328,8 @@ impl<T: SignalId> SigRecv<T> {
 }
 
 impl<T: SignalId<Data = Object>> SigRecv<T> {
-    pub async fn recv_as<A: AsObject>(self) -> A {
+    /// Receives and downcasts a signal, discard all invalid typed values.
+    pub async fn recv_as<A: AsObject>(&self) -> A {
         loop {
             let signal = self.0.clone();
             let obj = signal.async_read().await;
@@ -316,8 +350,8 @@ impl <T: SignalId> AsyncSystemParam for SigRecv<T>  {
             signals: &Signals,
         ) -> Self {
         SigRecv(
-            signals.receiver::<T>()
-                .unwrap_or_else(|| panic!("Signal receiver of type <{}> missing", stringify!(T))),
+            signals.borrow_receiver::<T>()
+                .unwrap_or_else(|| panic!("Signal receiver of type <{}> missing", type_name::<T>())),
             PhantomData
         )
     }
@@ -331,33 +365,35 @@ pub struct SignalSender<T: SignalId>{
 }
 
 impl<T: SignalId> SignalSenderItem<'_, T> {
+    /// Check if a sender exists.
     pub fn exists(&self) -> bool{
         self.signals
-            .map(|x| x.sender::<T>().is_some())
+            .map(|x| x.borrow_sender::<T>().is_some())
             .unwrap_or(false)
     }
 
+    /// Send a item through a signal, can be polled from the same sender.
     pub fn send(&self, item: T::Data) {
         if let Some(signals) = self.signals {
             signals.send::<T>(item);
         }
     }
     
+    /// Send a item through a signal, cannot be polled from the same sender.
     pub fn broadcast(&self, item: T::Data) {
         if let Some(signals) = self.signals {
             signals.broadcast::<T>(item);
         }
     }
 
+    /// Poll the signal from a sender.
     pub fn poll_sender(&self) -> Option<T::Data> {
         self.signals.and_then(|s| s.poll_sender_once::<T>())
     }
-    
 }
 
 /// `WorldQuery` for receiving a signal synchronously.
 #[derive(Debug, WorldQuery)]
-#[world_query(mutable)]
 pub struct SignalReceiver<T: SignalId>{
     signals: Option<&'static Signals>,
     p: PhantomData<T>,

@@ -1,6 +1,6 @@
 use bevy::{ecs::{component::Component, query::Has, system::{Query, Res}}, input::{mouse::MouseButton, Input}};
 
-use crate::sync::{SignalId, SignalSender};
+use bevy_defer::{SignalId, SignalSender};
 
 use super::{CursorClickOutside, DescendantHasFocus};
 

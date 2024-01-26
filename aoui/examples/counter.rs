@@ -1,7 +1,7 @@
 //! This is in fact a show case for `Mutation` and not how you typically implement a counter.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{signal_ids, util::{WorldExtension, AouiCommands}, widgets::button::Payload, AouiPlugin};
+use bevy_aoui::{util::{WorldExtension, AouiCommands}, widgets::button::Payload, AouiPlugin};
 
 pub fn main() {
     App::new()

@@ -4,7 +4,7 @@ use std::ops::{Add, Mul};
 use bevy::{render::color::Color, time::Time};
 use bevy::ecs::{component::Component, system::{Query, Res}};
 use bevy::math::{Vec2, Vec4};
-use crate::sync::AsyncResult;
+use bevy_defer::{AsyncComponent, AsyncResult};
 use crate::{Opacity, Dimension};
 use interpolation::EaseFunction;
 use smallvec::SmallVec;
@@ -386,19 +386,28 @@ impl Interpolation for Padding {
     fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
 }
 
-use crate::sync::AsyncComponent;
+#[allow(async_fn_in_trait)]
+pub trait AsyncInterpolate<T: Interpolation> {
+    async fn interpolate_to(&self, to: T::FrontEnd) -> AsyncResult<()>;
+}
 
-impl<T: Interpolation> AsyncComponent<Interpolate<T>> {
-    pub async fn interpolate_to(&self, to: T::FrontEnd) -> AsyncResult<()> {
+impl<T: Interpolation> AsyncInterpolate<T> for AsyncComponent<Interpolate<T>> {
+    async fn interpolate_to(&self, to: T::FrontEnd) -> AsyncResult<()> {
         self.set(move |x| x.interpolate_to(to)).await
     }
 }
 
-impl<T: Interpolation<FrontEnd = Vec2>> AsyncComponent<Interpolate<T>> {
-    pub async fn interpolate_to_x(&self, to: f32) -> AsyncResult<()> {
+#[allow(async_fn_in_trait)]
+pub trait AsyncInterpolateVec2 {
+    async fn interpolate_to_x(&self, to: f32) -> AsyncResult<()>;
+    async fn interpolate_to_y(&self, to: f32) -> AsyncResult<()>;
+}
+
+impl<T: Interpolation<FrontEnd = Vec2>> AsyncInterpolateVec2 for AsyncComponent<Interpolate<T>> {
+    async fn interpolate_to_x(&self, to: f32) -> AsyncResult<()> {
         self.set(move |x| x.interpolate_to_x(to)).await
     }
-    pub async fn interpolate_to_y(&self, to: f32) -> AsyncResult<()> {
+    async fn interpolate_to_y(&self, to: f32) -> AsyncResult<()> {
         self.set(move |x| x.interpolate_to_y(to)).await
     }
 }

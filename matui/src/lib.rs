@@ -48,6 +48,8 @@ pub use bevy;
 
 #[doc(hidden)]
 pub use bevy_aoui as aoui;
+#[doc(hidden)]
+pub use bevy_defer as defer;
 
 pub struct MatuiPlugin;
 

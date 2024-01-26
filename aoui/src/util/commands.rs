@@ -2,16 +2,23 @@ use std::borrow::Borrow;
 use std::marker::PhantomData;
 
 use bevy::ecs::{entity::Entity, bundle::Bundle, component::Component};
-use bevy::ecs::system::{SystemParam, Commands, Res, EntityCommands, Command};
+use bevy::ecs::system::{Command, Commands, EntityCommands, Res, Resource, SystemParam};
 use bevy::hierarchy::{Children, DespawnRecursive, BuildChildren, DespawnRecursiveExt};
 use bevy::render::texture::{Image, BevyDefault};
 use bevy::render::render_resource::{TextureDescriptor, Extent3d, TextureDimension, TextureUsages};
 use bevy::asset::{AssetServer, Asset, Handle, AssetPath};
-use crate::sync::{SignalPool, TypedSignal};
-use crate::util::{CloneSplit, Widget, AsObject};
+use bevy::utils::HashMap;
+use bevy_defer::{AsObject, Object, SignalData, TypedSignal};
+use parking_lot::RwLock;
+use crate::util::{CloneSplit, Widget};
 use crate::widgets::button::RadioButton;
 
 use super::WidgetBuilder;
+
+
+/// Storage for named signals.
+#[derive(Debug, Resource, Default)]
+pub struct SignalPool(pub(crate) RwLock<HashMap<String, bevy_defer::Arc<SignalData<Object>>>>);
 
 /// [`SystemParam`] combination of [`Commands`], [`AssetServer`] and [`SignalPool`].
 #[derive(SystemParam)]

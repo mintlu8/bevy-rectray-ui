@@ -8,10 +8,10 @@ use bevy::ecs::{entity::Entity, query::Changed, system::Query};
 use bevy_aoui::anim::Attr;
 use bevy_aoui::dsl::prelude::sender;
 use bevy_aoui::events::{CursorAction, EventFlags, FocusChange, FocusStateMachine};
-use bevy_aoui::sync::{SignalId, SignalReceiver, SignalSender, TypedSignal};
+use bevy_defer::{SignalId, SignalReceiver, SignalSender, TypedSignal, Object};
 use bevy_aoui::widgets::util::{DisplayIf, BlockPropagation};
 use bevy_aoui::{Anchor, size2, Size2, frame, transition, Opacity};
-use bevy_aoui::util::{signal, ComposeExtension, Object};
+use bevy_aoui::util::{signal, ComposeExtension};
 use bevy_aoui::layout::StackLayout;
 use bevy_aoui::widgets::button::{CheckButton, RadioButton, ToggleChange};
 use bevy_aoui::util::{Widget, AouiCommands, WidgetBuilder};
@@ -128,7 +128,7 @@ macro_rules! menu_item {
     };
     ($commands: tt $name: literal) => {
         $crate::widgets::MenuItem::Text{
-            key: $crate::aoui::util::Object::new($name.to_string()),
+            key: $crate::defer::Object::new($name.to_string()),
             value: $name.to_string(),
             icon: None,
             right: None,
@@ -150,7 +150,7 @@ macro_rules! menu_item {
     };
     ($commands: tt $name: literal {$($nest:tt)*}) => {
         $crate::widgets::MenuItemNested{
-            key: $crate::aoui::util::Object::new($name.to_string()),
+            key: $crate::defer::Object::new($name.to_string()),
             value: $name.to_string(),
             icon: None,
             right: None,

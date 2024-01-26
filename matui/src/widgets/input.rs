@@ -8,7 +8,7 @@ use bevy::text::{Font, Text};
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
 use bevy_aoui::dsl::OptionEx;
-use bevy_aoui::sync::TypedSignal;
+use bevy_defer::TypedSignal;
 use bevy_aoui::util::{signal, ComposeExtension};
 use bevy_aoui::widgets::button::ButtonClick;
 use bevy_aoui::widgets::signals::ClearWidget;

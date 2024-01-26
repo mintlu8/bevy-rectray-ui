@@ -1,5 +1,6 @@
 use bevy::{asset::{Asset, Handle}, ecs::entity::Entity};
-use crate::{widgets::button::Payload, util::{AsObject, WidgetBuilder}, util::AouiCommands};
+use bevy_defer::AsObject;
+use crate::{widgets::button::Payload, util::WidgetBuilder, util::AouiCommands};
 
 use super::{DslConvert, DslFrom, SealToken};
 

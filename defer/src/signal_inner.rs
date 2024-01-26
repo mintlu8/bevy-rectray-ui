@@ -1,10 +1,11 @@
-use std::{ops::Deref, sync::{atomic::AtomicU32, Arc}, task::Poll};
+use std::{ops::Deref, sync::atomic::AtomicU32, task::Poll};
+use triomphe::Arc;
 
-use atomic::Ordering;
+use std::sync::atomic::Ordering;
 use futures::Future;
 use parking_lot::Mutex;
 
-use crate::util::{AsObject, Object};
+use crate::{AsObject, Object};
 
 use super::TypedSignal;
 
@@ -152,7 +153,7 @@ impl<T: Send + Sync + 'static> SignalInner<T> {
         self.inner.data.lock().clone()
     }
 
-    pub async fn async_read(self: Arc<Self>) -> T where T: Clone {
+    pub async fn async_read(&self) -> T where T: Clone {
         loop {
             let version = self.inner.version.load(Ordering::Relaxed);
             if self.version.swap(version, Ordering::Relaxed) != version {

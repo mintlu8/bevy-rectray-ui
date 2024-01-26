@@ -1,6 +1,9 @@
 use bevy::{ecs::{component::Component, query::Has, system::Query}, render::color::Color};
-use bevy_aoui::{anim::{Attr, Fgsm, Rotation}, events::{CursorFocus, DescendantHasFocus, EventFlags}, fgsm_interpolation, sync::SignalReceiver, widgets::button::{CheckButtonState, ToggleChange}, Opacity};
-
+use bevy_aoui::{fgsm_interpolation,  Opacity};
+use bevy_aoui::anim::{Attr, Fgsm, Rotation};
+use bevy_aoui::widgets::button::{CheckButtonState, ToggleChange};
+use bevy_aoui::events::{CursorFocus, DescendantHasFocus, EventFlags};
+use bevy_defer::SignalReceiver;
 use crate::StrokeColoring;
 
 use super::StrokeColors;

@@ -4,7 +4,7 @@ use bevy::hierarchy::Parent;
 use bevy::math::Vec2;
 use bevy::ecs::{component::Component, query::Without, entity::Entity};
 use bevy::ecs::system::{Query, Res};
-use crate::sync::{SignalId, SignalReceiver, SignalSender};
+use bevy_defer::{SignalId, SignalReceiver, SignalSender};
 use crate::util::{Rem, WindowSize};
 use crate::DimensionData;
 use crate::{Transform2D, anim::Attr};

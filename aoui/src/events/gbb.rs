@@ -1,6 +1,7 @@
 use bevy::{ecs::{component::Component, system::Query}, hierarchy::Parent, math::Vec2};
 
-use crate::{sync::{SignalId, SignalSender}, util::{Rem, WindowSize}, Anchor, DimensionData, Transform2D};
+use crate::{util::{Rem, WindowSize}, Anchor, DimensionData, Transform2D};
+use bevy_defer::{SignalId, SignalSender};
 
 /// An signal that calculates the sized of the sprite's bounding
 /// rectangle of **offset** or **dimension**.

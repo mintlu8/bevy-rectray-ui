@@ -10,13 +10,17 @@ pub mod widgets;
 pub mod events;
 pub mod anim;
 
-pub mod sync;
-
 //pub mod signals;
 pub use core::*;
 
 #[doc(hidden)]
 pub use bevy;
+
+#[doc(hidden)]
+pub use bevy_defer as defer;
+
+#[doc(hidden)]
+pub use bevy_defer::async_system;
 
 pub mod schedule;
 
@@ -29,12 +33,12 @@ pub struct AouiPlugin;
 impl bevy::prelude::Plugin for AouiPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
+            .init_resource::<util::SignalPool>()
             .add_plugins(schedule::CorePlugin)
-            //.add_plugins(signals::SignalsPlugin)
             .add_plugins(events::CursorEventsPlugin)
             .add_plugins(anim::AnimationPlugin)
             .add_plugins(widgets::WidgetsPlugin)
-            .add_plugins(sync::AsyncExecutorPlugin)
+            .add_plugins(bevy_defer::DefaultAsyncPlugin)
         ;
     }
 }

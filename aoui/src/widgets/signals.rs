@@ -4,23 +4,23 @@
 
 use bevy::{ecs::{component::Component, query::{With, Without}, system::Query}, math::Vec2, text::Text};
 
-use crate::{signal_ids, sync::SignalReceiver, util::Object};
+use bevy_defer::{signal_ids, SignalReceiver, Object};
 
 use super::{button::RadioButton, inputbox::InputBox, TextFragment};
 
 signal_ids!(
     /// A standard signal with value `f32`.
-    Fac: f32,
+    pub Fac: f32,
     /// A standard signal with value `Vec2`.
-    Fac2: Vec2,
+    pub Fac2: Vec2,
     /// A standard signal id with type `String`.
-    FormatText: String,
+    pub FormatText: String,
     /// A standard signal id with type `&'static str`.
-    FormatTextStatic: &'static str,
+    pub FormatTextStatic: &'static str,
     /// A standard signal id for generic button output.
-    Invocation: Object,
+    pub Invocation: Object,
     /// A standard signal that removes data from a widget.
-    ClearWidget: Object,
+    pub ClearWidget: Object,
 );
 
 /// Uses signal `SetText` fot setting Text.

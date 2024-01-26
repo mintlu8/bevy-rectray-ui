@@ -2,9 +2,8 @@
 #![recursion_limit = "256"]
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
-use bevy_aoui::sync::Signal;
+use bevy_defer::{Signal, Object};
 use bevy_aoui::AouiPlugin;
-use bevy_aoui::util::Object;
 use bevy_aoui::util::WorldExtension;
 use bevy_aoui::util::AouiCommands;
 

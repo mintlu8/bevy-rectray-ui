@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
-use std::sync::Arc;
-
-use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
+use triomphe::Arc;
 use bevy::ecs::bundle::Bundle;
 use bevy::ecs::change_detection::DetectChanges;
 use bevy::ecs::component::Component;
@@ -11,7 +9,7 @@ use bevy::hierarchy::{DespawnRecursive, DespawnChildrenRecursive, AddChild};
 use futures::Future;
 use futures::channel::oneshot::channel;
 
-use super::{AsyncExecutor, AsyncFailure, BoxedQueryCallback, AsyncReadonlyQuery, AsyncResult, Signals};
+use super::{AsyncExecutor, AsyncFailure, BoxedQueryCallback, BoxedReadonlyCallback, AsyncResult, Signals};
 
 /// A parameter of an `AsyncSystem`.
 pub trait AsyncSystemParam: Sized {
@@ -55,12 +53,21 @@ impl<Q: WorldQuery + 'static> AsyncEntityQuery<Q> {
         }
     }
 
+    /// Map to an external, non-current entity.
+    pub fn of_entity(&self, entity: Entity) -> Self {
+        AsyncEntityQuery {
+            entity,
+            executor: self.executor.clone(),
+            p: PhantomData,
+        }
+    }
+
     pub async fn get<T: Send + Sync + 'static>(&self,
         f: impl Fn(<Q::ReadOnly as WorldQuery>::Item<'_>) -> T + Send + Sync + 'static
     ) -> AsyncResult<T> {
         let (sender, receiver) = channel::<Option<T>>();
         let entity = self.entity;
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.run_system_once(move |q: Query<Q>| {
                     match q.get(entity) {
@@ -87,7 +94,7 @@ impl<Q: WorldQuery + 'static> AsyncEntityQuery<Q> {
     ) -> impl Future<Output = Option<T>> + Send + Sync + 'static {
         let (sender, receiver) = channel::<Option<T>>();
         let entity = self.entity;
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.run_system_once(move |mut q: Query<Q>| {
                     match q.get_mut(entity) {
@@ -142,7 +149,7 @@ impl<Q: SystemParam + 'static> AsyncQuery<Q> {
         f: impl (Fn(StaticSystemParam<Q>) -> T) + Send + Sync + 'static
     ) -> impl Future<Output = AsyncResult<T>> + Send + Sync + 'static{
         let (sender, receiver) = channel::<T>();
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.run_system_once(move |q: StaticSystemParam<Q>| {
                     f(q)
@@ -187,10 +194,18 @@ impl AsyncEntityCommands {
         }
     }
 
+    /// Map to an external, non-current entity.
+    pub fn of_entity(&self, entity: Entity) -> Self {
+        AsyncEntityCommands {
+            entity,
+            executor: self.executor.clone(),
+        }
+    }
+
     pub fn insert(&self, bundle: impl Bundle) -> impl Future<Output = ()> {
         let (sender, receiver) = channel::<()>();
         let entity = self.entity;
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.entity_mut(entity).insert(bundle);
             },
@@ -208,7 +223,7 @@ impl AsyncEntityCommands {
 
     pub fn spawn(&self, bundle: impl Bundle) -> impl Future<Output = Option<Entity>> {
         let (sender, receiver) = channel::<Entity>();
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.spawn(bundle).id()
             },
@@ -226,7 +241,7 @@ impl AsyncEntityCommands {
     pub fn add_child(&self, child: Entity) -> impl Future<Output = bool> {
         let (sender, receiver) = channel::<()>();
         let entity = self.entity;
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 AddChild {
                     parent: entity,
@@ -248,7 +263,7 @@ impl AsyncEntityCommands {
     pub fn despawn(&self) -> impl Future<Output = bool> {
         let (sender, receiver) = channel::<()>();
         let entity = self.entity;
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 DespawnRecursive {
                     entity
@@ -269,7 +284,7 @@ impl AsyncEntityCommands {
     pub fn despawn_descendants(&self) -> impl Future<Output = bool> {
         let (sender, receiver) = channel::<()>();
         let entity = self.entity;
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 DespawnChildrenRecursive {
                     entity
@@ -309,11 +324,21 @@ impl<C: Component> AsyncSystemParam for AsyncComponent<C> {
 }
 
 impl<C: Component> AsyncComponent<C> {
+
+    /// Map to an external, non-current entity.
+    pub fn of_entity(&self, entity: Entity) -> Self {
+        AsyncComponent {
+            entity,
+            executor: self.executor.clone(),
+            p: PhantomData,
+        }
+    }
+
     pub fn get<Out: Send + Sync + 'static>(&self, f: impl FnOnce(&C) -> Out + Send + Sync + 'static)
             -> impl Future<Output = AsyncResult<Out>> {
         let (sender, receiver) = channel::<Option<Out>>();
         let entity = self.entity;
-        let query = AsyncReadonlyQuery::new(
+        let query = BoxedReadonlyCallback::new(
             move |world: &World| {
                 world.entity(entity)
                     .get::<C>()
@@ -363,7 +388,7 @@ impl<C: Component> AsyncComponent<C> {
             -> impl Future<Output = AsyncResult<Out>> {
         let (sender, receiver) = channel::<Option<Out>>();
         let entity = self.entity;
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.entity_mut(entity)
                     .get_mut::<C>()
@@ -408,7 +433,7 @@ impl<R: Resource> AsyncResource<R> {
     pub fn get<Out: Send + Sync + 'static>(&self, f: impl FnOnce(&R) -> Out + Send + Sync + 'static)
             -> impl Future<Output = AsyncResult<Out>> {
         let (sender, receiver) = channel::<Option<Out>>();
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.get_resource::<R>().map(f)
             },
@@ -430,7 +455,7 @@ impl<R: Resource> AsyncResource<R> {
     pub fn set<Out: Send + Sync + 'static>(&self, f: impl FnOnce(&mut R) -> Out + Send + Sync + 'static)
             -> impl Future<Output = AsyncResult<Out>> {
         let (sender, receiver) = channel::<Option<Out>>();
-        let query = BoxedQueryCallback::new(
+        let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.get_resource_mut::<R>()
                     .map(|mut x| f(x.as_mut()))
@@ -447,44 +472,6 @@ impl<R: Resource> AsyncResource<R> {
                 Ok(None) => Err(AsyncFailure::ComponentNotFound),
                 Err(_) => Err(AsyncFailure::ChannelClosed),
             }
-        }
-    }
-}
-
-/// An `AsyncSystemParam` that gets the `fps` value.
-/// 
-/// Requires `FrameTimeDiagnosticPlugin`.
-pub struct Fps(Arc<AsyncExecutor>);
-
-impl AsyncSystemParam for Fps {
-    fn from_async_context(
-        _: Entity,
-        executor: &Arc<AsyncExecutor>,
-        _: &Signals,
-    ) -> Self {
-        Self (executor.clone())
-    }
-}
-
-
-impl Fps {
-    pub fn get(&self) -> impl Future<Output = f32> {
-        let (sender, receiver) = channel::<f32>();
-        let query = AsyncReadonlyQuery::new(
-            move |world: &World| {
-                world.get_resource::<DiagnosticsStore>().and_then(|x| x
-                    .get(FrameTimeDiagnosticsPlugin::FPS)
-                    .and_then(|fps| fps.smoothed().map(|x| x as f32)) 
-                ).unwrap_or(0.0)
-            },
-            sender
-        );
-        {
-            let mut lock = self.0.readonly.lock();
-            lock.push(query);
-        }
-        async {
-            receiver.await.unwrap_or(0.0)
         }
     }
 }

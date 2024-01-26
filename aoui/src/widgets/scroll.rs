@@ -6,7 +6,7 @@ use bevy::ecs::system::Commands;
 use bevy::math::{Vec2, IVec2};
 use bevy::ecs::{component::Component, query::Without};
 use bevy::ecs::system::Query;
-use crate::sync::{SignalId, SignalReceiver, SignalSender};
+use bevy_defer::{SignalId, SignalReceiver, SignalSender};
 use crate::util::{Rem, WindowSize};
 use crate::{Transform2D, anim::Attr, anim::Offset, DimensionData};
 use crate::events::MouseWheelAction;

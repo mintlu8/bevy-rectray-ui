@@ -2,12 +2,11 @@
 
 use bevy::log::LogPlugin;
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::sync::TypedSignal;
+use bevy_defer::{TypedSignal, Object, signal_ids};
 use bevy_aoui::util::WorldExtension;
-use bevy_aoui::{signal_ids, AouiPlugin};
+use bevy_aoui::AouiPlugin;
 use bevy_aoui::util::AouiCommands;
 use bevy_aoui::events::MovementUnits;
-use bevy_aoui::util::Object;
 use bevy_aoui::widgets::button::RadioButton;
 pub fn main() {
     App::new()
@@ -77,7 +76,7 @@ pub fn accordion_page(
                     signal: receiver::<Invocation>(sig.clone()),
                     system: |recv: SigRecv<Invocation>, rot: Ac<Interpolate<Rotation>>| {
                         let index = index;
-                        if recv.recv().await.equals_dyn(&index) {
+                        if recv.recv().await.equal_to(&index) {
                             rot.interpolate_to(PI).await
                         } else {
                             rot.interpolate_to(0.0).await
@@ -92,7 +91,7 @@ pub fn accordion_page(
             signal: receiver::<Invocation>(sig.clone()),
             extra: ScrollParent,
             system: |recv: SigRecv<Invocation>, rot: Ac<Interpolate<Opacity>>| {
-                if recv.recv().await.equals_dyn(&index) {
+                if recv.recv().await.equal_to(&index) {
                     rot.interpolate_to(1.0).await
                 } else {
                     rot.interpolate_to(0.0).await
@@ -117,7 +116,7 @@ pub fn accordion_page(
                     let (invoke, dim_y) = futures::join!(
                         recv.recv(), sd.get(|x| x.0)
                     );
-                    if invoke.equals_dyn(&index) {
+                    if invoke.equal_to(&index) {
                         dim.interpolate_to_y(dim_y?).await?;
                     } else {
                         dim.interpolate_to_y(0.0).await?;

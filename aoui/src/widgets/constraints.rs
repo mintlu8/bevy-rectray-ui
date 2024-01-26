@@ -7,7 +7,7 @@ use bevy::reflect::Reflect;
 use crate::dsl::prelude::Signals;
 use crate::util::convert::DslConvert;
 use crate::DimensionData;
-use crate::sync::SignalId;
+use bevy_defer::SignalId;
 use crate::{Transform2D, Anchor, anim::Attr};
 use crate::anim::Offset;
 

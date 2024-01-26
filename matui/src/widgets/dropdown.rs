@@ -8,13 +8,13 @@ use bevy::render::texture::Image;
 use bevy::text::Font;
 use bevy::window::CursorIcon;
 use bevy::ecs::component::Component;
-use bevy_aoui::dsl::prelude::{adaptor, receiver};
+use bevy_aoui::dsl::prelude::{adaptor, receiver, signal_ids};
 use bevy_aoui::dsl::OptionEx;
-use bevy_aoui::sync::{SignalReceiver, TypedSignal};
-use bevy_aoui::util::{ComposeExtension, Object};
+use bevy_defer::{SignalReceiver, TypedSignal, Object};
+use bevy_aoui::util::ComposeExtension;
 use bevy_aoui::widgets::button::{ToggleChange, ToggleInvoke};
 use bevy_aoui::widgets::signals::{FormatText, Invocation, TextFromSignal};
-use bevy_aoui::{signal_ids, size2, text, transition, Anchor, Transform2D};
+use bevy_aoui::{size2, text, transition, Anchor, Transform2D};
 use bevy_aoui::widgets::inputbox::InputOverflow;
 use bevy_aoui::{frame_extension, build_frame};
 use bevy_aoui::anim::{Attr, Easing, Interpolate, Offset, Rotation, Scale};
@@ -165,7 +165,9 @@ impl Widget for MDropdownBuilder {
     }
 }
 
-signal_ids!(SpinSignal: bool);
+signal_ids!(
+    pub SpinSignal: bool
+);
 
 #[derive(Debug, Clone, Copy, PartialEq, Component, Reflect)]
 pub struct SpinDial{

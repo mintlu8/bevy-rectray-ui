@@ -1,8 +1,9 @@
 [workspace]
 members = [
     "aoui",
-    # "shapes",
-    "matui"
+    "defer",
+    "shapes",
+    "matui",
 ]
 resolver="2"
 

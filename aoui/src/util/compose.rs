@@ -1,9 +1,11 @@
 use std::{any::TypeId, marker::PhantomData};
 
 use bevy::ecs::{component::Component, entity::Entity, system::{Command, EntityCommands}};
+use bevy_defer::AsyncSystems;
 
-use crate::{dsl::prelude::Signals, sync::{SignalId, SignalMapper, TypedSignal}};
+use crate::dsl::prelude::Signals;
 use crate::events::EventFlags;
+use bevy_defer::{SignalId, SignalMapper, TypedSignal};
 
 /// A component that can be either inserted or composed.
 pub trait ComponentCompose: Component {
@@ -13,6 +15,20 @@ pub trait ComponentCompose: Component {
 impl ComponentCompose for EventFlags {
     fn compose(&mut self, other: Self) {
         *self |= other
+    }
+}
+
+impl ComponentCompose for AsyncSystems {
+    fn compose(&mut self, mut other: Self) {
+        self.append(&mut other)
+    }
+}
+
+impl ComponentCompose for Signals {
+    fn compose(&mut self, other: Self) {
+        self.senders.extend(other.senders);
+        self.receivers.extend(other.receivers);
+        self.adaptors.extend(other.adaptors);
     }
 }
 

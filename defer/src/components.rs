@@ -1,10 +1,11 @@
-use std::{marker::PhantomData, sync::Arc};
-
+use std::marker::PhantomData;
+use triomphe::Arc;
 use bevy::ecs::{component::Component, entity::Entity, world::{EntityRef, World}};
 use futures::{channel::oneshot::channel, Future};
 
-use super::{AsyncExecutor, AsyncFailure, AsyncReadonlyQuery, AsyncResult, AsyncSystemParam, Signals};
+use super::{AsyncExecutor, AsyncFailure, BoxedReadonlyCallback, AsyncResult, AsyncSystemParam, Signals};
 
+/// Tuple of [`Component`]s as a readonly query.
 pub trait ComponentRefQuery {
     type Output<'t>;
     fn from_entity<'t>(entity: &'t EntityRef) -> Option<Self::Output<'t>>;
@@ -38,14 +39,14 @@ impl_component_query_many!(
 );
 
 /// A fast readonly query for multiple components.
-pub struct AsyncComponentsReadonlyQuery<T: ComponentRefQuery> {
+pub struct AsyncComponentsReadonly<T: ComponentRefQuery> {
     entity: Entity,
     executor: Arc<AsyncExecutor>,
     p: PhantomData<T>
 }
 
 
-impl<C: ComponentRefQuery> AsyncSystemParam for AsyncComponentsReadonlyQuery<C> {
+impl<C: ComponentRefQuery> AsyncSystemParam for AsyncComponentsReadonly<C> {
     fn from_async_context(
         entity: Entity,
         executor: &Arc<AsyncExecutor>,
@@ -59,12 +60,12 @@ impl<C: ComponentRefQuery> AsyncSystemParam for AsyncComponentsReadonlyQuery<C> 
     }
 }
 
-impl<C: ComponentRefQuery> AsyncComponentsReadonlyQuery<C> {
+impl<C: ComponentRefQuery> AsyncComponentsReadonly<C> {
     pub fn get<Out: Send + Sync + 'static>(&self, f: impl FnOnce(C::Output<'_>) -> Out + Send + Sync + 'static)
             -> impl Future<Output = AsyncResult<Out>> {
         let (sender, receiver) = channel::<Option<Out>>();
         let entity = self.entity;
-        let query = AsyncReadonlyQuery::new(
+        let query = BoxedReadonlyCallback::new(
             move |world: &World| {
                 Some(f(C::from_entity(&world.entity(entity))?))
             },

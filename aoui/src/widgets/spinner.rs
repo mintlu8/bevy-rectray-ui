@@ -2,8 +2,9 @@ use std::fmt::Debug;
 
 use bevy::{ecs::{component::Component, system::Query, world::Mut, query::{Without, Changed}}, text::Text};
 use itertools::Itertools;
+use bevy_defer::{Signals, SignalId, Object, AsObject};
 
-use crate::{dsl::prelude::Signals, sync::SignalId, util::{Object, convert::{DslConvert, SealToken}, AsObject}};
+use crate::util::convert::{DslConvert, SealToken};
 
 use super::{TextFragment, inputbox::TextChange};
 

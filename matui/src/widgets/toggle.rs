@@ -1,8 +1,8 @@
 use bevy::{window::CursorIcon, hierarchy::BuildChildren, math::Vec2};
 use bevy::render::{color::Color, texture::Image};
 use bevy::ecs::entity::Entity;
-use bevy_aoui::sync::TypedSignal;
-use bevy_aoui::util::{ComposeExtension, Object};
+use bevy_defer::{TypedSignal, Object};
+use bevy_aoui::util::ComposeExtension;
 use bevy_aoui::{build_frame, fgsm_interpolation, frame_extension, size2, sprite, Dimension, Hitbox, Size2};
 use bevy_aoui::util::{AouiCommands, Widget, convert::{OptionEx, IntoAsset}};
 use bevy_aoui::anim::{Interpolate, Easing, Offset, EaseFunction};

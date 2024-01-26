@@ -65,7 +65,11 @@ use ::interpolation::Ease;
 /// Enum for easing functions.
 pub use ::interpolation::EaseFunction;
 mod interpolation;
-pub use interpolation::{Interpolate, Interpolation, Offset, Rotation, Scale, Index, Padding, Margin};
+pub use interpolation::{
+    Interpolate, Interpolation, 
+    Offset, Rotation, Scale, Index, Padding, Margin, 
+    AsyncInterpolate, AsyncInterpolateVec2
+};
 mod assoc;
 pub use assoc::{Attr, InterpolateAssociation};
 mod fgsm;

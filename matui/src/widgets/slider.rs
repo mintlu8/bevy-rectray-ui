@@ -6,7 +6,7 @@ use bevy::math::Vec2;
 use bevy::{render::texture::Image, window::CursorIcon, ecs::entity::Entity};
 use bevy_aoui::anim::Attr;
 use bevy_aoui::events::{CursorAction, CursorState, EventFlags};
-use bevy_aoui::sync::{Signal, SignalId, SignalReceiver, TypedSignal};
+use bevy_defer::{Signal, SignalId, SignalReceiver, TypedSignal};
 use bevy_aoui::util::ComposeExtension;
 use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
 use bevy_aoui::widgets::drag::Dragging;

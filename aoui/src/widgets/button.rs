@@ -1,7 +1,6 @@
 use crate::dsl::prelude::Signals;
 use crate::events::{CursorAction, EventFlags};
-use crate::sync::{Signal, SignalId, SignalSender, TypedSignal};
-use crate::util::{Object, AsObject};
+use bevy_defer::{Signal, SignalId, SignalSender, TypedSignal, Object, AsObject};
 use crate::util::CloneSplit;
 use bevy::ecs::system::{Commands, Query};
 use bevy::ecs::{component::Component, query::With};

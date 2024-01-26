@@ -107,7 +107,7 @@ pub fn init(mut commands: AouiCommands) {
             }
         },
         child: text! {
-            text: "Inner!",
+            text: "Title!",
             color: color!(black),
         },
         child: hstack! {

@@ -3,8 +3,8 @@ use bevy::hierarchy::BuildChildren;
 
 use bevy::text::Font;
 use bevy::window::CursorIcon;
-use crate::sync::{TypedSignal, Signals};
-use crate::util::{Object, ComposeExtension};
+use bevy_defer::{TypedSignal, Signals, Object};
+use crate::util::ComposeExtension;
 use crate::widgets::TextFragment;
 use crate::widgets::button::{Payload, Button, CheckButton, RadioButton, RadioButtonCancel, ButtonClick, ToggleChange};
 use crate::widgets::util::{SetCursor, PropagateFocus};

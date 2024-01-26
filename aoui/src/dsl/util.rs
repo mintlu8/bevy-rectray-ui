@@ -4,8 +4,8 @@ use bevy::ecs::component::Component;
 use bevy::ecs::world::Mut;
 use bevy::math::Vec2;
 use bevy::text::Text;
+use bevy_defer::{AsyncComponent, AsyncResult};
 use crate::layout::{Layout, LayoutObject};
-use crate::sync::{AsyncComponent, AsyncResult};
 use crate::widgets::TextFragment;
 use crate::widgets::inputbox::InputBox;
 use crate::{Hitbox, HitboxShape, Anchor, SizeUnit, Size};
@@ -539,8 +539,13 @@ impl WidgetWrite for Mut<'_, TextFragment> {
     }
 }
 
-impl<C: Component> AsyncComponent<C> where for<'t> &'t mut C: WidgetWrite {
-    pub async fn write(self, s: impl Into<String>) -> AsyncResult<()> {
+#[allow(async_fn_in_trait)]
+pub trait WidgetWriteAsync {
+    async fn write(self, s: impl Into<String>) -> AsyncResult<()>;
+}
+
+impl<C: Component> WidgetWriteAsync for AsyncComponent<C> where for<'t> &'t mut C: WidgetWrite {
+    async fn write(self, s: impl Into<String>) -> AsyncResult<()> {
         let s = s.into();
         self.set(move |x| x.write(s)).await
     }
@@ -553,21 +558,5 @@ impl<C: Component> AsyncComponent<C> where for<'t> &'t mut C: WidgetWrite {
 macro_rules! format_widget {
     ($widget: expr, $s: literal $(,$rest: expr),* $(,)?) => {
         $crate::dsl::WidgetWrite::write($widget, format!($s, $($rest),*))
-    };
-}
-
-/// Quickly construct multiple signal_ids at once.
-#[macro_export]
-macro_rules! signal_ids {
-    ($($(#[$($attr:tt)*])*$name: ident: $ty: ty),* $(,)?) => {
-        $(
-            $(#[$($attr)*])*
-            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-            pub enum $name {}
-
-            impl $crate::sync::SignalId for $name{
-                type Data = $ty;
-            }
-        )*
     };
 }
