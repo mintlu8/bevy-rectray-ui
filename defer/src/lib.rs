@@ -155,10 +155,15 @@ pub use triomphe::Arc;
 pub type AsyncResult<T> = Result<T, AsyncFailure>;
 
 pub mod prelude {
+    /// Async `Component`.
     pub type Ac<T> = crate::AsyncComponent<T>;
+    /// Async `Resource`.
     pub type Ar<T> = crate::AsyncResource<T>;
+    /// Async `WorldQuery` on the current `Entity`.
     pub type Aeq<T> = crate::AsyncEntityQuery<T>;
+    /// Async `SystemParam`.
     pub type Aq<T> = crate::AsyncQuery<T>;
+    /// Async `Component` tuple.
     pub type Acs<T> = crate::AsyncComponentsReadonly<T>;
     pub use crate::{SigSend, SigRecv};
     pub use crate::AsyncEntityCommands;
