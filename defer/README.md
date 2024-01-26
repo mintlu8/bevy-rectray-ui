@@ -136,6 +136,7 @@ independent queries, otherwise your systems might take longer to complete.
 
 ### Is this crate blazingly fast?
 
-Depends, this crate excels at waiting for events to occur, for example using signals.
-As an async executor that runs queries with extra steps,
-things that happens every frame should ideally not run here.
+Depends, this crate excels at waiting for events to occur,
+for example when using signals.
+However, as an async executor that runs queries with extra steps,
+things that happen every frame should ideally not run here.
