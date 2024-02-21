@@ -5,18 +5,18 @@
 #![allow(missing_docs)]
 use bevy::{
     prelude::*,
-    sprite::{Sprite, Mesh2dHandle, Material2d},
+    sprite::{Mesh2dHandle, Material2d},
     text::{Text2dBounds, TextLayoutInfo}
 };
 
 use crate::{Transform2D, RotatedRect, BuildTransform, Hitbox, layout::LayoutControl, Size2, Opacity, Anchor, Clipping, DimensionData, Dimension, Coloring};
 
 
-/// The minimal bundle required for Aoui to function.
+/// The minimal bundle required for bevy_rectray's pipeline to function.
 ///
 /// Provides transform propagation but no rendering support.
 #[derive(Debug, Default, Bundle)]
-pub struct AouiBundle {
+pub struct RectrayBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub dimension_data: DimensionData,
@@ -27,9 +27,9 @@ pub struct AouiBundle {
     pub vis: VisibilityBundle,
 }
 
-impl AouiBundle {
+impl RectrayBundle {
     pub fn empty(anchor: Anchor, size: impl Into<Size2>) -> Self{
-        AouiBundle {
+        RectrayBundle {
             transform: Transform2D::UNIT.with_anchor(anchor),
             dimension: Dimension::owned(size.into()),
             ..Default::default()
@@ -57,7 +57,7 @@ impl BuildTransformBundle {
 /// in place without taking up space.
 #[derive(Debug, Bundle)]
 pub struct LinebreakBundle {
-    bundle: AouiBundle,
+    bundle: RectrayBundle,
     control: LayoutControl,
 }
 
@@ -65,7 +65,7 @@ pub struct LinebreakBundle {
 impl LinebreakBundle {
     pub fn new(size: impl Into<Size2>) -> Self{
         Self {
-            bundle: AouiBundle {
+            bundle: RectrayBundle {
                 dimension: Dimension {
                     dimension: crate::DimensionType::Owned(size.into()),
                     ..Default::default()
@@ -78,7 +78,7 @@ impl LinebreakBundle {
 
     pub fn ems(size: Vec2) -> Self{
         Self {
-            bundle: AouiBundle {
+            bundle: RectrayBundle {
                 dimension: Dimension {
                     dimension: crate::DimensionType::Owned(Size2::em(size.x, size.y)),
                     ..Default::default()
@@ -96,9 +96,9 @@ impl Default for LinebreakBundle {
     }
 }
 
-/// The Aoui version of [`SpriteBundle`](bevy::sprite::SpriteBundle)
+/// The Rectray version of [`SpriteBundle`](bevy::sprite::SpriteBundle)
 #[derive(Debug, Default, Bundle)]
-pub struct AouiSpriteBundle {
+pub struct RSpriteBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub dimension_data: DimensionData,
@@ -114,28 +114,28 @@ pub struct AouiSpriteBundle {
     pub global: GlobalTransform,
 }
 
-/// The Aoui version of [`SpriteSheetBundle`](bevy::sprite::SpriteSheetBundle)
-#[derive(Debug, Default, Bundle)]
-pub struct AouiSpriteSheetBundle {
-    pub transform: Transform2D,
-    pub dimension: Dimension,
-    pub dimension_data: DimensionData,
-    pub control: LayoutControl,
-    pub rect: RotatedRect,
-    pub build: BuildTransform,
-    pub sprite: TextureAtlasSprite,
-    pub texture: Handle<TextureAtlas>,
-    pub clipping: Clipping,
-    pub color: Coloring,
-    pub opacity: Opacity,
-    pub vis: VisibilityBundle,
-    pub global: GlobalTransform,
+impl RSpriteBundle {
+    fn with_atlas(self, atlas: TextureAtlas) -> impl Bundle {
+        (self, atlas)
+    }
+
+    fn with_slice(self, slice: TextureSlicer) -> impl Bundle {
+        (self, ImageScaleMode::Sliced(slice))
+    }
+
+    fn with_scale_mode(self, scale: ImageScaleMode) -> impl Bundle {
+        (self, scale)
+    }
+
+    fn with_atlas_scale(self, atlas: TextureAtlas, slice: ImageScaleMode) -> impl Bundle {
+        (self, atlas, slice)
+    }
 }
 
 
 /// The Aoui version of [`Text2dBundle`](bevy::text::Text2dBundle)
 #[derive(Debug, Default, Bundle)]
-pub struct AouiTextBundle {
+pub struct RTextBundle {
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub dimension_data: DimensionData,
@@ -157,7 +157,7 @@ pub struct AouiTextBundle {
 
 /// The Aoui version of [`MaterialMesh2dBundle`](bevy::sprite::MaterialMesh2dBundle)
 #[derive(Debug, Default, Bundle)]
-pub struct AouiMaterialMesh2dBundle<M: Material2d>{
+pub struct RMesh2dBundle<M: Material2d>{
     pub transform: Transform2D,
     pub dimension: Dimension,
     pub dimension_data: DimensionData,

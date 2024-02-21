@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{util::AouiCommands, AouiPlugin};
+use bevy_rectray::{util::RCommands, RectrayPlugin};
 
 pub fn main() {
     App::new()
@@ -12,14 +12,14 @@ pub fn main() {
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         // classic macos stuff
         .run();
 }
 
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {

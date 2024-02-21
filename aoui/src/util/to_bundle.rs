@@ -3,11 +3,11 @@ use bevy::render::{color::Color, texture::Image};
 
 use crate::{dsl::IntoAsset, BuildTransform, Coloring};
 
-use super::AouiCommands;
+use super::RCommands;
 
 
 impl IntoAsset<Image> {
-    pub fn into_bundle(self, commands: &mut AouiCommands, color: Color) -> impl Bundle {
+    pub fn into_bundle(self, commands: &mut RCommands, color: Color) -> impl Bundle {
         let handle = commands.load_or_default(self);
         (
             Sprite::default(),

@@ -8,18 +8,18 @@ use bevy::render::texture::Image;
 use bevy::text::Font;
 use bevy::window::CursorIcon;
 use bevy::ecs::component::Component;
-use bevy_aoui::dsl::prelude::{adaptor, receiver, signal_ids};
-use bevy_aoui::dsl::OptionEx;
+use bevy_rectray::dsl::prelude::{adaptor, receiver, signal_ids};
+use bevy_rectray::dsl::OptionEx;
 use bevy_defer::{SignalReceiver, TypedSignal, Object};
-use bevy_aoui::util::ComposeExtension;
-use bevy_aoui::widgets::button::{ToggleChange, ToggleInvoke};
-use bevy_aoui::widgets::signals::{FormatText, Invocation, TextFromSignal};
-use bevy_aoui::{size2, text, transition, Anchor, Transform2D};
-use bevy_aoui::widgets::inputbox::InputOverflow;
-use bevy_aoui::{frame_extension, build_frame};
-use bevy_aoui::anim::{Attr, Easing, Interpolate, Offset, Rotation, Scale};
-use bevy_aoui::events::{EventFlags, LoseFocus, StrongFocusStateMachine};
-use bevy_aoui::util::{Widget, AouiCommands, DslInto, convert::IntoAsset};
+use bevy_rectray::util::ComposeExtension;
+use bevy_rectray::widgets::button::{ToggleChange, ToggleInvoke};
+use bevy_rectray::widgets::signals::{FormatText, Invocation, TextFromSignal};
+use bevy_rectray::{size2, text, transition, Anchor, Transform2D};
+use bevy_rectray::widgets::inputbox::InputOverflow;
+use bevy_rectray::{frame_extension, build_frame};
+use bevy_rectray::anim::{Attr, Easing, Interpolate, Offset, Rotation, Scale};
+use bevy_rectray::events::{EventFlags, LoseFocus, StrongFocusStateMachine};
+use bevy_rectray::util::{Widget, RCommands, DslInto, convert::IntoAsset};
 use crate::widgets::input::{DisplayIfHasText, PlaceHolderText};
 use crate::build_shape;
 use crate::shaders::RoundedRectangleMaterial;
@@ -68,7 +68,7 @@ frame_extension!(
 );
 
 impl Widget for MDropdownBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.event |= EventFlags::Hover|EventFlags::LeftDrag;
 
         self.dimension = size2!({self.width} em, 2.8 em).dinto();

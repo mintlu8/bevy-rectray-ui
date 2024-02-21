@@ -4,7 +4,7 @@ use bevy::asset::{Asset, Handle, Assets};
 use bevy::math::{Vec2, Vec4};
 use bevy::render::{color::Color, texture::Image};
 use bevy::render::render_resource::{AsBindGroup, ShaderRef, Shader};
-use bevy_aoui::{anim::{Interpolate, Interpolation, InterpolateAssociation}, util::{DslInto, AouiCommands, mesh_rectangle}, DimensionData, Opacity, Coloring, BuildMeshTransform};
+use bevy_rectray::{anim::{Interpolate, Interpolation, InterpolateAssociation}, util::{DslInto, RCommands, mesh_rectangle}, DimensionData, Opacity, Coloring, BuildMeshTransform};
 
 use crate::builders::Stroke;
 
@@ -104,7 +104,7 @@ impl IntoCorners for Vec4 {
 
 impl RoundedRectangleMaterial {
 
-    pub fn into_bundle(self, commands: &mut AouiCommands) -> impl Bundle{
+    pub fn into_bundle(self, commands: &mut RCommands) -> impl Bundle{
         (
             Coloring::new(self.color),
             StrokeColoring::new(self.stroke_color),

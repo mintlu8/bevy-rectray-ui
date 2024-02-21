@@ -4,14 +4,14 @@ use bevy::ecs::component::Component;
 use bevy::ecs::system::{Query, Res};
 use bevy::math::Vec2;
 use bevy::{render::texture::Image, window::CursorIcon, ecs::entity::Entity};
-use bevy_aoui::anim::Attr;
-use bevy_aoui::events::{CursorAction, CursorState, EventFlags};
+use bevy_rectray::anim::Attr;
+use bevy_rectray::events::{CursorAction, CursorState, EventFlags};
 use bevy_defer::{Signal, SignalId, SignalReceiver, TypedSignal};
-use bevy_aoui::util::ComposeExtension;
-use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
-use bevy_aoui::widgets::drag::Dragging;
-use bevy_aoui::{Dimension, RotatedRect};
-use bevy_aoui::{frame_extension, build_frame, layout::Axis, Anchor};
+use bevy_rectray::util::ComposeExtension;
+use bevy_rectray::util::{Widget, RCommands, convert::{OptionEx, IntoAsset}};
+use bevy_rectray::widgets::drag::Dragging;
+use bevy_rectray::{Dimension, RotatedRect};
+use bevy_rectray::{frame_extension, build_frame, layout::Axis, Anchor};
 
 use crate::shaders::RoundedRectangleMaterial;
 use crate::style::Palette;
@@ -114,8 +114,8 @@ frame_extension!(
 );
 
 impl<T: SliderData> Widget for MSliderBuilder<T> {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
-        use bevy_aoui::dsl::prelude::*;
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
+        use bevy_rectray::dsl::prelude::*;
 
         let palette = self.palette;
         let hover_palette = self.hover_palette.unwrap_or(palette);

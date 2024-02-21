@@ -1,4 +1,4 @@
-//! A simple material UI renderer for the bevy engine, built on top of [`bevy_aoui`].
+//! A simple material UI renderer for the bevy engine, built on top of [`bevy_rectray`].
 //!
 //! # Rendering features:
 //!
@@ -28,7 +28,7 @@
 use aoui::anim::{FgsmPairing, InterpolateAssociation};
 use bevy::{asset::load_internal_asset, render::render_resource::Shader, ecs::schedule::IntoSystemConfigs, sprite::Material2dPlugin};
 use bevy::app::{Plugin, PostUpdate, Update};
-use bevy_aoui::schedule::AouiStoreOutputSet;
+use bevy_rectray::schedule::AouiStoreOutputSet;
 
 use crate::widgets::input::display_if_has_text;
 use crate::widgets::menu::{run_dropdown_signals, run_oneshot_menu};
@@ -47,7 +47,7 @@ pub mod style;
 pub use bevy;
 
 #[doc(hidden)]
-pub use bevy_aoui as aoui;
+pub use bevy_rectray as aoui;
 #[doc(hidden)]
 pub use bevy_defer as defer;
 
@@ -62,7 +62,7 @@ impl Plugin for MatuiPlugin {
         app.add_systems(PostUpdate, (
             sync_rounded_rect,
             sync_rounded_shadow,
-        ).in_set(AouiStoreOutputSet));
+        ).in_set(StoreOutputSet));
         app.add_systems(Update, (
             interpolate_stroke_color,
             slider_rebase,
@@ -87,6 +87,6 @@ impl Plugin for MatuiPlugin {
             text_placeholder,
             display_if_has_text,
             run_oneshot_menu,
-        ).in_set(AouiStoreOutputSet));
+        ).in_set(StoreOutputSet));
     }
 }

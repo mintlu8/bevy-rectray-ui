@@ -1,11 +1,11 @@
 use std::{mem, ops::Deref, pin::Pin, task::Context};
-
-use bevy::{ecs::{entity::Entity, system::{Query, Res, Resource}, world::World}, log::trace, tasks::{ComputeTaskPool, ParallelSliceMut}};
-use futures::Future;
+use std::future::Future;
+use bevy::{app::App, ecs::{entity::Entity, system::{Commands, Query, Res, Resource}, world::World}, log::trace, tasks::{ComputeTaskPool, ParallelSliceMut}};
+use async_oneshot::{oneshot, Sender};
 use parking_lot::Mutex;
 use triomphe::Arc;
 
-use crate::{AsyncSystems, Signals, DUMMY_SIGNALS};
+use crate::{AsyncEntityCommands, AsyncSystems, Signals, DUMMY_SIGNALS};
 
 /// Standard errors for the async runtime.
 #[derive(Debug, thiserror::Error)]
@@ -49,7 +49,7 @@ pub struct BoxedReadonlyCallback {
 impl BoxedReadonlyCallback {
     pub fn new<Out: Send + Sync + 'static>(
         query: impl (FnOnce(&World) -> Out) + Send + Sync + 'static,
-        channel: futures::channel::oneshot::Sender<Out>
+        mut channel: Sender<Out>
     ) -> Self {
         Self {
             command: Some(Box::new(move |w| {
@@ -68,9 +68,21 @@ pub struct BoxedQueryCallback {
 }
 
 impl BoxedQueryCallback {
+
+    pub fn fire_and_forget(
+        query: impl (FnOnce(&mut World)) + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            command: Box::new(move |w| {
+                query(w);
+                None
+            })
+        }
+    }
+
     pub fn once<Out: Send + Sync + 'static>(
         query: impl (FnOnce(&mut World) -> Out) + Send + Sync + 'static,
-        channel: futures::channel::oneshot::Sender<Out>
+        mut channel: Sender<Out>
     ) -> Self {
         Self {
             command: Box::new(move |w| {
@@ -85,7 +97,7 @@ impl BoxedQueryCallback {
 
     pub fn repeat<Out: Send + Sync + 'static>(
         query: impl (Fn(&mut World) -> Option<Out>) + Send + Sync + 'static,
-        channel: futures::channel::oneshot::Sender<Out>
+        mut channel: Sender<Out>
     ) -> Self {
         Self {
             command: Box::new(move |w| {
@@ -106,12 +118,22 @@ impl BoxedQueryCallback {
     }
 }
 
-/// A simple async executor for `bevy_aoui`.
+/// A simple async executor for `bevy_rectray`.
 #[derive(Default)]
 pub struct AsyncExecutor {
     pub stream: Mutex<Vec<SystemFuture>>,
     pub readonly: Mutex<Vec<BoxedReadonlyCallback>>,
     pub queries: Mutex<Vec<BoxedQueryCallback>>,
+}
+
+impl std::fmt::Debug for AsyncExecutor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AsyncExecutor")
+            .field("stream", &self.stream.lock().len())
+            .field("readonly", &self.readonly.lock().len())
+            .field("queries", &self.queries.lock().len())
+            .finish()
+    }
 }
 
 /// Resource containing a reference to an async executor.
@@ -154,7 +176,8 @@ pub fn run_async_query(
 pub fn exec_async_executor(
     executor: Res<ResAsyncExecutor>,
 ) {
-    let mut ctx = Context::from_waker(futures::task::noop_waker_ref());
+    let waker = noop_waker::noop_waker();
+    let mut ctx = Context::from_waker(&waker);
     let mut lock = executor.stream.lock();
     lock.retain_mut(|fut| {
         if !fut.alive.other_alive() {return false;}
@@ -187,5 +210,67 @@ pub fn push_async_systems(
                 stream.push(fut)
             }
         }
+    }
+}
+
+/// Extension to various things for spawning futures onto the executor.
+#[allow(async_fn_in_trait)]
+pub trait AsyncSpawn {
+    /// Spawn a function the continuously checks the world until `Some` is returned.
+    async fn spawn_watch<T, F>(&mut self, 
+        f: impl Fn(&mut World) -> Option<T> + Send + Sync + 'static
+    ) -> T where T: Send + Sync + 'static, F: Future<Output = T> + Send + Sync + 'static;
+}
+
+impl AsyncSpawn for App{
+    async fn spawn_watch<T, F>(&mut self, 
+        f: impl Fn(&mut World) -> Option<T>  + Send + Sync + 'static
+    ) -> T where T: Send + Sync + 'static, F: Future<Output = T> + Send + Sync + 'static {
+        let res = self.world.get_resource::<ResAsyncExecutor>().expect("Expected ResAsyncExecutor.");
+        let mut queries = res.0.queries.lock();
+        let (send, recv) = oneshot::<T>();
+        queries.push(BoxedQueryCallback::repeat(f, send));
+        recv.await.unwrap()
+    }
+}
+
+
+impl AsyncSpawn for World{
+    async fn spawn_watch<T, F>(&mut self, 
+        f: impl Fn(&mut World) -> Option<T>  + Send + Sync + 'static
+    ) -> T where T: Send + Sync + 'static, F: Future<Output = T> + Send + Sync + 'static {
+        let res = self.get_resource::<ResAsyncExecutor>().expect("Expected ResAsyncExecutor.");
+        let mut queries = res.0.queries.lock();
+        let (send, recv) = oneshot::<T>();
+        queries.push(BoxedQueryCallback::repeat(f, send));
+        recv.await.unwrap()
+    }
+}
+
+impl AsyncSpawn for Commands<'_, '_> {
+    async fn spawn_watch<T, F>(&mut self, 
+        f: impl Fn(&mut World) -> Option<T> + Send + Sync + 'static
+    ) -> T where T: Send + Sync + 'static, F: Future<Output = T> + Send + Sync + 'static {
+        let (send, recv) = oneshot::<T>();
+        self.add(move |w: &mut World| {
+            let res = w.get_resource::<ResAsyncExecutor>().expect("Expected ResAsyncExecutor.");
+            let mut queries = res.0.queries.lock();
+            queries.push(BoxedQueryCallback::repeat(f, send));
+        });
+        recv.await.unwrap()
+    }
+}
+
+impl AsyncSpawn for AsyncEntityCommands {
+    async fn spawn_watch<T, F>(&mut self, 
+        f: impl Fn(&mut World) -> Option<T> + Send + Sync + 'static
+    ) -> T where T: Send + Sync + 'static, F: Future<Output = T> + Send + Sync + 'static {
+        let (send, recv) = oneshot::<T>();
+        self.add(move |w: &mut World| {
+            let res = w.get_resource::<ResAsyncExecutor>().expect("Expected ResAsyncExecutor.");
+            let mut queries = res.0.queries.lock();
+            queries.push(BoxedQueryCallback::repeat(f, send));
+        });
+        recv.await.unwrap()
     }
 }

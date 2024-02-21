@@ -1,4 +1,4 @@
-use bevy::{reflect::Reflect, ecs::{component::Component, query::WorldQuery}, math::Vec2};
+use bevy::{ecs::{component::Component, query::QueryData}, math::Vec2, reflect::Reflect};
 
 use crate::{Size2, FontSize};
 
@@ -55,8 +55,8 @@ pub struct DimensionData {
 }
 
 /// A mutable query that obtains both [`Dimension`] and [`DimensionData`]
-#[derive(Debug, WorldQuery)]
-#[world_query(mutable)]
+#[derive(Debug, QueryData)]
+#[query_data(mutable)]
 pub struct DimensionMut {
     pub source: &'static mut Dimension,
     pub dynamic: &'static mut DimensionData,

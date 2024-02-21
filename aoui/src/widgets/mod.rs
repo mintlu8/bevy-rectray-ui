@@ -1,8 +1,8 @@
-//! Widget primitives for `bevy_aoui`
+//! Widget primitives for `bevy_rectray`
 //!
-//! `bevy_aoui` has no standard styles, sprites or shaders,
+//! `bevy_rectray` has no standard styles, sprites or shaders,
 //! meaning we only provide building blocks for creating widgets.
-//! `bevy_matui` is a case study for building real widgets using `bevy_aoui`'s primitives.
+//! `bevy_matui` is a case study for building real widgets using `bevy_rectray`'s primitives.
 //!
 //! # Button
 //!
@@ -74,7 +74,7 @@ use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::app::{Plugin, PreUpdate, Update, PostUpdate, Last};
 
 use crate::events::{CursorAction, CursorFocus};
-use crate::schedule::{AouiCleanupSet, AouiLoadInputSet, AouiPostEventSet, AouiPostWidgetEventSet, AouiStoreOutputSet, AouiWidgetEventSet};
+use crate::schedule::{CleanupSet, LoadInputSet, PostEventSet, PostWidgetEventSet, StoreOutputSet, WidgetEventSet};
 
 use self::button::CheckButtonState;
 use self::inputbox::InputBoxState;
@@ -92,7 +92,7 @@ impl Plugin for WidgetsPlugin {
                 scroll::propagate_mouse_wheel_action,
                 util::propagate_focus::<CursorAction>,
                 util::propagate_focus::<CursorFocus>,
-            ).in_set(AouiPostEventSet))
+            ).in_set(PostEventSet))
             .add_systems(PreUpdate, (
                 inputbox::update_inputbox_cursor
                     .before(inputbox::inputbox_keyboard),
@@ -110,11 +110,11 @@ impl Plugin for WidgetsPlugin {
                     scroll::scroll_discrete_system,
                 ).after(scroll::scrolling_senders),
                 clipping::sync_camera_dimension,
-            ).in_set(AouiWidgetEventSet))
+            ).in_set(WidgetEventSet))
             .add_systems(PreUpdate, (
                 util::propagate_focus::<CheckButtonState>,
                 inputbox::text_propagate_focus,
-            ).in_set(AouiPostWidgetEventSet))
+            ).in_set(PostWidgetEventSet))
             .add_systems(Update, (
                 util::set_cursor,
                 util::event_conditional_visibility,
@@ -138,13 +138,13 @@ impl Plugin for WidgetsPlugin {
             ))
             .add_systems(PostUpdate, (
                 richtext::synchronize_glyph_spaces
-            ).in_set(AouiLoadInputSet))
+            ).in_set(LoadInputSet))
             .add_systems(PostUpdate, (
                 text::sync_em_text_fragment,
                 inputbox::sync_em_inputbox
-            ).in_set(AouiStoreOutputSet))
-            .add_systems(Last, util::remove_all::<CheckButtonState>.in_set(AouiCleanupSet))
-            .add_systems(Last, util::remove_all::<InputBoxState>.in_set(AouiCleanupSet))
+            ).in_set(StoreOutputSet))
+            .add_systems(Last, util::remove_all::<CheckButtonState>.in_set(CleanupSet))
+            .add_systems(Last, util::remove_all::<InputBoxState>.in_set(CleanupSet))
         ;
     }
 }

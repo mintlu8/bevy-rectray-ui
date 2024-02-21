@@ -1,5 +1,5 @@
 use bevy::{app::{Plugin, PostUpdate}, ecs::schedule::IntoSystemConfigs};
-use bevy_aoui::schedule::AouiStoreOutputSet;
+use bevy_rectray::schedule::AouiStoreOutputSet;
 mod systems;
 mod shapes;
 

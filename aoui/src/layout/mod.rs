@@ -1,4 +1,4 @@
-//! Container and Layouts for `bevy_aoui`.
+//! Container and Layouts for `bevy_rectray`.
 
 pub(crate) mod util;
 pub(crate) mod layouts;

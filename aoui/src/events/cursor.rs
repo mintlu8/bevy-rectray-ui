@@ -2,11 +2,11 @@ use std::mem::discriminant;
 
 use bevy::{ecs::{system::{Query, SystemParam, Res}, query::{With, Without}, component::Component, bundle::Bundle}, render::{camera::Camera, view::Visibility}, transform::components::GlobalTransform, reflect::Reflect, math::Vec2};
 use bevy::window::{CursorIcon, Window, PrimaryWindow};
-use crate::{Transform2D, util::convert::DslInto, Size2, DimensionData, AouiRem};
+use crate::{Transform2D, util::convert::DslInto, Size2, DimensionData, RectrayRem};
 
 use crate::widgets::clipping::CameraClip;
 
-use super::AouiCamera;
+use super::RectrayCamera;
 
 
 /// Displays only when the window's CursorIcon is this.
@@ -25,7 +25,7 @@ impl CustomCursor {
 
 impl Default for CustomCursor {
     fn default() -> Self {
-        Self(CursorIcon::Arrow)
+        Self(CursorIcon::Pointer)
     }
 }
 
@@ -43,8 +43,8 @@ impl TrackCursor {
 /// A query that finds a camera used for cursor handling.
 #[derive(Debug, SystemParam)]
 pub struct CameraQuery<'w, 's> {
-    marked_camera: Query<'w, 's, (&'static Camera, &'static GlobalTransform), With<AouiCamera>>,
-    unmarked_camera: Query<'w, 's, (&'static Camera, &'static GlobalTransform), (Without<AouiCamera>, Without<CameraClip>)>,
+    marked_camera: Query<'w, 's, (&'static Camera, &'static GlobalTransform), With<RectrayCamera>>,
+    unmarked_camera: Query<'w, 's, (&'static Camera, &'static GlobalTransform), (Without<RectrayCamera>, Without<CameraClip>)>,
 }
 
 impl CameraQuery<'_, '_> {
@@ -84,7 +84,7 @@ pub fn custom_cursor_controller(
 }
 
 pub fn track_cursor(
-    rem: Res<AouiRem>,
+    rem: Res<RectrayRem>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: CameraQuery,
     mut query: Query<(&TrackCursor, &mut Transform2D, &DimensionData)>

@@ -2,9 +2,9 @@
 
 use bevy::log::LogPlugin;
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, util::WorldExtension, util::AouiCommands};
+use bevy_rectray::{AouiPlugin, util::WorldExtension, util::RCommands};
 use bevy_matui::{MatuiPlugin, mbutton, mtoggle, mframe, palette, mwindow, mslider, minput, mmenu, menu_items, mspinner, mdropdown};
-use bevy_aoui::layout::BoundsLayout;
+use bevy_rectray::layout::BoundsLayout;
 use bevy_matui::widgets::states::ToggleRotation;
 
 pub fn main() {
@@ -27,11 +27,10 @@ pub fn main() {
         .add_plugins(AouiPlugin)
         .add_plugins(MatuiPlugin)
         .insert_resource(ClearColor(Color::WHITE))
-        .register_cursor_default(CursorIcon::Arrow)
         .run();
 }
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
@@ -263,7 +262,7 @@ pub fn init(mut commands: AouiCommands) {
             },
             child: mspinner!{
                 capsule: true,
-                axis: bevy_aoui::layout::Axis::Vertical,
+                axis: bevy_rectray::layout::Axis::Vertical,
                 radius: 5,
                 width: 1,
                 palette: palette_idle,

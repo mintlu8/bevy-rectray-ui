@@ -3,11 +3,12 @@
 use bevy::log::LogPlugin;
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_defer::{TypedSignal, Object, signal_ids};
-use bevy_aoui::util::WorldExtension;
-use bevy_aoui::AouiPlugin;
-use bevy_aoui::util::AouiCommands;
-use bevy_aoui::events::MovementUnits;
-use bevy_aoui::widgets::button::RadioButton;
+use bevy_rectray::util::WorldExtension;
+use bevy_rectray::RectrayPlugin;
+use bevy_rectray::util::RCommands;
+use bevy_rectray::events::MovementUnits;
+use bevy_rectray::widgets::button::RadioButton;
+use futures_lite::future;
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -22,7 +23,7 @@ pub fn main() {
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         .register_scrolling_speed([16, 16], [0.5, -0.5])
         .run();
 }
@@ -39,13 +40,13 @@ signal_ids!(
 );
 
 pub fn accordion_page(
-    commands: &mut AouiCommands,
+    commands: &mut RCommands,
     index: usize,
     group: &RadioButton,
     scroll: &TypedSignal<MovementUnits>,
     text: &str,
 ) -> [Entity; 2] {
-    use bevy_aoui::dsl::prelude::*;
+    use bevy_rectray::dsl::prelude::*;
     let sig = group.recv::<Object>();
 
     const HEIGHT: f32 = 200.0;
@@ -104,8 +105,8 @@ pub fn accordion_page(
                 signal: receiver::<Scrolling>(scroll.clone()),
                 extra: ScrollDimension(200.0),
 
-                signal: receiver::<Fac2>(cov_recv),
-                system: |recv: SigRecv<Fac2>, dim: Ac<ScrollDimension>| {
+                signal: receiver::<Fac<Vec2>>(cov_recv),
+                system: |recv: SigRecv<Fac<Vec2>>, dim: Ac<ScrollDimension>| {
                     let fac = recv.recv().await.y;
                     dbg!(fac);
                     dim.set(move |x| x.0 = fac.min(HEIGHT)).await?;
@@ -113,9 +114,9 @@ pub fn accordion_page(
                 signal: receiver::<Invocation>(sig.clone()),
                 system: |recv: SigRecv<Invocation>, dim: Ac<Interpolate<Dimension>>, sd: Ac<ScrollDimension>| {
                     let index = index;
-                    let (invoke, dim_y) = futures::join!(
+                    let (invoke, dim_y) = future::zip(
                         recv.recv(), sd.get(|x| x.0)
-                    );
+                    ).await;
                     if invoke.equal_to(&index) {
                         dim.interpolate_to_y(dim_y?).await?;
                     } else {
@@ -156,8 +157,8 @@ pub fn accordion_page(
                     extra: Dragging::Y,
                     extra: SharedPosition::new(false, true),
                     signal: sender::<SharedPosition>(pos_scroll),
-                    signal: receiver::<Fac2>(cov_percent_recv),
-                    system: |recv: SigRecv<Fac2>, dim: Ac<Dimension>| {
+                    signal: receiver::<Fac<Vec2>>(cov_percent_recv),
+                    system: |recv: SigRecv<Fac<Vec2>>, dim: Ac<Dimension>| {
                         let fac = recv.recv().await;
                         dim.set(move |dim| dim.edit_raw(|v| v.y = if fac.y > 1.0 {
                             1.0 / fac.y
@@ -182,8 +183,8 @@ pub fn accordion_page(
     ]
 }
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {

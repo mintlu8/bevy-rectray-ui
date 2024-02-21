@@ -1,7 +1,7 @@
 use bevy::{render::texture::Image,  ecs::entity::Entity, asset::Handle};
 use crate::{frame_extension, build_frame};
 use crate::widgets::clipping::ScopedCameraBundle;
-use crate::util::{Widget, AouiCommands};
+use crate::util::{Widget, RCommands};
 
 frame_extension!(
     /// A camera with its viewport bound to a sprite's `RotatedRect`.
@@ -12,7 +12,7 @@ frame_extension!(
 );
 
 impl Widget for CameraFrameBuilder {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let Some(buffer) = self.render_target else  {panic!("Requires \"buffer\"")};
         let entity = build_frame!(commands, self).id();
 

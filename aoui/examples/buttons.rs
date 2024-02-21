@@ -3,9 +3,8 @@
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use bevy_defer::{Signal, Object};
-use bevy_aoui::AouiPlugin;
-use bevy_aoui::util::WorldExtension;
-use bevy_aoui::util::AouiCommands;
+use bevy_rectray::RectrayPlugin;
+use bevy_rectray::util::RCommands;
 
 pub fn main() {
     App::new()
@@ -19,8 +18,7 @@ pub fn main() {
         .add_systems(Startup, init)
         .add_systems(Update, recv)
         .add_plugins(FrameTimeDiagnosticsPlugin)
-        .add_plugins(AouiPlugin)
-        .register_cursor_default(CursorIcon::Arrow)
+        .add_plugins(RectrayPlugin)
         .run();
 }
 
@@ -35,8 +33,8 @@ pub fn recv(query: Query<&Listen>) {
     }
 }
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
@@ -182,7 +180,7 @@ pub fn init(mut commands: AouiCommands) {
     button! (commands {
         dimension: size2!(12 em, 2 em),
         font_size: em(2),
-        cursor: CursorIcon::Hand,
+        cursor: CursorIcon::Pointer,
         on_click: send,
         child: rectangle!{
             dimension: size2!(100%, 100%),

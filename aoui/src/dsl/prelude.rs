@@ -6,8 +6,8 @@ pub use crate::{color, colors, gradient, transition, size2, markers};
 pub use crate::format_widget;
 pub use crate::util::convert::{DslFrom, DslInto};
 pub use super::util::*;
-pub use super::util::AouiSpacialConsts::*;
-pub use crate::util::AouiCommands;
+pub use super::util::SpacialConst::*;
+pub use crate::util::RCommands;
 pub use bevy::prelude::BuildChildren;
 pub use std::f32::consts::PI;
 pub const INFINITY: f32 = f32::INFINITY;
@@ -71,7 +71,6 @@ use bevy::transform::components::GlobalTransform;
 
 pub use crate::util::signal;
 pub use crate::widgets::signals::*;
-pub use crate::anim::{AsyncInterpolate, AsyncInterpolateVec2};
 
 /// A signal with the sender role.
 pub fn sender<T: SignalId>(sig: TypedSignal<T::Data>) -> RoleSignal<T> {

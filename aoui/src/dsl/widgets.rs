@@ -14,7 +14,7 @@ use crate::frame_extension;
 use crate::widgets::inputbox::{InputOverflow, InputBoxText, TextSubmit, TextChange};
 use crate::widgets::inputbox::{InputBox, InputBoxCursorBar, InputBoxCursorArea};
 
-use crate::util::{Widget, AouiCommands, convert::IntoAsset};
+use crate::util::{Widget, RCommands, convert::IntoAsset};
 
 frame_extension!(
     pub struct InputBoxBuilder {
@@ -33,7 +33,7 @@ frame_extension!(
 );
 
 impl Widget for InputBoxBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.event |= EventFlags::Hover|EventFlags::DoubleClick|EventFlags::LeftDrag|EventFlags::ClickOutside;
         let font = commands.load_or_default(self.font);
 
@@ -97,7 +97,7 @@ frame_extension!(
 );
 
 impl Widget for ButtonBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.event |= EventFlags::Hover|EventFlags::LeftClick;
         let mut entity = build_frame!(commands, self);
         entity.insert((
@@ -105,7 +105,7 @@ impl Widget for ButtonBuilder {
             Button,
             SetCursor {
                 flags: EventFlags::Hover|EventFlags::LeftPressed,
-                icon: self.cursor.unwrap_or(CursorIcon::Hand),
+                icon: self.cursor.unwrap_or(CursorIcon::Pointer),
             },
         ));
         if let Some(payload) = self.payload  {
@@ -137,7 +137,7 @@ frame_extension!(
 );
 
 impl Widget for CheckButtonBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.event |= EventFlags::Hover|EventFlags::LeftClick;
         let mut  entity = build_frame!(commands, self);
         entity.insert((
@@ -145,7 +145,7 @@ impl Widget for CheckButtonBuilder {
             CheckButton::from(self.checked),
             SetCursor {
                 flags: EventFlags::Hover|EventFlags::LeftPressed,
-                icon: self.cursor.unwrap_or(CursorIcon::Hand),
+                icon: self.cursor.unwrap_or(CursorIcon::Pointer),
             },
         ));
         if let Some(payload) = self.payload  {
@@ -176,7 +176,7 @@ frame_extension!(
 );
 
 impl Widget for RadioButtonBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.event |= EventFlags::Hover|EventFlags::LeftClick;
         let mut entity = build_frame!(commands, self);
 
@@ -184,7 +184,7 @@ impl Widget for RadioButtonBuilder {
             PropagateFocus,
             SetCursor {
                 flags: EventFlags::Hover|EventFlags::LeftPressed,
-                icon: self.cursor.unwrap_or(CursorIcon::Hand),
+                icon: self.cursor.unwrap_or(CursorIcon::Pointer),
             },
             self.context.expect("Expected RadioButton context."),
             self.value.expect("Expected RadioButton value."),

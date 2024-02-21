@@ -1,6 +1,6 @@
 use bevy::{asset::{Asset, Handle}, ecs::entity::Entity};
 use bevy_defer::AsObject;
-use crate::{widgets::button::Payload, util::WidgetBuilder, util::AouiCommands};
+use crate::{widgets::button::Payload, util::WidgetBuilder, util::RCommands};
 
 use super::{DslConvert, DslFrom, SealToken};
 
@@ -126,7 +126,7 @@ pub enum IntoEntity<T>{
 }
 
 impl IntoEntity<()> {
-    pub fn build_expect(&self, commands: &mut AouiCommands, panic: &str) -> Entity {
+    pub fn build_expect(&self, commands: &mut RCommands, panic: &str) -> Entity {
         match self {
             IntoEntity::None => panic!("{}", panic),
             IntoEntity::Entity(e) => *e,
@@ -134,7 +134,7 @@ impl IntoEntity<()> {
         }
     }
 
-    pub fn build_or(&self, commands: &mut AouiCommands, or: impl FnOnce() -> Entity) -> Entity {
+    pub fn build_or(&self, commands: &mut RCommands, or: impl FnOnce() -> Entity) -> Entity {
         match self {
             IntoEntity::None => or(),
             IntoEntity::Entity(e) => *e,
@@ -144,7 +144,7 @@ impl IntoEntity<()> {
 }
 
 impl<T> IntoEntity<T> {
-    pub fn build_with_expect(&self, commands: &mut AouiCommands, arg: T, panic: &str) -> Entity {
+    pub fn build_with_expect(&self, commands: &mut RCommands, arg: T, panic: &str) -> Entity {
         match self {
             IntoEntity::None => panic!("{}", panic),
             IntoEntity::Entity(e) => *e,
@@ -152,7 +152,7 @@ impl<T> IntoEntity<T> {
         }
     }
 
-    pub fn build_with_or(&self, commands: &mut AouiCommands, arg: T, or: impl FnOnce(T) -> Entity) -> Entity {
+    pub fn build_with_or(&self, commands: &mut RCommands, arg: T, or: impl FnOnce(T) -> Entity) -> Entity {
         match self {
             IntoEntity::None => or(arg),
             IntoEntity::Entity(e) => *e,
@@ -173,14 +173,14 @@ impl<T> DslFrom<WidgetBuilder<T>> for IntoEntity<T> {
     }
 }
 
-impl<F> DslConvert<IntoEntity<()>, 'ë'> for F where F: Fn(&mut AouiCommands) -> Entity + Send + Sync + 'static {
+impl<F> DslConvert<IntoEntity<()>, 'ë'> for F where F: Fn(&mut RCommands) -> Entity + Send + Sync + 'static {
     fn parse(self) -> IntoEntity<()> {
         IntoEntity::Builder(WidgetBuilder::new(self))
     }
     fn sealed(_: SealToken) {}
 }
 
-impl<F, T> DslConvert<IntoEntity<T>, 'ê'> for F where F: Fn(&mut AouiCommands, T) -> Entity + Send + Sync + 'static {
+impl<F, T> DslConvert<IntoEntity<T>, 'ê'> for F where F: Fn(&mut RCommands, T) -> Entity + Send + Sync + 'static {
     fn parse(self) -> IntoEntity<T> {
         IntoEntity::Builder(WidgetBuilder::new(self))
     }
@@ -188,7 +188,7 @@ impl<F, T> DslConvert<IntoEntity<T>, 'ê'> for F where F: Fn(&mut AouiCommands, 
 }
 
 
-impl AouiCommands<'_, '_>{
+impl RCommands<'_, '_>{
     /// Load a dsl `IntoAsset`, if `None`, returns the default value.
     pub fn load_or_default<T: Asset>(&self, asset: IntoAsset<T>) -> Handle<T> {
         match asset {

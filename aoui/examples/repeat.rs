@@ -1,18 +1,18 @@
 //! Demo for the `quote!` syntax.
 
 use bevy::prelude::*;
-use bevy_aoui::{AouiPlugin, util::AouiCommands};
+use bevy_rectray::{RectrayPlugin, util::RCommands};
 
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, init)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         .run();
 }
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
     let directions = [PI, 0.0, PI, 0.0, PI, 0.0];
     let colors = colors!(blue100, blue200, blue300, blue400, blue500, blue600, blue700, blue800, blue900);

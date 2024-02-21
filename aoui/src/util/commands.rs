@@ -22,7 +22,7 @@ pub struct SignalPool(pub(crate) RwLock<HashMap<String, bevy_defer::Arc<SignalDa
 
 /// [`SystemParam`] combination of [`Commands`], [`AssetServer`] and [`SignalPool`].
 #[derive(SystemParam)]
-pub struct AouiCommands<'w, 's> {
+pub struct RCommands<'w, 's> {
     commands: Commands<'w, 's>,
     asset_server: Res<'w, AssetServer>,
     signals: Res<'w, SignalPool>,
@@ -33,14 +33,14 @@ pub fn signal<T: AsObject, S: CloneSplit<TypedSignal<T>>>() -> S {
     CloneSplit::clone_split(TypedSignal::default())
 }
 
-impl<'w, 's> AouiCommands<'w, 's> {
+impl<'w, 's> RCommands<'w, 's> {
     /// Obtain the underlying [`Commands`].
     pub fn commands(&mut self) -> &mut Commands<'w, 's> {
         &mut self.commands
     }
 
     /// Obtain an [`EntityCommands`].
-    pub fn entity<'a>(&'a mut self, entity: Entity) -> EntityCommands<'w, 's, 'a> {
+    pub fn entity<'a>(&'a mut self, entity: Entity) -> EntityCommands<'a> {
         self.commands.entity(entity)
     }
 
@@ -65,7 +65,7 @@ impl<'w, 's> AouiCommands<'w, 's> {
     }
 
     /// Spawn a bundle.
-    pub fn spawn_bundle<'a>(&'a mut self, bundle: impl Bundle) -> EntityCommands<'w, 's, 'a>{
+    pub fn spawn_bundle<'a>(&'a mut self, bundle: impl Bundle) -> EntityCommands<'a>{
         self.commands.spawn(bundle)
     }
 
@@ -158,13 +158,13 @@ impl<'w, 's> AouiCommands<'w, 's> {
     }
 }
 
-impl AsRef<AssetServer> for AouiCommands<'_, '_> {
+impl AsRef<AssetServer> for RCommands<'_, '_> {
     fn as_ref(&self) -> &AssetServer {
         &self.asset_server
     }
 }
 
-impl<'w, 's> AsMut<Commands<'w, 's>> for AouiCommands<'w, 's> {
+impl<'w, 's> AsMut<Commands<'w, 's>> for RCommands<'w, 's> {
     fn as_mut(&mut self) -> &mut Commands<'w, 's> {
         &mut self.commands
     }

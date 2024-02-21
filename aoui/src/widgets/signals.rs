@@ -1,18 +1,29 @@
-/// Defines standard signals for `bevy_aoui`, and component that directly interacts with them.
+use std::marker::PhantomData;
+
+/// Defines standard signals for `bevy_rectray`, and component that directly interacts with them.
 /// 
 /// Libraries should avoid using async systems, directly polling signals is advisable here.
 
-use bevy::{ecs::{component::Component, query::{With, Without}, system::Query}, math::Vec2, text::Text};
+use bevy::{ecs::{component::Component, query::{With, Without}, system::Query}, text::Text};
 
-use bevy_defer::{signal_ids, SignalReceiver, Object};
+use bevy_defer::{signal_ids, AsObject, Object, SignalId, SignalReceiver};
 
 use super::{button::RadioButton, inputbox::InputBox, TextFragment};
 
+mod sealed {
+    pub enum Sealed{}
+}
+
+/// A standard signal with generic value `T`.
+pub enum Fac<T> {
+    __Sealed(PhantomData<T>, sealed::Sealed)
+}
+
+impl<T: AsObject> SignalId for Fac<T> {
+    type Data = T;
+}
+
 signal_ids!(
-    /// A standard signal with value `f32`.
-    pub Fac: f32,
-    /// A standard signal with value `Vec2`.
-    pub Fac2: Vec2,
     /// A standard signal id with type `String`.
     pub FormatText: String,
     /// A standard signal id with type `&'static str`.

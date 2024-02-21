@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 use triomphe::Arc;
 use bevy::ecs::{component::Component, entity::Entity, world::{EntityRef, World}};
-use futures::{channel::oneshot::channel, Future};
+use std::future::Future;
+use crate::oneshot;
 
 use super::{AsyncExecutor, AsyncFailure, BoxedReadonlyCallback, AsyncResult, AsyncSystemParam, Signals};
 
@@ -63,7 +64,7 @@ impl<C: ComponentRefQuery> AsyncSystemParam for AsyncComponentsReadonly<C> {
 impl<C: ComponentRefQuery> AsyncComponentsReadonly<C> {
     pub fn get<Out: Send + Sync + 'static>(&self, f: impl FnOnce(C::Output<'_>) -> Out + Send + Sync + 'static)
             -> impl Future<Output = AsyncResult<Out>> {
-        let (sender, receiver) = channel::<Option<Out>>();
+        let (sender, receiver) = oneshot::<Option<Out>>();
         let entity = self.entity;
         let query = BoxedReadonlyCallback::new(
             move |world: &World| {

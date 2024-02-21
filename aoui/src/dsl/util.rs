@@ -59,11 +59,11 @@ impl<T> DslFrom<T> for Option<LayoutObject> where T: Layout {
     }
 }
 
-/// Unified constants for various enums used by `Aoui`.
+/// Unified constants for various enums used by `bevy_rectray`.
 ///
 /// Note `Left` can be used as `CenterLeft`, etc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AouiSpacialConsts {
+pub enum SpacialConst {
     TopLeft,
     TopCenter,
     TopRight,
@@ -83,43 +83,43 @@ pub enum AouiSpacialConsts {
     BottomToTop,
 }
 
-impl DslFrom<AouiSpacialConsts> for Anchor {
-    fn dfrom(value: AouiSpacialConsts) -> Self {
+impl DslFrom<SpacialConst> for Anchor {
+    fn dfrom(value: SpacialConst) -> Self {
         match value {
-            AouiSpacialConsts::TopLeft => Anchor::TOP_LEFT,
-            AouiSpacialConsts::TopCenter => Anchor::TOP_CENTER,
-            AouiSpacialConsts::TopRight => Anchor::TOP_RIGHT,
-            AouiSpacialConsts::CenterLeft => Anchor::CENTER_LEFT,
-            AouiSpacialConsts::Center => Anchor::CENTER,
-            AouiSpacialConsts::CenterRight => Anchor::CENTER_RIGHT,
-            AouiSpacialConsts::BottomLeft => Anchor::BOTTOM_LEFT,
-            AouiSpacialConsts::BottomCenter => Anchor::BOTTOM_CENTER,
-            AouiSpacialConsts::BottomRight => Anchor::BOTTOM_RIGHT,
-            AouiSpacialConsts::Top => Anchor::TOP_CENTER,
-            AouiSpacialConsts::Bottom => Anchor::BOTTOM_CENTER,
-            AouiSpacialConsts::Left => Anchor::CENTER_LEFT,
-            AouiSpacialConsts::Right => Anchor::CENTER_RIGHT,
+            SpacialConst::TopLeft => Anchor::TOP_LEFT,
+            SpacialConst::TopCenter => Anchor::TOP_CENTER,
+            SpacialConst::TopRight => Anchor::TOP_RIGHT,
+            SpacialConst::CenterLeft => Anchor::CENTER_LEFT,
+            SpacialConst::Center => Anchor::CENTER,
+            SpacialConst::CenterRight => Anchor::CENTER_RIGHT,
+            SpacialConst::BottomLeft => Anchor::BOTTOM_LEFT,
+            SpacialConst::BottomCenter => Anchor::BOTTOM_CENTER,
+            SpacialConst::BottomRight => Anchor::BOTTOM_RIGHT,
+            SpacialConst::Top => Anchor::TOP_CENTER,
+            SpacialConst::Bottom => Anchor::BOTTOM_CENTER,
+            SpacialConst::Left => Anchor::CENTER_LEFT,
+            SpacialConst::Right => Anchor::CENTER_RIGHT,
             c => panic!("{:?} is not an Anchor.", c),
         }
     }
 }
 
-impl DslFrom<AouiSpacialConsts> for Option<Anchor> {
-    fn dfrom(value: AouiSpacialConsts) -> Self {
+impl DslFrom<SpacialConst> for Option<Anchor> {
+    fn dfrom(value: SpacialConst) -> Self {
         Some(match value {
-            AouiSpacialConsts::TopLeft => Anchor::TOP_LEFT,
-            AouiSpacialConsts::TopCenter => Anchor::TOP_CENTER,
-            AouiSpacialConsts::TopRight => Anchor::TOP_RIGHT,
-            AouiSpacialConsts::CenterLeft => Anchor::CENTER_LEFT,
-            AouiSpacialConsts::Center => Anchor::CENTER,
-            AouiSpacialConsts::CenterRight => Anchor::CENTER_RIGHT,
-            AouiSpacialConsts::BottomLeft => Anchor::BOTTOM_LEFT,
-            AouiSpacialConsts::BottomCenter => Anchor::BOTTOM_CENTER,
-            AouiSpacialConsts::BottomRight => Anchor::BOTTOM_RIGHT,
-            AouiSpacialConsts::Top => Anchor::TOP_CENTER,
-            AouiSpacialConsts::Bottom => Anchor::BOTTOM_CENTER,
-            AouiSpacialConsts::Left => Anchor::CENTER_LEFT,
-            AouiSpacialConsts::Right => Anchor::CENTER_RIGHT,
+            SpacialConst::TopLeft => Anchor::TOP_LEFT,
+            SpacialConst::TopCenter => Anchor::TOP_CENTER,
+            SpacialConst::TopRight => Anchor::TOP_RIGHT,
+            SpacialConst::CenterLeft => Anchor::CENTER_LEFT,
+            SpacialConst::Center => Anchor::CENTER,
+            SpacialConst::CenterRight => Anchor::CENTER_RIGHT,
+            SpacialConst::BottomLeft => Anchor::BOTTOM_LEFT,
+            SpacialConst::BottomCenter => Anchor::BOTTOM_CENTER,
+            SpacialConst::BottomRight => Anchor::BOTTOM_RIGHT,
+            SpacialConst::Top => Anchor::TOP_CENTER,
+            SpacialConst::Bottom => Anchor::BOTTOM_CENTER,
+            SpacialConst::Left => Anchor::CENTER_LEFT,
+            SpacialConst::Right => Anchor::CENTER_RIGHT,
             c => panic!("{:?} is not an Anchor.", c),
         })
     }
@@ -127,72 +127,72 @@ impl DslFrom<AouiSpacialConsts> for Option<Anchor> {
 
 type BevyAnchor = bevy::sprite::Anchor;
 
-impl DslInto<BevyAnchor> for AouiSpacialConsts {
+impl DslInto<BevyAnchor> for SpacialConst {
     fn dinto(self) -> BevyAnchor {
         match self {
-            AouiSpacialConsts::TopLeft => BevyAnchor::TopLeft,
-            AouiSpacialConsts::TopCenter => BevyAnchor::TopCenter,
-            AouiSpacialConsts::TopRight => BevyAnchor::TopRight,
-            AouiSpacialConsts::CenterLeft => BevyAnchor::CenterLeft,
-            AouiSpacialConsts::Center => BevyAnchor::Center,
-            AouiSpacialConsts::CenterRight => BevyAnchor::CenterRight,
-            AouiSpacialConsts::BottomLeft => BevyAnchor::BottomLeft,
-            AouiSpacialConsts::BottomCenter => BevyAnchor::BottomCenter,
-            AouiSpacialConsts::BottomRight => BevyAnchor::BottomRight,
-            AouiSpacialConsts::Top => BevyAnchor::TopCenter,
-            AouiSpacialConsts::Bottom => BevyAnchor::BottomCenter,
-            AouiSpacialConsts::Left => BevyAnchor::CenterLeft,
-            AouiSpacialConsts::Right => BevyAnchor::CenterRight,
+            SpacialConst::TopLeft => BevyAnchor::TopLeft,
+            SpacialConst::TopCenter => BevyAnchor::TopCenter,
+            SpacialConst::TopRight => BevyAnchor::TopRight,
+            SpacialConst::CenterLeft => BevyAnchor::CenterLeft,
+            SpacialConst::Center => BevyAnchor::Center,
+            SpacialConst::CenterRight => BevyAnchor::CenterRight,
+            SpacialConst::BottomLeft => BevyAnchor::BottomLeft,
+            SpacialConst::BottomCenter => BevyAnchor::BottomCenter,
+            SpacialConst::BottomRight => BevyAnchor::BottomRight,
+            SpacialConst::Top => BevyAnchor::TopCenter,
+            SpacialConst::Bottom => BevyAnchor::BottomCenter,
+            SpacialConst::Left => BevyAnchor::CenterLeft,
+            SpacialConst::Right => BevyAnchor::CenterRight,
             c => panic!("{:?} is not an Anchor.", c),
         }
     }
 }
 
-impl DslInto<Alignment> for AouiSpacialConsts {
+impl DslInto<Alignment> for SpacialConst {
     fn dinto(self) -> Alignment {
         match self {
-            AouiSpacialConsts::Center => Alignment::Center,
-            AouiSpacialConsts::Top => Alignment::Top,
-            AouiSpacialConsts::Bottom => Alignment::Bottom,
-            AouiSpacialConsts::Left => Alignment::Left,
-            AouiSpacialConsts::Right => Alignment::Right,
+            SpacialConst::Center => Alignment::Center,
+            SpacialConst::Top => Alignment::Top,
+            SpacialConst::Bottom => Alignment::Bottom,
+            SpacialConst::Left => Alignment::Left,
+            SpacialConst::Right => Alignment::Right,
             c => panic!("{:?} is not an Alignment.", c),
         }
     }
 }
 
-impl DslInto<Option<Alignment>> for AouiSpacialConsts {
+impl DslInto<Option<Alignment>> for SpacialConst {
     fn dinto(self) -> Option<Alignment> {
         Some(match self {
-            AouiSpacialConsts::Center => Alignment::Center,
-            AouiSpacialConsts::Top => Alignment::Top,
-            AouiSpacialConsts::Bottom => Alignment::Bottom,
-            AouiSpacialConsts::Left => Alignment::Left,
-            AouiSpacialConsts::Right => Alignment::Right,
+            SpacialConst::Center => Alignment::Center,
+            SpacialConst::Top => Alignment::Top,
+            SpacialConst::Bottom => Alignment::Bottom,
+            SpacialConst::Left => Alignment::Left,
+            SpacialConst::Right => Alignment::Right,
             c => panic!("{:?} is not an Alignment.", c),
         })
     }
 }
 
-impl DslInto<LayoutDir> for AouiSpacialConsts {
+impl DslInto<LayoutDir> for SpacialConst {
     fn dinto(self) -> LayoutDir {
         match self {
-            AouiSpacialConsts::LeftToRight => LayoutDir::LeftToRight,
-            AouiSpacialConsts::RightToLeft => LayoutDir::RightToLeft,
-            AouiSpacialConsts::TopToBottom => LayoutDir::TopToBottom,
-            AouiSpacialConsts::BottomToTop => LayoutDir::BottomToTop,
+            SpacialConst::LeftToRight => LayoutDir::LeftToRight,
+            SpacialConst::RightToLeft => LayoutDir::RightToLeft,
+            SpacialConst::TopToBottom => LayoutDir::TopToBottom,
+            SpacialConst::BottomToTop => LayoutDir::BottomToTop,
             c => panic!("{:?} is not an FlexDir.", c),
         }
     }
 }
 
-impl DslInto<Option<LayoutDir>> for AouiSpacialConsts {
+impl DslInto<Option<LayoutDir>> for SpacialConst {
     fn dinto(self) -> Option<LayoutDir> {
         Some(match self {
-            AouiSpacialConsts::LeftToRight => LayoutDir::LeftToRight,
-            AouiSpacialConsts::RightToLeft => LayoutDir::RightToLeft,
-            AouiSpacialConsts::TopToBottom => LayoutDir::TopToBottom,
-            AouiSpacialConsts::BottomToTop => LayoutDir::BottomToTop,
+            SpacialConst::LeftToRight => LayoutDir::LeftToRight,
+            SpacialConst::RightToLeft => LayoutDir::RightToLeft,
+            SpacialConst::TopToBottom => LayoutDir::TopToBottom,
+            SpacialConst::BottomToTop => LayoutDir::BottomToTop,
             c => panic!("{:?} is not an FlexDir.", c),
         })
     }
@@ -203,7 +203,7 @@ impl DslInto<Option<LayoutDir>> for AouiSpacialConsts {
 /// Input is `RgbaLinear`, but immediately cast into `Rgba`(sRGB).
 ///
 /// ```
-/// # use bevy_aoui::color;
+/// # use bevy_rectray::color;
 /// color!(red400);
 /// ```
 #[macro_export]

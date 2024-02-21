@@ -2,7 +2,7 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, bundles::*, util::AouiCommands};
+use bevy_rectray::{*, bundles::*, util::RCommands};
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_egui::{EguiContexts, egui::{self, Slider}, EguiPlugin};
 pub fn main() {
@@ -18,7 +18,7 @@ pub fn main() {
         .add_systems(Startup, init)
         .add_systems(Update, egui_window)
         .add_plugins(EguiPlugin)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         .run();
 }
 
@@ -28,34 +28,34 @@ static ANCHORS: &[Anchor] = &[
     Anchor::BOTTOM_LEFT, Anchor::BOTTOM_CENTER, Anchor::BOTTOM_RIGHT,
 ];
 
-pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, enitity: Entity, texture: Handle<Image>) {
+pub fn spawn_fractal(commands: &mut Commands, count: usize, size: f32, entity: Entity, texture: Handle<Image>) {
     if count == 0 {
         return;
     }
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
     for anchor in ANCHORS {
-        let child = commands.spawn(AouiSpriteBundle {
-            sprite: Sprite {
-                color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5),
-                custom_size: Some(Vec2::new(size, size)),
-                ..Default::default()
-            },
+        let child = commands.spawn(RSpriteBundle {
             transform: Transform2D {
                 anchor: *anchor,
                 ..Default::default()
             },
+            dimension: Dimension {
+                dimension: DimensionType::Owned(Size2::pixels(size, size)),
+                ..Default::default()
+            },
             texture: texture.clone(),
+            color: Coloring::new(Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5)),
             ..Default::default()
         }).id();
 
         spawn_fractal(commands, count - 1, size / 3.0, child, texture.clone());
-        commands.entity(enitity).push_children(&[child]);
+        commands.entity(entity).add_child(child);
     }
 }
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     let texture = commands.load::<Image>("square.png");
     commands.spawn_bundle(Camera2dBundle::default());
 
@@ -72,17 +72,17 @@ pub fn init(mut commands: AouiCommands) {
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
 
-    let enitity = commands.spawn_bundle(AouiSpriteBundle {
-        sprite: Sprite {
-            color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 1.0),
-            custom_size: Some(Vec2::new(800.0, 800.0)),
+    let entity = commands.spawn_bundle(RSpriteBundle {
+        dimension: Dimension {
+            dimension: DimensionType::Owned(Size2::pixels(800.0, 800.0)),
             ..Default::default()
         },
         texture: texture.clone(),
+        color: Coloring::new(Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5)),
         ..Default::default()
     }).id();
 
-    spawn_fractal(commands.commands(), 5, 250.0, enitity, texture.clone());
+    spawn_fractal(commands.commands(), 5, 250.0, entity, texture.clone());
 }
 
 pub fn egui_window(mut ctx: EguiContexts,

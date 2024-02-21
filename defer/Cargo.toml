@@ -1,6 +1,6 @@
 [package]
 name = "bevy_defer"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 
 authors = ["Mincong Lu <mintlux667@gmail.com>"]
@@ -17,10 +17,13 @@ keywords = ["bevy", "async", "defer"]
 doctest = false
 
 [dependencies]
-bevy = { version = "^0.12", default-features = false, features = ["trace"] }
+bevy = { version = "^0.13", default-features = false, features = ["trace"] }
 triomphe = "^0.1.11"
 parking_lot = "^0.12"
-futures = "^0.3.30"
 once_cell = "^1.19"
 thiserror = "^1"
 downcast-rs = "^1.2"
+async-oneshot = "0.5.9"
+futures-lite = { version = "2.2.0", default-features = false }
+noop-waker = "0.1.0"
+async-channel = "2.2.0"

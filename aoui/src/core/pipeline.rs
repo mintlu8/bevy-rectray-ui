@@ -1,10 +1,10 @@
 use std::mem;
 
-use bevy::{prelude::*, window::PrimaryWindow, ecs::query::{ReadOnlyWorldQuery, WorldQuery}, math::Affine2};
+use bevy::{ecs::query::{QueryData, QueryFilter}, math::Affine2, prelude::*, window::PrimaryWindow};
 
-use crate::{*, layout::*, dimension::DimensionMut};
+use crate::{*, layout::*};
 
-type AouiEntity<'t> = (
+type REntity<'t> = (
     Entity,
     DimensionMut,
     &'t Transform2D,
@@ -22,7 +22,7 @@ fn propagate(
     parent: ParentInfo,
     entity: Entity,
     rem: f32,
-    mut_query: &mut Query<AouiEntity>,
+    mut_query: &mut Query<REntity>,
     layout_query: &mut Query<&mut Container>,
     parent_query: &Query<&Parent>,
     child_query: &Query<&Children>,
@@ -165,8 +165,8 @@ fn propagate(
 ///
 /// Usually `PrimaryWindow`.
 pub trait RootQuery<'t> {
-    type Query: WorldQuery;
-    type ReadOnly: ReadOnlyWorldQuery;
+    type Query: QueryData;
+    type ReadOnly: QueryFilter;
 
     fn as_rect(query: &Query<Self::Query, Self::ReadOnly>) -> (RotatedRect, Vec2);
 }
@@ -203,12 +203,12 @@ impl<'t> RootQuery<'t> for PrimaryWindow {
 pub fn compute_aoui_transforms<'t, R: RootQuery<'t>>(
     root: Query<R::Query, R::ReadOnly>,
     root_entities: Query<Entity, Or<(Without<Parent>, With<Detach>)>>,
-    mut entity_query: Query<AouiEntity>,
+    mut entity_query: Query<REntity>,
     mut layout_query: Query<&mut Container>,
     parent_query: Query<&Parent>,
     child_query: Query<&Children>,
     not_root: Query<Entity, Without<Detach>>,
-    res_rem: Option<Res<AouiRem>>,
+    res_rem: Option<Res<RectrayRem>>,
 ) {
     let rem = res_rem.map(|x| x.get()).unwrap_or(16.0);
 

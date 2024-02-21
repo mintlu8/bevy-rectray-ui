@@ -1,4 +1,4 @@
-//! The bread and butter of `bevy_aoui`.
+//! The bread and butter of `bevy_rectray`.
 //!
 //! The parent sprite is parented to the window,
 //! the child sprite is parented to the parent.
@@ -8,7 +8,7 @@
 
 use std::f32::consts::PI;
 
-use bevy_aoui::{*, DimensionMut, util::AouiCommands};
+use bevy_rectray::{*, util::RCommands};
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{self, Slider, ComboBox, Ui}, EguiPlugin};
 
@@ -16,7 +16,7 @@ pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(EguiPlugin)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         .add_systems(Startup, init)
         .add_systems(Update, egui_window)
         .run();
@@ -27,7 +27,7 @@ pub struct A;
 #[derive(Debug, Component)]
 pub struct B;
 
-pub fn init(mut commands: AouiCommands) {
+pub fn init(mut commands: RCommands) {
 
     commands.spawn_bundle(Camera2dBundle::default());
 

@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{AouiPlugin, widgets::richtext::RichTextBuilder, util::{AouiCommands, ComposeExtension}};
+use bevy_rectray::{RectrayPlugin, widgets::richtext::RichTextBuilder, util::{RCommands, ComposeExtension}};
 
 pub fn main() {
     App::new()
@@ -12,13 +12,13 @@ pub fn main() {
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         .run();
 }
 
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {

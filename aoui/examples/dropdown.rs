@@ -1,8 +1,7 @@
 #![recursion_limit = "256"]
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::util::WorldExtension;
-use bevy_aoui::AouiPlugin;
-use bevy_aoui::util::AouiCommands;
+use bevy_rectray::RectrayPlugin;
+use bevy_rectray::util::RCommands;
 
 pub fn main() {
     App::new()
@@ -15,13 +14,12 @@ pub fn main() {
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
-        .add_plugins(AouiPlugin)
-        .register_cursor_default(CursorIcon::Arrow)
+        .add_plugins(RectrayPlugin)
         .run();
 }
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {

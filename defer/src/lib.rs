@@ -2,7 +2,7 @@
 //! 
 //! # Why does this crate exist?
 //! 
-//! `bevy_defer` is the asynchronous runtime of `bevy_aoui` with a simple
+//! `bevy_defer` is the asynchronous runtime of `bevy_rectray` with a simple
 //! premise: given two components `Signals` and `AsyncSystems`, you can
 //! run any query you want in a deferred manner, and communicate with other widgets
 //! through signals. 
@@ -123,7 +123,7 @@
 //! 
 //! ## Any tips regarding async usage?
 //! 
-//! You should use [`futures::join`] whenever you want to wait for multiple
+//! You should use `futures::join!` or [`futures_lite::future::zip`] whenever you want to wait for multiple
 //! independent queries, otherwise your systems might take longer to complete.
 //! 
 //! ## Is this crate blazingly fast?
@@ -147,6 +147,7 @@ pub use async_param::*;
 pub use signal_inner::*;
 pub use components::*;
 pub use object::{Object, AsObject};
+pub use async_oneshot::oneshot;
 
 #[doc(hidden)]
 pub use triomphe::Arc;

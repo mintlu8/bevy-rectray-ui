@@ -2,7 +2,7 @@ use bevy::asset::{AssetServer, Assets, Handle};
 use bevy::ecs::system::{Commands, Query, Res, ResMut};
 use bevy::ecs::{component::Component, entity::Entity};
 use bevy::reflect::Reflect;
-use bevy::sprite::{TextureAtlas, TextureAtlasBuilder};
+use bevy::sprite::{TextureAtlas, TextureAtlasBuilder, TextureAtlasLayout};
 use bevy::{
     log::warn,
     math::{Rect, Vec2},
@@ -14,69 +14,91 @@ use std::mem;
 #[derive(Debug, Component, Reflect)]
 pub enum DeferredAtlasBuilder {
     Subdivide {
-        image: Handle<Image>,
+        index: usize,
         count: [usize; 2],
         padding: Option<Vec2>,
     },
-    Images(Vec<Handle<Image>>),
+    Images {
+        index: usize,
+        images: Vec<Handle<Image>>,
+    },
     Rectangles {
-        image: Handle<Image>,
+        index: usize,
         rectangles: Vec<Rect>,
     },
 }
 
 pub(crate) fn build_deferred_atlas(
     mut commands: Commands,
-    mut atlas: Query<(Entity, &mut DeferredAtlasBuilder)>,
+    mut atlas: Query<(Entity, &mut DeferredAtlasBuilder, Option<&Handle<Image>>)>,
     server: Res<AssetServer>,
-    mut image_assets: ResMut<Assets<Image>>,
+    image_assets: ResMut<Assets<Image>>,
 ) {
-    'main: for (entity, mut builder) in atlas.iter_mut() {
-        let atlas = match builder.as_mut() {
+    'main: for (entity, mut builder, image) in atlas.iter_mut() {
+        match builder.as_mut() {
             DeferredAtlasBuilder::Subdivide {
-                image,
+                index,
                 count,
                 padding,
             } => {
+                let Some(image) = image else {continue};
                 let [x, y] = *count;
-                let Some(im) = image_assets.get(image.clone()) else {
+                let Some(im) = image_assets.get(image) else {
                     continue 'main;
                 };
                 let size = im.size().as_vec2()
                     - padding.unwrap_or(Vec2::ZERO)
                         * Vec2::new(x.saturating_sub(1) as f32, y.saturating_sub(1) as f32);
                 let size = size / Vec2::new(x as f32, y as f32);
-                TextureAtlas::from_grid(image.clone(), size, y, x, *padding, None)
+                let atlas = TextureAtlasLayout::from_grid(size, y, x, *padding, None);
+                commands
+                    .entity(entity)
+                    .remove::<DeferredAtlasBuilder>()
+                    .insert(TextureAtlas {
+                        layout: server.add(atlas),
+                        index: *index,
+                    });
             }
-            DeferredAtlasBuilder::Images(images) => {
+            DeferredAtlasBuilder::Images{ images, index } => {
                 let mut builder = TextureAtlasBuilder::default();
-                for image in mem::take(images) {
+                for image in images {
                     let id = image.id();
-                    let Some(im) = image_assets.get(image) else {
+                    let Some(im) = image_assets.get(image.id()) else {
                         continue 'main;
                     };
-                    builder.add_texture(id, im);
+                    builder.add_texture(Some(id), im);
                 }
-                match builder.finish(&mut image_assets) {
-                    Ok(atlas) => atlas,
+                match builder.finish() {
                     Err(e) => {
                         warn!("Texture atlas building failed: {e}.");
                         continue 'main;
                     }
+                    Ok((atlas, image)) => {
+                        commands
+                            .entity(entity)
+                            .remove::<DeferredAtlasBuilder>()
+                            .insert(server.add(image))
+                            .insert(TextureAtlas {
+                                layout: server.add(atlas),
+                                index: *index,
+                            });
+                    },
+
                 }
             }
-            DeferredAtlasBuilder::Rectangles { image, rectangles } => {
-                let Some(im) = image_assets.get(image.clone()) else {
-                    return;
-                };
-                let mut atlas = TextureAtlas::new_empty(image.clone(), im.size().as_vec2());
+            DeferredAtlasBuilder::Rectangles { rectangles, index } => {
+                let Some(image) = image else {continue};
+                let Some(image) = image_assets.get(image) else {continue};
+                let mut atlas = TextureAtlasLayout::new_empty(image.size().as_vec2());
                 atlas.textures = mem::take(rectangles);
-                atlas
+                commands
+                    .entity(entity)
+                    .remove::<DeferredAtlasBuilder>()
+                    .insert(TextureAtlas {
+                        layout: server.add(atlas),
+                        index: *index,
+                    });
             }
         };
-        commands
-            .entity(entity)
-            .remove::<DeferredAtlasBuilder>()
-            .insert(server.add(atlas));
     }
 }

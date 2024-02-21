@@ -1,10 +1,11 @@
-use bevy::{asset::Handle, sprite::{TextureAtlas, TextureAtlasSprite}, math::UVec2, ecs::entity::Entity};
+use bevy::sprite::{Sprite, TextureAtlasLayout};
+use bevy::{asset::Handle, sprite::TextureAtlas, math::UVec2, ecs::entity::Entity};
 use bevy::math::{Vec2, Rect};
 use bevy::render::{texture::Image, color::Color};
 
 use crate::{frame_extension, widgets::DeferredAtlasBuilder, bundles::BuildTransformBundle, build_frame};
 
-use crate::util::{Widget, DslFrom, AouiCommands};
+use crate::util::{Widget, DslFrom, RCommands};
 
 #[derive(Debug, Default)]
 pub enum AtlasSprites {
@@ -21,8 +22,8 @@ pub enum AtlasRectangles {
     #[default]
     None,
     AtlasFile(String),
-    AtlasHandle(Handle<TextureAtlas>),
-    AtlasStruct(TextureAtlas),
+    AtlasHandle(Handle<TextureAtlasLayout>),
+    AtlasStruct(TextureAtlasLayout),
     Rectangles(Vec<Rect>),
     Subdivide([usize; 2]),
     Grid {
@@ -66,36 +67,63 @@ frame_extension!(pub struct AtlasBuilder {
 });
 
 impl Widget for AtlasBuilder {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let entity = build_frame!(commands, self).insert(BuildTransformBundle::default()).id();
         let [x, y] = self.flip;
-        let sprite = TextureAtlasSprite{
+        let sprite = Sprite {
             color: self.color.unwrap_or(Color::WHITE),
-            index: self.index,
             flip_x: x,
             flip_y: y,
             custom_size: self.size,
             anchor: self.anchor.into(),
+            rect: None,
         };
         match self.atlas {
             AtlasRectangles::AtlasFile(file) => {
-                let asset: Handle<TextureAtlas> = commands.load(file);
+                let texture = match self.sprites {
+                    AtlasSprites::ImageName(name) => commands.load::<Image>(name),
+                    AtlasSprites::ImageHandle(handle) => handle,
+                    _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
+                };
+                let layout: Handle<TextureAtlasLayout> = commands.load(file);
                 commands.entity(entity).insert((
-                    asset,
-                    sprite
+                    sprite,
+                    texture,
+                    TextureAtlas {
+                        index: self.index,
+                        layout
+                    }
                 ));
             },
             AtlasRectangles::AtlasStruct(atlas) => {
-                let asset: Handle<TextureAtlas> = commands.add_asset(atlas);
+                let texture = match self.sprites {
+                    AtlasSprites::ImageName(name) => commands.load::<Image>(name),
+                    AtlasSprites::ImageHandle(handle) => handle,
+                    _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
+                };
+                let layout: Handle<TextureAtlasLayout> = commands.add_asset(atlas);
                 commands.entity(entity).insert((
-                    asset,
-                    sprite
+                    sprite,
+                    texture,
+                    TextureAtlas {
+                        index: self.index,
+                        layout
+                    }
                 ));
             },
-            AtlasRectangles::AtlasHandle(asset) => {
+            AtlasRectangles::AtlasHandle(layout) => {
+                let texture = match self.sprites {
+                    AtlasSprites::ImageName(name) => commands.load::<Image>(name),
+                    AtlasSprites::ImageHandle(handle) => handle,
+                    _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
+                };
                 commands.entity(entity).insert((
-                    asset,
-                    sprite
+                    sprite,
+                    texture,
+                    TextureAtlas {
+                        index: self.index,
+                        layout
+                    }
                 ));
             },
             AtlasRectangles::None => {
@@ -106,20 +134,24 @@ impl Widget for AtlasBuilder {
                 };
                 commands.entity(entity).insert((
                     sprite,
-                    DeferredAtlasBuilder::Images(handles)
+                    DeferredAtlasBuilder::Images{
+                        index: self.index,
+                        images: handles,
+                    }
                 ));
             },
             AtlasRectangles::Rectangles(rectangles) => {
-                let texture = match self.sprites {
+                let image = match self.sprites {
                     AtlasSprites::ImageName(name) => commands.load(name),
                     AtlasSprites::ImageHandle(handle) => handle,
                     _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
                 };
                 commands.entity(entity).insert((
                     sprite,
+                    image,
                     DeferredAtlasBuilder::Rectangles{
-                        image: texture,
                         rectangles,
+                        index: self.index,
                     },
                 ));
             },
@@ -130,11 +162,15 @@ impl Widget for AtlasBuilder {
                     _ => panic!("Invalid atlas build mode. Either supply images or rectangles on an image.")
                 };
                 let [x, y] = count;
-                let atlas = TextureAtlas::from_grid(image, size, y, x, self.atlas_padding, Some(offset));
-                let atlas = commands.add_asset(atlas);
+                let atlas = TextureAtlasLayout::from_grid(size, y, x, self.atlas_padding, Some(offset));
+                let layout = commands.add_asset(atlas);
                 commands.entity(entity).insert((
                     sprite,
-                    atlas,
+                    image,
+                    TextureAtlas {
+                        layout,
+                        index: self.index,
+                    },
                 ));
             },
             AtlasRectangles::Subdivide(slices) => {
@@ -145,10 +181,11 @@ impl Widget for AtlasBuilder {
                 };
                 commands.entity(entity).insert((
                     sprite,
+                    image,
                     DeferredAtlasBuilder::Subdivide {
-                        image,
                         padding: self.atlas_padding,
                         count: slices,
+                        index: self.index,
                     },
                 ));
             }
@@ -258,14 +295,14 @@ impl DslFrom<&str> for AtlasRectangles {
     }
 }
 
-impl DslFrom<TextureAtlas> for AtlasRectangles {
-    fn dfrom(value: TextureAtlas) -> Self {
+impl DslFrom<TextureAtlasLayout> for AtlasRectangles {
+    fn dfrom(value: TextureAtlasLayout) -> Self {
         AtlasRectangles::AtlasStruct(value)
     }
 }
 
-impl DslFrom<Handle<TextureAtlas>> for AtlasRectangles {
-    fn dfrom(value: Handle<TextureAtlas>) -> Self {
+impl DslFrom<Handle<TextureAtlasLayout>> for AtlasRectangles {
+    fn dfrom(value: Handle<TextureAtlasLayout>) -> Self {
         AtlasRectangles::AtlasHandle(value)
     }
 }

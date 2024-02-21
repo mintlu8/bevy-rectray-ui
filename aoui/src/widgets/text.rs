@@ -1,4 +1,4 @@
-use bevy::{reflect::Reflect, asset::{Handle, Assets}};
+use bevy::{asset::{Assets, Handle}, reflect::Reflect, render::render_asset::RenderAssetUsages};
 use bevy::render::texture::Image;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::text::{Font, Text, TextStyle};
@@ -147,6 +147,6 @@ pub fn sync_sprite_text_fragment(
             width: width as u32,
             height: height as u32,
             depth_or_array_layers: 1,
-        }, TextureDimension::D2, buffer, TextureFormat::Rgba8Unorm)
+        }, TextureDimension::D2, buffer, TextureFormat::Rgba8Unorm, RenderAssetUsages::all())
     }
 }

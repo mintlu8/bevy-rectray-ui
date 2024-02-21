@@ -1,26 +1,26 @@
-# Bevy Aoui
+# Bevy Rectray
 
-[![Crates.io](https://img.shields.io/crates/v/bevy_aoui.svg)](https://crates.io/crates/bevy_aoui)
-[![Docs](https://docs.rs/bevy_aoui/badge.svg)](https://docs.rs/bevy_aoui/latest/bevy_aoui/)
+[![Crates.io](https://img.shields.io/crates/v/bevy_rectray.svg)](https://crates.io/crates/bevy_rectray)
+[![Docs](https://docs.rs/bevy_rectray/badge.svg)](https://docs.rs/bevy_rectray/latest/bevy_rectray/)
 [![Bevy tracking](https://img.shields.io/badge/Bevy%20tracking-released%20version-lightblue)](https://bevyengine.org/learn/book/plugin-development/)
 
-Bevy Aoui is a native component based 2D and UI solution for the bevy engine.
+Bevy Rectray is a native component based 2D and UI solution for the bevy engine.
 
 ## Getting Started
 
-First add the Aoui Plugin:
+First add the `RectrayPlugin`:
 
 ```rust
-app.add_plugins(AouiPlugin)
+app.add_plugins(RectrayPlugin)
 ```
 
 Import the
-[DSL prelude](https://docs.rs/bevy_aoui/latest/bevy_aoui/dsl/prelude/),
+[DSL prelude](https://docs.rs/bevy_rectray/latest/bevy_rectray/dsl/prelude/),
 preferably inside the function scope.
 
 ```rust
-fn spawn(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+fn spawn(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     ...
 }
 ```
@@ -59,20 +59,20 @@ vstack!(commands {
 
 ### Why a DSL?
 
-`bevy_aoui`'s DSL is a very simple `macro_rules` macro that reorganizes arguments in a way to make
+`bevy_rectray`'s DSL is a very simple `macro_rules` macro that reorganizes arguments in a way to make
 `commands` usable anywhere during the macro invocation, without the need to bend over backwards
 to create children/bundles before parents. As a result we have a simple rust-like syntax.
 that is intuitive and enjoyable to write.
 
 If you don't like the DSL you can use our
-[`bundles`](https://docs.rs/bevy_aoui/latest/bevy_aoui/bundles)
+[`bundles`](https://docs.rs/bevy_rectray/latest/bevy_rectray/bundles)
 or
-[`widgets`](https://docs.rs/bevy_aoui/latest/bevy_aoui/dsl/builders)
+[`widgets`](https://docs.rs/bevy_rectray/latest/bevy_rectray/dsl/builders)
 directly,
 
 ## How this works?
 
-`bevy_aoui` is all about rectangles!
+`bevy_rectray` is all about rectangles!
 
 Each sprite is a rectangle, and placed relative to the parent
 rectangle.
@@ -87,7 +87,7 @@ with 20% of parent's width as width
 and rotate by 45 degrees.
 ```
 
-In `bevy_aoui` this is incredibly simple:
+In `bevy_rectray` this is incredibly simple:
 
 ```rust
 sprite!(commands {
@@ -99,9 +99,9 @@ sprite!(commands {
 })
 ```
 
-Use `Transform2D` and `Dimension` to manipulate `aoui` widgets directly.
+Use `Transform2D` and `Dimension` to manipulate our widgets directly.
 
-## What `bevy_aoui` provides
+## What `bevy_rectray` provides
 
 * Fine grained low level anchor-offset layout system.
 * First class support for rotation and scaling.
@@ -116,28 +116,28 @@ Use `Transform2D` and `Dimension` to manipulate `aoui` widgets directly.
 * Easy integration with third-party 2D crates.
 * Easy migration to future bevy versions.
 
-## What `bevy_aoui` is not
+## What `bevy_rectray` is not
 
 * Not a renderer.
 
-    `bevy_aoui` has minimal rendering features and no third party bevy dependencies,
+    `bevy_rectray` has minimal rendering features and no third party bevy dependencies,
     this ensures maintainability and easy migration to future bevy versions,
     at the cost of not having out of the box widget styles.
 
 * Not `bevy_ui` compatible.
 
-    `bevy_aoui` is not dependent on `bevy_ui` in any way. This means `bevy_ui` exclusive
-    features won't be available in `bevy_aoui` as is.
+    `bevy_rectray` is not dependent on `bevy_ui` in any way. This means `bevy_ui` exclusive
+    features won't be available in `bevy_rectray` as is.
 
 * No ui script or serialization.
 
-    `bevy_aoui` uses rust closures for a lot of things, including events and reactivity,
+    `bevy_rectray` uses rust closures for a lot of things, including events and reactivity,
     those are unfortunately not serializable.
 
 * Limited reflection support.
 
     Limiting the scope of this project to the supported feature set of `Reflection` is not ideal of this project. Use reflect to some extent to
-    debug is supported, but don't expect every reflect based feature to work with `bevy_aoui`.
+    debug is supported, but don't expect every reflect based feature to work with `bevy_rectray`.
 
 * No styling
 
@@ -147,21 +147,21 @@ Use `Transform2D` and `Dimension` to manipulate `aoui` widgets directly.
 
 Anchor-Offset offers fine-grained control over the layout, but you can surrender
 that control to
-[containers](https://docs.rs/bevy_aoui/latest/bevy_aoui/layout) for ergonomics.
+[containers](https://docs.rs/bevy_rectray/latest/bevy_rectray/layout) for ergonomics.
 
 The `Container` is a very simple layout system that
 only depends on insertion order of its children. You can find your
-[`hstack`](https://docs.rs/bevy_aoui/latest/bevy_aoui/layout/struct.StackLayout.html),
-[`grid`](https://docs.rs/bevy_aoui/latest/bevy_aoui/layout/struct.FixedGridLayout.html)
+[`hstack`](https://docs.rs/bevy_rectray/latest/bevy_rectray/layout/struct.StackLayout.html),
+[`grid`](https://docs.rs/bevy_rectray/latest/bevy_rectray/layout/struct.FixedGridLayout.html)
 or
-[`paragraph`](https://docs.rs/bevy_aoui/latest/bevy_aoui/layout/struct.ParagraphLayout) here.
+[`paragraph`](https://docs.rs/bevy_rectray/latest/bevy_rectray/layout/struct.ParagraphLayout) here.
 
-You can implement [`Layout`](https://docs.rs/bevy_aoui/latest/bevy_aoui/layout/trait.Layout) yourself to create a custom layout.
+You can implement [`Layout`](https://docs.rs/bevy_rectray/latest/bevy_rectray/layout/trait.Layout) yourself to create a custom layout.
 
 ## Widget Abstractions
 
 Widget builders are used to empower our DSL.
-Widget builders implements [`Widget`](https://docs.rs/bevy_aoui/latest/bevy_aoui/dsl/trait.Widget)
+Widget builders implements [`Widget`](https://docs.rs/bevy_rectray/latest/bevy_rectray/dsl/trait.Widget)
 and `Default`.
 They can be used in general like so:
 
@@ -199,9 +199,9 @@ a simple struct constructor.
 ### commands
 
 At the root level, the DSL takes a
-[`AouiCommands`](https://docs.rs/bevy_aoui/latest/bevy_aoui/dsl/struct.AouiCommands),
+[`RCommands`](https://docs.rs/bevy_rectray/latest/bevy_rectray/dsl/struct.RCommands),
 which is a combination of `Commands`, `AssetServer` and
-[`SignalPool`](https://docs.rs/bevy_aoui/latest/bevy_aoui/signals/struct.SignalPool),
+[`SignalPool`](https://docs.rs/bevy_rectray/latest/bevy_rectray/signals/struct.SignalPool),
 
 ### child
 
@@ -303,10 +303,10 @@ to increase your recursion limit.
 
 Checkout our modules for more documentations and examples.
 
-* [events](https://docs.rs/bevy_aoui/latest/bevy_aoui/events)
-* [signals](https://docs.rs/bevy_aoui/latest/bevy_aoui/signals)
-* [widgets](https://docs.rs/bevy_aoui/latest/bevy_aoui/widgets)
-* [animation](https://docs.rs/bevy_aoui/latest/bevy_aoui/anim)
+* [events](https://docs.rs/bevy_rectray/latest/bevy_rectray/events)
+* [signals](https://docs.rs/bevy_rectray/latest/bevy_rectray/signals)
+* [widgets](https://docs.rs/bevy_rectray/latest/bevy_rectray/widgets)
+* [animation](https://docs.rs/bevy_rectray/latest/bevy_rectray/anim)
 
 ## License
 

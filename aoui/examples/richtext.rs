@@ -3,7 +3,7 @@
 //! Note this just compiles to bevy_text, nothing fancy here.
 
 use bevy::{prelude::*, utils::HashMap};
-use bevy_aoui::{AouiPlugin, widgets::richtext::{RichTextBuilder, FontStyle}, util::AouiCommands};
+use bevy_rectray::{RectrayPlugin, widgets::richtext::{RichTextBuilder, FontStyle}, util::RCommands};
 
 pub fn main() {
     App::new()
@@ -15,13 +15,13 @@ pub fn main() {
             ..Default::default()
         }))
         .add_systems(Startup, init)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         .run();
 }
 
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
     let rich = paragraph! (commands {
         dimension: [600, 600],

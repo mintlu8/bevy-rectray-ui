@@ -4,9 +4,9 @@ use bevy::{prelude::{Vec2, Resource}, reflect::Reflect};
 ///
 /// By default this is `16 px`.
 #[derive(Debug, Resource, Reflect)]
-pub struct AouiRem(f32);
+pub struct RectrayRem(f32);
 
-impl AouiRem {
+impl RectrayRem {
     pub fn get(&self) -> f32 {
         self.0
     }
@@ -15,7 +15,7 @@ impl AouiRem {
         self.0 = rem
     }
 }
-impl Default for AouiRem {
+impl Default for RectrayRem {
     fn default() -> Self {
         Self(16.0)
     }

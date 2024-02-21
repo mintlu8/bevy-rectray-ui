@@ -1,7 +1,7 @@
 use bevy::{render::color::Color, math::Vec2};
 use bevy::ecs::{component::Component, system::Query};
-use bevy::sprite::TextureAtlasSprite;
-use bevy::ecs::query::{WorldQuery, ReadOnlyWorldQuery};
+use bevy::sprite::TextureAtlas;
+use bevy::ecs::query::{QueryData, QueryFilter};
 use crate::Coloring;
 use crate::{Transform2D, Dimension, Opacity};
 use super::{Interpolation, Interpolate, Offset, Rotation, Scale, Index};
@@ -11,7 +11,7 @@ use super::{Interpolation, Interpolate, Offset, Rotation, Scale, Index};
 pub trait InterpolateAssociation {
     type Component: Component;
     type Interpolation: Interpolation;
-    type Condition: ReadOnlyWorldQuery;
+    type Condition: QueryFilter;
 
     fn set(component: &mut Self::Component, value: <Self::Interpolation as Interpolation>::FrontEnd);
     fn get(component: &Self::Component) -> <Self::Interpolation as Interpolation>::FrontEnd;
@@ -88,8 +88,8 @@ impl InterpolateAssociation for (Dimension, Dimension) {
     }
 }
 
-impl InterpolateAssociation for (TextureAtlasSprite, Index) {
-    type Component = TextureAtlasSprite;
+impl InterpolateAssociation for (TextureAtlas, Index) {
+    type Component = TextureAtlas;
     type Interpolation = Index;
     type Condition = ();
 
@@ -133,8 +133,8 @@ impl InterpolateAssociation for (Coloring, Color) {
 
 
 /// Query for either setting a field or setting its associated interpolation.
-#[derive(Debug, WorldQuery)]
-#[world_query(mutable)]
+#[derive(Debug, QueryData)]
+#[query_data(mutable)]
 pub struct Attr<A: Component, B: Interpolation> where (A, B): InterpolateAssociation<Component = A, Interpolation = B> {
     pub component: &'static mut A,
     pub interpolate: Option<&'static mut Interpolate<B>>,

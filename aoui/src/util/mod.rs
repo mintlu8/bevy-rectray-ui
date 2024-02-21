@@ -1,4 +1,4 @@
-//! Utilities for `bevy_aoui`.
+//! Utilities for `bevy_rectray`.
 
 mod widget;
 mod commands;
@@ -14,7 +14,7 @@ pub mod convert;
 
 pub use mesh::mesh_rectangle;
 pub use widget::{Widget, WidgetBuilder, IntoWidgetBuilder};
-pub use commands::{AouiCommands, signal, SignalPool};
+pub use commands::{RCommands, signal, SignalPool};
 pub use cloning::CloneSplit;
 pub use extension::WorldExtension;
 pub use convert::{DslFrom, DslInto};

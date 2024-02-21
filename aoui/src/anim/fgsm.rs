@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
-use bevy::{app::{FixedUpdate, Plugin}, ecs::{component::Component, query::WorldQuery, system::Query}};
+use bevy::{app::{FixedUpdate, Plugin}, ecs::{component::Component, query::{QueryData, WorldQuery}, system::Query}};
 
 /// Fine-grained state machine.
 pub trait Fgsm: Sized {
-    type State: WorldQuery;
+    type State: QueryData;
 
     fn from_state(state: &<Self::State as WorldQuery>::Item<'_>) -> Self;
 }
@@ -22,7 +22,7 @@ impl<T> Fgsm for T where T: ComponentFgsm {
 
 pub trait FgsmPairing: Component + Sized {
     type State: Fgsm;
-    type Target: WorldQuery;
+    type Target: QueryData;
     
     fn system(mut query: Query<(<Self::State as Fgsm>::State, &Self, Self::Target)>) {
         for (state, this, mut target) in query.iter_mut() {

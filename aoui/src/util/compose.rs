@@ -98,7 +98,7 @@ pub trait ComposeExtension {
     fn add_adaptor<From: SignalId, To: SignalId>(&mut self, adaptor: impl Fn(From::Data) -> To::Data + Clone + Send + Sync + 'static)  -> &mut Self;
 }
 
-impl ComposeExtension for EntityCommands<'_, '_, '_> {
+impl ComposeExtension for EntityCommands<'_> {
     fn compose(&mut self, component: impl ComponentCompose) -> &mut Self{
         let entity = self.id();
         self.commands().add(ComposeInsert(entity, component));

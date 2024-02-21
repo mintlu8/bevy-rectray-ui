@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use bevy_aoui::{AouiPlugin, linebreak, util::AouiCommands};
-use bevy_aoui_shapes::{shape, Shapes, AouiShapesPlugin};
+use bevy_rectray::{AouiPlugin, linebreak, util::RCommands};
+use bevy_rectray_shapes::{shape, Shapes, AouiShapesPlugin};
 use bevy_prototype_lyon::prelude::*;
 
 pub fn main() {
@@ -13,8 +13,8 @@ pub fn main() {
         .run();
 }
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
     shape! (commands {
         shape: Shapes::Rectangle,

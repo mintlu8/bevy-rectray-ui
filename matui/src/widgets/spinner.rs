@@ -3,17 +3,17 @@ use bevy::render::color::Color;
 use bevy::render::texture::Image;
 use bevy::{hierarchy::BuildChildren, text::Font};
 use bevy::window::CursorIcon;
-use bevy_aoui::dsl::prelude::receiver;
+use bevy_rectray::dsl::prelude::receiver;
 use bevy_defer::{TypedSignal, Object};
-use bevy_aoui::util::signal;
-use bevy_aoui::widgets::spinner::{SpinnerText, Decrement, Increment};
-use bevy_aoui::{button, Size2};
-use bevy_aoui::layout::{LayoutRange, Axis};
-use bevy_aoui::{frame_extension, build_frame, Hitbox, size2, frame, text, layout::{Container, StackLayout}, sprite};
-use bevy_aoui::anim::{Interpolate, Easing};
-use bevy_aoui::events::EventFlags;
-use bevy_aoui::widgets::util::PropagateFocus;
-use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
+use bevy_rectray::util::signal;
+use bevy_rectray::widgets::spinner::{SpinnerText, Decrement, Increment};
+use bevy_rectray::{button, Size2};
+use bevy_rectray::layout::{LayoutRange, Axis};
+use bevy_rectray::{frame_extension, build_frame, Hitbox, size2, frame, text, layout::{Container, StackLayout}, sprite};
+use bevy_rectray::anim::{Interpolate, Easing};
+use bevy_rectray::events::EventFlags;
+use bevy_rectray::widgets::util::PropagateFocus;
+use bevy_rectray::util::{Widget, RCommands, convert::{OptionEx, IntoAsset}};
 use crate::shaders::{RoundedRectangleMaterial, StrokeColoring};
 use crate::style::Palette;
 use crate::widgets::states::FocusColors;
@@ -51,7 +51,7 @@ frame_extension!(
 );
 
 impl Widget for MSpinnerBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.event |= EventFlags::LeftClick | EventFlags::Hover;
         let mut frame = build_frame!(commands, self);
 

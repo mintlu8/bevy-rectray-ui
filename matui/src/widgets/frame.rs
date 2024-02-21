@@ -6,17 +6,17 @@ use bevy::render::color::Color;
 use bevy::render::texture::Image;
 use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
 use bevy::window::CursorIcon;
-use bevy_aoui::anim::Attr;
-use bevy_aoui::layout::{Axis, BoundsLayout};
-use bevy_aoui::layout::LayoutControl::IgnoreLayout;
+use bevy_rectray::anim::Attr;
+use bevy_rectray::layout::{Axis, BoundsLayout};
+use bevy_rectray::layout::LayoutControl::IgnoreLayout;
 use bevy_defer::{Signal, TypedSignal, Object};
-use bevy_aoui::util::{signal, ComposeExtension};
-use bevy_aoui::widgets::button::ToggleChange;
-use bevy_aoui::{transition, vstack, Anchor, Dimension, DimensionData, Hitbox, Opacity, Size2};
-use bevy_aoui::widgets::drag::Dragging;
-use bevy_aoui::{frame, frame_extension, build_frame, size2, layout::StackLayout};
-use bevy_aoui::events::EventFlags;
-use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
+use bevy_rectray::util::{signal, ComposeExtension};
+use bevy_rectray::widgets::button::ToggleChange;
+use bevy_rectray::{transition, vstack, Anchor, Dimension, DimensionData, Hitbox, Opacity, Size2};
+use bevy_rectray::widgets::drag::Dragging;
+use bevy_rectray::{frame, frame_extension, build_frame, size2, layout::StackLayout};
+use bevy_rectray::events::EventFlags;
+use bevy_rectray::util::{Widget, RCommands, convert::{OptionEx, IntoAsset}};
 use crate::mframe_extension;
 use crate::shaders::RoundedRectangleMaterial;
 use crate::style::Palette;
@@ -32,7 +32,7 @@ pub struct Divider {
 }
 
 impl Widget for Divider {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let mat = if self.inset == 0.0 {
             RoundedRectangleMaterial::rect(self.color)
         } else {
@@ -79,7 +79,7 @@ frame_extension!(pub struct MRectangle {
 });
 
 impl Widget for MRectangle {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let material = RoundedRectangleMaterial::rect(self.palette.background())
             .with_stroke((self.palette.stroke(), self.stroke)).into_bundle(commands);
 
@@ -101,7 +101,7 @@ frame_extension!(pub struct MCapsule {
 });
 
 impl Widget for MCapsule {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let material = RoundedRectangleMaterial::capsule(self.palette.background())
             .with_stroke((self.palette.stroke(), self.stroke)).into_bundle(commands);
 
@@ -118,7 +118,7 @@ impl Widget for MCapsule {
 mframe_extension!(pub struct MFrameBuilder {});
 
 impl Widget for MFrameBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.z += 0.01;
         if self.layout.is_none() {
             self.layout = Some(BoundsLayout::PADDING.into());
@@ -198,7 +198,7 @@ pub fn window_collapse_transfer(
 }
 
 impl Widget for MWindowBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.z += 0.01;
         self.event = EventFlags::BlockAll;
         //self.dimension = Some(size2!(0, 0));
@@ -270,7 +270,7 @@ impl Widget for MWindowBuilder {
         self.layout = self.layout.or(Some(StackLayout::VSTACK.into()));
         let container = build_frame!(commands, self).id();
 
-        let rest = bevy_aoui::padding!(commands {
+        let rest = bevy_rectray::padding!(commands {
             child: container
         });
 

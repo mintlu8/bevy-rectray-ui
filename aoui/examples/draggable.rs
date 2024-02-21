@@ -1,8 +1,8 @@
 //! Showcases support for dragging and interpolation.
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin, sprite::{Material2dPlugin, Material2d}, render::render_resource::AsBindGroup};
-use bevy_aoui::{util::{WorldExtension, AouiCommands}, AouiPlugin};
-
+use bevy_rectray::{util::RCommands, RectrayPlugin};
+use futures_lite::future;
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -14,9 +14,8 @@ pub fn main() {
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, init)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         .add_plugins(Material2dPlugin::<Circle>::default())
-        .register_cursor_default(CursorIcon::Arrow)
         .run();
 }
 
@@ -34,8 +33,8 @@ impl Material2d for Circle {
     }
 }
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
@@ -60,7 +59,7 @@ pub fn init(mut commands: AouiCommands) {
         extra: Dragging::BOTH.without_constraint().with_snap_back(),
         extra: SetCursor {
             flags: EventFlags::Hover|EventFlags::LeftDrag,
-            icon: CursorIcon::Hand,
+            icon: CursorIcon::Grab,
         },
         extra: transition!(Offset 4.0 BounceOut default Vec2::ZERO),
     });
@@ -78,16 +77,16 @@ pub fn init(mut commands: AouiCommands) {
             event: EventFlags::Hover|EventFlags::LeftDrag,
             extra: SetCursor {
                 flags: EventFlags::Hover|EventFlags::LeftDrag,
-                icon: CursorIcon::Hand,
+                icon: CursorIcon::Grab,
             },
             extra: Dragging::X,
             signal: sender::<PositionFac>(send1),
             system: |fac: SigSend<PositionFac>, transform: Ac<Transform2D>, dim: Ac<Dimension>| {
                 let fac = fac.recv().await;
-                futures::try_join!(
+                future::try_zip(
                     transform.set(move |x| x.rotation = fac * 2.0 * PI),
                     dim.set(move |v| v.edit_raw(|v| v.y = 50.0 + (1.0 - fac) * 50.0))
-                )?;
+                ).await?;
             }
         }
     });
@@ -130,7 +129,7 @@ pub fn init(mut commands: AouiCommands) {
         },
         extra: SetCursor {
             flags: EventFlags::Hover|EventFlags::LeftDrag,
-            icon: CursorIcon::Hand,
+            icon: CursorIcon::Grab,
         },
         signal: sender::<Dragging>(send2),
     });

@@ -61,7 +61,7 @@ pub struct CursorDefault(pub CursorIcon);
 
 impl Default for CursorDefault {
     fn default() -> Self {
-        Self(CursorIcon::Arrow)
+        Self(CursorIcon::Pointer)
     }
 }
 

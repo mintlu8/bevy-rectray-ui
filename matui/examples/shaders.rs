@@ -1,5 +1,5 @@
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::{material_sprite, util::AouiCommands, AouiPlugin, Coloring};
+use bevy_rectray::{material_sprite, util::RCommands, AouiPlugin, Coloring};
 use bevy_matui::{MatuiPlugin, shaders::{RoundedRectangleMaterial, RoundedShadowMaterial}};
 
 pub fn main() {
@@ -19,8 +19,8 @@ pub fn main() {
         .run();
 }
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {

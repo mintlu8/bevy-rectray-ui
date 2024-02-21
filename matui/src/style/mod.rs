@@ -1,5 +1,5 @@
 use bevy::render::color::Color;
-use bevy_aoui::util::{DslFrom, DslInto};
+use bevy_rectray::util::{DslFrom, DslInto};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Color8(pub [u8; 4]);
@@ -32,7 +32,7 @@ impl DslInto<Color> for Color8 {
 #[macro_export]
 macro_rules! color8 {
     ($tt: tt) => {
-        $bevy_aoui::color!($tt).as_rgba_u8()
+        $bevy_rectray::color!($tt).as_rgba_u8()
     };
 }
 
@@ -110,7 +110,7 @@ macro_rules! palette {
             ..Default::default()
         }
     };
-    // hack for bevy_aoui's propagation
+    // hack for bevy_rectray's propagation
     ($_: tt {$($field: ident: $color: tt),* $(,)?}) => {
         $crate::style::Palette {
             $($field: $crate::aoui::color!($color).into(),)*

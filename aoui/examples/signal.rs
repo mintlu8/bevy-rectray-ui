@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_aoui::{AouiPlugin, util::WorldExtension, util::AouiCommands};
+use bevy_rectray::{RectrayPlugin, util::RCommands};
 
 
 pub fn main() {
@@ -12,14 +12,13 @@ pub fn main() {
             ..Default::default()
         }))
         .add_systems(Startup, init)
-        .register_cursor_default(CursorIcon::Arrow)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         .run();
 }
 
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
     let (submit_sender, recv_s1, recv_s2) = signal();
     let (change_sender, recv_c1, recv_c2) = signal();

@@ -1,5 +1,5 @@
 [package]
-name = "bevy_aoui_shapes"
+name = "bevy_rectray_shapes"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 
-bevy = { version = "^0.12", default-features = false, features = ["bevy_sprite"] }
-bevy_aoui = { version = "^0.3", path = "../aoui" }
-bevy_prototype_lyon = "^0.10"
+bevy = { version = "^0.13", default-features = false, features = ["bevy_sprite"] }
+bevy_rectray = { version = "^0.3", path = "../aoui" }
+bevy_prototype_lyon = "^0.11"
 
 [dev-dependencies]
-bevy = { version = "^0.12", features = ["multi-threaded", "png", "bevy_winit"]}
+bevy = { version = "^0.13", features = ["multi-threaded", "png", "bevy_winit"]}

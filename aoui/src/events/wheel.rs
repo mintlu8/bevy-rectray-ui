@@ -4,7 +4,7 @@ use bevy_defer::SignalId;
 
 use crate::widgets::clipping::CameraClip;
 
-use super::{EventFlags, AouiCamera, CursorDetection, ActiveDetection};
+use super::{EventFlags, RectrayCamera, CursorDetection, ActiveDetection};
 
 
 
@@ -59,8 +59,8 @@ pub(crate) fn mousewheel_event(
     mut commands: Commands,
     scaling: Res<ScrollScaling>,
     windows: Query<&Window, With<PrimaryWindow>>,
-    marked_camera: Query<(&Camera, &GlobalTransform), With<AouiCamera>>,
-    unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<AouiCamera>, Without<CameraClip>)>,
+    marked_camera: Query<(&Camera, &GlobalTransform), With<RectrayCamera>>,
+    unmarked_camera: Query<(&Camera, &GlobalTransform), (Without<RectrayCamera>, Without<CameraClip>)>,
     query: Query<(Entity, &EventFlags, ActiveDetection, CursorDetection)>,
     mut lines: Local<Vec2>,
     mut reader: EventReader<MouseWheel>,

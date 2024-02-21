@@ -1,4 +1,5 @@
 use bevy::core::Name;
+use bevy::render::render_asset::RenderAssetUsages;
 use bevy::sprite::Sprite;
 use bevy::ecs::entity::Entity;
 use bevy::math::{Vec2, Rect};
@@ -7,9 +8,9 @@ use bevy::render::texture::{Image, BevyDefault};
 use bevy::render::render_resource::{Extent3d, TextureDimension};
 
 use crate::{DimensionType, Transform2D, Dimension, Coloring};
-use crate::{frame_extension, Clipping, bundles::{AouiBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
+use crate::{frame_extension, Clipping, bundles::{RectrayBundle, BuildTransformBundle}, Hitbox, build_frame, layout::Container};
 
-use crate::util::{Widget, AouiCommands, convert::IntoAsset};
+use crate::util::{Widget, RCommands, convert::IntoAsset};
 use super::Aspect;
 
 frame_extension!(pub struct FrameBuilder {});
@@ -52,13 +53,13 @@ frame_extension!(
 );
 
 impl Widget for FrameBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         if self.layout.is_some() && self.dimension == DimensionType::Copied {
             self.dimension = DimensionType::Dynamic;
         }
 
         let mut base = commands.spawn_bundle(
-            AouiBundle {
+            RectrayBundle {
                 transform: Transform2D {
                     center: self.center,
                     anchor: self.anchor,
@@ -107,7 +108,7 @@ impl Widget for FrameBuilder {
 }
 
 impl Widget for SpriteBuilder {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let sprite = commands.load_or_default(self.sprite);
         let mut frame = build_frame!(commands, self);
         let color = self.color.unwrap_or(bevy::prelude::Color::WHITE);
@@ -130,12 +131,12 @@ impl Widget for SpriteBuilder {
 
 
 impl Widget for RectangleBuilder {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let texture = Image::new(Extent3d {
             width: 1,
             height: 1,
             ..Default::default()
-        }, TextureDimension::D2, vec![255, 255, 255, 255], BevyDefault::bevy_default());
+        }, TextureDimension::D2, vec![255, 255, 255, 255], BevyDefault::bevy_default(), RenderAssetUsages::RENDER_WORLD);
         let texture = commands.add_asset(texture);
         let color = self.color.unwrap_or(bevy::prelude::Color::WHITE);
         let frame = build_frame!(commands, self)
@@ -154,7 +155,7 @@ impl Widget for RectangleBuilder {
 }
 
 impl Widget for TextBuilder {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let font = commands.load_or_default(self.font);
         let mut frame = build_frame!(commands, self);
         let color = self.color.unwrap_or(bevy::prelude::Color::WHITE);

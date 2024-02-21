@@ -4,14 +4,14 @@ use bevy::render::texture::Image;
 use bevy::{hierarchy::BuildChildren, text::Font};
 use bevy::window::CursorIcon;
 use bevy_defer::{TypedSignal, Object};
-use bevy_aoui::util::ComposeExtension;
-use bevy_aoui::layout::LayoutRange;
-use bevy_aoui::{build_frame, size2, text, layout::{Container, StackLayout}, sprite};
-use bevy_aoui::anim::{Interpolate, Easing};
-use bevy_aoui::events::EventFlags;
-use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
-use bevy_aoui::widgets::button::{Button, ButtonClick, Payload};
-use bevy_aoui::util::{Widget, AouiCommands, convert::{OptionEx, IntoAsset}};
+use bevy_rectray::util::ComposeExtension;
+use bevy_rectray::layout::LayoutRange;
+use bevy_rectray::{build_frame, size2, text, layout::{Container, StackLayout}, sprite};
+use bevy_rectray::anim::{Interpolate, Easing};
+use bevy_rectray::events::EventFlags;
+use bevy_rectray::widgets::util::{PropagateFocus, SetCursor};
+use bevy_rectray::widgets::button::{Button, ButtonClick, Payload};
+use bevy_rectray::util::{Widget, RCommands, convert::{OptionEx, IntoAsset}};
 use crate::{build_shape, mframe_extension};
 use crate::shaders::{RoundedRectangleMaterial, StrokeColoring};
 use crate::style::Palette;
@@ -37,7 +37,7 @@ mframe_extension!(
 );
 
 impl Widget for MButtonBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.event |= EventFlags::LeftClick | EventFlags::Hover;
         let mut frame = build_frame!(commands, self);
 
@@ -109,7 +109,7 @@ impl Widget for MButtonBuilder {
             });
             commands.entity(frame).add_child(child);
         } else if self.text.is_some() {
-            let left_pad = bevy_aoui::frame!(commands {
+            let left_pad = bevy_rectray::frame!(commands {
                 dimension: size2!(0),
             });
             commands.entity(frame).add_child(left_pad);
@@ -131,7 +131,7 @@ impl Widget for MButtonBuilder {
                     0.15
                 ),
             });
-            let right_pad = bevy_aoui::frame!(commands {
+            let right_pad = bevy_rectray::frame!(commands {
                 dimension: size2!(0),
             });
             commands.entity(frame).push_children(&[child, right_pad]);

@@ -5,15 +5,16 @@ use crate::events::{
     ActiveDetection, CursorAction, CursorClickOutside, CursorFocus, CursorState,
     EventFlags,
 };
+use bevy::input::ButtonInput;
 use bevy_defer::{SignalId, SignalSender};
-use crate::{RotatedRect, Transform2D, DimensionData, Size, size, AouiRem};
+use crate::{RotatedRect, Transform2D, DimensionData, Size, size, RectrayRem};
 use ab_glyph::{Font as FontTrait, ScaleFont};
 use bevy::asset::{Assets, Handle};
 use bevy::ecs::query::Or;
 
 use bevy::ecs::{event::EventReader, query::Changed, system::Commands};
 use bevy::hierarchy::Children;
-use bevy::input::{keyboard::KeyCode, Input};
+use bevy::input::keyboard::KeyCode;
 use bevy::prelude::{Component, Entity, Query, Res, With, Without};
 use bevy::reflect::Reflect;
 
@@ -563,10 +564,10 @@ pub(crate) fn text_on_click_outside(mut query: Query<&mut InputBox, With<CursorC
     }
 }
 pub(crate) fn inputbox_keyboard(
-    rem: Res<AouiRem>,
+    rem: Res<RectrayRem>,
     fonts: Res<Assets<Font>>,
     mut events: EventReader<ReceivedCharacter>,
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&DimensionData, &mut InputBox, &Handle<Font>,
         &Children,
         SignalSender<TextChange>,
@@ -607,11 +608,11 @@ pub(crate) fn inputbox_keyboard(
         let mut changed = false;
         let is_area = inputbox.cursor_len() > 0;
         if keys.any_pressed(CONTROL) {
-            if keys.just_pressed(KeyCode::C) {
+            if keys.just_pressed(KeyCode::KeyC) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                     let _ = clipboard.set_text(inputbox.selected());
                 }
-            } else if keys.just_pressed(KeyCode::V) {
+            } else if keys.just_pressed(KeyCode::KeyV) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                     if let Ok(text) = clipboard.get_text() {
                         if inputbox.overflow == InputOverflow::Deny {
@@ -634,23 +635,23 @@ pub(crate) fn inputbox_keyboard(
                         changed = true;
                     }
                 }
-            } else if keys.just_pressed(KeyCode::X) {
+            } else if keys.just_pressed(KeyCode::KeyX) {
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                     let _ = clipboard.set_text(inputbox.swap_selected(""));
                 } else {
                     inputbox.swap_selected("");
                 }
                 changed = true;
-            } else if keys.just_pressed(KeyCode::A) {
+            } else if keys.just_pressed(KeyCode::KeyA) {
                 inputbox.select_all()
             }
-        } else if keys.just_pressed(KeyCode::Left) {
+        } else if keys.just_pressed(KeyCode::ArrowLeft) {
             if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
                 inputbox.cursor_select_left()
             } else {
                 inputbox.cursor_left()
             }
-        } else if keys.just_pressed(KeyCode::Right) {
+        } else if keys.just_pressed(KeyCode::ArrowRight) {
             if keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
                 inputbox.cursor_select_right()
             } else {
@@ -658,15 +659,15 @@ pub(crate) fn inputbox_keyboard(
             }
         } else {
             for char in events.read() {
-                match char.char {
-                    '\t' => (),
-                    '\r' | '\n' => {
+                match char.char.as_str() {
+                    "\t" => (),
+                    "\r" | "\n" => {
                         submit.send(inputbox.get().to_owned())
                     }
-                    '\x08' | '\x7f' => inputbox.backspace(),
-                    _ => {
+                    "\x08" | "\x7f" => inputbox.backspace(),
+                    s => {
                         if inputbox.overflow == InputOverflow::Deny {
-                            let string = inputbox.try_push(char.char);
+                            let string = inputbox.try_push_str(s);
                             let font = match fonts.get(font_handle) {
                                 Some(font) => font.font.as_scaled(em),
                                 None => continue,
@@ -676,12 +677,12 @@ pub(crate) fn inputbox_keyboard(
                                 continue;
                             }
                         } else if let InputOverflow::Characters(c) = inputbox.overflow {
-                            let string = inputbox.try_push(char.char);
+                            let string = inputbox.try_push_str(s);
                             if string.chars().count() > c {
                                 continue;
                             }
                         }
-                        inputbox.push(char.char)
+                        inputbox.push_str(s)
                     }
                 }
                 changed = true;

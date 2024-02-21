@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use bevy::{render::color::Color, ecs::{component::Component, entity::Entity}};
-use bevy_aoui::{layout::LayoutControl, material_sprite, size2, util::{AouiCommands, convert::DslFromOptionEx}, Coloring};
+use bevy_rectray::{layout::LayoutControl, material_sprite, size2, util::{RCommands, convert::DslFromOptionEx}, Coloring};
 
 use crate::shaders::RoundedShadowMaterial;
 
@@ -23,7 +23,7 @@ pub struct ShadowInfo {
 
 impl ShadowInfo {
 
-    pub fn build_capsule(&self, commands: &mut AouiCommands) -> Entity {
+    pub fn build_capsule(&self, commands: &mut RCommands) -> Entity {
         material_sprite!(commands {
             dimension: size2![1 + {self.size * 2.0} px, 1 + {self.size * 2.0} px],
             z: -0.005,
@@ -33,7 +33,7 @@ impl ShadowInfo {
         })
     }
 
-    pub fn build_rect(&self, commands: &mut AouiCommands, corner: f32) -> Entity {
+    pub fn build_rect(&self, commands: &mut RCommands, corner: f32) -> Entity {
         material_sprite!(commands {
             dimension: size2![1 + {self.size * 2.0} px, 1 + {self.size * 2.0} px],
             z: -0.005,

@@ -338,7 +338,7 @@ macro_rules! quote_syntax {
 /// #[macro_export]
 /// macro_rules! macro_name {
 ///     {$commands: tt {$($tt:tt)*}} => {
-///         bevy_aoui::meta_dsl!($commands [$crate::absolute::path::to::WidgetBuilder] {
+///         bevy_rectray::meta_dsl!($commands [$crate::absolute::path::to::WidgetBuilder] {
 ///             $($tt)*
 ///         })
 ///     };

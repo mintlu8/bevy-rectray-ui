@@ -1,8 +1,8 @@
-use bevy::{prelude::*, window::{Window, PrimaryWindow}};
+use bevy::{prelude::*, window::PrimaryWindow};
 
 use crate::widgets::util::OptionDo;
 
-use super::{*, cursor::CameraQuery};
+use super::*;
 
 trait End: Sized {
     fn end(self) {}
@@ -19,7 +19,7 @@ pub fn mouse_button_input(
     mut state: ResMut<CursorState>,
     time: Res<Time>,
     double_click: Res<DoubleClickThreshold>,
-    buttons: Res<Input<MouseButton>>,
+    buttons: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: CameraQuery,
     query: Query<(Entity, &EventFlags, CursorDetection, ActiveDetection)>,
@@ -75,7 +75,7 @@ pub fn mouse_button_input(
                     MouseButton::Left => EventFlags::LeftDrag,
                     MouseButton::Right => EventFlags::RightDrag,
                     MouseButton::Middle => EventFlags::MidDrag,
-                    MouseButton::Other(_) => EventFlags::LeftDrag,
+                    _ => EventFlags::LeftDrag,
                 }));
             }
         } else if !buttons.pressed(state.drag_button) {
@@ -213,7 +213,7 @@ pub fn mouse_button_input(
 pub fn mouse_button_click_outside(
     mut commands: Commands,
     state: Res<CursorState>,
-    buttons: Res<Input<MouseButton>>,
+    buttons: Res<ButtonInput<MouseButton>>,
     parents: Query<&Parent>,
     query: Query<(Entity, &EventFlags)>,
 ) {

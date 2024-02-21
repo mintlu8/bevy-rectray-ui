@@ -39,7 +39,7 @@ macro_rules! linebreak {
 
 use crate::frame_extension;
 
-use crate::util::{Widget, AouiCommands};
+use crate::util::{Widget, RCommands};
 
 
 frame_extension! {
@@ -47,7 +47,7 @@ frame_extension! {
 }
 
 impl Widget for PaddingBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.layout = Some(BoundsLayout::PADDING.into());
         let entity = build_frame!(commands, self).id();
         (entity, entity)

@@ -1,5 +1,5 @@
 use bevy::{prelude::{Component, Vec2}, reflect::Reflect, ecs::{query::Changed, system::Query}};
-use bevy_aoui::{Transform2D, Anchor, DimensionData};
+use bevy_rectray::{Transform2D, Anchor, DimensionData};
 use bevy_prototype_lyon::prelude::{GeometryBuilder, Path};
 use bevy_prototype_lyon::shapes::*;
 

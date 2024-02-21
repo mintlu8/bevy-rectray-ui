@@ -1,12 +1,12 @@
 #![recursion_limit = "256"]
 use bevy::{prelude::*, render::render_resource::AsBindGroup, sprite::{Material2d, Material2dPlugin}};
-use bevy_aoui::{AouiPlugin, util::{DslInto, AouiCommands}, Anchor, material_sprite, layout::TableLayout};
+use bevy_rectray::{RectrayPlugin, util::{DslInto, RCommands}, Anchor, material_sprite, layout::TableLayout};
 
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, init)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         .add_plugins(Material2dPlugin::<Circle>::default())
         .run();
 }
@@ -25,7 +25,7 @@ impl Material2d for Circle {
     }
 }
 
-fn anchor_circle(commands: &mut AouiCommands, anchor: impl DslInto<Anchor>) -> Entity{
+fn anchor_circle(commands: &mut RCommands, anchor: impl DslInto<Anchor>) -> Entity{
     material_sprite!(commands {
         anchor: anchor,
         dimension: [6, 6],
@@ -38,8 +38,8 @@ fn anchor_circle(commands: &mut AouiCommands, anchor: impl DslInto<Anchor>) -> E
 }
 
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
     vstack! (commands {
         anchor: Top,

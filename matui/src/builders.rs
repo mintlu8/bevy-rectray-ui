@@ -1,5 +1,5 @@
 use bevy::{math::Vec2, render::color::Color};
-use bevy_aoui::util::DslFrom;
+use bevy_rectray::util::DslFrom;
 
 #[derive(Debug, Default)]
 pub enum FillShape {

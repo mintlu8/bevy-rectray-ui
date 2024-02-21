@@ -1,10 +1,10 @@
 use std::fmt::Debug;
 use std::ops::{Add, Mul};
-
+use ref_cast::RefCast;
 use bevy::{render::color::Color, time::Time};
 use bevy::ecs::{component::Component, system::{Query, Res}};
 use bevy::math::{Vec2, Vec4};
-use bevy_defer::{AsyncComponent, AsyncResult};
+use bevy_defer::{AsyncComponent, AsyncComponentDeref, AsyncResult};
 use crate::{Opacity, Dimension};
 use interpolation::EaseFunction;
 use smallvec::SmallVec;
@@ -361,8 +361,8 @@ impl Interpolation for Dimension {
 impl Interpolation for Color {
     type FrontEnd = Color;
     type Data = Vec4;
-    fn into_data(data: Self::FrontEnd) -> Self::Data { data.into() }
-    fn into_front_end(data: Self::Data) -> Self::FrontEnd { data.into() }
+    fn into_data(data: Self::FrontEnd) -> Self::Data { data.rgba_to_vec4() }
+    fn into_front_end(data: Self::Data) -> Self::FrontEnd { Color::rgba_from_array(data) }
 }
 
 impl Interpolation for Opacity {
@@ -386,28 +386,30 @@ impl Interpolation for Padding {
     fn into_front_end(data: Self::Data) -> Self::FrontEnd { data }
 }
 
-#[allow(async_fn_in_trait)]
-pub trait AsyncInterpolate<T: Interpolation> {
-    async fn interpolate_to(&self, to: T::FrontEnd) -> AsyncResult<()>;
-}
+#[doc(hidden)]
+#[derive(Debug, RefCast)]
+#[repr(transparent)]
+pub struct AsyncInterpolate<T: Interpolation>(AsyncComponent<Interpolate<T>>);
 
-impl<T: Interpolation> AsyncInterpolate<T> for AsyncComponent<Interpolate<T>> {
-    async fn interpolate_to(&self, to: T::FrontEnd) -> AsyncResult<()> {
-        self.set(move |x| x.interpolate_to(to)).await
+impl<T: Interpolation> AsyncComponentDeref for Interpolate<T> {
+    type Target = AsyncInterpolate<T>;
+
+    fn async_deref(this: &AsyncComponent<Self>) -> &Self::Target {
+        AsyncInterpolate::ref_cast(this)
     }
 }
 
-#[allow(async_fn_in_trait)]
-pub trait AsyncInterpolateVec2 {
-    async fn interpolate_to_x(&self, to: f32) -> AsyncResult<()>;
-    async fn interpolate_to_y(&self, to: f32) -> AsyncResult<()>;
+impl<T: Interpolation> AsyncInterpolate<T> {
+    pub async fn interpolate_to(&self, to: T::FrontEnd) -> AsyncResult<()> {
+        self.0.set(move |x| x.interpolate_to(to)).await
+    }
 }
 
-impl<T: Interpolation<FrontEnd = Vec2>> AsyncInterpolateVec2 for AsyncComponent<Interpolate<T>> {
-    async fn interpolate_to_x(&self, to: f32) -> AsyncResult<()> {
-        self.set(move |x| x.interpolate_to_x(to)).await
+impl<T: Interpolation<FrontEnd = Vec2>> AsyncInterpolate<T> {
+    pub async fn interpolate_to_x(&self, to: f32) -> AsyncResult<()> {
+        self.0.set(move |x| x.interpolate_to_x(to)).await
     }
-    async fn interpolate_to_y(&self, to: f32) -> AsyncResult<()> {
-        self.set(move |x| x.interpolate_to_y(to)).await
+    pub async fn interpolate_to_y(&self, to: f32) -> AsyncResult<()> {
+        self.0.set(move |x| x.interpolate_to_y(to)).await
     }
 }

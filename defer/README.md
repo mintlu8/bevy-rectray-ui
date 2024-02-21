@@ -8,7 +8,7 @@ A simple asynchronous runtime for executing deferred queries.
 
 ## Why does this crate exist?
 
-`bevy_defer` is the asynchronous runtime of `bevy_aoui` with a simple
+`bevy_defer` is the asynchronous runtime of `bevy_rectray` with a simple
 premise: given two components `Signals` and `AsyncSystems`, you can
 run any query you want in a deferred manner, and communicate with other widgets
 through signals.

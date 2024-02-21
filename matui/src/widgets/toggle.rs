@@ -2,13 +2,13 @@ use bevy::{window::CursorIcon, hierarchy::BuildChildren, math::Vec2};
 use bevy::render::{color::Color, texture::Image};
 use bevy::ecs::entity::Entity;
 use bevy_defer::{TypedSignal, Object};
-use bevy_aoui::util::ComposeExtension;
-use bevy_aoui::{build_frame, fgsm_interpolation, frame_extension, size2, sprite, Dimension, Hitbox, Size2};
-use bevy_aoui::util::{AouiCommands, Widget, convert::{OptionEx, IntoAsset}};
-use bevy_aoui::anim::{Interpolate, Easing, Offset, EaseFunction};
-use bevy_aoui::events::EventFlags;
-use bevy_aoui::widgets::button::{ButtonClick, CheckButton, Payload, ToggleChange};
-use bevy_aoui::widgets::util::{PropagateFocus, SetCursor};
+use bevy_rectray::util::ComposeExtension;
+use bevy_rectray::{build_frame, fgsm_interpolation, frame_extension, size2, sprite, Dimension, Hitbox, Size2};
+use bevy_rectray::util::{RCommands, Widget, convert::{OptionEx, IntoAsset}};
+use bevy_rectray::anim::{Interpolate, Easing, Offset, EaseFunction};
+use bevy_rectray::events::EventFlags;
+use bevy_rectray::widgets::button::{ButtonClick, CheckButton, Payload, ToggleChange};
+use bevy_rectray::widgets::util::{PropagateFocus, SetCursor};
 
 use crate::widgets::states::ToggleColors;
 use crate::{shaders::{RoundedRectangleMaterial, StrokeColoring}, style::Palette};
@@ -80,7 +80,7 @@ frame_extension!(
 );
 
 impl Widget for MToggleBuilder {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let mut frame = build_frame!(commands, self);
 
         let unchecked_palette = self.palette;
@@ -119,7 +119,7 @@ impl Widget for MToggleBuilder {
 
         let size = self.background_size.map(|x| Size2::em(x + horiz_len, x))
             .unwrap_or(Size2::FULL);
-        let background = bevy_aoui::frame!(commands {
+        let background = bevy_rectray::frame!(commands {
             dimension: size,
             z: 0.01,
             extra: RoundedRectangleMaterial::capsule(active_palette.background())
@@ -153,7 +153,7 @@ impl Widget for MToggleBuilder {
         commands.entity(frame).add_child(background);
         let dial_size = self.dial_size.unwrap_or(1.4);
         let checked_size = self.checked_size.unwrap_or(dial_size);
-        let dial = bevy_aoui::frame!(commands {
+        let dial = bevy_rectray::frame!(commands {
             offset: Size2::em(0.0, 0.0),
             dimension: Size2::em(dial_size, dial_size),
             z: 0.02,

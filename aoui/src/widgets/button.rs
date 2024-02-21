@@ -276,7 +276,7 @@ impl Payload {
 ///
 /// # Example
 /// ```
-/// use bevy_aoui::widgets::button::radio_button_group;
+/// use bevy_rectray::widgets::button::radio_button_group;
 /// let (ferris, gopher, python) = radio_button_group("Ferris");
 /// // Construct 4 items as an array.
 /// let colors = radio_button_group::<[_; 4]>("Red");

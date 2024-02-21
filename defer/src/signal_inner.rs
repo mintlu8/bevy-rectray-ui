@@ -2,7 +2,7 @@ use std::{ops::Deref, sync::atomic::AtomicU32, task::Poll};
 use triomphe::Arc;
 
 use std::sync::atomic::Ordering;
-use futures::Future;
+use std::future::Future;
 use parking_lot::Mutex;
 
 use crate::{AsObject, Object};

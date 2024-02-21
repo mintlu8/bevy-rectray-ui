@@ -1,8 +1,7 @@
 use bevy::asset::AssetLoader;
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_aoui::util::WorldExtension;
-use bevy_aoui::AouiPlugin;
-use bevy_aoui::util::AouiCommands;
+use bevy_rectray::RectrayPlugin;
+use bevy_rectray::util::RCommands;
 
 pub fn main() {
     App::new()
@@ -16,8 +15,7 @@ pub fn main() {
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .init_asset_loader::<AtlasImporter>()
         .add_systems(Startup, init)
-        .add_plugins(AouiPlugin)
-        .register_cursor_default(CursorIcon::Arrow)
+        .add_plugins(RectrayPlugin)
         .run();
 }
 
@@ -32,7 +30,7 @@ pub struct Atlas {
 pub struct AtlasImporter;
 
 impl AssetLoader for AtlasImporter {
-    type Asset = TextureAtlas;
+    type Asset = TextureAtlasLayout;
 
     type Settings = ();
 
@@ -42,14 +40,14 @@ impl AssetLoader for AtlasImporter {
         &'a self,
         reader: &'a mut bevy::asset::io::Reader,
         _: &'a Self::Settings,
-        load_context: &'a mut bevy::asset::LoadContext,
+        _: &'a mut bevy::asset::LoadContext,
     ) -> bevy::utils::BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         use bevy::asset::AsyncReadExt;
         Box::pin(async {
             let mut bytes = Vec::new();
             reader.read_to_end(&mut bytes).await.unwrap();
             let atlas: Atlas = serde_json::from_slice(&bytes).unwrap();
-            let mut result = TextureAtlas::new_empty(load_context.load(atlas.file), Vec2::new(atlas.size[0], atlas.size[1]));
+            let mut result = TextureAtlasLayout::new_empty(Vec2::new(atlas.size[0], atlas.size[1]));
             for rect in atlas.atlas {
                 let [x, y, w, h] = rect;
                 result.add_texture(Rect { min: Vec2 { x, y }, max: Vec2 { x: x + w, y: y + h } });
@@ -64,8 +62,8 @@ impl AssetLoader for AtlasImporter {
 }
 
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     commands.spawn_bundle(Camera2dBundle::default());
 
     text!(commands {
@@ -82,6 +80,7 @@ pub fn init(mut commands: AouiCommands) {
         child: atlas! {
             dimension: [128, 128],
             atlas: "ducky.json",
+            sprites: "ducky.png",
             padding: [1, 1],
             extra: transition!(
                 Index 0.2 Linear repeat (2, 7)

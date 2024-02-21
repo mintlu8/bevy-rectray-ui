@@ -46,8 +46,8 @@ impl Transform2D {
 
     pub const UNIT: Self = Self {
         anchor: Anchor::CENTER,
-        parent_anchor: Anchor::CENTER,
-        center: Anchor::INHERIT,
+        parent_anchor: Anchor::INHERIT,
+        center: Anchor::CENTER,
         offset: Size2::ZERO,
         rotation: 0.0,
         z: 0.0,

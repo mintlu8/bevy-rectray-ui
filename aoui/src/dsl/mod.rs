@@ -1,4 +1,4 @@
-//! `bevy_aoui`'s DSL.
+//! `bevy_rectray`'s DSL.
 //!
 //! See the [main page](crate) for documentation.
 
@@ -42,7 +42,7 @@ pub mod builders {
 }
 
 
-/// The auto convert function for bevy_aoui's DSL,
+/// The auto convert function for bevy_rectray's DSL,
 /// uses `DslInto` as the normal backend
 /// while specializes for functions
 /// and some other cases normally requiring specialization with a single trait.
@@ -94,7 +94,7 @@ pub fn into_children<'t, E: IntoChildren<'t, M>, const M:u8>(entity: E) -> E::Ou
     entity.into_entities()
 }
 
-/// Documents intrinsic fields of bevy_aoui's dsl.
+/// Documents intrinsic fields of bevy_rectray's dsl.
 #[doc(hidden)]
 pub mod intrinsics {
 

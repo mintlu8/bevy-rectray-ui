@@ -4,7 +4,7 @@ use bevy::sprite::{Material2d, Mesh2dHandle};
 
 use crate::{BuildMeshTransform, build_frame, frame_extension, util::mesh_rectangle};
 
-use crate::util::{Widget, AouiCommands, convert::IntoAsset};
+use crate::util::{Widget, RCommands, convert::IntoAsset};
 
 frame_extension!(
     /// Construct a sprite with a custom [`Material2d`](bevy::sprite::Material2d).
@@ -15,7 +15,7 @@ frame_extension!(
 );
 
 impl<M: Material2d> Widget for MaterialSpriteBuilder<M> {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let material = commands.load_or_panic(self.material, "Please specify a material.");
         let mesh = commands.add_asset(mesh_rectangle());
         let mut entity = build_frame!(commands, self);
@@ -52,7 +52,7 @@ frame_extension!(
 );
 
 impl<M: Material2d> Widget for MaterialMeshBuilder<M> {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let material = commands.load_or_panic(self.material, "Please specify a material.");
         let mesh = Mesh2dHandle(commands.load_or_panic(self.mesh, "Please specify a mesh."));
         let mut entity = build_frame!(commands, self);

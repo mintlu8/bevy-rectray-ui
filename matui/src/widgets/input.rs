@@ -7,18 +7,18 @@ use bevy::render::texture::Image;
 use bevy::text::{Font, Text};
 use bevy::window::CursorIcon;
 use bevy::ecs::{component::Component, system::Query};
-use bevy_aoui::dsl::OptionEx;
+use bevy_rectray::dsl::OptionEx;
 use bevy_defer::TypedSignal;
-use bevy_aoui::util::{signal, ComposeExtension};
-use bevy_aoui::widgets::button::ButtonClick;
-use bevy_aoui::widgets::signals::ClearWidget;
-use bevy_aoui::widgets::TextFragment;
-use bevy_aoui::{Opacity, material_sprite, size2, color, inputbox, Anchor, text, Size2, rectangle, transition, frame};
-use bevy_aoui::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxCursorArea, InputBoxCursorBar, InputBoxText};
-use bevy_aoui::{size, frame_extension, build_frame};
-use bevy_aoui::anim::{Easing, Interpolate, Offset, Scale, VisibilityToggle};
-use bevy_aoui::events::{EventFlags, CursorFocus};
-use bevy_aoui::util::{Widget, AouiCommands, DslInto, convert::IntoAsset};
+use bevy_rectray::util::{signal, ComposeExtension};
+use bevy_rectray::widgets::button::ButtonClick;
+use bevy_rectray::widgets::signals::ClearWidget;
+use bevy_rectray::widgets::TextFragment;
+use bevy_rectray::{Opacity, material_sprite, size2, color, inputbox, Anchor, text, Size2, rectangle, transition, frame};
+use bevy_rectray::widgets::inputbox::{InputOverflow, InputBoxState, InputBoxCursorArea, InputBoxCursorBar, InputBoxText};
+use bevy_rectray::{size, frame_extension, build_frame};
+use bevy_rectray::anim::{Easing, Interpolate, Offset, Scale, VisibilityToggle};
+use bevy_rectray::events::{EventFlags, CursorFocus};
+use bevy_rectray::util::{Widget, RCommands, DslInto, convert::IntoAsset};
 use crate::{StrokeColoring, build_shape};
 use crate::shaders::RoundedRectangleMaterial;
 use crate::style::Palette;
@@ -164,7 +164,7 @@ frame_extension!(
 );
 
 impl Widget for MInputBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         self.event |= EventFlags::Hover|EventFlags::LeftDrag;
 
         self.dimension = size2!({self.width} em, 2.8 em).dinto();

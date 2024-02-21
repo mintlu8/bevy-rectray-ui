@@ -5,16 +5,16 @@ use bevy::ecs::query::{With, Without};
 use bevy::render::texture::Image;
 use bevy::{window::CursorIcon, hierarchy::BuildChildren};
 use bevy::ecs::{entity::Entity, query::Changed, system::Query};
-use bevy_aoui::anim::Attr;
-use bevy_aoui::dsl::prelude::sender;
-use bevy_aoui::events::{CursorAction, EventFlags, FocusChange, FocusStateMachine};
+use bevy_rectray::anim::Attr;
+use bevy_rectray::dsl::prelude::sender;
+use bevy_rectray::events::{CursorAction, EventFlags, FocusChange, FocusStateMachine};
 use bevy_defer::{SignalId, SignalReceiver, SignalSender, TypedSignal, Object};
-use bevy_aoui::widgets::util::{DisplayIf, BlockPropagation};
-use bevy_aoui::{Anchor, size2, Size2, frame, transition, Opacity};
-use bevy_aoui::util::{signal, ComposeExtension};
-use bevy_aoui::layout::StackLayout;
-use bevy_aoui::widgets::button::{CheckButton, RadioButton, ToggleChange};
-use bevy_aoui::util::{Widget, AouiCommands, WidgetBuilder};
+use bevy_rectray::widgets::util::{DisplayIf, BlockPropagation};
+use bevy_rectray::{Anchor, size2, Size2, frame, transition, Opacity};
+use bevy_rectray::util::{signal, ComposeExtension};
+use bevy_rectray::layout::StackLayout;
+use bevy_rectray::widgets::button::{CheckButton, RadioButton, ToggleChange};
+use bevy_rectray::util::{Widget, RCommands, WidgetBuilder};
 
 use crate::style::{Color8, Palette};
 use crate::widgets::states::{SignalToggleOpacity, ToggleOpacity};
@@ -136,7 +136,7 @@ macro_rules! menu_item {
     };
     ($commands: tt ($key: expr, $value: expr)) => {
         $crate::widgets::MenuItem::Text{
-            key: $bevy_aoui::dsl::parse($key),
+            key: $bevy_rectray::dsl::parse($key),
             value: $value.to_string(),
             icon: None,
             right: None,
@@ -161,7 +161,7 @@ macro_rules! menu_item {
     };
     ($commands: tt ($key: expr, $value: expr) {$($nest:tt)*}) => {
         $crate::widgets::MenuItemNested{
-            key: $bevy_aoui::dsl::parse($key),
+            key: $bevy_rectray::dsl::parse($key),
             value: $value.to_string(),
             icon: None,
             right: None,
@@ -224,7 +224,7 @@ pub fn run_dropdown_signals(
 }
 
 pub fn rebuild_dropdown_children(
-    mut commands: AouiCommands,
+    mut commands: RCommands,
     query: Query<(Entity, &DropdownItems, &MenuBuilder), Changed<DropdownItems>>
 ) {
     for (entity, items, builder) in query.iter() {
@@ -238,7 +238,7 @@ pub fn rebuild_dropdown_children(
                     commands.entity(entity).add_child(div);
                 },
                 MenuItem::Text { key, value, icon, right } => {
-                    let item = bevy_aoui::button!(commands {
+                    let item = bevy_rectray::button!(commands {
                         dimension: size2!(width em, 2.2 em),
                         child: builder.text.build(&mut commands, value.clone()),
                         child: icon.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
@@ -279,7 +279,7 @@ pub fn rebuild_dropdown_children(
                 },
                 MenuItem::Nest { key:_, value, icon, right, nest } => {
                     let (send, recv) = signal();
-                    let item = bevy_aoui::button!(commands {
+                    let item = bevy_rectray::button!(commands {
                         dimension: size2!(width em, 2.2 em),
                         child: builder.text.build(&mut commands, value.clone()),
                         child: icon.clone().map(|icon| commands.spawn_fn(&builder.icon, icon)),
@@ -374,7 +374,7 @@ mframe_extension!(
 );
 
 impl Widget for MMenuBuilder {
-    fn spawn(mut self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(mut self, commands: &mut RCommands) -> (Entity, Entity) {
         let nested_builder = match self.nested_builder {
             Some(builder) => Some(builder),
             None => {
@@ -384,7 +384,7 @@ impl Widget for MMenuBuilder {
                     cloned.anchor = Anchor::TOP_LEFT;
                     cloned.parent_anchor = Anchor::TOP_RIGHT.into();
                     Some(WidgetBuilder::new(
-                        move |commands: &mut AouiCommands, items: Vec<MenuItem>| {
+                        move |commands: &mut RCommands, items: Vec<MenuItem>| {
                             let mut cloned = cloned.clone();
                             cloned.items = items;
                             cloned.spawn(commands).0
@@ -414,7 +414,7 @@ impl Widget for MMenuBuilder {
                     nested: nested_builder,
                     signal: signal.clone(),
                     width: self.width.unwrap_or(10.0),
-                    divider: WidgetBuilder::new(move |commands: &mut AouiCommands| {
+                    divider: WidgetBuilder::new(move |commands: &mut RCommands| {
                         frame!(commands {
                             dimension: size2!(100%, {divider_width + 0.3} em),
                             child: mdivider!{
@@ -426,8 +426,8 @@ impl Widget for MMenuBuilder {
                         })
                     }),
                     text: self.text_builder.unwrap_or_else(||
-                        WidgetBuilder::new(move |commands: &mut AouiCommands, text: String| {
-                            bevy_aoui::text!(commands {
+                        WidgetBuilder::new(move |commands: &mut RCommands, text: String| {
+                            bevy_rectray::text!(commands {
                                 anchor: Anchor::CENTER_LEFT,
                                 offset: size2!(2.2 em, 0),
                                 text: text,
@@ -437,8 +437,8 @@ impl Widget for MMenuBuilder {
                         })
                     ),
                     icon: self.icon_builder.unwrap_or_else(||
-                        WidgetBuilder::new(move |commands: &mut AouiCommands, img: Handle<Image>| {
-                            bevy_aoui::sprite!(commands {
+                        WidgetBuilder::new(move |commands: &mut RCommands, img: Handle<Image>| {
+                            bevy_rectray::sprite!(commands {
                                 anchor: Anchor::CENTER_RIGHT,
                                 sprite: img,
                                 offset: size2!(-2.2 em, 0),

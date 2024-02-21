@@ -2,17 +2,16 @@ use crate::{Anchor, BuildTransform, DimensionData};
 use bevy::asset::Handle;
 use bevy::core_pipeline::core_2d::Camera2dBundle;
 use bevy::core_pipeline::{
-    clear_color::ClearColorConfig,
     core_2d::Camera2d,
     tonemapping::{DebandDither, Tonemapping},
 };
 use bevy::ecs::{bundle::Bundle, component::Component, query::With, system::Query};
 use bevy::render::camera::{
-    Camera, CameraRenderGraph, OrthographicProjection, RenderTarget, ScalingMode,
+    Camera, CameraMainTextureUsages, CameraRenderGraph, OrthographicProjection, RenderTarget, ScalingMode
 };
 use bevy::render::view::{RenderLayers, VisibleEntities};
 use bevy::{
-    render::{color::Color, primitives::Frustum, texture::Image},
+    render::{primitives::Frustum, texture::Image},
     transform::components::GlobalTransform,
 };
 
@@ -22,7 +21,7 @@ use crate::util::convert::DslInto;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Component)]
 pub struct CameraClip;
 
-/// A bundle that spawns a camera that draws its enclosed rectangle to a render target.
+/// A bundle that spawns a camera that draws its enclosed rectangle to a render target .
 #[derive(Bundle)]
 #[non_exhaustive]
 pub struct ScopedCameraBundle {
@@ -38,6 +37,7 @@ pub struct ScopedCameraBundle {
     pub render_layer: RenderLayers,
     pub build: BuildTransform,
     pub global: GlobalTransform,
+    pub usages: CameraMainTextureUsages,
 }
 
 impl ScopedCameraBundle {
@@ -54,14 +54,13 @@ impl ScopedCameraBundle {
             projection: bun.projection,
             visible_entities: bun.visible_entities,
             frustum: bun.frustum,
-            camera_2d: Camera2d {
-                clear_color: ClearColorConfig::Custom(Color::NONE),
-            },
+            camera_2d: Camera2d,
             tonemapping: bun.tonemapping,
             deband_dither: bun.deband_dither,
             render_layer: layer.dinto(),
             build: BuildTransform(Anchor::CENTER),
             global: GlobalTransform::default(),
+            usages: CameraMainTextureUsages::default()
         }
     }
 }

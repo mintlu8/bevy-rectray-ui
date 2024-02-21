@@ -1,13 +1,14 @@
 use std::marker::PhantomData;
+use std::ops::Deref;
 use triomphe::Arc;
 use bevy::ecs::bundle::Bundle;
 use bevy::ecs::change_detection::DetectChanges;
 use bevy::ecs::component::Component;
-use bevy::ecs::{query::WorldQuery, entity::Entity, world::World};
+use bevy::ecs::{query::{WorldQuery, QueryData}, entity::Entity, world::World};
 use bevy::ecs::system::{Command, Query, Resource, RunSystemOnce, StaticSystemParam, SystemParam};
-use bevy::hierarchy::{DespawnRecursive, DespawnChildrenRecursive, AddChild};
-use futures::Future;
-use futures::channel::oneshot::channel;
+use bevy::hierarchy::{DespawnChildrenRecursive, DespawnRecursive, PushChild};
+use std::future::Future;
+use async_oneshot::oneshot;
 
 use super::{AsyncExecutor, AsyncFailure, BoxedQueryCallback, BoxedReadonlyCallback, AsyncResult, Signals};
 
@@ -21,6 +22,7 @@ pub trait AsyncSystemParam: Sized {
 }
 
 /// A WorldQuery that runs on the current entity.
+#[derive(Debug)]
 pub struct AsyncEntityQuery<Q: WorldQuery + 'static>{
     entity: Entity,
     executor: Arc<AsyncExecutor>,
@@ -44,7 +46,7 @@ impl<Q: WorldQuery> AsyncSystemParam for AsyncEntityQuery<Q> {
     }
 }
 
-impl<Q: WorldQuery + 'static> AsyncEntityQuery<Q> {
+impl<Q: QueryData + 'static> AsyncEntityQuery<Q> {
     pub fn new(executor: &Arc<AsyncExecutor>, entity: Entity) -> Self{
         AsyncEntityQuery {
             entity,
@@ -65,7 +67,7 @@ impl<Q: WorldQuery + 'static> AsyncEntityQuery<Q> {
     pub async fn get<T: Send + Sync + 'static>(&self,
         f: impl Fn(<Q::ReadOnly as WorldQuery>::Item<'_>) -> T + Send + Sync + 'static
     ) -> AsyncResult<T> {
-        let (sender, receiver) = channel::<Option<T>>();
+        let (sender, receiver) = oneshot::<Option<T>>();
         let entity = self.entity;
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
@@ -92,7 +94,7 @@ impl<Q: WorldQuery + 'static> AsyncEntityQuery<Q> {
     pub fn set<T: Send + Sync + 'static>(&self,
         f: impl Fn(Q::Item<'_>) -> T + Send + Sync + 'static
     ) -> impl Future<Output = Option<T>> + Send + Sync + 'static {
-        let (sender, receiver) = channel::<Option<T>>();
+        let (sender, receiver) = oneshot::<Option<T>>();
         let entity = self.entity;
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
@@ -116,6 +118,7 @@ impl<Q: WorldQuery + 'static> AsyncEntityQuery<Q> {
 }
 
 /// Represents any query that can be run on the world.
+#[derive(Debug)]
 pub struct AsyncQuery<P: SystemParam + 'static>{
     executor: Arc<AsyncExecutor>,
     p: PhantomData<P>
@@ -148,7 +151,7 @@ impl<Q: SystemParam + 'static> AsyncQuery<Q> {
     pub fn run<T: Send + Sync + 'static>(&self,
         f: impl (Fn(StaticSystemParam<Q>) -> T) + Send + Sync + 'static
     ) -> impl Future<Output = AsyncResult<T>> + Send + Sync + 'static{
-        let (sender, receiver) = channel::<T>();
+        let (sender, receiver) = oneshot::<T>();
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.run_system_once(move |q: StaticSystemParam<Q>| {
@@ -168,6 +171,7 @@ impl<Q: SystemParam + 'static> AsyncQuery<Q> {
 }
 
 /// A deferred `EntityCommands` that can be run on the current entity.
+#[derive(Debug)]
 pub struct AsyncEntityCommands{
     entity: Entity,
     executor: Arc<AsyncExecutor>,
@@ -202,8 +206,20 @@ impl AsyncEntityCommands {
         }
     }
 
+    pub fn add(&self, command: impl Command + Send + Sync + 'static) {
+        let query = BoxedQueryCallback::fire_and_forget(
+            move |world: &mut World| {
+                command.apply(world)
+            },
+        );
+        {
+            let mut lock = self.executor.queries.lock();
+            lock.push(query);
+        }
+    }
+
     pub fn insert(&self, bundle: impl Bundle) -> impl Future<Output = ()> {
-        let (sender, receiver) = channel::<()>();
+        let (sender, receiver) = oneshot::<()>();
         let entity = self.entity;
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
@@ -222,7 +238,7 @@ impl AsyncEntityCommands {
 
 
     pub fn spawn(&self, bundle: impl Bundle) -> impl Future<Output = Option<Entity>> {
-        let (sender, receiver) = channel::<Entity>();
+        let (sender, receiver) = oneshot::<Entity>();
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.spawn(bundle).id()
@@ -239,11 +255,11 @@ impl AsyncEntityCommands {
     }
 
     pub fn add_child(&self, child: Entity) -> impl Future<Output = bool> {
-        let (sender, receiver) = channel::<()>();
+        let (sender, receiver) = oneshot::<()>();
         let entity = self.entity;
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
-                AddChild {
+                PushChild {
                     parent: entity,
                     child,
                 }.apply(world);
@@ -261,7 +277,7 @@ impl AsyncEntityCommands {
 
     // Calls despawn_recursive
     pub fn despawn(&self) -> impl Future<Output = bool> {
-        let (sender, receiver) = channel::<()>();
+        let (sender, receiver) = oneshot::<()>();
         let entity = self.entity;
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
@@ -282,7 +298,7 @@ impl AsyncEntityCommands {
 
     // Calls despawn_recursive
     pub fn despawn_descendants(&self) -> impl Future<Output = bool> {
-        let (sender, receiver) = channel::<()>();
+        let (sender, receiver) = oneshot::<()>();
         let entity = self.entity;
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
@@ -303,6 +319,7 @@ impl AsyncEntityCommands {
 }
 
 /// An `AsyncSystemParam` that gets or sets a component on the current `Entity`.
+#[derive(Debug)]
 pub struct AsyncComponent<C: Component>{
     entity: Entity,
     executor: Arc<AsyncExecutor>,
@@ -336,7 +353,7 @@ impl<C: Component> AsyncComponent<C> {
 
     pub fn get<Out: Send + Sync + 'static>(&self, f: impl FnOnce(&C) -> Out + Send + Sync + 'static)
             -> impl Future<Output = AsyncResult<Out>> {
-        let (sender, receiver) = channel::<Option<Out>>();
+        let (sender, receiver) = oneshot::<Option<Out>>();
         let entity = self.entity;
         let query = BoxedReadonlyCallback::new(
             move |world: &World| {
@@ -361,7 +378,7 @@ impl<C: Component> AsyncComponent<C> {
 
     pub fn watch<Out: Send + Sync + 'static>(&self, f: impl Fn(&C) -> Out + Send + Sync + 'static)
             -> impl Future<Output = AsyncResult<Out>> {
-        let (sender, receiver) = channel::<Out>();
+        let (sender, receiver) = oneshot::<Out>();
         let entity = self.entity;
         let query = BoxedQueryCallback::repeat(
             move |world: &mut World| {
@@ -386,7 +403,7 @@ impl<C: Component> AsyncComponent<C> {
 
     pub fn set<Out: Send + Sync + 'static>(&self, f: impl FnOnce(&mut C) -> Out + Send + Sync + 'static)
             -> impl Future<Output = AsyncResult<Out>> {
-        let (sender, receiver) = channel::<Option<Out>>();
+        let (sender, receiver) = oneshot::<Option<Out>>();
         let entity = self.entity;
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
@@ -411,6 +428,7 @@ impl<C: Component> AsyncComponent<C> {
 }
 
 /// An `AsyncSystemParam` that gets or sets a resource on the `World`.
+#[derive(Debug)]
 pub struct AsyncResource<R: Resource>{
     executor: Arc<AsyncExecutor>,
     p: PhantomData<R>
@@ -432,7 +450,7 @@ impl<R: Resource> AsyncSystemParam for AsyncResource<R> {
 impl<R: Resource> AsyncResource<R> {
     pub fn get<Out: Send + Sync + 'static>(&self, f: impl FnOnce(&R) -> Out + Send + Sync + 'static)
             -> impl Future<Output = AsyncResult<Out>> {
-        let (sender, receiver) = channel::<Option<Out>>();
+        let (sender, receiver) = oneshot::<Option<Out>>();
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.get_resource::<R>().map(f)
@@ -454,7 +472,7 @@ impl<R: Resource> AsyncResource<R> {
 
     pub fn set<Out: Send + Sync + 'static>(&self, f: impl FnOnce(&mut R) -> Out + Send + Sync + 'static)
             -> impl Future<Output = AsyncResult<Out>> {
-        let (sender, receiver) = channel::<Option<Out>>();
+        let (sender, receiver) = oneshot::<Option<Out>>();
         let query = BoxedQueryCallback::once(
             move |world: &mut World| {
                 world.get_resource_mut::<R>()
@@ -473,5 +491,38 @@ impl<R: Resource> AsyncResource<R> {
                 Err(_) => Err(AsyncFailure::ChannelClosed),
             }
         }
+    }
+}
+
+/// The standard way to add method to [`AsyncComponent`].
+///
+/// It is recommended to derive [`RefCast`](https://docs.rs/ref-cast/latest/ref_cast/) for this.
+pub trait AsyncComponentDeref: Component + Sized {
+    type Target;
+    fn async_deref(this: &AsyncComponent<Self>) -> &Self::Target;
+}
+
+impl<C> Deref for AsyncComponent<C> where C: AsyncComponentDeref{
+    type Target = <C as AsyncComponentDeref>::Target;
+
+    fn deref(&self) -> &Self::Target {
+        AsyncComponentDeref::async_deref(self)
+    }
+}
+
+
+/// The standard way to add method to [`AsyncResource`].
+///
+/// It is recommended to derive [`RefCast`](https://docs.rs/ref-cast/latest/ref_cast/) for this.
+pub trait AsyncResourceDeref: Resource + Sized {
+    type Target;
+    fn async_deref(this: &AsyncResource<Self>) -> &Self::Target;
+}
+
+impl<C> Deref for AsyncResource<C> where C: AsyncResourceDeref{
+    type Target = <C as AsyncResourceDeref>::Target;
+
+    fn deref(&self) -> &Self::Target {
+        AsyncResourceDeref::async_deref(self)
     }
 }

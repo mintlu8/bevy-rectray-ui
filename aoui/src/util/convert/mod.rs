@@ -14,7 +14,7 @@ pub(crate) mod sealed {
 /// 
 /// This trait uses a marker type for extra flexibility
 /// compared to its counterpart [`Into`]. 
-/// Since any ambiguity can break `bevy_aoui`'s DSL,
+/// Since any ambiguity can break `bevy_rectray`'s DSL,
 /// this trait is sealed and cannot be implemented downstream.
 pub trait DslConvert<B, const C: char> {
     fn parse(self) -> B;
@@ -23,12 +23,12 @@ pub trait DslConvert<B, const C: char> {
 
 pub(crate) use sealed::SealToken;
 
-/// The `From` trait for `bevy_aoui`'s DSL.
+/// The `From` trait for `bevy_rectray`'s DSL.
 pub trait DslFrom<T> {
     fn dfrom(value: T) -> Self;
 }
 
-/// The `Into` trait for `bevy_aoui`'s DSL.
+/// The `Into` trait for `bevy_rectray`'s DSL.
 pub trait DslInto<T> {
     fn dinto(self) -> T;
 }

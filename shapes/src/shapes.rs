@@ -1,5 +1,5 @@
 use bevy::{math::Vec2, sprite::{Mesh2dHandle, ColorMaterial}, prelude::Color, ecs::entity::Entity};
-use bevy_aoui::{frame_extension, util::{DslFrom, Widget, AouiCommands}, bundles::BuildTransformBundle, build_frame, dsl::OneOrTwo};
+use bevy_rectray::{frame_extension, util::{DslFrom, Widget, RCommands}, bundles::BuildTransformBundle, build_frame, dsl::OneOrTwo};
 use bevy_prototype_lyon::prelude::*;
 
 use crate::systems::{ShapeDimension, Shapes};
@@ -58,7 +58,7 @@ frame_extension! {
 }
 
 impl Widget for ShapeBuilder {
-    fn spawn(self, commands: &mut AouiCommands) -> (Entity, Entity) {
+    fn spawn(self, commands: &mut RCommands) -> (Entity, Entity) {
         let color_material = commands.add_asset(ColorMaterial::default());
         let mut frame = build_frame!(commands, self);
         frame.insert((
@@ -86,7 +86,7 @@ impl Widget for ShapeBuilder {
 #[macro_export]
 macro_rules! shape {
     ($ctx: tt {$($tt:tt)*}) => {
-            bevy_aoui::meta_dsl!($ctx [$crate::ShapeBuilder] {
+            bevy_rectray::meta_dsl!($ctx [$crate::ShapeBuilder] {
             $($tt)*
         })
     };

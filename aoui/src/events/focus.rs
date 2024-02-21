@@ -1,4 +1,4 @@
-use bevy::{ecs::{component::Component, query::Has, system::{Query, Res}}, input::{mouse::MouseButton, Input}};
+use bevy::{ecs::{component::Component, query::Has, system::{Query, Res}}, input::{mouse::MouseButton, ButtonInput}};
 
 use bevy_defer::{SignalId, SignalSender};
 
@@ -68,7 +68,7 @@ pub(crate) fn run_focus_signals(
 }
 
 pub(crate) fn run_strong_focus_signals(
-    state: Res<Input<MouseButton>>,
+    state: Res<ButtonInput<MouseButton>>,
     mut query: Query<(&mut StrongFocusStateMachine, 
         SignalSender<ObtainedFocus>, 
         SignalSender<LoseFocus>, 

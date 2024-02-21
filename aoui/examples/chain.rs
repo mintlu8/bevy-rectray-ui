@@ -1,6 +1,6 @@
 //! Showcases a simple skeletal system by chaining rectangles.
 
-use bevy_aoui::{*, bundles::*, util::AouiCommands};
+use bevy_rectray::{*, bundles::*, util::RCommands};
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui::{Slider, self}};
 pub fn main() {
@@ -15,7 +15,7 @@ pub fn main() {
         .add_plugins(bevy_egui::EguiPlugin)
         .add_systems(Startup, init)
         .add_systems(Update, egui_window)
-        .add_plugins(AouiPlugin)
+        .add_plugins(RectrayPlugin)
         .run();
 }
 
@@ -25,8 +25,8 @@ pub struct Root;
 #[derive(Component)]
 pub struct AnchorMarker;
 
-pub fn init(mut commands: AouiCommands) {
-    use bevy_aoui::dsl::prelude::*;
+pub fn init(mut commands: RCommands) {
+    use bevy_rectray::dsl::prelude::*;
     let texture = commands.load::<Image>("square.png");
     commands.spawn_bundle(Camera2dBundle::default());
 
@@ -42,7 +42,7 @@ pub fn init(mut commands: AouiCommands) {
 
     use rand::prelude::*;
     let mut rng = rand::thread_rng();
-    let mut last = commands.spawn_bundle((AouiSpriteBundle {
+    let mut last = commands.spawn_bundle((RSpriteBundle {
         transform: Transform2D::UNIT.with_anchor(Anchor::CENTER).with_z(0.1),
         sprite: Sprite {
             color: Color::hsl(rng.gen_range(0.0..360.0), 1.0, 0.5),
@@ -53,7 +53,7 @@ pub fn init(mut commands: AouiCommands) {
         ..Default::default()
     }, Root)).id();
     for _ in 0..120 {
-        let curr = commands.spawn_bundle(AouiSpriteBundle {
+        let curr = commands.spawn_bundle(RSpriteBundle {
             transform: Transform2D::UNIT
                 .with_anchor(Anchor::CENTER_LEFT)
                 .with_center(Anchor::CENTER_LEFT)
@@ -67,7 +67,7 @@ pub fn init(mut commands: AouiCommands) {
             texture: texture.clone(),
             ..Default::default()
         }).id();
-        let marker = commands.spawn_bundle((AouiSpriteBundle {
+        let marker = commands.spawn_bundle((RSpriteBundle {
             transform: Transform2D::UNIT
                 .with_offset(Vec2::new(1.0, 0.0))
                 .with_anchor(Anchor::CENTER_RIGHT)

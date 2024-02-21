@@ -1,4 +1,4 @@
-//! WIP Rich Text implementation for `bevy_aoui`.
+//! WIP Rich Text implementation for `bevy_rectray`.
 //!
 //! Format
 //!
@@ -67,9 +67,9 @@ use std::{collections::HashMap, hash::{Hash, BuildHasher}, num::ParseFloatError}
 use bevy::{reflect::Reflect, render::view::RenderLayers};
 use bevy::{asset::{Handle, Assets}, text::Font, render::color::Color, hierarchy::BuildChildren};
 use bevy::ecs::{entity::Entity, system::{Query, Res}, bundle::Bundle, component::Component};
-use crate::{Transform2D, Anchor, FontSize, Dimension, Size2, DimensionType, dimension::DimensionMut, util::AouiCommands};
+use crate::{Transform2D, Anchor, FontSize, Dimension, Size2, DimensionType, dimension::DimensionMut, util::RCommands};
 use crate::layout::{Container, StackLayout};
-use crate::bundles::AouiBundle;
+use crate::bundles::RectrayBundle;
 use crate::layout::LayoutControl;
 use crate::frame;
 
@@ -221,7 +221,7 @@ pub struct RichTextBuilder<'t, 'w, 's, F: FontFetcher, B: Bundle + Clone = ()>{
     bundle: B,
     /// This determines the inserted `LinebreakBundle`'s height.
     line_gap:(Handle<Font>, FontSize),
-    commands: &'t mut AouiCommands<'w, 's>,
+    commands: &'t mut RCommands<'w, 's>,
     font: F,
     style: FontStyle,
     color_stack: Vec<Color>,
@@ -235,7 +235,7 @@ pub struct RichTextBuilder<'t, 'w, 's, F: FontFetcher, B: Bundle + Clone = ()>{
 }
 
 impl<'a, 'w, 's, F: FontFetcher> RichTextBuilder<'a, 'w, 's, F> {
-    pub fn new(commands: &'a mut AouiCommands<'w, 's>, font: F) -> Self {
+    pub fn new(commands: &'a mut RCommands<'w, 's>, font: F) -> Self {
         Self {
             bundle: (),
             line_gap: (font.default(), FontSize::None),
@@ -438,7 +438,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
         macro_rules! line_gap {
             () => {
                 self.buffer.push(self.commands.spawn_bundle((
-                    AouiBundle{
+                    RectrayBundle{
                         dimension: Dimension {
                             font_size: self.line_gap.1,
                             ..Default::default()
@@ -598,7 +598,7 @@ impl<'a, 'w, 's, F: FontFetcher, B: Bundle + Clone> RichTextBuilder<'a, 'w, 's, 
                             Some(RichTextScope::Zip) => {
                                 let anchor = self.anchor();
                                 self.buffer.push(self.commands.spawn_bundle((
-                                    AouiBundle {
+                                    RectrayBundle {
                                         dimension: Dimension {
                                             font_size: self.size(),
                                             ..Default::default()

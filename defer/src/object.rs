@@ -61,7 +61,6 @@ impl<T> AsObject for T where T: DataTransfer + Clone {
     fn as_dyn_inner(&self) -> Option<&dyn DataTransfer> {
         Some(self)
     }
-
 }
 
 impl AsObject for Object  {

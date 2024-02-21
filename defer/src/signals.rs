@@ -1,6 +1,6 @@
 use std::{any::{type_name, Any, TypeId}, fmt::Debug, marker::PhantomData};
 use triomphe::Arc;
-use bevy::{ecs::{component::Component, entity::Entity, query::WorldQuery}, log::debug, utils::hashbrown::HashMap};
+use bevy::{ecs::{component::Component, entity::Entity, query::QueryData}, log::debug, utils::hashbrown::HashMap};
 use once_cell::sync::Lazy;
 use crate::object::{Object, AsObject};
 use super::{AsyncExecutor, AsyncSystemParam, Signal, SignalData, SignalInner, YieldNow};
@@ -359,7 +359,7 @@ impl <T: SignalId> AsyncSystemParam for SigRecv<T>  {
 }
 
 /// `WorldQuery` for sending a signal synchronously.
-#[derive(Debug, WorldQuery)]
+#[derive(Debug, QueryData)]
 pub struct SignalSender<T: SignalId>{
     signals: Option<&'static Signals>,
     p: PhantomData<T>,
@@ -394,7 +394,7 @@ impl<T: SignalId> SignalSenderItem<'_, T> {
 }
 
 /// `WorldQuery` for receiving a signal synchronously.
-#[derive(Debug, WorldQuery)]
+#[derive(Debug, QueryData)]
 pub struct SignalReceiver<T: SignalId>{
     signals: Option<&'static Signals>,
     p: PhantomData<T>,

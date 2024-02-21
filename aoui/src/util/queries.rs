@@ -1,8 +1,11 @@
 use std::{iter::Copied, slice::Iter};
 
-use bevy::{ecs::{entity::Entity, query::{With, WorldQuery}, system::{Query, Res, SystemParam}}, hierarchy::Children, math::Vec2, window::{PrimaryWindow, Window}};
+use bevy::{hierarchy::Children, math::Vec2, window::{PrimaryWindow, Window}};
+use bevy::ecs::entity::Entity;
+use bevy::ecs::system::{Query, Res, SystemParam};
+use bevy::ecs::query::{QueryData, With};
 
-use crate::AouiRem;
+use crate::RectrayRem;
 
 /// Query for scaling factor from [`Window`].
 #[derive(SystemParam)]
@@ -34,10 +37,10 @@ impl WindowSize<'_, '_> {
     }
 }
 
-/// Query for `rem` from [`AouiRem`].
+/// Query for `rem` from [`RectrayRem`].
 #[derive(SystemParam)]
 pub struct Rem<'w> {
-    rem: Option<Res<'w, AouiRem>>,
+    rem: Option<Res<'w, RectrayRem>>,
 }
 
 impl Rem<'_> {
@@ -49,7 +52,7 @@ impl Rem<'_> {
 }
 
 /// Query for children that can also be empty.
-#[derive(WorldQuery)]
+#[derive(QueryData)]
 pub struct ChildIter {
     children: Option<&'static Children>
 }

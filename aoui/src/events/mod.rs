@@ -1,4 +1,4 @@
-//! This module provides cursor related event detection for `bevy_aoui`.
+//! This module provides cursor related event detection for `bevy_rectray`.
 //!
 //! # Event Listeners
 //!
@@ -36,10 +36,11 @@
 //! We provide abstractions that you can use for other types of input,
 //! but these are outside the scope of this crate.
 
-use bevy::{prelude::*, ecs::query::WorldQuery};
+use bevy::ecs::query::QueryData;
+use bevy::prelude::*;
 use crate::{Hitbox, Clipping, RotatedRect, Opacity};
 use crate::widgets::util::{CursorDefault, remove_all};
-use crate::schedule::{AouiCleanupSet, AouiEventSet, AouiWidgetEventSet};
+use crate::schedule::{CleanupSet, EventSet, WidgetEventSet};
 
 pub(crate) mod systems;
 pub(crate) mod wheel;
@@ -61,16 +62,16 @@ pub use focus::*;
 use self::gbb::calculate_greater_bounding_box;
 use self::cursor::{custom_cursor_controller, track_cursor};
 
-/// Marker component for Aoui's camera, optional.
+/// Marker component for `bevy_rectray`'s main camera, optional.
 ///
 /// Used for cursor detection and has no effect on rendering.
 /// If not present, we will try the `.get_single()` method instead.
 #[derive(Debug, Clone, Copy, Component, Default, Reflect)]
-pub struct AouiCamera;
+pub struct RectrayCamera;
 
 
 /// Query for checking whether a widget is active and can receive interactions.
-#[derive(WorldQuery)]
+#[derive(QueryData)]
 pub struct ActiveDetection {
     vis: &'static Visibility,
     computed_vis: &'static InheritedVisibility,
@@ -85,7 +86,7 @@ impl ActiveDetectionItem<'_> {
 }
 
 /// Query for checking whether cursor is in bounds of a widget.
-#[derive(WorldQuery)]
+#[derive(QueryData)]
 pub struct CursorDetection {
     hitbox: &'static Hitbox,
     rect: &'static RotatedRect,
@@ -117,11 +118,11 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
             .init_resource::<ScrollScaling>()
             .init_resource::<DoubleClickThreshold>()
             .init_resource::<CursorDefault>()
-            .add_systems(PreUpdate, mouse_button_input.in_set(AouiEventSet))
-            .add_systems(PreUpdate, mouse_button_click_outside.in_set(AouiEventSet).after(mouse_button_input))
-            .add_systems(PreUpdate, wheel::mousewheel_event.in_set(AouiEventSet))
-            .add_systems(PreUpdate, focus::run_focus_signals.in_set(AouiWidgetEventSet))
-            .add_systems(PreUpdate, focus::run_strong_focus_signals.in_set(AouiWidgetEventSet))
+            .add_systems(PreUpdate, mouse_button_input.in_set(EventSet))
+            .add_systems(PreUpdate, mouse_button_click_outside.in_set(EventSet).after(mouse_button_input))
+            .add_systems(PreUpdate, wheel::mousewheel_event.in_set(EventSet))
+            .add_systems(PreUpdate, focus::run_focus_signals.in_set(WidgetEventSet))
+            .add_systems(PreUpdate, focus::run_strong_focus_signals.in_set(WidgetEventSet))
             .add_systems(FixedUpdate, (
                 track_cursor,
                 custom_cursor_controller,
@@ -133,7 +134,7 @@ impl bevy::prelude::Plugin for CursorEventsPlugin {
                 remove_all::<CursorClickOutside>,
                 remove_all::<MouseWheelAction>,
                 remove_all::<DescendantHasFocus>,
-            ).in_set(AouiCleanupSet))
+            ).in_set(CleanupSet))
         ;
     }
 }

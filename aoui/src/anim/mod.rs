@@ -1,4 +1,4 @@
-//! Interpolation module for bevy_aoui.
+//! Interpolation module for bevy_rectray.
 //!
 //! # Getting Started:
 //!
@@ -58,8 +58,8 @@
 //! * If target is the source of current animation, reverse.
 //! * Otherwise interpolate to the target.
 
-use bevy::{app::{FixedUpdate, Plugin, Update}, render::color::Color, sprite::TextureAtlasSprite};
-use bevy::ecs::{schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs}, query::WorldQuery};
+use bevy::{app::{FixedUpdate, Plugin, Update}, ecs::query::QueryData, render::color::Color, sprite::TextureAtlas};
+use bevy::ecs::schedule::{SystemSet, IntoSystemConfigs, IntoSystemSetConfigs};
 
 use ::interpolation::Ease;
 /// Enum for easing functions.
@@ -68,7 +68,7 @@ mod interpolation;
 pub use interpolation::{
     Interpolate, Interpolation, 
     Offset, Rotation, Scale, Index, Padding, Margin, 
-    AsyncInterpolate, AsyncInterpolateVec2
+    AsyncInterpolate
 };
 mod assoc;
 pub use assoc::{Attr, InterpolateAssociation};
@@ -122,8 +122,8 @@ pub struct InterpolationSet;
 pub struct InterpolationUpdateSet;
 
 /// A query for gracefully toggling visibility.
-#[derive(Debug, WorldQuery)]
-#[world_query(mutable)]
+#[derive(Debug, QueryData)]
+#[query_data(mutable)]
 pub struct VisibilityToggle {
     pub opacity: &'static mut Opacity,
     pub interpolate: Option<&'static mut Interpolate<Opacity>>,
@@ -159,7 +159,7 @@ impl Plugin for AnimationPlugin {
                 <(Dimension, Dimension)>::system,
                 <(Coloring, Color)>::system,
                 <(Opacity, Opacity)>::system,
-                <(TextureAtlasSprite, Index)>::system,
+                <(TextureAtlas, Index)>::system,
             ).in_set(InterpolationSet))
             .add_systems(FixedUpdate, (
                 Offset::update_interpolate,
