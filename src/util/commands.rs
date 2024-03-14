@@ -40,7 +40,7 @@ impl<'w, 's> RCommands<'w, 's> {
     }
 
     /// Obtain an [`EntityCommands`].
-    pub fn entity<'a>(&'a mut self, entity: Entity) -> EntityCommands<'a> {
+    pub fn entity(&mut self, entity: Entity) -> EntityCommands {
         self.commands.entity(entity)
     }
 

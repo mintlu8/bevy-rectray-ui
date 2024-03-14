@@ -108,7 +108,6 @@ pub fn accordion_page(
                 signal: receiver::<Fac<Vec2>>(cov_recv),
                 system: |recv: Receiver<Fac<Vec2>>, dim: Ac<ScrollDimension>| {
                     let fac = recv.recv().await.y;
-                    dbg!(fac);
                     dim.set(move |x| x.0 = fac.min(HEIGHT)).await?;
                 },
                 signal: receiver::<Invocation>(sig.clone()),

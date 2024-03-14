@@ -2,7 +2,9 @@
 #![recursion_limit = "256"]
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
+use bevy_defer::{world, AsyncExtension};
 use bevy_defer::{spawn, Object, signals::Signal};
+use bevy_rectray::widgets::signals::Fac;
 use bevy_rectray::RectrayPlugin;
 use bevy_rectray::util::RCommands;
 
@@ -19,6 +21,13 @@ pub fn main() {
         .add_systems(Update, recv)
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_plugins(RectrayPlugin)
+        .spawn_task(async {
+            let world = world();
+            loop {
+                let message = world.poll::<Fac<String>>("Clicked").await;
+                println!("{}", message);
+            }
+        })
         .run();
 }
 
@@ -104,7 +113,7 @@ pub fn init(mut commands: RCommands) {
         signal: receiver::<ToggleChange>(recv1),
         system: |toggle: Receiver<ToggleChange>, text: Aeq<&mut Text>| {
             let checked = toggle.recv().await;
-            let _ = text.with(move |mut text| format_widget!(text.as_mut(), "<= {}!", checked)).await;
+            let _ = text.run(move |mut text| format_widget!(text.as_mut(), "<= {}!", checked)).await;
         }
     });
 
@@ -115,7 +124,7 @@ pub fn init(mut commands: RCommands) {
         signal: receiver::<ToggleChange>(recv2),
         system: |x: Receiver<ToggleChange>, text: Aeq<&mut Text>| {
             let checked = x.recv().await;
-            let _ = text.with(move |mut text| format_widget!(text.as_mut(), "<= {}!", checked)).await;
+            let _ = text.run(move |mut text| format_widget!(text.as_mut(), "<= {}!", checked)).await;
         }
     });
 
@@ -162,7 +171,7 @@ pub fn init(mut commands: RCommands) {
 
     let (send, recv, recv2) = signal::<Object, _>();
 
-    commands.spawn_bundle(Listen(Signal::from_typed(recv2)));
+    commands.spawn_bundle(Listen(Signal::from(recv2)));
 
     text! (commands {
         offset: [300, 0],
@@ -171,7 +180,7 @@ pub fn init(mut commands: RCommands) {
         signal: receiver::<Invocation>(recv),
         system: |sig: Receiver<Invocation>, text: Aeq<&mut Text>| {
             sig.recv().await;
-            let _ = text.with(|text| format_widget!(text, "You clicked it!")).await;
+            let _ = text.run(|text| format_widget!(text, "You clicked it!")).await;
             spawn(async { 
                 println!("Hello from spawned task!");
             }).await;
@@ -211,9 +220,10 @@ pub fn init(mut commands: RCommands) {
             extra: DisplayIf(EventFlags::LeftPressed),
             z: 0.1
         },
-        system: |sender: Sender<ButtonClick>| {
+        system: |sender: Sender<ButtonClick>, world: AsyncWorldMut| {
             sender.recv().await;
-            println!("Clicked")
+            println!("Clicked");
+            world.send::<Fac<String>>("Clicked", "!!!!".to_owned()).await;
         }
     });
 }

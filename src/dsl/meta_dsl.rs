@@ -490,7 +490,7 @@ macro_rules! meta_dsl2 {
                 );
             )?
             $(
-                let system = $crate::defer::AsyncSystems::from_systems([$first_sys, $($system),*]);
+                let system = $crate::defer::AsyncSystems::from_iter([$first_sys, $($system),*]);
                 $crate::util::ComposeExtension::compose(
                     &mut $commands.entity(out),
                     system

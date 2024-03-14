@@ -20,7 +20,7 @@ pub enum Fac<T> {
     __Sealed(PhantomData<T>, sealed::Sealed)
 }
 
-impl<T: AsObject> SignalId for Fac<T> {
+impl<T: AsObject + Default> SignalId for Fac<T> {
     type Data = T;
 }
 

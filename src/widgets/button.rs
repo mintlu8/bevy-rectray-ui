@@ -114,7 +114,7 @@ impl RadioButton {
     }
 
     pub fn recv<T: AsObject>(&self) -> TypedSignal<T> {
-        TypedSignal::from_inner(self.sender.get_shared())
+        TypedSignal::from_signal(&self.sender)
     }
 
     pub fn clear(&self) {

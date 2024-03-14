@@ -18,7 +18,7 @@ doctest = false
 
 [dependencies]
 bevy = { version = "^0.13", default-features = false, features = ["bevy_sprite", "bevy_text", "trace"] }
-bevy_defer = { version = "^0.3", path = "../bevy_defer" }
+bevy_defer = { version = "^0.4", path = "../bevy_defer" }
 downcast-rs = "^1.2"
 itertools = "^0.12"
 serde = { version = "^1", optional = true }

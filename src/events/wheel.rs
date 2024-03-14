@@ -26,7 +26,7 @@ impl Default for ScrollScaling {
 }
 
 /// Movement units associated with dragging or scrolling.
-#[derive(Debug, Clone, Copy, PartialEq, Reflect)]
+#[derive(Debug, Clone, Copy, PartialEq, Reflect, Default)]
 pub struct MovementUnits{
     pub lines: IVec2,
     pub pixels: Vec2,
