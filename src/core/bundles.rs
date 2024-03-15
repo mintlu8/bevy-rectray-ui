@@ -115,19 +115,19 @@ pub struct RSpriteBundle {
 }
 
 impl RSpriteBundle {
-    fn with_atlas(self, atlas: TextureAtlas) -> impl Bundle {
+    pub fn with_atlas(self, atlas: TextureAtlas) -> impl Bundle {
         (self, atlas)
     }
 
-    fn with_slice(self, slice: TextureSlicer) -> impl Bundle {
+    pub fn with_slice(self, slice: TextureSlicer) -> impl Bundle {
         (self, ImageScaleMode::Sliced(slice))
     }
 
-    fn with_scale_mode(self, scale: ImageScaleMode) -> impl Bundle {
+    pub fn with_scale_mode(self, scale: ImageScaleMode) -> impl Bundle {
         (self, scale)
     }
 
-    fn with_atlas_scale(self, atlas: TextureAtlas, slice: ImageScaleMode) -> impl Bundle {
+    pub fn with_atlas_scale(self, atlas: TextureAtlas, slice: ImageScaleMode) -> impl Bundle {
         (self, atlas, slice)
     }
 }

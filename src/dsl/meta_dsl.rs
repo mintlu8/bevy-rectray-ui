@@ -477,7 +477,7 @@ macro_rules! meta_dsl2 {
             #[allow(unused_mut)]
             let mut children = ::std::vec::Vec::new();
             $(children.extend($crate::dsl::into_children($children));)*
-            let out = $commands.spawn_aoui(
+            let out = $commands.spawn_widget(
                 entity,
                 extras,
                 children,

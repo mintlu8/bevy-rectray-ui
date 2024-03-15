@@ -17,7 +17,7 @@ impl ScalingFactor<'_, '_> {
     pub fn get(&self) -> f32 {
         self.window
             .get_single()
-            .map(|x| x.scale_factor() as f32)
+            .map(|x| x.scale_factor())
             .unwrap_or(2.0)
     }
 }

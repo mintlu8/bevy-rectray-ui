@@ -93,7 +93,7 @@ impl CursorState {
     }
 
     /// This guarantees the existence of the entity.
-    pub fn drag_target<'w, 's, 't>(&self, commands: &'t mut Commands<'w, 's>) -> Option<EntityCommands<'t>> {
+    pub fn drag_target<'t>(&self, commands: &'t mut Commands) -> Option<EntityCommands<'t>> {
         commands.get_entity(self.drag_target?)
     }
 

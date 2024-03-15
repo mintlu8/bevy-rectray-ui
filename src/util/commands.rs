@@ -65,7 +65,7 @@ impl<'w, 's> RCommands<'w, 's> {
     }
 
     /// Spawn a bundle.
-    pub fn spawn_bundle<'a>(&'a mut self, bundle: impl Bundle) -> EntityCommands<'a>{
+    pub fn spawn_bundle(&mut self, bundle: impl Bundle) -> EntityCommands{
         self.commands.spawn(bundle)
     }
 
@@ -95,7 +95,7 @@ impl<'w, 's> RCommands<'w, 's> {
     }
 
     /// Spawn a `Widget` without passing in an `AssetServer`, this may panic.
-    pub fn spawn_aoui(&mut self, widget: impl Widget, extras: impl Bundle, children: impl AsRef<[Entity]>) -> Entity {
+    pub fn spawn_widget(&mut self, widget: impl Widget, extras: impl Bundle, children: impl AsRef<[Entity]>) -> Entity {
         let (id, container) = widget.spawn(self);
         self.entity(container).push_children(children.as_ref());
         self.entity(id)
